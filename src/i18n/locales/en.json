@@ -139,6 +139,11 @@
     "view_detailed_usage": "View Detailed Stats",
     "edit_settings": "Edit Settings",
     "routing_strategy": "Routing Strategy",
+    "usage_statistics_persist_interval": "Stats Snapshot Interval",
+    "gemini_cli_endpoint": "Gemini CLI Internal Endpoint",
+    "auth_maintenance": "Auth Maintenance",
+    "setting_disabled": "Disabled",
+    "seconds_short": "s",
     "available_models": "Available Models",
     "available_models_desc": "Total models from all providers",
     "welcome_back": "Welcome Back",
@@ -183,10 +188,11 @@
     "ws_auth_enable": "Require auth for /ws/*",
     "routing_title": "Routing Strategy",
     "routing_strategy_label": "Routing strategy:",
-    "routing_strategy_hint": "round-robin cycles through keys; fill-first prioritizes the first available key.",
+    "routing_strategy_hint": "round-robin cycles through keys; fill-first prioritizes the first available key; random picks randomly within the same priority tier.",
     "routing_strategy_update": "Update",
     "routing_strategy_round_robin": "round-robin (cycle)",
-    "routing_strategy_fill_first": "fill-first (prioritize)"
+    "routing_strategy_fill_first": "fill-first (prioritize)",
+    "routing_strategy_random": "random (randomized)"
   },
   "api_keys": {
     "title": "API Keys Management",
@@ -1245,7 +1251,9 @@
           "logging_to_file_desc": "Save logs to files",
           "usage_statistics": "Usage Statistics",
           "usage_statistics_desc": "Collect usage statistics",
-          "logs_max_size": "Log File Size Limit (MB)"
+          "logs_max_size": "Log File Size Limit (MB)",
+          "usage_statistics_persist": "Usage Snapshot Persist Interval (seconds)",
+          "usage_statistics_persist_desc": "Set to 0 or leave empty to disable automatic snapshot persistence"
         },
         "network": {
           "title": "Network Configuration",
@@ -1259,6 +1267,9 @@
           "routing_strategy_hint": "Select credential selection strategy",
           "strategy_round_robin": "Round Robin",
           "strategy_fill_first": "Fill First",
+          "strategy_random": "Random",
+          "enable_gemini_cli_endpoint": "Enable Gemini CLI Internal Endpoint",
+          "enable_gemini_cli_endpoint_desc": "Controls the /v1internal:* entrypoint; the backend still requires an API key and loopback-only access",
           "force_model_prefix": "Force Model Prefix",
           "force_model_prefix_desc": "Unprefixed model requests only use credentials without prefix",
           "ws_auth": "WebSocket Authentication",
@@ -1273,6 +1284,22 @@
           "switch_preview_model_desc": "Switch to preview model version when quota is exceeded",
           "antigravity_credits": "Antigravity Credits Retry",
           "antigravity_credits_desc": "Retry once with enabledCreditTypes=[\"GOOGLE_ONE_AI\"] when Antigravity returns quota_exhausted 429"
+        },
+        "maintenance": {
+          "title": "Auth Maintenance",
+          "description": "Disable broken auths, queue deletions, and react to repeated quota hits",
+          "enable": "Enable Maintenance",
+          "enable_desc": "Run background scans to handle broken or repeatedly rate-limited auths",
+          "scan_interval_seconds": "Scan Interval (seconds)",
+          "delete_interval_seconds": "Delete Interval (seconds)",
+          "delete_status_codes": "Immediate Delete Status Codes",
+          "delete_status_codes_desc": "Separate with commas or new lines, for example 401, 403",
+          "delete_quota_exceeded": "Delete on Repeated Quota Exceeded",
+          "delete_quota_exceeded_desc": "Queue repeated 429 auths for deletion after the configured threshold",
+          "quota_strike_threshold": "Delete Strike Threshold",
+          "disable_quota_exceeded": "Disable on Repeated Quota Exceeded",
+          "disable_quota_exceeded_desc": "Disable repeated 429 auths without deleting them",
+          "disable_quota_strike_threshold": "Disable Strike Threshold"
         },
         "streaming": {
           "title": "Streaming Configuration",
@@ -1353,6 +1380,7 @@
         "validation_blocked": "Fix validation errors before saving",
         "port_range": "Enter a valid port between 1 and 65535",
         "non_negative_integer": "Enter a non-negative whole number",
+        "integer_list": "Enter integers separated by commas or line breaks",
         "payload_invalid_number": "Enter a valid number",
         "payload_invalid_boolean": "Choose true or false",
         "payload_invalid_json": "Enter valid JSON"

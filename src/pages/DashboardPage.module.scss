@@ -478,6 +478,12 @@
   background: rgba($success-color, 0.12);
 }
 
+.configBadgeRandom {
+  color: #9a5a00;
+  border-color: rgba(#d58a00, 0.32);
+  background: rgba(#d58a00, 0.12);
+}
+
 .configBadgeUnknown {
   color: var(--text-secondary);
   background: var(--bg-primary);

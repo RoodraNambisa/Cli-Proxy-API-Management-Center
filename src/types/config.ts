@@ -12,17 +12,31 @@ export interface QuotaExceededConfig {
   antigravityCredits?: boolean;
 }
 
+export interface AuthMaintenanceConfig {
+  enable?: boolean;
+  scanIntervalSeconds?: number;
+  deleteIntervalSeconds?: number;
+  deleteStatusCodes?: number[];
+  deleteQuotaExceeded?: boolean;
+  quotaStrikeThreshold?: number;
+  disableQuotaExceeded?: boolean;
+  disableQuotaStrikeThreshold?: number;
+}
+
 export interface Config {
   debug?: boolean;
   proxyUrl?: string;
   requestRetry?: number;
   quotaExceeded?: QuotaExceededConfig;
   usageStatisticsEnabled?: boolean;
+  usageStatisticsPersistIntervalSeconds?: number;
   requestLog?: boolean;
   loggingToFile?: boolean;
   logsMaxTotalSizeMb?: number;
   wsAuth?: boolean;
+  enableGeminiCliEndpoint?: boolean;
   forceModelPrefix?: boolean;
+  authMaintenance?: AuthMaintenanceConfig;
   routingStrategy?: string;
   apiKeys?: string[];
   ampcode?: AmpcodeConfig;
@@ -41,11 +55,14 @@ export type RawConfigSection =
   | 'request-retry'
   | 'quota-exceeded'
   | 'usage-statistics-enabled'
+  | 'usage-statistics-persist-interval-seconds'
   | 'request-log'
   | 'logging-to-file'
   | 'logs-max-total-size-mb'
   | 'ws-auth'
+  | 'enable-gemini-cli-endpoint'
   | 'force-model-prefix'
+  | 'auth-maintenance'
   | 'routing/strategy'
   | 'api-keys'
   | 'ampcode'

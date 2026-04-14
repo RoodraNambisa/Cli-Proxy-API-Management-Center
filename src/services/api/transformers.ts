@@ -27,6 +27,34 @@ const normalizeBoolean = (value: unknown): boolean | undefined => {
   return Boolean(value);
 };
 
+const normalizeNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
+};
+
+const normalizeIntegerArray = (value: unknown): number[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+
+  const normalized = value.reduce<number[]>((result, item) => {
+    const parsed = normalizeNumber(item);
+    if (parsed === undefined || !Number.isInteger(parsed)) {
+      return result;
+    }
+    result.push(parsed);
+    return result;
+  }, []);
+
+  return normalized.length > 0 ? normalized : [];
+};
+
 const normalizeModelAliases = (models: unknown): ModelAlias[] => {
   if (!Array.isArray(models)) return [];
   return models
@@ -353,14 +381,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   config.proxyUrl =
     typeof proxyUrl === 'string' ? proxyUrl : proxyUrl === undefined || proxyUrl === null ? undefined : String(proxyUrl);
   const requestRetry = raw['request-retry'] ?? raw.requestRetry;
-  if (typeof requestRetry === 'number' && Number.isFinite(requestRetry)) {
-    config.requestRetry = requestRetry;
-  } else if (typeof requestRetry === 'string' && requestRetry.trim() !== '') {
-    const parsed = Number(requestRetry);
-    if (Number.isFinite(parsed)) {
-      config.requestRetry = parsed;
-    }
-  }
+  config.requestRetry = normalizeNumber(requestRetry);
 
   const quota = raw['quota-exceeded'] ?? raw.quotaExceeded;
   if (isRecord(quota)) {
@@ -378,19 +399,46 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   config.usageStatisticsEnabled = normalizeBoolean(
     raw['usage-statistics-enabled'] ?? raw.usageStatisticsEnabled
   );
+  config.usageStatisticsPersistIntervalSeconds = normalizeNumber(
+    raw['usage-statistics-persist-interval-seconds'] ?? raw.usageStatisticsPersistIntervalSeconds
+  );
   config.requestLog = normalizeBoolean(raw['request-log'] ?? raw.requestLog);
   config.loggingToFile = normalizeBoolean(raw['logging-to-file'] ?? raw.loggingToFile);
   const logsMaxTotalSizeMb = raw['logs-max-total-size-mb'] ?? raw.logsMaxTotalSizeMb;
-  if (typeof logsMaxTotalSizeMb === 'number' && Number.isFinite(logsMaxTotalSizeMb)) {
-    config.logsMaxTotalSizeMb = logsMaxTotalSizeMb;
-  } else if (typeof logsMaxTotalSizeMb === 'string' && logsMaxTotalSizeMb.trim() !== '') {
-    const parsed = Number(logsMaxTotalSizeMb);
-    if (Number.isFinite(parsed)) {
-      config.logsMaxTotalSizeMb = parsed;
-    }
-  }
+  config.logsMaxTotalSizeMb = normalizeNumber(logsMaxTotalSizeMb);
   config.wsAuth = normalizeBoolean(raw['ws-auth'] ?? raw.wsAuth);
+  config.enableGeminiCliEndpoint = normalizeBoolean(
+    raw['enable-gemini-cli-endpoint'] ?? raw.enableGeminiCliEndpoint
+  );
   config.forceModelPrefix = normalizeBoolean(raw['force-model-prefix'] ?? raw.forceModelPrefix);
+  const authMaintenance = raw['auth-maintenance'] ?? raw.authMaintenance;
+  if (isRecord(authMaintenance)) {
+    config.authMaintenance = {
+      enable: normalizeBoolean(authMaintenance.enable),
+      scanIntervalSeconds: normalizeNumber(
+        authMaintenance['scan-interval-seconds'] ?? authMaintenance.scanIntervalSeconds
+      ),
+      deleteIntervalSeconds: normalizeNumber(
+        authMaintenance['delete-interval-seconds'] ?? authMaintenance.deleteIntervalSeconds
+      ),
+      deleteStatusCodes: normalizeIntegerArray(
+        authMaintenance['delete-status-codes'] ?? authMaintenance.deleteStatusCodes
+      ),
+      deleteQuotaExceeded: normalizeBoolean(
+        authMaintenance['delete-quota-exceeded'] ?? authMaintenance.deleteQuotaExceeded
+      ),
+      quotaStrikeThreshold: normalizeNumber(
+        authMaintenance['quota-strike-threshold'] ?? authMaintenance.quotaStrikeThreshold
+      ),
+      disableQuotaExceeded: normalizeBoolean(
+        authMaintenance['disable-quota-exceeded'] ?? authMaintenance.disableQuotaExceeded
+      ),
+      disableQuotaStrikeThreshold: normalizeNumber(
+        authMaintenance['disable-quota-strike-threshold'] ??
+          authMaintenance.disableQuotaStrikeThreshold
+      ),
+    };
+  }
   const routing = raw.routing;
   const strategyRaw = isRecord(routing)
     ? (routing.strategy ?? routing['strategy'])

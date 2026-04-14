@@ -251,6 +251,8 @@ export function DashboardPage() {
       ? t('basic_settings.routing_strategy_round_robin')
       : routingStrategyRaw === 'fill-first'
         ? t('basic_settings.routing_strategy_fill_first')
+        : routingStrategyRaw === 'random'
+          ? t('basic_settings.routing_strategy_random')
         : routingStrategyRaw;
   const routingStrategyBadgeClass = !routingStrategyRaw
     ? styles.configBadgeUnknown
@@ -258,7 +260,18 @@ export function DashboardPage() {
       ? styles.configBadgeRoundRobin
       : routingStrategyRaw === 'fill-first'
         ? styles.configBadgeFillFirst
+        : routingStrategyRaw === 'random'
+          ? styles.configBadgeRandom
         : styles.configBadgeUnknown;
+  const authMaintenanceEnabled = config?.authMaintenance?.enable === true;
+  const geminiCliEndpointEnabled = config?.enableGeminiCliEndpoint === true;
+  const usageStatisticsPersistInterval = config?.usageStatisticsPersistIntervalSeconds;
+  const usageStatisticsPersistDisplay =
+    usageStatisticsPersistInterval === undefined
+      ? '-'
+      : usageStatisticsPersistInterval > 0
+        ? `${usageStatisticsPersistInterval}${t('dashboard.seconds_short')}`
+        : t('dashboard.setting_disabled');
 
   // Derived time-based values
   const greetingKey = `dashboard.greeting_${timeOfDay}`;
@@ -373,6 +386,12 @@ export function DashboardPage() {
               </span>
             </div>
             <div className={styles.configPill}>
+              <span className={styles.configPillLabel}>
+                {t('dashboard.usage_statistics_persist_interval')}
+              </span>
+              <span className={styles.configPillValue}>{usageStatisticsPersistDisplay}</span>
+            </div>
+            <div className={styles.configPill}>
               <span className={styles.configPillLabel}>{t('basic_settings.logging_to_file_enable')}</span>
               <span className={`${styles.configPillValue} ${config.loggingToFile ? styles.on : styles.off}`}>
                 {config.loggingToFile ? t('common.yes') : t('common.no')}
@@ -386,6 +405,26 @@ export function DashboardPage() {
               <span className={styles.configPillLabel}>{t('basic_settings.ws_auth_enable')}</span>
               <span className={`${styles.configPillValue} ${config.wsAuth ? styles.on : styles.off}`}>
                 {config.wsAuth ? t('common.yes') : t('common.no')}
+              </span>
+            </div>
+            <div className={styles.configPill}>
+              <span className={styles.configPillLabel}>{t('dashboard.gemini_cli_endpoint')}</span>
+              <span
+                className={`${styles.configPillValue} ${
+                  geminiCliEndpointEnabled ? styles.on : styles.off
+                }`}
+              >
+                {geminiCliEndpointEnabled ? t('common.yes') : t('common.no')}
+              </span>
+            </div>
+            <div className={styles.configPill}>
+              <span className={styles.configPillLabel}>{t('dashboard.auth_maintenance')}</span>
+              <span
+                className={`${styles.configPillValue} ${
+                  authMaintenanceEnabled ? styles.on : styles.off
+                }`}
+              >
+                {authMaintenanceEnabled ? t('common.yes') : t('common.no')}
               </span>
             </div>
             <div className={styles.configPill}>

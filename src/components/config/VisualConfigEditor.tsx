@@ -52,6 +52,7 @@ type VisualSectionId =
   | 'system'
   | 'network'
   | 'quota'
+  | 'maintenance'
   | 'streaming'
   | 'payload';
 
@@ -185,6 +186,9 @@ export function VisualConfigEditor({
   const shouldRenderFloatingSidebar = !isMobile && isFloatingSidebar && isCurrentLayer;
   const routingStrategyLabelId = useId();
   const routingStrategyHintId = `${routingStrategyLabelId}-hint`;
+  const maintenanceDeleteStatusCodesInputId = useId();
+  const maintenanceDeleteStatusCodesHintId = `${maintenanceDeleteStatusCodesInputId}-hint`;
+  const maintenanceDeleteStatusCodesErrorId = `${maintenanceDeleteStatusCodesInputId}-error`;
   const keepaliveInputId = useId();
   const keepaliveHintId = `${keepaliveInputId}-hint`;
   const keepaliveErrorId = `${keepaliveInputId}-error`;
@@ -209,9 +213,33 @@ export function VisualConfigEditor({
 
   const portError = getValidationMessage(t, validationErrors?.port);
   const logsMaxSizeError = getValidationMessage(t, validationErrors?.logsMaxTotalSizeMb);
+  const usageStatisticsPersistIntervalError = getValidationMessage(
+    t,
+    validationErrors?.usageStatisticsPersistIntervalSeconds
+  );
   const requestRetryError = getValidationMessage(t, validationErrors?.requestRetry);
   const maxRetryCredentialsError = getValidationMessage(t, validationErrors?.maxRetryCredentials);
   const maxRetryIntervalError = getValidationMessage(t, validationErrors?.maxRetryInterval);
+  const authMaintenanceScanIntervalError = getValidationMessage(
+    t,
+    validationErrors?.['authMaintenance.scanIntervalSeconds']
+  );
+  const authMaintenanceDeleteIntervalError = getValidationMessage(
+    t,
+    validationErrors?.['authMaintenance.deleteIntervalSeconds']
+  );
+  const authMaintenanceDeleteStatusCodesError = getValidationMessage(
+    t,
+    validationErrors?.['authMaintenance.deleteStatusCodes']
+  );
+  const authMaintenanceQuotaStrikeThresholdError = getValidationMessage(
+    t,
+    validationErrors?.['authMaintenance.quotaStrikeThreshold']
+  );
+  const authMaintenanceDisableQuotaStrikeThresholdError = getValidationMessage(
+    t,
+    validationErrors?.['authMaintenance.disableQuotaStrikeThreshold']
+  );
   const keepaliveError = getValidationMessage(t, validationErrors?.['streaming.keepaliveSeconds']);
   const bootstrapRetriesError = getValidationMessage(
     t,
@@ -288,7 +316,10 @@ export function VisualConfigEditor({
         title: t('config_management.visual.sections.system.title'),
         description: t('config_management.visual.sections.system.description'),
         icon: IconDiamond,
-        errorCount: countErrors(['logsMaxTotalSizeMb']),
+        errorCount: countErrors([
+          'logsMaxTotalSizeMb',
+          'usageStatisticsPersistIntervalSeconds',
+        ]),
       },
       {
         id: 'network',
@@ -303,6 +334,19 @@ export function VisualConfigEditor({
         description: t('config_management.visual.sections.quota.description'),
         icon: IconTimer,
         errorCount: 0,
+      },
+      {
+        id: 'maintenance',
+        title: t('config_management.visual.sections.maintenance.title'),
+        description: t('config_management.visual.sections.maintenance.description'),
+        icon: IconShield,
+        errorCount: countErrors([
+          'authMaintenance.scanIntervalSeconds',
+          'authMaintenance.deleteIntervalSeconds',
+          'authMaintenance.deleteStatusCodes',
+          'authMaintenance.quotaStrikeThreshold',
+          'authMaintenance.disableQuotaStrikeThreshold',
+        ]),
       },
       {
         id: 'streaming',
@@ -329,7 +373,10 @@ export function VisualConfigEditor({
   const hasValidationIssues =
     sections.some((section) => section.errorCount > 0) || hasPayloadValidationErrors;
   const focusSections = useMemo(
-    () => sections.filter((section) => ['server', 'network', 'payload'].includes(section.id)),
+    () =>
+      sections.filter((section) =>
+        ['server', 'network', 'maintenance', 'payload'].includes(section.id)
+      ),
     [sections]
   );
 
@@ -808,6 +855,20 @@ export function VisualConfigEditor({
                   disabled={disabled}
                   error={logsMaxSizeError}
                 />
+                <Input
+                  label={t('config_management.visual.sections.system.usage_statistics_persist')}
+                  type="number"
+                  placeholder="0"
+                  value={values.usageStatisticsPersistIntervalSeconds}
+                  onChange={(e) =>
+                    onChange({ usageStatisticsPersistIntervalSeconds: e.target.value })
+                  }
+                  disabled={disabled}
+                  hint={t(
+                    'config_management.visual.sections.system.usage_statistics_persist_desc'
+                  )}
+                  error={usageStatisticsPersistIntervalError}
+                />
               </SectionGrid>
             </SectionStack>
           </ConfigSection>
@@ -876,6 +937,10 @@ export function VisualConfigEditor({
                         value: 'fill-first',
                         label: t('config_management.visual.sections.network.strategy_fill_first'),
                       },
+                      {
+                        value: 'random',
+                        label: t('config_management.visual.sections.network.strategy_random'),
+                      },
                     ]}
                     id={`${routingStrategyLabelId}-select`}
                     disabled={disabled}
@@ -891,6 +956,17 @@ export function VisualConfigEditor({
               </SectionGrid>
 
               <SectionGrid>
+                <ToggleRow
+                  title={t('config_management.visual.sections.network.enable_gemini_cli_endpoint')}
+                  description={t(
+                    'config_management.visual.sections.network.enable_gemini_cli_endpoint_desc'
+                  )}
+                  checked={values.enableGeminiCliEndpoint}
+                  disabled={disabled}
+                  onChange={(enableGeminiCliEndpoint) =>
+                    onChange({ enableGeminiCliEndpoint })
+                  }
+                />
                 <ToggleRow
                   title={t('config_management.visual.sections.network.force_model_prefix')}
                   description={t(
@@ -949,11 +1025,174 @@ export function VisualConfigEditor({
           </ConfigSection>
 
           <ConfigSection
+            id="maintenance"
+            ref={(node) => {
+              sectionRefs.current.maintenance = node;
+            }}
+            indexLabel="08"
+            icon={<IconShield size={16} />}
+            title={t('config_management.visual.sections.maintenance.title')}
+            description={t('config_management.visual.sections.maintenance.description')}
+          >
+            <SectionStack>
+              <SectionGrid>
+                <ToggleRow
+                  title={t('config_management.visual.sections.maintenance.enable')}
+                  description={t('config_management.visual.sections.maintenance.enable_desc')}
+                  checked={values.authMaintenance.enable}
+                  disabled={disabled}
+                  onChange={(enable) =>
+                    onChange({
+                      authMaintenance: {
+                        ...values.authMaintenance,
+                        enable,
+                      },
+                    })
+                  }
+                />
+                <ToggleRow
+                  title={t('config_management.visual.sections.maintenance.delete_quota_exceeded')}
+                  description={t(
+                    'config_management.visual.sections.maintenance.delete_quota_exceeded_desc'
+                  )}
+                  checked={values.authMaintenance.deleteQuotaExceeded}
+                  disabled={disabled}
+                  onChange={(deleteQuotaExceeded) =>
+                    onChange({
+                      authMaintenance: {
+                        ...values.authMaintenance,
+                        deleteQuotaExceeded,
+                      },
+                    })
+                  }
+                />
+                <ToggleRow
+                  title={t('config_management.visual.sections.maintenance.disable_quota_exceeded')}
+                  description={t(
+                    'config_management.visual.sections.maintenance.disable_quota_exceeded_desc'
+                  )}
+                  checked={values.authMaintenance.disableQuotaExceeded}
+                  disabled={disabled}
+                  onChange={(disableQuotaExceeded) =>
+                    onChange({
+                      authMaintenance: {
+                        ...values.authMaintenance,
+                        disableQuotaExceeded,
+                      },
+                    })
+                  }
+                />
+              </SectionGrid>
+
+              <SectionGrid>
+                <Input
+                  label={t('config_management.visual.sections.maintenance.scan_interval_seconds')}
+                  type="number"
+                  placeholder="30"
+                  value={values.authMaintenance.scanIntervalSeconds}
+                  onChange={(e) =>
+                    onChange({
+                      authMaintenance: {
+                        ...values.authMaintenance,
+                        scanIntervalSeconds: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={disabled}
+                  error={authMaintenanceScanIntervalError}
+                />
+                <Input
+                  label={t(
+                    'config_management.visual.sections.maintenance.delete_interval_seconds'
+                  )}
+                  type="number"
+                  placeholder="5"
+                  value={values.authMaintenance.deleteIntervalSeconds}
+                  onChange={(e) =>
+                    onChange({
+                      authMaintenance: {
+                        ...values.authMaintenance,
+                        deleteIntervalSeconds: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={disabled}
+                  error={authMaintenanceDeleteIntervalError}
+                />
+                <Input
+                  label={t('config_management.visual.sections.maintenance.quota_strike_threshold')}
+                  type="number"
+                  placeholder="6"
+                  value={values.authMaintenance.quotaStrikeThreshold}
+                  onChange={(e) =>
+                    onChange({
+                      authMaintenance: {
+                        ...values.authMaintenance,
+                        quotaStrikeThreshold: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={disabled}
+                  error={authMaintenanceQuotaStrikeThresholdError}
+                />
+                <Input
+                  label={t(
+                    'config_management.visual.sections.maintenance.disable_quota_strike_threshold'
+                  )}
+                  type="number"
+                  placeholder="6"
+                  value={values.authMaintenance.disableQuotaStrikeThreshold}
+                  onChange={(e) =>
+                    onChange({
+                      authMaintenance: {
+                        ...values.authMaintenance,
+                        disableQuotaStrikeThreshold: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={disabled}
+                  error={authMaintenanceDisableQuotaStrikeThresholdError}
+                />
+              </SectionGrid>
+
+              <FieldShell
+                label={t('config_management.visual.sections.maintenance.delete_status_codes')}
+                htmlFor={maintenanceDeleteStatusCodesInputId}
+                hint={t('config_management.visual.sections.maintenance.delete_status_codes_desc')}
+                hintId={maintenanceDeleteStatusCodesHintId}
+                error={authMaintenanceDeleteStatusCodesError}
+                errorId={maintenanceDeleteStatusCodesErrorId}
+              >
+                <div className={styles.fieldControl}>
+                  <textarea
+                    id={maintenanceDeleteStatusCodesInputId}
+                    className={`input ${styles.fieldTextarea}`}
+                    placeholder="401, 403"
+                    value={values.authMaintenance.deleteStatusCodes}
+                    onChange={(e) =>
+                      onChange({
+                        authMaintenance: {
+                          ...values.authMaintenance,
+                          deleteStatusCodes: e.target.value,
+                        },
+                      })
+                    }
+                    disabled={disabled}
+                    rows={3}
+                    aria-invalid={Boolean(authMaintenanceDeleteStatusCodesError)}
+                    aria-describedby={`${maintenanceDeleteStatusCodesHintId} ${authMaintenanceDeleteStatusCodesError ? maintenanceDeleteStatusCodesErrorId : ''}`.trim()}
+                  />
+                </div>
+              </FieldShell>
+            </SectionStack>
+          </ConfigSection>
+
+          <ConfigSection
             id="streaming"
             ref={(node) => {
               sectionRefs.current.streaming = node;
             }}
-            indexLabel="08"
+            indexLabel="09"
             icon={<IconSatellite size={16} />}
             title={t('config_management.visual.sections.streaming.title')}
             description={t('config_management.visual.sections.streaming.description')}
@@ -1054,7 +1293,7 @@ export function VisualConfigEditor({
             ref={(node) => {
               sectionRefs.current.payload = node;
             }}
-            indexLabel="09"
+            indexLabel="10"
             icon={<IconCode size={16} />}
             title={t('config_management.visual.sections.payload.title')}
             description={t('config_management.visual.sections.payload.description')}

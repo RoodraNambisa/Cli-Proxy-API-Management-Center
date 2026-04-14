@@ -139,6 +139,11 @@
     "view_detailed_usage": "Просмотреть детальную статистику",
     "edit_settings": "Изменить настройки",
     "routing_strategy": "Стратегия маршрутизации",
+    "usage_statistics_persist_interval": "Интервал снимка статистики",
+    "gemini_cli_endpoint": "Внутренний Gemini CLI endpoint",
+    "auth_maintenance": "Автообслуживание auth",
+    "setting_disabled": "Отключено",
+    "seconds_short": "с",
     "available_models": "Доступные модели",
     "available_models_desc": "Всего моделей от всех провайдеров",
     "welcome_back": "С возвращением",
@@ -183,10 +188,11 @@
     "ws_auth_enable": "Требовать аутентификацию для /ws/*",
     "routing_title": "Стратегия маршрутизации",
     "routing_strategy_label": "Стратегия маршрутизации:",
-    "routing_strategy_hint": "round-robin циклически перебирает ключи; fill-first отдаёт приоритет первому доступному ключу.",
+    "routing_strategy_hint": "round-robin циклически перебирает ключи; fill-first отдаёт приоритет первому доступному ключу; random выбирает случайно внутри одного приоритета.",
     "routing_strategy_update": "Обновить",
     "routing_strategy_round_robin": "round-robin (цикл)",
-    "routing_strategy_fill_first": "fill-first (приоритет)"
+    "routing_strategy_fill_first": "fill-first (приоритет)",
+    "routing_strategy_random": "random (случайно)"
   },
   "api_keys": {
     "title": "Управление API-ключами",
@@ -1243,6 +1249,8 @@
           "usage_statistics": "Статистика использования",
           "usage_statistics_desc": "Собирать статистику использования",
           "logs_max_size": "Максимальный размер файла журнала (МБ)",
+          "usage_statistics_persist": "Интервал сохранения снимка статистики (сек)",
+          "usage_statistics_persist_desc": "Установите 0 или оставьте пустым, чтобы отключить автосохранение снимка",
           "usage_retention_days": "Хранить статистику (дней)",
           "usage_retention_hint": "0 означает без ограничений (без очистки)"
         },
@@ -1258,6 +1266,9 @@
           "routing_strategy_hint": "Выберите стратегию подбора учётных данных",
           "strategy_round_robin": "По кругу",
           "strategy_fill_first": "Сначала заполнить",
+          "strategy_random": "Случайно",
+          "enable_gemini_cli_endpoint": "Включить внутренний Gemini CLI endpoint",
+          "enable_gemini_cli_endpoint_desc": "Управляет входом /v1internal:*; сервер всё равно требует API key и доступ только с loopback-адреса",
           "force_model_prefix": "Принудительный префикс модели",
           "force_model_prefix_desc": "Запросы к моделям без префикса используют только учётные данные без префикса",
           "ws_auth": "Аутентификация WebSocket",
@@ -1272,6 +1283,22 @@
           "switch_preview_model_desc": "Переключаться на preview-версию модели при превышении квоты",
           "antigravity_credits": "Повтор Antigravity Credits",
           "antigravity_credits_desc": "При ответе Antigravity quota_exhausted 429 повторять запрос один раз с enabledCreditTypes=[\"GOOGLE_ONE_AI\"]"
+        },
+        "maintenance": {
+          "title": "Обслуживание auth",
+          "description": "Отключение сломанных auth, очередь удаления и реакция на повторные quota hits",
+          "enable": "Включить обслуживание",
+          "enable_desc": "Запускать фоновые проверки для сломанных или постоянно ограничиваемых auth",
+          "scan_interval_seconds": "Интервал сканирования (сек)",
+          "delete_interval_seconds": "Интервал удаления (сек)",
+          "delete_status_codes": "Коды немедленного удаления",
+          "delete_status_codes_desc": "Разделяйте запятыми или переводами строки, например 401, 403",
+          "delete_quota_exceeded": "Удалять при повторном quota exceeded",
+          "delete_quota_exceeded_desc": "Помещать auth с повторными 429 в очередь удаления после достижения порога",
+          "quota_strike_threshold": "Порог удаления",
+          "disable_quota_exceeded": "Отключать при повторном quota exceeded",
+          "disable_quota_exceeded_desc": "Отключать auth с повторными 429 без удаления",
+          "disable_quota_strike_threshold": "Порог отключения"
         },
         "streaming": {
           "title": "Настройки стриминга",
@@ -1352,6 +1379,7 @@
         "validation_blocked": "Исправьте ошибки валидации перед сохранением",
         "port_range": "Введите корректный порт от 1 до 65535",
         "non_negative_integer": "Введите неотрицательное целое число",
+        "integer_list": "Введите список целых чисел через запятую или перевод строки",
         "payload_invalid_number": "Введите корректное число",
         "payload_invalid_boolean": "Выберите true или false",
         "payload_invalid_json": "Введите корректный JSON"

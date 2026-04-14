@@ -39,11 +39,14 @@ const SECTION_KEYS: RawConfigSection[] = [
   'request-retry',
   'quota-exceeded',
   'usage-statistics-enabled',
+  'usage-statistics-persist-interval-seconds',
   'request-log',
   'logging-to-file',
   'logs-max-total-size-mb',
   'ws-auth',
+  'enable-gemini-cli-endpoint',
   'force-model-prefix',
+  'auth-maintenance',
   'routing/strategy',
   'api-keys',
   'ampcode',
@@ -68,6 +71,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.quotaExceeded;
     case 'usage-statistics-enabled':
       return config.usageStatisticsEnabled;
+    case 'usage-statistics-persist-interval-seconds':
+      return config.usageStatisticsPersistIntervalSeconds;
     case 'request-log':
       return config.requestLog;
     case 'logging-to-file':
@@ -76,8 +81,12 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.logsMaxTotalSizeMb;
     case 'ws-auth':
       return config.wsAuth;
+    case 'enable-gemini-cli-endpoint':
+      return config.enableGeminiCliEndpoint;
     case 'force-model-prefix':
       return config.forceModelPrefix;
+    case 'auth-maintenance':
+      return config.authMaintenance;
     case 'routing/strategy':
       return config.routingStrategy;
     case 'api-keys':
@@ -205,6 +214,10 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         case 'usage-statistics-enabled':
           nextConfig.usageStatisticsEnabled = value as Config['usageStatisticsEnabled'];
           break;
+        case 'usage-statistics-persist-interval-seconds':
+          nextConfig.usageStatisticsPersistIntervalSeconds =
+            value as Config['usageStatisticsPersistIntervalSeconds'];
+          break;
         case 'request-log':
           nextConfig.requestLog = value as Config['requestLog'];
           break;
@@ -217,8 +230,14 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         case 'ws-auth':
           nextConfig.wsAuth = value as Config['wsAuth'];
           break;
+        case 'enable-gemini-cli-endpoint':
+          nextConfig.enableGeminiCliEndpoint = value as Config['enableGeminiCliEndpoint'];
+          break;
         case 'force-model-prefix':
           nextConfig.forceModelPrefix = value as Config['forceModelPrefix'];
+          break;
+        case 'auth-maintenance':
+          nextConfig.authMaintenance = value as Config['authMaintenance'];
           break;
         case 'routing/strategy':
           nextConfig.routingStrategy = value as Config['routingStrategy'];

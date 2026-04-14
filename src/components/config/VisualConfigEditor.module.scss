@@ -654,6 +654,13 @@
   position: relative;
 }
 
+.fieldTextarea {
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .fieldHint {
   color: var(--text-secondary);
   font-size: 12px;

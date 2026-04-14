@@ -139,6 +139,11 @@
     "view_detailed_usage": "查看详细统计",
     "edit_settings": "编辑设置",
     "routing_strategy": "路由策略",
+    "usage_statistics_persist_interval": "统计快照落盘间隔",
+    "gemini_cli_endpoint": "Gemini CLI 内部接口",
+    "auth_maintenance": "账号自动维护",
+    "setting_disabled": "已禁用",
+    "seconds_short": "秒",
     "available_models": "可用模型",
     "available_models_desc": "所有提供商的模型总数",
     "welcome_back": "欢迎回来",
@@ -183,10 +188,11 @@
     "ws_auth_enable": "启用 /ws/* 鉴权",
     "routing_title": "路由策略",
     "routing_strategy_label": "路由策略:",
-    "routing_strategy_hint": "round-robin 为轮询，fill-first 为优先填充。",
+    "routing_strategy_hint": "round-robin 为轮询，fill-first 为优先填充，random 为同优先级随机。",
     "routing_strategy_update": "更新",
     "routing_strategy_round_robin": "round-robin (轮询)",
-    "routing_strategy_fill_first": "fill-first (优先填充)"
+    "routing_strategy_fill_first": "fill-first (优先填充)",
+    "routing_strategy_random": "random (随机)"
   },
   "api_keys": {
     "title": "API 密钥管理",
@@ -1245,7 +1251,9 @@
           "logging_to_file_desc": "将日志保存到文件",
           "usage_statistics": "使用统计",
           "usage_statistics_desc": "收集使用统计信息",
-          "logs_max_size": "日志文件大小限制 (MB)"
+          "logs_max_size": "日志文件大小限制 (MB)",
+          "usage_statistics_persist": "统计快照落盘间隔 (秒)",
+          "usage_statistics_persist_desc": "设置为 0 或留空表示禁用自动快照落盘"
         },
         "network": {
           "title": "网络配置",
@@ -1259,6 +1267,9 @@
           "routing_strategy_hint": "选择凭据选择策略",
           "strategy_round_robin": "轮询 (Round Robin)",
           "strategy_fill_first": "填充优先 (Fill First)",
+          "strategy_random": "随机 (Random)",
+          "enable_gemini_cli_endpoint": "启用 Gemini CLI 内部接口",
+          "enable_gemini_cli_endpoint_desc": "控制 /v1internal:* 接口入口；后端仍要求 API key 且仅允许本机回环访问",
           "force_model_prefix": "强制模型前缀",
           "force_model_prefix_desc": "未带前缀的模型请求只使用无前缀凭据",
           "ws_auth": "WebSocket 认证",
@@ -1273,6 +1284,22 @@
           "switch_preview_model_desc": "配额耗尽时切换到预览版本模型",
           "antigravity_credits": "Antigravity Credits 重试",
           "antigravity_credits_desc": "Antigravity 返回 quota_exhausted 429 时，使用 enabledCreditTypes=[\"GOOGLE_ONE_AI\"] 重试一次"
+        },
+        "maintenance": {
+          "title": "账号自动维护",
+          "description": "失效账号停用、额度撞限禁用与删除队列设置",
+          "enable": "启用自动维护",
+          "enable_desc": "开启后台扫描和处理失效或反复撞额度的账号",
+          "scan_interval_seconds": "扫描间隔 (秒)",
+          "delete_interval_seconds": "删除间隔 (秒)",
+          "delete_status_codes": "立即删除状态码",
+          "delete_status_codes_desc": "用逗号或换行分隔，例如 401, 403",
+          "delete_quota_exceeded": "额度撞限后删除",
+          "delete_quota_exceeded_desc": "达到阈值后将反复 429 的账号加入删除流程",
+          "quota_strike_threshold": "删除阈值",
+          "disable_quota_exceeded": "额度撞限后禁用",
+          "disable_quota_exceeded_desc": "达到阈值后仅禁用账号，不进入删除流程",
+          "disable_quota_strike_threshold": "禁用阈值"
         },
         "streaming": {
           "title": "流式传输配置",
@@ -1353,6 +1380,7 @@
         "validation_blocked": "请先修复表单校验错误再保存",
         "port_range": "请输入 1 到 65535 之间的有效端口",
         "non_negative_integer": "请输入非负整数",
+        "integer_list": "请输入用逗号或换行分隔的整数列表",
         "payload_invalid_number": "请输入有效数字",
         "payload_invalid_boolean": "请选择 true 或 false",
         "payload_invalid_json": "请输入有效的 JSON"

@@ -7,14 +7,23 @@ export type PayloadParamValidationErrorCode =
 export type VisualConfigFieldPath =
   | 'port'
   | 'logsMaxTotalSizeMb'
+  | 'usageStatisticsPersistIntervalSeconds'
   | 'requestRetry'
   | 'maxRetryCredentials'
   | 'maxRetryInterval'
+  | 'authMaintenance.scanIntervalSeconds'
+  | 'authMaintenance.deleteIntervalSeconds'
+  | 'authMaintenance.deleteStatusCodes'
+  | 'authMaintenance.quotaStrikeThreshold'
+  | 'authMaintenance.disableQuotaStrikeThreshold'
   | 'streaming.keepaliveSeconds'
   | 'streaming.bootstrapRetries'
   | 'streaming.nonstreamKeepaliveInterval';
 
-export type VisualConfigValidationErrorCode = 'port_range' | 'non_negative_integer';
+export type VisualConfigValidationErrorCode =
+  | 'port_range'
+  | 'non_negative_integer'
+  | 'integer_list';
 
 export type VisualConfigValidationErrors = Partial<
   Record<VisualConfigFieldPath, VisualConfigValidationErrorCode>
@@ -51,6 +60,17 @@ export interface StreamingConfig {
   nonstreamKeepaliveInterval: string;
 }
 
+export interface AuthMaintenanceVisualConfig {
+  enable: boolean;
+  scanIntervalSeconds: string;
+  deleteIntervalSeconds: string;
+  deleteStatusCodes: string;
+  deleteQuotaExceeded: boolean;
+  quotaStrikeThreshold: string;
+  disableQuotaExceeded: boolean;
+  disableQuotaStrikeThreshold: string;
+}
+
 export type VisualConfigValues = {
   host: string;
   port: string;
@@ -68,7 +88,9 @@ export type VisualConfigValues = {
   loggingToFile: boolean;
   logsMaxTotalSizeMb: string;
   usageStatisticsEnabled: boolean;
+  usageStatisticsPersistIntervalSeconds: string;
   proxyUrl: string;
+  enableGeminiCliEndpoint: boolean;
   forceModelPrefix: boolean;
   requestRetry: string;
   maxRetryCredentials: string;
@@ -76,7 +98,8 @@ export type VisualConfigValues = {
   quotaSwitchProject: boolean;
   quotaSwitchPreviewModel: boolean;
   quotaAntigravityCredits: boolean;
-  routingStrategy: 'round-robin' | 'fill-first';
+  authMaintenance: AuthMaintenanceVisualConfig;
+  routingStrategy: 'round-robin' | 'fill-first' | 'random';
   wsAuth: boolean;
   payloadDefaultRules: PayloadRule[];
   payloadDefaultRawRules: PayloadRule[];
@@ -108,7 +131,9 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   loggingToFile: false,
   logsMaxTotalSizeMb: '',
   usageStatisticsEnabled: false,
+  usageStatisticsPersistIntervalSeconds: '',
   proxyUrl: '',
+  enableGeminiCliEndpoint: false,
   forceModelPrefix: false,
   requestRetry: '',
   maxRetryCredentials: '',
@@ -116,6 +141,16 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   quotaSwitchProject: true,
   quotaSwitchPreviewModel: true,
   quotaAntigravityCredits: true,
+  authMaintenance: {
+    enable: false,
+    scanIntervalSeconds: '30',
+    deleteIntervalSeconds: '5',
+    deleteStatusCodes: '401',
+    deleteQuotaExceeded: false,
+    quotaStrikeThreshold: '6',
+    disableQuotaExceeded: false,
+    disableQuotaStrikeThreshold: '6',
+  },
   routingStrategy: 'round-robin',
   wsAuth: false,
   payloadDefaultRules: [],
