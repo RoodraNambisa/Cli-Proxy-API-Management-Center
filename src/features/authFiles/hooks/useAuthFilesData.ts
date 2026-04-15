@@ -13,6 +13,19 @@ import {
   isRuntimeOnlyAuthFile,
 } from '@/features/authFiles/constants';
 
+const getArchiveDownloadErrorMeta = (
+  err: unknown
+): { status?: number; message: string; unsupported: boolean } => {
+  const status =
+    typeof err === 'object' && err && 'status' in err ? Number((err as { status?: unknown }).status) : undefined;
+  const message = err instanceof Error ? err.message : '';
+  const normalizedMessage = message.trim().toLowerCase();
+  const unsupported =
+    status === 405 || (status === 404 && normalizedMessage !== 'file not found');
+
+  return { status, message, unsupported };
+};
+
 type DeleteAllOptions = {
   filter: string;
   problemOnly: boolean;
@@ -29,6 +42,8 @@ export type UseAuthFilesDataResult = {
   uploading: boolean;
   deleting: string | null;
   deletingAll: boolean;
+  archiveDownloadingSelected: boolean;
+  archiveDownloadingAll: boolean;
   statusUpdating: Record<string, boolean>;
   batchStatusUpdating: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
@@ -44,6 +59,8 @@ export type UseAuthFilesDataResult = {
   invertVisibleSelection: (visibleFiles: AuthFileItem[]) => void;
   deselectAll: () => void;
   batchDownload: (names: string[]) => Promise<void>;
+  batchArchiveDownload: (names: string[]) => Promise<void>;
+  downloadAllArchive: () => Promise<void>;
   batchSetStatus: (names: string[], enabled: boolean) => Promise<void>;
   batchDelete: (names: string[]) => void;
 };
@@ -63,6 +80,8 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [archiveDownloadingSelected, setArchiveDownloadingSelected] = useState(false);
+  const [archiveDownloadingAll, setArchiveDownloadingAll] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
   const [batchStatusUpdating, setBatchStatusUpdating] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
@@ -564,6 +583,59 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     [showNotification, t]
   );
 
+  const batchArchiveDownload = useCallback(
+    async (names: string[]) => {
+      const uniqueNames = Array.from(
+        new Set(
+          names
+            .map((name) => name.trim())
+            .filter(Boolean)
+        )
+      );
+      if (uniqueNames.length === 0 || archiveDownloadingSelected) return;
+
+      setArchiveDownloadingSelected(true);
+      try {
+        const { blob, filename } = await authFilesApi.downloadArchiveByNames(uniqueNames);
+        downloadBlob({ filename, blob });
+        showNotification(
+          t('auth_files.archive_download_selected_success', { count: uniqueNames.length }),
+          'success'
+        );
+      } catch (err: unknown) {
+        const { message, unsupported } = getArchiveDownloadErrorMeta(err);
+        if (unsupported) {
+          showNotification(t('auth_files.archive_download_unsupported'), 'warning');
+        } else {
+          showNotification(`${t('notification.download_failed')}: ${message}`, 'error');
+        }
+      } finally {
+        setArchiveDownloadingSelected(false);
+      }
+    },
+    [archiveDownloadingSelected, showNotification, t]
+  );
+
+  const downloadAllArchive = useCallback(async () => {
+    if (archiveDownloadingAll) return;
+
+    setArchiveDownloadingAll(true);
+    try {
+      const { blob, filename } = await authFilesApi.downloadArchiveAll();
+      downloadBlob({ filename, blob });
+      showNotification(t('auth_files.archive_download_all_success'), 'success');
+    } catch (err: unknown) {
+      const { message, unsupported } = getArchiveDownloadErrorMeta(err);
+      if (unsupported) {
+        showNotification(t('auth_files.archive_download_unsupported'), 'warning');
+      } else {
+        showNotification(`${t('notification.download_failed')}: ${message}`, 'error');
+      }
+    } finally {
+      setArchiveDownloadingAll(false);
+    }
+  }, [archiveDownloadingAll, showNotification, t]);
+
   const batchDelete = useCallback(
     (names: string[]) => {
       const uniqueNames = Array.from(new Set(names));
@@ -613,6 +685,8 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     uploading,
     deleting,
     deletingAll,
+    archiveDownloadingSelected,
+    archiveDownloadingAll,
     statusUpdating,
     batchStatusUpdating,
     fileInputRef,
@@ -628,6 +702,8 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     invertVisibleSelection,
     deselectAll,
     batchDownload,
+    batchArchiveDownload,
+    downloadAllArchive,
     batchSetStatus,
     batchDelete,
   };

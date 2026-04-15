@@ -115,6 +115,8 @@ export function AuthFilesPage() {
     uploading,
     deleting,
     deletingAll,
+    archiveDownloadingSelected,
+    archiveDownloadingAll,
     statusUpdating,
     batchStatusUpdating,
     fileInputRef,
@@ -130,6 +132,8 @@ export function AuthFilesPage() {
     invertVisibleSelection,
     deselectAll,
     batchDownload,
+    batchArchiveDownload,
+    downloadAllArchive,
     batchSetStatus,
     batchDelete,
   } = useAuthFilesData({ refreshKeyStats });
@@ -665,6 +669,15 @@ export function AuthFilesPage() {
               {t('auth_files.upload_button')}
             </Button>
             <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void downloadAllArchive()}
+              disabled={disableControls || archiveDownloadingAll}
+              loading={archiveDownloadingAll}
+            >
+              {t('auth_files.archive_download_all')}
+            </Button>
+            <Button
               variant="danger"
               size="sm"
               onClick={() =>
@@ -933,6 +946,15 @@ export function AuthFilesPage() {
                     disabled={disableControls || selectedNames.length === 0}
                   >
                     {t('auth_files.batch_download')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void batchArchiveDownload(selectedNames)}
+                    disabled={disableControls || selectedNames.length === 0 || archiveDownloadingSelected}
+                    loading={archiveDownloadingSelected}
+                  >
+                    {t('auth_files.archive_download_selected')}
                   </Button>
                   <Button
                     size="sm"

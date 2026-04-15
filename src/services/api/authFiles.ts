@@ -7,9 +7,15 @@ import type { AuthFilesResponse } from '@/types/authFile';
 import type { OAuthModelAliasEntry } from '@/types';
 
 type StatusError = { status?: number };
+type RawHeaders = Record<string, unknown> | undefined;
 type AuthFileStatusResponse = { status: string; disabled: boolean };
 type AuthFileEntry = AuthFilesResponse['files'][number];
 type AuthFileBatchFailure = { name: string; error: string };
+type AuthFileArchiveRequest = { names: string[] } | { all: true };
+type AuthFileArchiveResult = {
+  blob: Blob;
+  filename: string;
+};
 type AuthFileBatchUploadResponse = {
   status?: string;
   uploaded?: number;
@@ -41,6 +47,52 @@ const getStatusCode = (err: unknown): number | undefined => {
   if (!err || typeof err !== 'object') return undefined;
   if ('status' in err) return (err as StatusError).status;
   return undefined;
+};
+
+const readHeaderValue = (headers: RawHeaders, key: string): string | null => {
+  if (!headers) return null;
+
+  const headerGetter = (headers as { get?: (name: string) => unknown }).get;
+  if (typeof headerGetter === 'function') {
+    const value = headerGetter.call(headers, key);
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  const entry = headers[key] ?? headers[key.toLowerCase()] ?? headers[key.toUpperCase()];
+  if (Array.isArray(entry)) {
+    const matched = entry.find((value) => typeof value === 'string' && value.trim());
+    return typeof matched === 'string' ? matched.trim() : null;
+  }
+  return typeof entry === 'string' && entry.trim() ? entry.trim() : null;
+};
+
+const parseDownloadFilename = (headers: RawHeaders, fallback: string): string => {
+  const disposition = readHeaderValue(headers, 'content-disposition');
+  if (!disposition) return fallback;
+
+  const utf8Match = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      const decoded = decodeURIComponent(utf8Match[1].trim());
+      if (decoded) return decoded;
+    } catch {
+      // Ignore malformed RFC5987 filename values and continue falling back.
+    }
+  }
+
+  const quotedMatch = disposition.match(/filename\s*=\s*"([^"]+)"/i);
+  if (quotedMatch?.[1]?.trim()) {
+    return quotedMatch[1].trim();
+  }
+
+  const plainMatch = disposition.match(/filename\s*=\s*([^;]+)/i);
+  if (plainMatch?.[1]?.trim()) {
+    return plainMatch[1].trim();
+  }
+
+  return fallback;
 };
 
 const normalizeRequestedAuthFileNames = (names: string[]): string[] => {
@@ -393,6 +445,22 @@ const normalizeOauthModelAlias = (payload: unknown): Record<string, OAuthModelAl
 };
 
 const OAUTH_MODEL_ALIAS_ENDPOINT = '/oauth-model-alias';
+const AUTH_FILES_ARCHIVE_FALLBACK_NAME = 'auth-files.zip';
+
+const downloadAuthFilesArchive = async (
+  payload: AuthFileArchiveRequest
+): Promise<AuthFileArchiveResult> => {
+  const response = await apiClient.requestRaw({
+    url: '/auth-files/archive',
+    method: 'POST',
+    data: payload,
+    responseType: 'blob',
+  });
+
+  const blob = response.data instanceof Blob ? response.data : new Blob([response.data]);
+  const filename = parseDownloadFilename(response.headers as RawHeaders, AUTH_FILES_ARCHIVE_FALLBACK_NAME);
+  return { blob, filename };
+};
 
 export const authFilesApi = {
   list: async () => dedupeAuthFilesResponse(await apiClient.get<AuthFilesResponse>('/auth-files')),
@@ -431,6 +499,20 @@ export const authFilesApi = {
   deleteFile: (name: string) => authFilesApi.deleteFiles([name]),
 
   deleteAll: () => apiClient.delete('/auth-files', { params: { all: true } }),
+
+  downloadArchiveByNames: async (names: string[]): Promise<AuthFileArchiveResult> => {
+    const requestedNames = normalizeRequestedAuthFileNames(names);
+    if (requestedNames.length === 0) {
+      return {
+        blob: new Blob([], { type: 'application/zip' }),
+        filename: AUTH_FILES_ARCHIVE_FALLBACK_NAME,
+      };
+    }
+    return downloadAuthFilesArchive({ names: requestedNames });
+  },
+
+  downloadArchiveAll: async (): Promise<AuthFileArchiveResult> =>
+    downloadAuthFilesArchive({ all: true }),
 
   downloadText: async (name: string): Promise<string> => {
     const response = await apiClient.getRaw(`/auth-files/download?name=${encodeURIComponent(name)}`, {
