@@ -501,6 +501,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       unsupportedStatusCode: normalizeNumber(
         images['unsupported-status-code'] ?? images.unsupportedStatusCode
       ),
+      overrideUnsupportedParams: normalizeBoolean(
+        images['override-unsupported-params'] ?? images.overrideUnsupportedParams
+      ),
     };
   }
   const routing = raw.routing;

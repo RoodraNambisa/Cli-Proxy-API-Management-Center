@@ -853,6 +853,13 @@ function getNextDirtyFields(
         nextValues.images.enableNAggregation === baselineValues.images.enableNAggregation
       );
     }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'overrideUnsupportedParams')) {
+      updateDirty(
+        'images.overrideUnsupportedParams',
+        nextValues.images.overrideUnsupportedParams ===
+          baselineValues.images.overrideUnsupportedParams
+      );
+    }
     if (Object.prototype.hasOwnProperty.call(imagesPatch, 'unsupportedStatusCode')) {
       updateDirty(
         'images.unsupportedStatusCode',
@@ -1104,6 +1111,9 @@ export function useVisualConfig() {
             images?.enableNAggregation === undefined
               ? DEFAULT_VISUAL_VALUES.images.enableNAggregation
               : Boolean(images?.['enable-n-aggregation'] ?? images?.enableNAggregation),
+          overrideUnsupportedParams: Boolean(
+            images?.['override-unsupported-params'] ?? images?.overrideUnsupportedParams
+          ),
           unsupportedStatusCode:
             images?.['unsupported-status-code'] === undefined &&
             images?.unsupportedStatusCode === undefined
@@ -1311,12 +1321,17 @@ export function useVisualConfig() {
           values.images.codexModel !== imagesDefaults.codexModel ||
           values.images.imageModel !== imagesDefaults.imageModel ||
           values.images.enableNAggregation !== imagesDefaults.enableNAggregation ||
+          values.images.overrideUnsupportedParams !== imagesDefaults.overrideUnsupportedParams ||
           values.images.unsupportedStatusCode !== imagesDefaults.unsupportedStatusCode;
         if (imagesDefined) {
           ensureMapInDoc(doc, ['images']);
           setStringInDoc(doc, ['images', 'codex-model'], values.images.codexModel);
           setStringInDoc(doc, ['images', 'image-model'], values.images.imageModel);
           doc.setIn(['images', 'enable-n-aggregation'], values.images.enableNAggregation);
+          doc.setIn(
+            ['images', 'override-unsupported-params'],
+            values.images.overrideUnsupportedParams
+          );
           setIntFromStringInDoc(
             doc,
             ['images', 'unsupported-status-code'],

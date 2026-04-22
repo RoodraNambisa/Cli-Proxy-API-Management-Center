@@ -77,6 +77,7 @@ export interface ImagesVisualConfig {
   codexModel: string;
   imageModel: string;
   enableNAggregation: boolean;
+  overrideUnsupportedParams: boolean;
   unsupportedStatusCode: string;
 }
 
@@ -166,7 +167,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   images: {
     codexModel: 'gpt-5.4',
     imageModel: 'gpt-image-2',
-    enableNAggregation: true,
+    enableNAggregation: false,
+    overrideUnsupportedParams: false,
     unsupportedStatusCode: '400',
   },
   routingStrategy: 'round-robin',

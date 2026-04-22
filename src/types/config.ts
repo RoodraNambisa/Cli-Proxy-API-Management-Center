@@ -28,6 +28,7 @@ export interface ImagesConfig {
   imageModel?: string;
   enableNAggregation?: boolean;
   unsupportedStatusCode?: number;
+  overrideUnsupportedParams?: boolean;
 }
 
 export interface Config {

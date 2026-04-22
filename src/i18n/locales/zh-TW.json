@@ -1290,7 +1290,9 @@
           "image_model": "圖片工具模型",
           "image_model_hint": "透過 /v1/images/* 暴露的 image_generation tool 模型，預設 gpt-image-2",
           "enable_n_aggregation": "啟用 n 聚合",
-          "enable_n_aggregation_desc": "開啟後 n > 1 會拆成多次 Codex 圖片呼叫並聚合結果；關閉後直接回傳不支援錯誤",
+          "enable_n_aggregation_desc": "預設關閉；開啟後 n > 1 會拆成多次 Codex 圖片呼叫並聚合結果，關閉後直接回傳不支援錯誤",
+          "override_unsupported_params": "覆蓋不支援參數",
+          "override_unsupported_params_desc": "預設關閉；開啟後將 response_format=url 歸一為 b64_json，並將 background=transparent 歸一為 auto",
           "unsupported_status_code": "不支援參數狀態碼",
           "unsupported_status_code_hint": "response_format=url、transparent background、file_id 等不支援能力回傳的 HTTP 狀態碼，範圍 400-599"
         },

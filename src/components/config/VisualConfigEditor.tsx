@@ -1084,6 +1084,22 @@ export function VisualConfigEditor({
                     })
                   }
                 />
+                <ToggleRow
+                  title={t('config_management.visual.sections.images.override_unsupported_params')}
+                  description={t(
+                    'config_management.visual.sections.images.override_unsupported_params_desc'
+                  )}
+                  checked={values.images.overrideUnsupportedParams}
+                  disabled={disabled}
+                  onChange={(overrideUnsupportedParams) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        overrideUnsupportedParams,
+                      },
+                    })
+                  }
+                />
               </SectionGrid>
             </SectionStack>
           </ConfigSection>

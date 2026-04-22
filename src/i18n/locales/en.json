@@ -1263,7 +1263,9 @@
           "image_model": "Image Tool Model",
           "image_model_hint": "image_generation tool model exposed through /v1/images/*, defaults to gpt-image-2",
           "enable_n_aggregation": "Enable n Aggregation",
-          "enable_n_aggregation_desc": "When enabled, n > 1 is split into multiple Codex image calls and aggregated; when disabled, n > 1 returns an unsupported option error",
+          "enable_n_aggregation_desc": "Disabled by default. When enabled, n > 1 is split into multiple Codex image calls and aggregated; when disabled, n > 1 returns an unsupported option error",
+          "override_unsupported_params": "Override Unsupported Params",
+          "override_unsupported_params_desc": "Disabled by default. When enabled, response_format=url is coerced to b64_json and background=transparent is coerced to auto",
           "unsupported_status_code": "Unsupported Option Status Code",
           "unsupported_status_code_hint": "HTTP status code for unsupported capabilities such as response_format=url, transparent background, or file_id. Range: 400-599"
         },
