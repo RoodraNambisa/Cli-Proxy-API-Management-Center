@@ -23,6 +23,13 @@ export interface AuthMaintenanceConfig {
   disableQuotaStrikeThreshold?: number;
 }
 
+export interface ImagesConfig {
+  codexModel?: string;
+  imageModel?: string;
+  enableNAggregation?: boolean;
+  unsupportedStatusCode?: number;
+}
+
 export interface Config {
   debug?: boolean;
   proxyUrl?: string;
@@ -37,6 +44,7 @@ export interface Config {
   enableGeminiCliEndpoint?: boolean;
   forceModelPrefix?: boolean;
   authMaintenance?: AuthMaintenanceConfig;
+  images?: ImagesConfig;
   routingStrategy?: string;
   apiKeys?: string[];
   ampcode?: AmpcodeConfig;
@@ -63,6 +71,7 @@ export type RawConfigSection =
   | 'enable-gemini-cli-endpoint'
   | 'force-model-prefix'
   | 'auth-maintenance'
+  | 'images'
   | 'routing/strategy'
   | 'api-keys'
   | 'ampcode'

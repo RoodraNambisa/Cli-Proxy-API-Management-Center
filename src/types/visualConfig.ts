@@ -16,12 +16,14 @@ export type VisualConfigFieldPath =
   | 'authMaintenance.deleteStatusCodes'
   | 'authMaintenance.quotaStrikeThreshold'
   | 'authMaintenance.disableQuotaStrikeThreshold'
+  | 'images.unsupportedStatusCode'
   | 'streaming.keepaliveSeconds'
   | 'streaming.bootstrapRetries'
   | 'streaming.nonstreamKeepaliveInterval';
 
 export type VisualConfigValidationErrorCode =
   | 'port_range'
+  | 'http_status_range'
   | 'non_negative_integer'
   | 'integer_list';
 
@@ -71,6 +73,13 @@ export interface AuthMaintenanceVisualConfig {
   disableQuotaStrikeThreshold: string;
 }
 
+export interface ImagesVisualConfig {
+  codexModel: string;
+  imageModel: string;
+  enableNAggregation: boolean;
+  unsupportedStatusCode: string;
+}
+
 export type VisualConfigValues = {
   host: string;
   port: string;
@@ -99,6 +108,7 @@ export type VisualConfigValues = {
   quotaSwitchPreviewModel: boolean;
   quotaAntigravityCredits: boolean;
   authMaintenance: AuthMaintenanceVisualConfig;
+  images: ImagesVisualConfig;
   routingStrategy: 'round-robin' | 'fill-first' | 'random';
   routingSessionAffinity: boolean;
   routingSessionAffinityTTL: string;
@@ -152,6 +162,12 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     quotaStrikeThreshold: '6',
     disableQuotaExceeded: false,
     disableQuotaStrikeThreshold: '6',
+  },
+  images: {
+    codexModel: 'gpt-5.4',
+    imageModel: 'gpt-image-2',
+    enableNAggregation: true,
+    unsupportedStatusCode: '400',
   },
   routingStrategy: 'round-robin',
   routingSessionAffinity: false,

@@ -1254,6 +1254,18 @@
           "ws_auth": "Аутентификация WebSocket",
           "ws_auth_desc": "Включить аутентификацию WebSocket (/v1/ws)"
         },
+        "images": {
+          "title": "Совместимость OpenAI Images",
+          "description": "Проксирование OpenAI Images API через Codex Responses image_generation tool",
+          "codex_model": "Внешняя модель Codex",
+          "codex_model_hint": "Модель Responses для вызова image_generation tool, по умолчанию gpt-5.4",
+          "image_model": "Модель image tool",
+          "image_model_hint": "Модель image_generation tool, доступная через /v1/images/*, по умолчанию gpt-image-2",
+          "enable_n_aggregation": "Включить агрегацию n",
+          "enable_n_aggregation_desc": "Если включено, n > 1 разбивается на несколько Codex image-вызовов и агрегируется; если выключено, n > 1 возвращает ошибку неподдерживаемой опции",
+          "unsupported_status_code": "HTTP-код неподдерживаемой опции",
+          "unsupported_status_code_hint": "HTTP-код для неподдерживаемых возможностей, например response_format=url, transparent background или file_id. Диапазон: 400-599"
+        },
         "quota": {
           "title": "Резерв по квоте",
           "description": "Стратегия при превышении квоты",
@@ -1360,6 +1372,7 @@
         "port_range": "Введите корректный порт от 1 до 65535",
         "non_negative_integer": "Введите неотрицательное целое число",
         "integer_list": "Введите список целых чисел через запятую или перевод строки",
+        "http_status_range": "Введите HTTP-код состояния от 400 до 599",
         "payload_invalid_number": "Введите корректное число",
         "payload_invalid_boolean": "Выберите true или false",
         "payload_invalid_json": "Введите корректный JSON"

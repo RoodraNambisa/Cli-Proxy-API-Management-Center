@@ -1255,6 +1255,18 @@
           "ws_auth": "WebSocket Authentication",
           "ws_auth_desc": "Enable WebSocket authentication (/v1/ws)"
         },
+        "images": {
+          "title": "OpenAI Images Compatibility",
+          "description": "Proxy OpenAI Images API through the Codex Responses image_generation tool",
+          "codex_model": "Codex Outer Model",
+          "codex_model_hint": "Responses model used to invoke the image_generation tool, defaults to gpt-5.4",
+          "image_model": "Image Tool Model",
+          "image_model_hint": "image_generation tool model exposed through /v1/images/*, defaults to gpt-image-2",
+          "enable_n_aggregation": "Enable n Aggregation",
+          "enable_n_aggregation_desc": "When enabled, n > 1 is split into multiple Codex image calls and aggregated; when disabled, n > 1 returns an unsupported option error",
+          "unsupported_status_code": "Unsupported Option Status Code",
+          "unsupported_status_code_hint": "HTTP status code for unsupported capabilities such as response_format=url, transparent background, or file_id. Range: 400-599"
+        },
         "quota": {
           "title": "Quota Fallback",
           "description": "Fallback strategy when quota is exceeded",
@@ -1361,6 +1373,7 @@
         "port_range": "Enter a valid port between 1 and 65535",
         "non_negative_integer": "Enter a non-negative whole number",
         "integer_list": "Enter integers separated by commas or line breaks",
+        "http_status_range": "Enter an HTTP status code between 400 and 599",
         "payload_invalid_number": "Enter a valid number",
         "payload_invalid_boolean": "Choose true or false",
         "payload_invalid_json": "Enter valid JSON"

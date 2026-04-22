@@ -216,6 +216,14 @@ function getPortError(value: string): 'port_range' | undefined {
   return parsed >= 1 && parsed <= 65535 ? undefined : 'port_range';
 }
 
+function getHttpStatusRangeError(value: string): 'http_status_range' | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (!/^\d+$/.test(trimmed)) return 'http_status_range';
+  const parsed = Number(trimmed);
+  return parsed >= 400 && parsed <= 599 ? undefined : 'http_status_range';
+}
+
 export function getVisualConfigValidationErrors(
   values: VisualConfigValues
 ): VisualConfigValidationErrors {
@@ -243,6 +251,7 @@ export function getVisualConfigValidationErrors(
     'authMaintenance.disableQuotaStrikeThreshold': getNonNegativeIntegerError(
       values.authMaintenance.disableQuotaStrikeThreshold
     ),
+    'images.unsupportedStatusCode': getHttpStatusRangeError(values.images.unsupportedStatusCode),
     'streaming.keepaliveSeconds': getNonNegativeIntegerError(values.streaming.keepaliveSeconds),
     'streaming.bootstrapRetries': getNonNegativeIntegerError(values.streaming.bootstrapRetries),
     'streaming.nonstreamKeepaliveInterval': getNonNegativeIntegerError(
@@ -627,6 +636,9 @@ function mergeVisualConfigValues(
   if (patch.authMaintenance) {
     nextValues.authMaintenance = { ...currentValues.authMaintenance, ...patch.authMaintenance };
   }
+  if (patch.images) {
+    nextValues.images = { ...currentValues.images, ...patch.images };
+  }
   if (patch.streaming) {
     nextValues.streaming = { ...currentValues.streaming, ...patch.streaming };
   }
@@ -813,13 +825,38 @@ function getNextDirtyFields(
           baselineValues.authMaintenance.disableQuotaExceeded
       );
     }
-    if (
-      Object.prototype.hasOwnProperty.call(authMaintenancePatch, 'disableQuotaStrikeThreshold')
-    ) {
+    if (Object.prototype.hasOwnProperty.call(authMaintenancePatch, 'disableQuotaStrikeThreshold')) {
       updateDirty(
         'authMaintenance.disableQuotaStrikeThreshold',
         nextValues.authMaintenance.disableQuotaStrikeThreshold ===
           baselineValues.authMaintenance.disableQuotaStrikeThreshold
+      );
+    }
+  }
+  if (patch.images) {
+    const imagesPatch = patch.images;
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'codexModel')) {
+      updateDirty(
+        'images.codexModel',
+        nextValues.images.codexModel === baselineValues.images.codexModel
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'imageModel')) {
+      updateDirty(
+        'images.imageModel',
+        nextValues.images.imageModel === baselineValues.images.imageModel
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'enableNAggregation')) {
+      updateDirty(
+        'images.enableNAggregation',
+        nextValues.images.enableNAggregation === baselineValues.images.enableNAggregation
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'unsupportedStatusCode')) {
+      updateDirty(
+        'images.unsupportedStatusCode',
+        nextValues.images.unsupportedStatusCode === baselineValues.images.unsupportedStatusCode
       );
     }
   }
@@ -973,6 +1010,7 @@ export function useVisualConfig() {
       const remoteManagement = asRecord(parsed['remote-management']);
       const quotaExceeded = asRecord(parsed['quota-exceeded']);
       const authMaintenance = asRecord(parsed['auth-maintenance']);
+      const images = asRecord(parsed.images);
       const routing = asRecord(parsed.routing);
       const payload = asRecord(parsed.payload);
       const streaming = asRecord(parsed.streaming);
@@ -1048,6 +1086,31 @@ export function useVisualConfig() {
               : String(authMaintenance['disable-quota-strike-threshold'] ?? ''),
         },
 
+        images: {
+          codexModel:
+            typeof images?.['codex-model'] === 'string'
+              ? images['codex-model']
+              : typeof images?.codexModel === 'string'
+                ? images.codexModel
+                : DEFAULT_VISUAL_VALUES.images.codexModel,
+          imageModel:
+            typeof images?.['image-model'] === 'string'
+              ? images['image-model']
+              : typeof images?.imageModel === 'string'
+                ? images.imageModel
+                : DEFAULT_VISUAL_VALUES.images.imageModel,
+          enableNAggregation:
+            images?.['enable-n-aggregation'] === undefined &&
+            images?.enableNAggregation === undefined
+              ? DEFAULT_VISUAL_VALUES.images.enableNAggregation
+              : Boolean(images?.['enable-n-aggregation'] ?? images?.enableNAggregation),
+          unsupportedStatusCode:
+            images?.['unsupported-status-code'] === undefined &&
+            images?.unsupportedStatusCode === undefined
+              ? DEFAULT_VISUAL_VALUES.images.unsupportedStatusCode
+              : String(images?.['unsupported-status-code'] ?? images?.unsupportedStatusCode ?? ''),
+        },
+
         routingStrategy:
           routing?.strategy === 'fill-first'
             ? 'fill-first'
@@ -1055,9 +1118,7 @@ export function useVisualConfig() {
               ? 'random'
               : 'round-robin',
         routingSessionAffinity: Boolean(
-          routing?.['session-affinity'] ??
-            routing?.sessionAffinity ??
-            routing?.['sessionAffinity']
+          routing?.['session-affinity'] ?? routing?.sessionAffinity ?? routing?.['sessionAffinity']
         ),
         routingSessionAffinityTTL:
           typeof routing?.['session-affinity-ttl'] === 'string'
@@ -1168,11 +1229,7 @@ export function useVisualConfig() {
         }
 
         setStringInDoc(doc, ['proxy-url'], values.proxyUrl);
-        setBooleanInDoc(
-          doc,
-          ['enable-gemini-cli-endpoint'],
-          values.enableGeminiCliEndpoint
-        );
+        setBooleanInDoc(doc, ['enable-gemini-cli-endpoint'], values.enableGeminiCliEndpoint);
         setBooleanInDoc(doc, ['force-model-prefix'], values.forceModelPrefix);
         setIntFromStringInDoc(doc, ['request-retry'], values.requestRetry);
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
@@ -1188,10 +1245,7 @@ export function useVisualConfig() {
           ensureMapInDoc(doc, ['quota-exceeded']);
           doc.setIn(['quota-exceeded', 'switch-project'], values.quotaSwitchProject);
           doc.setIn(['quota-exceeded', 'switch-preview-model'], values.quotaSwitchPreviewModel);
-          doc.setIn(
-            ['quota-exceeded', 'antigravity-credits'],
-            values.quotaAntigravityCredits
-          );
+          doc.setIn(['quota-exceeded', 'antigravity-credits'], values.quotaAntigravityCredits);
           deleteIfMapEmpty(doc, ['quota-exceeded']);
         }
 
@@ -1203,8 +1257,7 @@ export function useVisualConfig() {
             authMaintenanceDefaults.scanIntervalSeconds ||
           values.authMaintenance.deleteIntervalSeconds !==
             authMaintenanceDefaults.deleteIntervalSeconds ||
-          values.authMaintenance.deleteStatusCodes !==
-            authMaintenanceDefaults.deleteStatusCodes ||
+          values.authMaintenance.deleteStatusCodes !== authMaintenanceDefaults.deleteStatusCodes ||
           values.authMaintenance.deleteQuotaExceeded !==
             authMaintenanceDefaults.deleteQuotaExceeded ||
           values.authMaintenance.quotaStrikeThreshold !==
@@ -1250,6 +1303,26 @@ export function useVisualConfig() {
             values.authMaintenance.disableQuotaStrikeThreshold
           );
           deleteIfMapEmpty(doc, ['auth-maintenance']);
+        }
+
+        const imagesDefaults = DEFAULT_VISUAL_VALUES.images;
+        const imagesDefined =
+          docHas(doc, ['images']) ||
+          values.images.codexModel !== imagesDefaults.codexModel ||
+          values.images.imageModel !== imagesDefaults.imageModel ||
+          values.images.enableNAggregation !== imagesDefaults.enableNAggregation ||
+          values.images.unsupportedStatusCode !== imagesDefaults.unsupportedStatusCode;
+        if (imagesDefined) {
+          ensureMapInDoc(doc, ['images']);
+          setStringInDoc(doc, ['images', 'codex-model'], values.images.codexModel);
+          setStringInDoc(doc, ['images', 'image-model'], values.images.imageModel);
+          doc.setIn(['images', 'enable-n-aggregation'], values.images.enableNAggregation);
+          setIntFromStringInDoc(
+            doc,
+            ['images', 'unsupported-status-code'],
+            values.images.unsupportedStatusCode
+          );
+          deleteIfMapEmpty(doc, ['images']);
         }
 
         if (

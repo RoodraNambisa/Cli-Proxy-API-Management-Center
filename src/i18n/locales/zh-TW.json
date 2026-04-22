@@ -1246,7 +1246,9 @@
           "logging_to_file_desc": "將記錄儲存到檔案",
           "usage_statistics": "使用統計",
           "usage_statistics_desc": "收集使用統計資訊",
-          "logs_max_size": "記錄檔大小限制（MB）"
+          "logs_max_size": "記錄檔大小限制（MB）",
+          "usage_statistics_persist": "統計快照落盤間隔（秒）",
+          "usage_statistics_persist_desc": "設定為 0 或留空表示停用自動快照落盤"
         },
         "network": {
           "title": "網路設定",
@@ -1260,7 +1262,10 @@
           "routing_strategy_hint": "選擇憑證選擇策略",
           "strategy_round_robin": "輪詢（Round Robin）",
           "strategy_fill_first": "填充優先（Fill First）",
+          "strategy_random": "隨機（Random）",
           "session_affinity_ttl": "會話黏性 TTL",
+          "enable_gemini_cli_endpoint": "啟用 Gemini CLI 內部介面",
+          "enable_gemini_cli_endpoint_desc": "控制 /v1internal:* 介面入口；後端仍要求 API key 且僅允許本機 loopback 存取",
           "force_model_prefix": "強制模型前綴",
           "force_model_prefix_desc": "未帶前綴的模型請求只使用無前綴憑證",
           "session_affinity": "會話黏性路由",
@@ -1276,6 +1281,34 @@
           "switch_preview_model_desc": "配額耗盡時切換到預覽版本模型",
           "antigravity_credits": "Antigravity Credits 重試",
           "antigravity_credits_desc": "Antigravity 回傳 quota_exhausted 429 時，使用 enabledCreditTypes=[\"GOOGLE_ONE_AI\"] 重試一次"
+        },
+        "images": {
+          "title": "OpenAI Images 相容",
+          "description": "透過 Codex Responses 的 image_generation tool 代理 OpenAI Images API",
+          "codex_model": "Codex 外層模型",
+          "codex_model_hint": "用於呼叫 image_generation tool 的 Responses 模型，預設 gpt-5.4",
+          "image_model": "圖片工具模型",
+          "image_model_hint": "透過 /v1/images/* 暴露的 image_generation tool 模型，預設 gpt-image-2",
+          "enable_n_aggregation": "啟用 n 聚合",
+          "enable_n_aggregation_desc": "開啟後 n > 1 會拆成多次 Codex 圖片呼叫並聚合結果；關閉後直接回傳不支援錯誤",
+          "unsupported_status_code": "不支援參數狀態碼",
+          "unsupported_status_code_hint": "response_format=url、transparent background、file_id 等不支援能力回傳的 HTTP 狀態碼，範圍 400-599"
+        },
+        "maintenance": {
+          "title": "帳號自動維護",
+          "description": "失效帳號停用、額度撞限停用與刪除佇列設定",
+          "enable": "啟用自動維護",
+          "enable_desc": "開啟背景掃描和處理失效或反覆撞額度的帳號",
+          "scan_interval_seconds": "掃描間隔（秒）",
+          "delete_interval_seconds": "刪除間隔（秒）",
+          "delete_status_codes": "立即刪除狀態碼",
+          "delete_status_codes_desc": "用逗號或換行分隔，例如 401, 403",
+          "delete_quota_exceeded": "額度撞限後刪除",
+          "delete_quota_exceeded_desc": "達到閾值後將反覆 429 的帳號加入刪除流程",
+          "quota_strike_threshold": "刪除閾值",
+          "disable_quota_exceeded": "額度撞限後停用",
+          "disable_quota_exceeded_desc": "達到閾值後僅停用帳號，不進入刪除流程",
+          "disable_quota_strike_threshold": "停用閾值"
         },
         "streaming": {
           "title": "串流傳輸設定",
@@ -1356,6 +1389,8 @@
         "validation_blocked": "請先修復表單驗證錯誤再儲存",
         "port_range": "請輸入 1 到 65535 之間的有效連接埠",
         "non_negative_integer": "請輸入非負整數",
+        "integer_list": "請輸入用逗號或換行分隔的整數列表",
+        "http_status_range": "請輸入 400 到 599 之間的 HTTP 狀態碼",
         "payload_invalid_number": "請輸入有效數字",
         "payload_invalid_boolean": "請選擇 true 或 false",
         "payload_invalid_json": "請輸入有效的 JSON"

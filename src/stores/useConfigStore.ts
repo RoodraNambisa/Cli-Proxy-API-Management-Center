@@ -47,6 +47,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'enable-gemini-cli-endpoint',
   'force-model-prefix',
   'auth-maintenance',
+  'images',
   'routing/strategy',
   'api-keys',
   'ampcode',
@@ -55,7 +56,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'claude-api-key',
   'vertex-api-key',
   'openai-compatibility',
-  'oauth-excluded-models'
+  'oauth-excluded-models',
 ];
 
 const extractSectionValue = (config: Config | null, section?: RawConfigSection) => {
@@ -87,6 +88,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.forceModelPrefix;
     case 'auth-maintenance':
       return config.authMaintenance;
+    case 'images':
+      return config.images;
     case 'routing/strategy':
       return config.routingStrategy;
     case 'api-keys':
@@ -171,17 +174,21 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       set({
         config: data,
         cache: newCache,
-        loading: false
+        loading: false,
       });
 
       return section ? extractSectionValue(data, section) : data;
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : typeof error === 'string' ? error : 'Failed to fetch config';
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'Failed to fetch config';
       if (requestId === configRequestToken) {
         set({
           error: message || 'Failed to fetch config',
-          loading: false
+          loading: false,
         });
       }
       throw error;
@@ -238,6 +245,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'auth-maintenance':
           nextConfig.authMaintenance = value as Config['authMaintenance'];
+          break;
+        case 'images':
+          nextConfig.images = value as Config['images'];
           break;
         case 'routing/strategy':
           nextConfig.routingStrategy = value as Config['routingStrategy'];
@@ -312,5 +322,5 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     if (!cached) return false;
 
     return Date.now() - cached.timestamp < CACHE_EXPIRY_MS;
-  }
+  },
 }));

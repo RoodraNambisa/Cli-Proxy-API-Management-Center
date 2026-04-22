@@ -1255,6 +1255,18 @@
           "ws_auth": "WebSocket 认证",
           "ws_auth_desc": "启用 WebSocket 连接认证 (/v1/ws)"
         },
+        "images": {
+          "title": "OpenAI Images 兼容",
+          "description": "通过 Codex Responses 的 image_generation tool 代理 OpenAI Images API",
+          "codex_model": "Codex 外层模型",
+          "codex_model_hint": "用于调用 image_generation tool 的 Responses 模型，默认 gpt-5.4",
+          "image_model": "图片工具模型",
+          "image_model_hint": "通过 /v1/images/* 暴露的 image_generation tool 模型，默认 gpt-image-2",
+          "enable_n_aggregation": "启用 n 聚合",
+          "enable_n_aggregation_desc": "开启后 n > 1 会拆成多次 Codex 图片调用并聚合结果；关闭后直接返回不支持错误",
+          "unsupported_status_code": "不支持参数状态码",
+          "unsupported_status_code_hint": "response_format=url、transparent background、file_id 等不支持能力返回的 HTTP 状态码，范围 400-599"
+        },
         "quota": {
           "title": "配额回退",
           "description": "配额耗尽时的回退策略",
@@ -1361,6 +1373,7 @@
         "port_range": "请输入 1 到 65535 之间的有效端口",
         "non_negative_integer": "请输入非负整数",
         "integer_list": "请输入用逗号或换行分隔的整数列表",
+        "http_status_range": "请输入 400 到 599 之间的 HTTP 状态码",
         "payload_invalid_number": "请输入有效数字",
         "payload_invalid_boolean": "请选择 true 或 false",
         "payload_invalid_json": "请输入有效的 JSON"

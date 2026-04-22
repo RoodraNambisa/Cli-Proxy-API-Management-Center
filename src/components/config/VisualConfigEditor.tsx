@@ -51,6 +51,7 @@ type VisualSectionId =
   | 'auth'
   | 'system'
   | 'network'
+  | 'images'
   | 'quota'
   | 'maintenance'
   | 'streaming'
@@ -220,6 +221,10 @@ export function VisualConfigEditor({
   const requestRetryError = getValidationMessage(t, validationErrors?.requestRetry);
   const maxRetryCredentialsError = getValidationMessage(t, validationErrors?.maxRetryCredentials);
   const maxRetryIntervalError = getValidationMessage(t, validationErrors?.maxRetryInterval);
+  const imagesUnsupportedStatusCodeError = getValidationMessage(
+    t,
+    validationErrors?.['images.unsupportedStatusCode']
+  );
   const authMaintenanceScanIntervalError = getValidationMessage(
     t,
     validationErrors?.['authMaintenance.scanIntervalSeconds']
@@ -316,10 +321,7 @@ export function VisualConfigEditor({
         title: t('config_management.visual.sections.system.title'),
         description: t('config_management.visual.sections.system.description'),
         icon: IconDiamond,
-        errorCount: countErrors([
-          'logsMaxTotalSizeMb',
-          'usageStatisticsPersistIntervalSeconds',
-        ]),
+        errorCount: countErrors(['logsMaxTotalSizeMb', 'usageStatisticsPersistIntervalSeconds']),
       },
       {
         id: 'network',
@@ -327,6 +329,13 @@ export function VisualConfigEditor({
         description: t('config_management.visual.sections.network.description'),
         icon: IconTrendingUp,
         errorCount: countErrors(['requestRetry', 'maxRetryCredentials', 'maxRetryInterval']),
+      },
+      {
+        id: 'images',
+        title: t('config_management.visual.sections.images.title'),
+        description: t('config_management.visual.sections.images.description'),
+        icon: IconDiamond,
+        errorCount: countErrors(['images.unsupportedStatusCode']),
       },
       {
         id: 'quota',
@@ -375,7 +384,7 @@ export function VisualConfigEditor({
   const focusSections = useMemo(
     () =>
       sections.filter((section) =>
-        ['server', 'network', 'maintenance', 'payload'].includes(section.id)
+        ['server', 'network', 'images', 'maintenance', 'payload'].includes(section.id)
       ),
     [sections]
   );
@@ -487,7 +496,8 @@ export function VisualConfigEditor({
         220
       );
       const maxHeight = Math.max(window.innerHeight - top - viewportPadding, 160);
-      const isVisible = workspaceRect.bottom > stickyTop + 24 && anchorRect.top < window.innerHeight;
+      const isVisible =
+        workspaceRect.bottom > stickyTop + 24 && anchorRect.top < window.innerHeight;
 
       floatingElement.style.transform = `translate3d(${left}px, ${top}px, 0)`;
       floatingElement.style.width = `${width}px`;
@@ -864,9 +874,7 @@ export function VisualConfigEditor({
                     onChange({ usageStatisticsPersistIntervalSeconds: e.target.value })
                   }
                   disabled={disabled}
-                  hint={t(
-                    'config_management.visual.sections.system.usage_statistics_persist_desc'
-                  )}
+                  hint={t('config_management.visual.sections.system.usage_statistics_persist_desc')}
                   error={usageStatisticsPersistIntervalError}
                 />
               </SectionGrid>
@@ -970,9 +978,7 @@ export function VisualConfigEditor({
                   )}
                   checked={values.enableGeminiCliEndpoint}
                   disabled={disabled}
-                  onChange={(enableGeminiCliEndpoint) =>
-                    onChange({ enableGeminiCliEndpoint })
-                  }
+                  onChange={(enableGeminiCliEndpoint) => onChange({ enableGeminiCliEndpoint })}
                 />
                 <ToggleRow
                   title={t('config_management.visual.sections.network.force_model_prefix')}
@@ -1001,11 +1007,93 @@ export function VisualConfigEditor({
           </ConfigSection>
 
           <ConfigSection
+            id="images"
+            ref={(node) => {
+              sectionRefs.current.images = node;
+            }}
+            indexLabel="07"
+            icon={<IconDiamond size={16} />}
+            title={t('config_management.visual.sections.images.title')}
+            description={t('config_management.visual.sections.images.description')}
+          >
+            <SectionStack>
+              <SectionGrid>
+                <Input
+                  label={t('config_management.visual.sections.images.codex_model')}
+                  placeholder="gpt-5.4"
+                  value={values.images.codexModel}
+                  onChange={(e) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        codexModel: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={disabled}
+                  hint={t('config_management.visual.sections.images.codex_model_hint')}
+                />
+                <Input
+                  label={t('config_management.visual.sections.images.image_model')}
+                  placeholder="gpt-image-2"
+                  value={values.images.imageModel}
+                  onChange={(e) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        imageModel: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={disabled}
+                  hint={t('config_management.visual.sections.images.image_model_hint')}
+                />
+                <Input
+                  label={t('config_management.visual.sections.images.unsupported_status_code')}
+                  type="number"
+                  placeholder="400"
+                  value={values.images.unsupportedStatusCode}
+                  onChange={(e) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        unsupportedStatusCode: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={disabled}
+                  hint={t('config_management.visual.sections.images.unsupported_status_code_hint')}
+                  error={imagesUnsupportedStatusCodeError}
+                />
+              </SectionGrid>
+
+              <SectionGrid>
+                <ToggleRow
+                  title={t('config_management.visual.sections.images.enable_n_aggregation')}
+                  description={t(
+                    'config_management.visual.sections.images.enable_n_aggregation_desc'
+                  )}
+                  checked={values.images.enableNAggregation}
+                  disabled={disabled}
+                  onChange={(enableNAggregation) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        enableNAggregation,
+                      },
+                    })
+                  }
+                />
+              </SectionGrid>
+            </SectionStack>
+          </ConfigSection>
+
+          <ConfigSection
             id="quota"
             ref={(node) => {
               sectionRefs.current.quota = node;
             }}
-            indexLabel="07"
+            indexLabel="08"
             icon={<IconTimer size={16} />}
             title={t('config_management.visual.sections.quota.title')}
             description={t('config_management.visual.sections.quota.description')}
@@ -1027,9 +1115,7 @@ export function VisualConfigEditor({
               />
               <ToggleRow
                 title={t('config_management.visual.sections.quota.antigravity_credits')}
-                description={t(
-                  'config_management.visual.sections.quota.antigravity_credits_desc'
-                )}
+                description={t('config_management.visual.sections.quota.antigravity_credits_desc')}
                 checked={values.quotaAntigravityCredits}
                 disabled={disabled}
                 onChange={(quotaAntigravityCredits) => onChange({ quotaAntigravityCredits })}
@@ -1042,7 +1128,7 @@ export function VisualConfigEditor({
             ref={(node) => {
               sectionRefs.current.maintenance = node;
             }}
-            indexLabel="08"
+            indexLabel="09"
             icon={<IconShield size={16} />}
             title={t('config_management.visual.sections.maintenance.title')}
             description={t('config_management.visual.sections.maintenance.description')}
@@ -1115,9 +1201,7 @@ export function VisualConfigEditor({
                   error={authMaintenanceScanIntervalError}
                 />
                 <Input
-                  label={t(
-                    'config_management.visual.sections.maintenance.delete_interval_seconds'
-                  )}
+                  label={t('config_management.visual.sections.maintenance.delete_interval_seconds')}
                   type="number"
                   placeholder="5"
                   value={values.authMaintenance.deleteIntervalSeconds}
@@ -1205,7 +1289,7 @@ export function VisualConfigEditor({
             ref={(node) => {
               sectionRefs.current.streaming = node;
             }}
-            indexLabel="09"
+            indexLabel="10"
             icon={<IconSatellite size={16} />}
             title={t('config_management.visual.sections.streaming.title')}
             description={t('config_management.visual.sections.streaming.description')}
@@ -1306,7 +1390,7 @@ export function VisualConfigEditor({
             ref={(node) => {
               sectionRefs.current.payload = node;
             }}
-            indexLabel="10"
+            indexLabel="11"
             icon={<IconCode size={16} />}
             title={t('config_management.visual.sections.payload.title')}
             description={t('config_management.visual.sections.payload.description')}
