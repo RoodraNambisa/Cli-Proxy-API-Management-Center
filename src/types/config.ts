@@ -29,6 +29,8 @@ export interface ImagesConfig {
   enableNAggregation?: boolean;
   unsupportedStatusCode?: number;
   overrideUnsupportedParams?: boolean;
+  overrideResponseFormatUrl?: boolean;
+  overrideTransparentBackground?: boolean;
 }
 
 export interface Config {

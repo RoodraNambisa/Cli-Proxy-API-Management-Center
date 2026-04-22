@@ -1085,17 +1085,35 @@ export function VisualConfigEditor({
                   }
                 />
                 <ToggleRow
-                  title={t('config_management.visual.sections.images.override_unsupported_params')}
+                  title={t('config_management.visual.sections.images.override_response_format_url')}
                   description={t(
-                    'config_management.visual.sections.images.override_unsupported_params_desc'
+                    'config_management.visual.sections.images.override_response_format_url_desc'
                   )}
-                  checked={values.images.overrideUnsupportedParams}
+                  checked={values.images.overrideResponseFormatUrl}
                   disabled={disabled}
-                  onChange={(overrideUnsupportedParams) =>
+                  onChange={(overrideResponseFormatUrl) =>
                     onChange({
                       images: {
                         ...values.images,
-                        overrideUnsupportedParams,
+                        overrideResponseFormatUrl,
+                      },
+                    })
+                  }
+                />
+                <ToggleRow
+                  title={t(
+                    'config_management.visual.sections.images.override_transparent_background'
+                  )}
+                  description={t(
+                    'config_management.visual.sections.images.override_transparent_background_desc'
+                  )}
+                  checked={values.images.overrideTransparentBackground}
+                  disabled={disabled}
+                  onChange={(overrideTransparentBackground) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        overrideTransparentBackground,
                       },
                     })
                   }

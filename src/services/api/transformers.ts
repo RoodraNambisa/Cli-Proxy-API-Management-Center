@@ -504,6 +504,14 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       overrideUnsupportedParams: normalizeBoolean(
         images['override-unsupported-params'] ?? images.overrideUnsupportedParams
       ),
+      overrideResponseFormatUrl: normalizeBoolean(
+        images['override-response-format-url'] ??
+          images.overrideResponseFormatUrl ??
+          images.overrideResponseFormatURL
+      ),
+      overrideTransparentBackground: normalizeBoolean(
+        images['override-transparent-background'] ?? images.overrideTransparentBackground
+      ),
     };
   }
   const routing = raw.routing;

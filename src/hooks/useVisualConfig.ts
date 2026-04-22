@@ -853,11 +853,18 @@ function getNextDirtyFields(
         nextValues.images.enableNAggregation === baselineValues.images.enableNAggregation
       );
     }
-    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'overrideUnsupportedParams')) {
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'overrideResponseFormatUrl')) {
       updateDirty(
-        'images.overrideUnsupportedParams',
-        nextValues.images.overrideUnsupportedParams ===
-          baselineValues.images.overrideUnsupportedParams
+        'images.overrideResponseFormatUrl',
+        nextValues.images.overrideResponseFormatUrl ===
+          baselineValues.images.overrideResponseFormatUrl
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'overrideTransparentBackground')) {
+      updateDirty(
+        'images.overrideTransparentBackground',
+        nextValues.images.overrideTransparentBackground ===
+          baselineValues.images.overrideTransparentBackground
       );
     }
     if (Object.prototype.hasOwnProperty.call(imagesPatch, 'unsupportedStatusCode')) {
@@ -1021,6 +1028,26 @@ export function useVisualConfig() {
       const routing = asRecord(parsed.routing);
       const payload = asRecord(parsed.payload);
       const streaming = asRecord(parsed.streaming);
+      const legacyImagesOverrideUnsupportedParams = Boolean(
+        images?.['override-unsupported-params'] ?? images?.overrideUnsupportedParams
+      );
+      const imagesOverrideResponseFormatUrl =
+        images?.['override-response-format-url'] === undefined &&
+        images?.overrideResponseFormatUrl === undefined &&
+        images?.overrideResponseFormatURL === undefined
+          ? legacyImagesOverrideUnsupportedParams
+          : Boolean(
+              images?.['override-response-format-url'] ??
+              images?.overrideResponseFormatUrl ??
+              images?.overrideResponseFormatURL
+            );
+      const imagesOverrideTransparentBackground =
+        images?.['override-transparent-background'] === undefined &&
+        images?.overrideTransparentBackground === undefined
+          ? legacyImagesOverrideUnsupportedParams
+          : Boolean(
+              images?.['override-transparent-background'] ?? images?.overrideTransparentBackground
+            );
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === 'string' ? parsed.host : '',
@@ -1111,9 +1138,8 @@ export function useVisualConfig() {
             images?.enableNAggregation === undefined
               ? DEFAULT_VISUAL_VALUES.images.enableNAggregation
               : Boolean(images?.['enable-n-aggregation'] ?? images?.enableNAggregation),
-          overrideUnsupportedParams: Boolean(
-            images?.['override-unsupported-params'] ?? images?.overrideUnsupportedParams
-          ),
+          overrideResponseFormatUrl: imagesOverrideResponseFormatUrl,
+          overrideTransparentBackground: imagesOverrideTransparentBackground,
           unsupportedStatusCode:
             images?.['unsupported-status-code'] === undefined &&
             images?.unsupportedStatusCode === undefined
@@ -1321,7 +1347,9 @@ export function useVisualConfig() {
           values.images.codexModel !== imagesDefaults.codexModel ||
           values.images.imageModel !== imagesDefaults.imageModel ||
           values.images.enableNAggregation !== imagesDefaults.enableNAggregation ||
-          values.images.overrideUnsupportedParams !== imagesDefaults.overrideUnsupportedParams ||
+          values.images.overrideResponseFormatUrl !== imagesDefaults.overrideResponseFormatUrl ||
+          values.images.overrideTransparentBackground !==
+            imagesDefaults.overrideTransparentBackground ||
           values.images.unsupportedStatusCode !== imagesDefaults.unsupportedStatusCode;
         if (imagesDefined) {
           ensureMapInDoc(doc, ['images']);
@@ -1329,8 +1357,12 @@ export function useVisualConfig() {
           setStringInDoc(doc, ['images', 'image-model'], values.images.imageModel);
           doc.setIn(['images', 'enable-n-aggregation'], values.images.enableNAggregation);
           doc.setIn(
-            ['images', 'override-unsupported-params'],
-            values.images.overrideUnsupportedParams
+            ['images', 'override-response-format-url'],
+            values.images.overrideResponseFormatUrl
+          );
+          doc.setIn(
+            ['images', 'override-transparent-background'],
+            values.images.overrideTransparentBackground
           );
           setIntFromStringInDoc(
             doc,

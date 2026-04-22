@@ -1264,8 +1264,10 @@
           "image_model_hint": "通过 /v1/images/* 暴露的 image_generation tool 模型，默认 gpt-image-2",
           "enable_n_aggregation": "启用 n 聚合",
           "enable_n_aggregation_desc": "默认关闭；开启后 n > 1 会拆成多次 Codex 图片调用并聚合结果，关闭后直接返回不支持错误",
-          "override_unsupported_params": "覆盖不支持参数",
-          "override_unsupported_params_desc": "默认关闭；开启后将 response_format=url 归一为 b64_json，并将 background=transparent 归一为 auto",
+          "override_response_format_url": "覆盖 response_format=url",
+          "override_response_format_url_desc": "默认关闭；开启后将 response_format=url 归一为 b64_json",
+          "override_transparent_background": "覆盖透明背景",
+          "override_transparent_background_desc": "默认关闭；开启后将 background=transparent 归一为 auto",
           "unsupported_status_code": "不支持参数状态码",
           "unsupported_status_code_hint": "response_format=url、transparent background、file_id 等不支持能力返回的 HTTP 状态码，范围 400-599"
         },

@@ -1263,8 +1263,10 @@
           "image_model_hint": "Модель image_generation tool, доступная через /v1/images/*, по умолчанию gpt-image-2",
           "enable_n_aggregation": "Включить агрегацию n",
           "enable_n_aggregation_desc": "По умолчанию выключено. Если включено, n > 1 разбивается на несколько Codex image-вызовов и агрегируется; если выключено, n > 1 возвращает ошибку неподдерживаемой опции",
-          "override_unsupported_params": "Переопределять неподдерживаемые параметры",
-          "override_unsupported_params_desc": "По умолчанию выключено. Если включено, response_format=url приводится к b64_json, а background=transparent — к auto",
+          "override_response_format_url": "Переопределять response_format=url",
+          "override_response_format_url_desc": "По умолчанию выключено. Если включено, response_format=url приводится к b64_json",
+          "override_transparent_background": "Переопределять transparent background",
+          "override_transparent_background_desc": "По умолчанию выключено. Если включено, background=transparent приводится к auto",
           "unsupported_status_code": "HTTP-код неподдерживаемой опции",
           "unsupported_status_code_hint": "HTTP-код для неподдерживаемых возможностей, например response_format=url, transparent background или file_id. Диапазон: 400-599"
         },
