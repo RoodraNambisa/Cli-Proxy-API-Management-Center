@@ -100,6 +100,8 @@ export type VisualConfigValues = {
   quotaAntigravityCredits: boolean;
   authMaintenance: AuthMaintenanceVisualConfig;
   routingStrategy: 'round-robin' | 'fill-first' | 'random';
+  routingSessionAffinity: boolean;
+  routingSessionAffinityTTL: string;
   wsAuth: boolean;
   payloadDefaultRules: PayloadRule[];
   payloadDefaultRawRules: PayloadRule[];
@@ -152,6 +154,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     disableQuotaStrikeThreshold: '6',
   },
   routingStrategy: 'round-robin',
+  routingSessionAffinity: false,
+  routingSessionAffinityTTL: '',
   wsAuth: false,
   payloadDefaultRules: [],
   payloadDefaultRawRules: [],
