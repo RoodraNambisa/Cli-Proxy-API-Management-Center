@@ -26,6 +26,7 @@ export interface AuthMaintenanceConfig {
 export interface ImagesConfig {
   codexModel?: string;
   imageModel?: string;
+  enableFreePlanImageModel?: boolean;
   enableNAggregation?: boolean;
   unsupportedStatusCode?: number;
   overrideUnsupportedParams?: boolean;

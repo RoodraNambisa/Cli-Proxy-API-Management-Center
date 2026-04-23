@@ -78,6 +78,215 @@
   margin-bottom: $spacing-md;
 }
 
+.codexPlanRefreshPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-bottom: $spacing-md;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 20%, var(--border-color));
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--bg-secondary) 92%, var(--primary-color) 6%),
+      color-mix(in srgb, var(--bg-primary) 96%, transparent)
+    );
+}
+
+.codexPlanRefreshHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+
+  @include mobile {
+    flex-direction: column;
+  }
+}
+
+.codexPlanRefreshHeaderText {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.codexPlanRefreshEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.codexPlanRefreshTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.codexPlanRefreshTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.codexPlanRefreshStateBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.codexPlanRefreshStateIdle {
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--bg-tertiary) 86%, transparent);
+  border: 1px solid var(--border-color);
+}
+
+.codexPlanRefreshStateRunning {
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 28%, transparent);
+}
+
+.codexPlanRefreshStateCompleted {
+  color: var(--success-badge-text, #065f46);
+  background: var(--success-badge-bg, #d1fae5);
+  border: 1px solid var(--success-badge-border, #6ee7b7);
+}
+
+.codexPlanRefreshStateWarning {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+}
+
+.codexPlanRefreshStateFailed {
+  color: var(--danger-color);
+  background: rgba($error-color, 0.1);
+  border: 1px solid var(--danger-color);
+}
+
+.codexPlanRefreshHint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.codexPlanRefreshCurrent {
+  min-width: min(100%, 260px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+}
+
+.codexPlanRefreshCurrentLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.codexPlanRefreshCurrentValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.codexPlanRefreshSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+
+  @include tablet {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @include mobile {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.codexPlanRefreshSummaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+}
+
+.codexPlanRefreshSummaryLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+.codexPlanRefreshSummaryValue {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.codexPlanRefreshFailures {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--warning-border) 70%, var(--border-color));
+  background: color-mix(in srgb, var(--warning-bg) 70%, var(--bg-secondary));
+}
+
+.codexPlanRefreshFailuresLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--warning-text);
+}
+
+.codexPlanRefreshFailureList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.codexPlanRefreshFailureItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+
+  @include mobile {
+    flex-direction: column;
+  }
+}
+
+.codexPlanRefreshFailureName {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.codexPlanRefreshFailureMeta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+
 // 筛选区域
 .filterSection {
   display: flex;

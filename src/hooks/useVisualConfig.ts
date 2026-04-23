@@ -859,6 +859,13 @@ function getNextDirtyFields(
         nextValues.images.imageModel === baselineValues.images.imageModel
       );
     }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'enableFreePlanImageModel')) {
+      updateDirty(
+        'images.enableFreePlanImageModel',
+        nextValues.images.enableFreePlanImageModel ===
+          baselineValues.images.enableFreePlanImageModel
+      );
+    }
     if (Object.prototype.hasOwnProperty.call(imagesPatch, 'enableNAggregation')) {
       updateDirty(
         'images.enableNAggregation',
@@ -1088,6 +1095,13 @@ export function useVisualConfig() {
         images?.overrideInputFidelity === undefined
           ? legacyImagesOverrideUnsupportedParams
           : Boolean(images?.['override-input-fidelity'] ?? images?.overrideInputFidelity);
+      const imagesEnableFreePlanImageModel =
+        images?.['enable-free-plan-image-model'] === undefined &&
+        images?.enableFreePlanImageModel === undefined
+          ? DEFAULT_VISUAL_VALUES.images.enableFreePlanImageModel
+          : Boolean(
+              images?.['enable-free-plan-image-model'] ?? images?.enableFreePlanImageModel
+            );
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === 'string' ? parsed.host : '',
@@ -1179,6 +1193,7 @@ export function useVisualConfig() {
               : typeof images?.imageModel === 'string'
                 ? images.imageModel
                 : DEFAULT_VISUAL_VALUES.images.imageModel,
+          enableFreePlanImageModel: imagesEnableFreePlanImageModel,
           enableNAggregation:
             images?.['enable-n-aggregation'] === undefined &&
             images?.enableNAggregation === undefined
@@ -1396,6 +1411,7 @@ export function useVisualConfig() {
           docHas(doc, ['images']) ||
           values.images.codexModel !== imagesDefaults.codexModel ||
           values.images.imageModel !== imagesDefaults.imageModel ||
+          values.images.enableFreePlanImageModel !== imagesDefaults.enableFreePlanImageModel ||
           values.images.enableNAggregation !== imagesDefaults.enableNAggregation ||
           values.images.overrideResponseFormatUrl !== imagesDefaults.overrideResponseFormatUrl ||
           values.images.responseFormatUrlDataUrl !== imagesDefaults.responseFormatUrlDataUrl ||
@@ -1407,6 +1423,10 @@ export function useVisualConfig() {
           ensureMapInDoc(doc, ['images']);
           setStringInDoc(doc, ['images', 'codex-model'], values.images.codexModel);
           setStringInDoc(doc, ['images', 'image-model'], values.images.imageModel);
+          doc.setIn(
+            ['images', 'enable-free-plan-image-model'],
+            values.images.enableFreePlanImageModel
+          );
           doc.setIn(['images', 'enable-n-aggregation'], values.images.enableNAggregation);
           doc.setIn(
             ['images', 'override-response-format-url'],

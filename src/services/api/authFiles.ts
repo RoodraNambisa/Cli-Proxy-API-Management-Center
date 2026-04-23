@@ -3,7 +3,12 @@
  */
 
 import { apiClient } from './client';
-import type { AuthFilesResponse } from '@/types/authFile';
+import type {
+  AuthFilesResponse,
+  CodexPlanTypeRefreshResult,
+  CodexPlanTypeRefreshSummary,
+  CodexPlanTypeRefreshTask,
+} from '@/types/authFile';
 import type { OAuthModelAliasEntry } from '@/types';
 import { parseTimestampMs } from '@/utils/timestamp';
 
@@ -41,12 +46,35 @@ type AuthFileBatchDeleteResult = {
   files: string[];
   failed: AuthFileBatchFailure[];
 };
+type RawCodexPlanTypeRefreshSummary = Partial<
+  Record<keyof CodexPlanTypeRefreshSummary, unknown>
+>;
+type RawCodexPlanTypeRefreshResult = Record<string, unknown>;
+type RawCodexPlanTypeRefreshTask = Record<string, unknown>;
 
 export const AUTH_FILE_INVALID_JSON_OBJECT_ERROR = 'AUTH_FILE_INVALID_JSON_OBJECT';
 
 const getStatusCode = (err: unknown): number | undefined => {
   if (!err || typeof err !== 'object') return undefined;
   if ('status' in err) return (err as StatusError).status;
+  return undefined;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const readStringValue = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const readNumberValue = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
   return undefined;
 };
 
@@ -306,6 +334,16 @@ const mergeAuthFileEntries = (entries: AuthFileEntry[]): AuthFileEntry => {
   return merged;
 };
 
+const normalizeAuthFileEntry = (entry: AuthFileEntry): AuthFileEntry => {
+  const normalized: AuthFileEntry = { ...entry };
+  const planType =
+    readStringValue(entry.planType) ?? readStringValue(entry['plan_type']);
+  if (planType) {
+    normalized.planType = planType;
+  }
+  return normalized;
+};
+
 const dedupeAuthFilesResponse = (payload: AuthFilesResponse): AuthFilesResponse => {
   const files = Array.isArray(payload?.files) ? payload.files : [];
   const grouped = new Map<string, AuthFileEntry[]>();
@@ -321,7 +359,9 @@ const dedupeAuthFilesResponse = (payload: AuthFilesResponse): AuthFilesResponse 
     grouped.set(key, [entry]);
   });
 
-  const normalizedFiles = Array.from(grouped.values()).map(mergeAuthFileEntries);
+  const normalizedFiles = Array.from(grouped.values()).map((entries) =>
+    normalizeAuthFileEntry(mergeAuthFileEntries(entries))
+  );
   normalizedFiles.sort((left, right) =>
     readTextField(left, 'name').localeCompare(readTextField(right, 'name'), undefined, {
       sensitivity: 'accent',
@@ -447,6 +487,79 @@ const normalizeOauthModelAlias = (payload: unknown): Record<string, OAuthModelAl
 
 const OAUTH_MODEL_ALIAS_ENDPOINT = '/oauth-model-alias';
 const AUTH_FILES_ARCHIVE_FALLBACK_NAME = 'auth-files.zip';
+const EMPTY_CODEX_PLAN_TYPE_REFRESH_SUMMARY: CodexPlanTypeRefreshSummary = {
+  eligible: 0,
+  processed: 0,
+  updated: 0,
+  unchanged: 0,
+  skipped: 0,
+  failed: 0,
+};
+
+const normalizeCodexPlanTypeRefreshSummary = (
+  payload: unknown
+): CodexPlanTypeRefreshSummary => {
+  const source = isRecord(payload) ? (payload as RawCodexPlanTypeRefreshSummary) : {};
+
+  return {
+    eligible: readNumberValue(source.eligible) ?? 0,
+    processed: readNumberValue(source.processed) ?? 0,
+    updated: readNumberValue(source.updated) ?? 0,
+    unchanged: readNumberValue(source.unchanged) ?? 0,
+    skipped: readNumberValue(source.skipped) ?? 0,
+    failed: readNumberValue(source.failed) ?? 0,
+  };
+};
+
+const normalizeCodexPlanTypeRefreshResult = (
+  payload: unknown
+): CodexPlanTypeRefreshResult | null => {
+  if (!isRecord(payload)) return null;
+  const source = payload as RawCodexPlanTypeRefreshResult;
+  const name = readStringValue(source.name);
+  const status = readStringValue(source.status);
+  if (!name || !status) return null;
+
+  const result: CodexPlanTypeRefreshResult = {
+    name,
+    status,
+  };
+
+  const authId = readStringValue(source.auth_id ?? source.authId);
+  if (authId) result.authId = authId;
+  const planTypeBefore = readStringValue(source.plan_type_before ?? source.planTypeBefore);
+  if (planTypeBefore) result.planTypeBefore = planTypeBefore;
+  const planTypeAfter = readStringValue(source.plan_type_after ?? source.planTypeAfter);
+  if (planTypeAfter) result.planTypeAfter = planTypeAfter;
+  const httpStatus = readNumberValue(source.http_status ?? source.httpStatus);
+  if (httpStatus !== undefined) result.httpStatus = httpStatus;
+  const error = readStringValue(source.error);
+  if (error) result.error = error;
+
+  return result;
+};
+
+const normalizeCodexPlanTypeRefreshTask = (payload: unknown): CodexPlanTypeRefreshTask => {
+  const source = isRecord(payload) ? (payload as RawCodexPlanTypeRefreshTask) : {};
+  const state = readStringValue(source.state) ?? 'idle';
+  const results = Array.isArray(source.results)
+    ? source.results
+        .map((entry) => normalizeCodexPlanTypeRefreshResult(entry))
+        .filter(Boolean) as CodexPlanTypeRefreshResult[]
+    : [];
+
+  return {
+    state,
+    running: source.running === true || state === 'running',
+    startedAt: readStringValue(source.started_at ?? source.startedAt),
+    finishedAt: readStringValue(source.finished_at ?? source.finishedAt),
+    currentName: readStringValue(source.current_name ?? source.currentName),
+    summary: normalizeCodexPlanTypeRefreshSummary(
+      source.summary ?? EMPTY_CODEX_PLAN_TYPE_REFRESH_SUMMARY
+    ),
+    results,
+  };
+};
 
 const downloadAuthFilesArchive = async (
   payload: AuthFileArchiveRequest
@@ -514,6 +627,21 @@ export const authFilesApi = {
 
   downloadArchiveAll: async (): Promise<AuthFileArchiveResult> =>
     downloadAuthFilesArchive({ all: true }),
+
+  getCodexPlanTypeRefreshStatus: async (): Promise<CodexPlanTypeRefreshTask> =>
+    normalizeCodexPlanTypeRefreshTask(
+      await apiClient.get<RawCodexPlanTypeRefreshTask>('/auth-files/codex/plan-type-refresh')
+    ),
+
+  startCodexPlanTypeRefresh: async (): Promise<CodexPlanTypeRefreshTask> => {
+    const response = await apiClient.requestRaw({
+      url: '/auth-files/codex/plan-type-refresh',
+      method: 'POST',
+      validateStatus: (status) => status === 202 || status === 409,
+    });
+
+    return normalizeCodexPlanTypeRefreshTask(response.data);
+  },
 
   downloadText: async (name: string): Promise<string> => {
     const response = await apiClient.getRaw(`/auth-files/download?name=${encodeURIComponent(name)}`, {

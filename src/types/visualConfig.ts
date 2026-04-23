@@ -78,6 +78,7 @@ export interface AuthMaintenanceVisualConfig {
 export interface ImagesVisualConfig {
   codexModel: string;
   imageModel: string;
+  enableFreePlanImageModel: boolean;
   enableNAggregation: boolean;
   overrideResponseFormatUrl: boolean;
   responseFormatUrlDataUrl: boolean;
@@ -174,6 +175,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   images: {
     codexModel: 'gpt-5.4',
     imageModel: 'gpt-image-2',
+    enableFreePlanImageModel: false,
     enableNAggregation: false,
     overrideResponseFormatUrl: false,
     responseFormatUrlDataUrl: false,

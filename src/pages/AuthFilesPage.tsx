@@ -9,6 +9,7 @@ import {
   type ChangeEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { animate } from 'motion/mini';
@@ -59,6 +60,7 @@ import {
   type AuthFilesSortMode,
 } from '@/features/authFiles/uiState';
 import { useAuthStore, useNotificationStore, useThemeStore } from '@/stores';
+import type { CodexPlanTypeRefreshTask } from '@/types';
 import styles from './AuthFilesPage.module.scss';
 
 const easePower3Out = (progress: number) => 1 - (1 - progress) ** 4;
@@ -75,6 +77,54 @@ const buildWildcardSearch = (value: string): RegExp | null => {
   if (!value.includes('*')) return null;
   const pattern = value.split('*').map(escapeWildcardSearchSegment).join('.*');
   return new RegExp(pattern, 'i');
+};
+
+const isCodexPlanRefreshRunning = (task: CodexPlanTypeRefreshTask | null): boolean =>
+  Boolean(task && (task.running || task.state === 'running'));
+
+const getCodexPlanRefreshStateLabel = (t: TFunction, state: string): string => {
+  const key = `auth_files.codex_plan_refresh_state_${state}`;
+  const translated = t(key);
+  return translated === key ? state : translated;
+};
+
+const getCodexPlanRefreshResultStatusLabel = (t: TFunction, status: string): string => {
+  const key = `auth_files.codex_plan_refresh_result_${status}`;
+  const translated = t(key);
+  return translated === key ? status : translated;
+};
+
+const getCodexPlanRefreshHint = (t: TFunction, task: CodexPlanTypeRefreshTask): string => {
+  if (task.state === 'running') {
+    return task.currentName
+      ? t('auth_files.codex_plan_refresh_running_hint', { name: task.currentName })
+      : t('auth_files.codex_plan_refresh_running_hint_idle');
+  }
+
+  if (task.state === 'completed') {
+    return t('auth_files.codex_plan_refresh_completed_hint', {
+      processed: task.summary.processed,
+      updated: task.summary.updated,
+    });
+  }
+
+  if (task.state === 'completed_with_errors') {
+    return t('auth_files.codex_plan_refresh_completed_with_errors_hint', {
+      processed: task.summary.processed,
+      updated: task.summary.updated,
+      failed: task.summary.failed,
+    });
+  }
+
+  if (task.state === 'failed') {
+    const failedMessage =
+      task.results.find((result) => result.status === 'failed' && result.error)?.error ?? '';
+    return failedMessage
+      ? t('auth_files.codex_plan_refresh_failed_hint', { message: failedMessage })
+      : t('auth_files.codex_plan_refresh_failed_hint_fallback');
+  }
+
+  return t('auth_files.codex_plan_refresh_idle_hint');
 };
 
 export function AuthFilesPage() {
@@ -117,6 +167,9 @@ export function AuthFilesPage() {
     deletingAll,
     archiveDownloadingSelected,
     archiveDownloadingAll,
+    codexPlanRefreshTask,
+    codexPlanRefreshLoading,
+    codexPlanRefreshStarting,
     statusUpdating,
     batchStatusUpdating,
     fileInputRef,
@@ -134,9 +187,11 @@ export function AuthFilesPage() {
     batchDownload,
     batchArchiveDownload,
     downloadAllArchive,
+    refreshCodexPlanTypeRefreshStatus,
+    startCodexPlanTypeRefresh,
     batchSetStatus,
     batchDelete,
-  } = useAuthFilesData({ refreshKeyStats });
+  } = useAuthFilesData({ refreshKeyStats, active: isCurrentLayer });
 
   const statusBarCache = useAuthFilesStatusBarCache(files, usageDetails);
 
@@ -328,8 +383,14 @@ export function AuthFilesPage() {
   );
 
   const handleHeaderRefresh = useCallback(async () => {
-    await Promise.all([loadFiles(), refreshKeyStats(), loadExcluded(), loadModelAlias()]);
-  }, [loadFiles, refreshKeyStats, loadExcluded, loadModelAlias]);
+    await Promise.all([
+      loadFiles(),
+      refreshKeyStats(),
+      refreshCodexPlanTypeRefreshStatus(),
+      loadExcluded(),
+      loadModelAlias(),
+    ]);
+  }, [loadFiles, refreshKeyStats, refreshCodexPlanTypeRefreshStatus, loadExcluded, loadModelAlias]);
 
   useHeaderRefresh(handleHeaderRefresh);
 
@@ -440,6 +501,53 @@ export function AuthFilesPage() {
     () => selectedNames.some((name) => statusUpdating[name] === true),
     [selectedNames, statusUpdating]
   );
+  const codexPlanRefreshRunning = isCodexPlanRefreshRunning(codexPlanRefreshTask);
+  const showCodexPlanRefreshPanel = Boolean(
+    codexPlanRefreshTask &&
+      (codexPlanRefreshLoading ||
+        codexPlanRefreshRunning ||
+        codexPlanRefreshTask.state !== 'idle' ||
+        codexPlanRefreshTask.summary.processed > 0 ||
+        codexPlanRefreshTask.results.length > 0 ||
+        codexPlanRefreshTask.currentName)
+  );
+  const codexPlanRefreshSummaryItems = useMemo(
+    () =>
+      codexPlanRefreshTask
+        ? [
+            { key: 'eligible', value: codexPlanRefreshTask.summary.eligible },
+            { key: 'processed', value: codexPlanRefreshTask.summary.processed },
+            { key: 'updated', value: codexPlanRefreshTask.summary.updated },
+            { key: 'unchanged', value: codexPlanRefreshTask.summary.unchanged },
+            { key: 'skipped', value: codexPlanRefreshTask.summary.skipped },
+            { key: 'failed', value: codexPlanRefreshTask.summary.failed },
+          ]
+        : [],
+    [codexPlanRefreshTask]
+  );
+  const codexPlanRefreshFailedResults = useMemo(
+    () =>
+      codexPlanRefreshTask?.results.filter((result) => result.status === 'failed').slice(0, 3) ??
+      [],
+    [codexPlanRefreshTask]
+  );
+  const codexPlanRefreshStateLabel = codexPlanRefreshTask
+    ? getCodexPlanRefreshStateLabel(t, codexPlanRefreshTask.state)
+    : '';
+  const codexPlanRefreshHintText = codexPlanRefreshTask
+    ? getCodexPlanRefreshHint(t, codexPlanRefreshTask)
+    : '';
+  const codexPlanRefreshStateBadgeClass = codexPlanRefreshTask
+    ? codexPlanRefreshTask.state === 'completed'
+      ? styles.codexPlanRefreshStateCompleted
+      : codexPlanRefreshTask.state === 'completed_with_errors'
+        ? styles.codexPlanRefreshStateWarning
+        : codexPlanRefreshTask.state === 'failed'
+          ? styles.codexPlanRefreshStateFailed
+          : codexPlanRefreshTask.state === 'running'
+            ? styles.codexPlanRefreshStateRunning
+            : styles.codexPlanRefreshStateIdle
+    : styles.codexPlanRefreshStateIdle;
   const batchStatusButtonsDisabled =
     disableControls ||
     selectedNames.length === 0 ||
@@ -661,6 +769,20 @@ export function AuthFilesPage() {
               {t('common.refresh')}
             </Button>
             <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void startCodexPlanTypeRefresh()}
+              disabled={
+                disableControls ||
+                codexPlanRefreshLoading ||
+                codexPlanRefreshStarting ||
+                codexPlanRefreshRunning
+              }
+              loading={codexPlanRefreshStarting}
+            >
+              {t('auth_files.codex_plan_refresh_button')}
+            </Button>
+            <Button
               size="sm"
               onClick={handleUploadClick}
               disabled={disableControls || uploading}
@@ -705,6 +827,73 @@ export function AuthFilesPage() {
         }
       >
         {error && <div className={styles.errorBox}>{error}</div>}
+
+        {showCodexPlanRefreshPanel && codexPlanRefreshTask && (
+          <div className={styles.codexPlanRefreshPanel}>
+            <div className={styles.codexPlanRefreshHeader}>
+              <div className={styles.codexPlanRefreshHeaderText}>
+                <div className={styles.codexPlanRefreshEyebrow}>
+                  {t('auth_files.codex_plan_refresh_title')}
+                </div>
+                <div className={styles.codexPlanRefreshTitleRow}>
+                  <span className={styles.codexPlanRefreshTitle}>
+                    {t('auth_files.codex_plan_refresh_panel_title')}
+                  </span>
+                  <span
+                    className={`${styles.codexPlanRefreshStateBadge} ${codexPlanRefreshStateBadgeClass}`}
+                  >
+                    {codexPlanRefreshStateLabel}
+                  </span>
+                </div>
+                <p className={styles.codexPlanRefreshHint}>{codexPlanRefreshHintText}</p>
+              </div>
+
+              {codexPlanRefreshTask.currentName && (
+                <div className={styles.codexPlanRefreshCurrent}>
+                  <span className={styles.codexPlanRefreshCurrentLabel}>
+                    {t('auth_files.codex_plan_refresh_current')}
+                  </span>
+                  <span className={styles.codexPlanRefreshCurrentValue}>
+                    {codexPlanRefreshTask.currentName}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className={styles.codexPlanRefreshSummaryGrid}>
+              {codexPlanRefreshSummaryItems.map((item) => (
+                <div key={item.key} className={styles.codexPlanRefreshSummaryItem}>
+                  <span className={styles.codexPlanRefreshSummaryLabel}>
+                    {t(`auth_files.codex_plan_refresh_summary_${item.key}`)}
+                  </span>
+                  <span className={styles.codexPlanRefreshSummaryValue}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {codexPlanRefreshFailedResults.length > 0 && (
+              <div className={styles.codexPlanRefreshFailures}>
+                <span className={styles.codexPlanRefreshFailuresLabel}>
+                  {t('auth_files.codex_plan_refresh_failures_label')}
+                </span>
+                <div className={styles.codexPlanRefreshFailureList}>
+                  {codexPlanRefreshFailedResults.map((result) => (
+                    <div
+                      key={`${result.name}-${result.authId ?? result.error ?? result.status}`}
+                      className={styles.codexPlanRefreshFailureItem}
+                    >
+                      <span className={styles.codexPlanRefreshFailureName}>{result.name}</span>
+                      <span className={styles.codexPlanRefreshFailureMeta}>
+                        {getCodexPlanRefreshResultStatusLabel(t, result.status)}
+                        {result.error ? ` · ${result.error}` : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className={styles.filterSection}>
           {renderFilterTags()}

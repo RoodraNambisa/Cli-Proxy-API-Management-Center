@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
 import { apiClient } from '@/services/api/client';
 import { useNotificationStore } from '@/stores';
-import type { AuthFileItem } from '@/types';
+import type { AuthFileItem, CodexPlanTypeRefreshTask } from '@/types';
 import { formatFileSize } from '@/utils/format';
 import { MAX_AUTH_FILE_SIZE } from '@/utils/constants';
 import { downloadBlob } from '@/utils/download';
@@ -12,6 +12,8 @@ import {
   hasAuthFileStatusMessage,
   isRuntimeOnlyAuthFile,
 } from '@/features/authFiles/constants';
+
+const CODEX_PLAN_TYPE_REFRESH_POLL_INTERVAL_MS = 3000;
 
 const getArchiveDownloadErrorMeta = (
   err: unknown
@@ -25,6 +27,31 @@ const getArchiveDownloadErrorMeta = (
 
   return { status, message, unsupported };
 };
+
+const getCodexPlanRefreshErrorMeta = (
+  err: unknown
+): { status?: number; message: string; unsupported: boolean } => {
+  const status =
+    typeof err === 'object' && err && 'status' in err ? Number((err as { status?: unknown }).status) : undefined;
+  const message = err instanceof Error ? err.message : '';
+
+  return {
+    status,
+    message,
+    unsupported: status === 404 || status === 405,
+  };
+};
+
+const isCodexPlanRefreshRunning = (task: CodexPlanTypeRefreshTask | null): boolean =>
+  Boolean(task && (task.running || task.state === 'running'));
+
+const isCodexPlanRefreshTerminal = (task: CodexPlanTypeRefreshTask | null): boolean =>
+  Boolean(
+    task &&
+      (task.state === 'completed' ||
+        task.state === 'completed_with_errors' ||
+        task.state === 'failed')
+  );
 
 type DeleteAllOptions = {
   filter: string;
@@ -44,6 +71,9 @@ export type UseAuthFilesDataResult = {
   deletingAll: boolean;
   archiveDownloadingSelected: boolean;
   archiveDownloadingAll: boolean;
+  codexPlanRefreshTask: CodexPlanTypeRefreshTask | null;
+  codexPlanRefreshLoading: boolean;
+  codexPlanRefreshStarting: boolean;
   statusUpdating: Record<string, boolean>;
   batchStatusUpdating: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
@@ -61,16 +91,19 @@ export type UseAuthFilesDataResult = {
   batchDownload: (names: string[]) => Promise<void>;
   batchArchiveDownload: (names: string[]) => Promise<void>;
   downloadAllArchive: () => Promise<void>;
+  refreshCodexPlanTypeRefreshStatus: () => Promise<void>;
+  startCodexPlanTypeRefresh: () => Promise<void>;
   batchSetStatus: (names: string[], enabled: boolean) => Promise<void>;
   batchDelete: (names: string[]) => void;
 };
 
 export type UseAuthFilesDataOptions = {
   refreshKeyStats: () => Promise<void>;
+  active?: boolean;
 };
 
 export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFilesDataResult {
-  const { refreshKeyStats } = options;
+  const { refreshKeyStats, active = true } = options;
   const { t } = useTranslation();
   const { showNotification, showConfirmation } = useNotificationStore();
 
@@ -82,12 +115,20 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const [deletingAll, setDeletingAll] = useState(false);
   const [archiveDownloadingSelected, setArchiveDownloadingSelected] = useState(false);
   const [archiveDownloadingAll, setArchiveDownloadingAll] = useState(false);
+  const [codexPlanRefreshTask, setCodexPlanRefreshTask] = useState<CodexPlanTypeRefreshTask | null>(
+    null
+  );
+  const [codexPlanRefreshLoading, setCodexPlanRefreshLoading] = useState(false);
+  const [codexPlanRefreshStarting, setCodexPlanRefreshStarting] = useState(false);
+  const [codexPlanRefreshSupported, setCodexPlanRefreshSupported] = useState<boolean | null>(null);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
   const [batchStatusUpdating, setBatchStatusUpdating] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const batchStatusPendingRef = useRef(false);
+  const codexPlanRefreshTaskRef = useRef<CodexPlanTypeRefreshTask | null>(null);
+  const codexPlanRefreshPollErrorNotifiedRef = useRef(false);
   const selectionCount = selectedFiles.size;
   const toggleSelect = useCallback((name: string) => {
     setSelectedFiles((prev) => {
@@ -193,6 +234,152 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       setLoading(false);
     }
   }, [t]);
+
+  const applyCodexPlanRefreshTask = useCallback(
+    async (
+      task: CodexPlanTypeRefreshTask,
+      options?: {
+        notifyTerminal?: boolean;
+      }
+    ) => {
+      const notifyTerminal = options?.notifyTerminal === true;
+      const previousTask = codexPlanRefreshTaskRef.current;
+      codexPlanRefreshTaskRef.current = task;
+      codexPlanRefreshPollErrorNotifiedRef.current = false;
+      setCodexPlanRefreshTask(task);
+      setCodexPlanRefreshSupported(true);
+
+      const transitionedToTerminal =
+        notifyTerminal &&
+        isCodexPlanRefreshRunning(previousTask) &&
+        isCodexPlanRefreshTerminal(task) &&
+        !isCodexPlanRefreshRunning(task);
+
+      if (!transitionedToTerminal) return;
+
+      await Promise.allSettled([loadFiles(), refreshKeyStats()]);
+
+      if (task.state === 'completed') {
+        showNotification(
+          t('auth_files.codex_plan_refresh_completed', {
+            processed: task.summary.processed,
+            updated: task.summary.updated,
+          }),
+          'success'
+        );
+        return;
+      }
+
+      if (task.state === 'completed_with_errors') {
+        showNotification(
+          t('auth_files.codex_plan_refresh_completed_with_errors', {
+            processed: task.summary.processed,
+            updated: task.summary.updated,
+            failed: task.summary.failed,
+          }),
+          'warning'
+        );
+        return;
+      }
+
+      const failedMessage =
+        task.results.find((result) => result.status === 'failed' && result.error)?.error ??
+        t('notification.refresh_failed');
+      showNotification(
+        t('auth_files.codex_plan_refresh_failed', {
+          message: failedMessage,
+        }),
+        'error'
+      );
+    },
+    [loadFiles, refreshKeyStats, showNotification, t]
+  );
+
+  const fetchCodexPlanRefreshStatus = useCallback(
+    async (options?: { markLoading?: boolean; notifyTerminal?: boolean; silentUnsupported?: boolean }) => {
+      if (options?.markLoading) {
+        setCodexPlanRefreshLoading(true);
+      }
+
+      try {
+        const task = await authFilesApi.getCodexPlanTypeRefreshStatus();
+        await applyCodexPlanRefreshTask(task, { notifyTerminal: options?.notifyTerminal });
+      } catch (err: unknown) {
+        const { message, unsupported } = getCodexPlanRefreshErrorMeta(err);
+        if (unsupported) {
+          setCodexPlanRefreshSupported(false);
+          if (!options?.silentUnsupported) {
+            showNotification(t('auth_files.codex_plan_refresh_unsupported'), 'warning');
+          }
+          return;
+        }
+
+        if (options?.notifyTerminal && !codexPlanRefreshPollErrorNotifiedRef.current) {
+          showNotification(`${t('notification.refresh_failed')}: ${message}`, 'error');
+          codexPlanRefreshPollErrorNotifiedRef.current = true;
+        }
+      } finally {
+        if (options?.markLoading) {
+          setCodexPlanRefreshLoading(false);
+        }
+      }
+    },
+    [applyCodexPlanRefreshTask, showNotification, t]
+  );
+
+  const startCodexPlanTypeRefresh = useCallback(async () => {
+    if (codexPlanRefreshStarting) return;
+    if (codexPlanRefreshSupported === false) {
+      showNotification(t('auth_files.codex_plan_refresh_unsupported'), 'warning');
+      return;
+    }
+    if (isCodexPlanRefreshRunning(codexPlanRefreshTaskRef.current)) {
+      return;
+    }
+
+    setCodexPlanRefreshStarting(true);
+    try {
+      const task = await authFilesApi.startCodexPlanTypeRefresh();
+      await applyCodexPlanRefreshTask(task);
+      showNotification(t('auth_files.codex_plan_refresh_started'), 'success');
+    } catch (err: unknown) {
+      const { message, unsupported } = getCodexPlanRefreshErrorMeta(err);
+      if (unsupported) {
+        setCodexPlanRefreshSupported(false);
+        showNotification(t('auth_files.codex_plan_refresh_unsupported'), 'warning');
+      } else {
+        showNotification(`${t('notification.refresh_failed')}: ${message}`, 'error');
+      }
+    } finally {
+      setCodexPlanRefreshStarting(false);
+    }
+  }, [
+    applyCodexPlanRefreshTask,
+    codexPlanRefreshStarting,
+    codexPlanRefreshSupported,
+    showNotification,
+    t,
+  ]);
+
+  const refreshCodexPlanTypeRefreshStatus = useCallback(
+    () => fetchCodexPlanRefreshStatus({ markLoading: true, silentUnsupported: true }),
+    [fetchCodexPlanRefreshStatus]
+  );
+
+  useEffect(() => {
+    if (!active) return;
+    void fetchCodexPlanRefreshStatus({ markLoading: true, silentUnsupported: true });
+  }, [active, fetchCodexPlanRefreshStatus]);
+
+  useEffect(() => {
+    if (!active || !isCodexPlanRefreshRunning(codexPlanRefreshTask)) return;
+
+    const timer = window.setInterval(() => {
+      void fetchCodexPlanRefreshStatus({ notifyTerminal: true, silentUnsupported: true });
+    }, CODEX_PLAN_TYPE_REFRESH_POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(timer);
+  }, [active, codexPlanRefreshTask, fetchCodexPlanRefreshStatus]);
 
   const handleUploadClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -687,6 +874,9 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     deletingAll,
     archiveDownloadingSelected,
     archiveDownloadingAll,
+    codexPlanRefreshTask,
+    codexPlanRefreshLoading,
+    codexPlanRefreshStarting,
     statusUpdating,
     batchStatusUpdating,
     fileInputRef,
@@ -704,6 +894,8 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     batchDownload,
     batchArchiveDownload,
     downloadAllArchive,
+    refreshCodexPlanTypeRefreshStatus,
+    startCodexPlanTypeRefresh,
     batchSetStatus,
     batchDelete,
   };

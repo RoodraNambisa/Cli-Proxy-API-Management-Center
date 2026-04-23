@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/icons';
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
 import type { AuthFileItem } from '@/types';
-import { resolveAuthProvider } from '@/utils/quota';
+import { resolveAuthProvider, resolveCodexPlanType } from '@/utils/quota';
 import { calculateStatusBarData, normalizeAuthIndex, type KeyStats } from '@/utils/usage';
 import { formatFileSize } from '@/utils/format';
 import {
@@ -33,6 +33,7 @@ import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQu
 import styles from '@/pages/AuthFilesPage.module.scss';
 
 const HEALTHY_STATUS_MESSAGES = new Set(['ok', 'healthy', 'ready', 'success', 'available']);
+const PREMIUM_CODEX_PLAN_TYPES = new Set(['plus', 'team', 'pro', 'prolite']);
 
 export type AuthFileCardProps = {
   file: AuthFileItem;
@@ -116,6 +117,14 @@ export function AuthFileCard(props: AuthFileCardProps) {
 
   const priorityValue = parsePriorityValue(file.priority ?? file['priority']);
   const noteValue = typeof file.note === 'string' ? file.note.trim() : '';
+  const codexPlanType = resolveCodexPlanType(file);
+  const codexPlanKey = codexPlanType ? `codex_quota.plan_${codexPlanType}` : '';
+  const codexPlanLabel = codexPlanKey ? t(codexPlanKey) : '';
+  const codexPlanDisplay =
+    codexPlanLabel && codexPlanLabel !== codexPlanKey ? codexPlanLabel : codexPlanType;
+  const codexPlanValueClass = PREMIUM_CODEX_PLAN_TYPES.has(codexPlanType ?? '')
+    ? `${styles.codexPlanValue} ${styles.premiumPlanValue}`
+    : styles.codexPlanValue;
   const stateLabel = isRuntimeOnly
     ? t('auth_files.type_virtual') || '虚拟认证文件'
     : file.disabled
@@ -213,6 +222,13 @@ export function AuthFileCard(props: AuthFileCardProps) {
               </div>
             )}
           </div>
+
+          {codexPlanDisplay && (
+            <div className={styles.codexPlan}>
+              <span className={styles.codexPlanLabel}>{t('codex_quota.plan_label')}</span>
+              <span className={codexPlanValueClass}>{codexPlanDisplay}</span>
+            </div>
+          )}
 
           {rawStatusMessage && hasStatusWarning && (
             <div className={styles.healthStatusMessage} title={rawStatusMessage}>

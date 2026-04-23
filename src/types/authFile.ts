@@ -21,6 +21,7 @@ export interface AuthFileItem {
   name: string;
   type?: AuthFileType | string;
   provider?: string;
+  planType?: string | null;
   size?: number;
   authIndex?: string | number | null;
   runtimeOnly?: boolean | string;
@@ -36,4 +37,42 @@ export interface AuthFileItem {
 export interface AuthFilesResponse {
   files: AuthFileItem[];
   total?: number;
+}
+
+export type CodexPlanTypeRefreshState =
+  | 'idle'
+  | 'running'
+  | 'completed'
+  | 'completed_with_errors'
+  | 'failed';
+
+export type CodexPlanTypeRefreshResultStatus = 'updated' | 'unchanged' | 'skipped' | 'failed';
+
+export interface CodexPlanTypeRefreshSummary {
+  eligible: number;
+  processed: number;
+  updated: number;
+  unchanged: number;
+  skipped: number;
+  failed: number;
+}
+
+export interface CodexPlanTypeRefreshResult {
+  name: string;
+  authId?: string;
+  status: CodexPlanTypeRefreshResultStatus | string;
+  planTypeBefore?: string;
+  planTypeAfter?: string;
+  httpStatus?: number;
+  error?: string;
+}
+
+export interface CodexPlanTypeRefreshTask {
+  state: CodexPlanTypeRefreshState | string;
+  running: boolean;
+  startedAt?: string;
+  finishedAt?: string;
+  currentName?: string;
+  summary: CodexPlanTypeRefreshSummary;
+  results: CodexPlanTypeRefreshResult[];
 }

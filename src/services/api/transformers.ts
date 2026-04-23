@@ -520,6 +520,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
           : imageModel === undefined || imageModel === null
             ? undefined
             : String(imageModel),
+      enableFreePlanImageModel: normalizeBoolean(
+        images['enable-free-plan-image-model'] ?? images.enableFreePlanImageModel
+      ),
       enableNAggregation: normalizeBoolean(
         images['enable-n-aggregation'] ?? images.enableNAggregation
       ),

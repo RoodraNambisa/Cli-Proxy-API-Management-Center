@@ -1081,6 +1081,24 @@ export function VisualConfigEditor({
 
               <SectionGrid>
                 <ToggleRow
+                  title={t(
+                    'config_management.visual.sections.images.enable_free_plan_image_model'
+                  )}
+                  description={t(
+                    'config_management.visual.sections.images.enable_free_plan_image_model_desc'
+                  )}
+                  checked={values.images.enableFreePlanImageModel}
+                  disabled={disabled}
+                  onChange={(enableFreePlanImageModel) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        enableFreePlanImageModel,
+                      },
+                    })
+                  }
+                />
+                <ToggleRow
                   title={t('config_management.visual.sections.images.enable_n_aggregation')}
                   description={t(
                     'config_management.visual.sections.images.enable_n_aggregation_desc'
