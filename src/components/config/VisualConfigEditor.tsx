@@ -213,6 +213,7 @@ export function VisualConfigEditor({
     values.streaming.nonstreamKeepaliveInterval === '0';
 
   const portError = getValidationMessage(t, validationErrors?.port);
+  const rmAccessPathError = getValidationMessage(t, validationErrors?.rmAccessPath);
   const logsMaxSizeError = getValidationMessage(t, validationErrors?.logsMaxTotalSizeMb);
   const usageStatisticsPersistIntervalError = getValidationMessage(
     t,
@@ -307,7 +308,7 @@ export function VisualConfigEditor({
         title: t('config_management.visual.sections.remote.title'),
         description: t('config_management.visual.sections.remote.description'),
         icon: IconSatellite,
-        errorCount: 0,
+        errorCount: countErrors(['rmAccessPath']),
       },
       {
         id: 'auth',
@@ -772,6 +773,17 @@ export function VisualConfigEditor({
                   value={values.rmSecretKey}
                   onChange={(e) => onChange({ rmSecretKey: e.target.value })}
                   disabled={disabled}
+                />
+                <Input
+                  label={t('config_management.visual.sections.remote.access_path')}
+                  placeholder={t(
+                    'config_management.visual.sections.remote.access_path_placeholder'
+                  )}
+                  value={values.rmAccessPath}
+                  onChange={(e) => onChange({ rmAccessPath: e.target.value })}
+                  disabled={disabled}
+                  hint={t('config_management.visual.sections.remote.access_path_hint')}
+                  error={rmAccessPathError}
                 />
                 <Input
                   label={t('config_management.visual.sections.remote.panel_repo')}

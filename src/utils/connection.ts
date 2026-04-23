@@ -11,10 +11,36 @@ export const normalizeApiBase = (input: string): string => {
   return base;
 };
 
+export const normalizeManagementAccessPath = (input: string): string => {
+  const trimmed = (input || '').trim();
+  if (!trimmed) return '';
+
+  const withoutOrigin = trimmed.replace(/^https?:\/\/[^/]+/i, '');
+  const withoutQuery = withoutOrigin.split(/[?#]/)[0] ?? '';
+  const withoutManagementApi = withoutQuery.replace(/\/?v0\/management\/?$/i, '');
+  const withoutManagementPage = withoutManagementApi.replace(/\/?management\.html\/?$/i, '');
+  const normalized = withoutManagementPage.replace(/^\/+|\/+$/g, '');
+
+  return normalized ? `/${normalized}` : '';
+};
+
+export const detectManagementAccessPathFromLocation = (): string => {
+  try {
+    const pathname = window.location.pathname || '';
+    return normalizeManagementAccessPath(pathname.endsWith('/management.html') ? pathname : '');
+  } catch (error) {
+    console.warn('Failed to detect management access path from location', error);
+    return '';
+  }
+};
+
 export const computeApiUrl = (base: string): string => {
   const normalized = normalizeApiBase(base);
   if (!normalized) return '';
-  return `${normalized}${MANAGEMENT_API_PREFIX}`;
+  const accessPath = normalizeManagementAccessPath(detectManagementAccessPathFromLocation());
+  const suffix =
+    accessPath && normalized.toLowerCase().endsWith(accessPath.toLowerCase()) ? '' : accessPath;
+  return `${normalized}${suffix}${MANAGEMENT_API_PREFIX}`;
 };
 
 export const detectApiBaseFromLocation = (): string => {

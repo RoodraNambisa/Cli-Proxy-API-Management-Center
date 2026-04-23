@@ -6,6 +6,7 @@ export type PayloadParamValidationErrorCode =
 
 export type VisualConfigFieldPath =
   | 'port'
+  | 'rmAccessPath'
   | 'logsMaxTotalSizeMb'
   | 'usageStatisticsPersistIntervalSeconds'
   | 'requestRetry'
@@ -23,6 +24,7 @@ export type VisualConfigFieldPath =
 
 export type VisualConfigValidationErrorCode =
   | 'port_range'
+  | 'management_access_path'
   | 'http_status_range'
   | 'non_negative_integer'
   | 'integer_list';
@@ -93,6 +95,7 @@ export type VisualConfigValues = {
   rmAllowRemote: boolean;
   rmSecretKey: string;
   rmDisableControlPanel: boolean;
+  rmAccessPath: string;
   rmPanelRepo: string;
   authDir: string;
   apiKeysText: string;
@@ -139,6 +142,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   rmAllowRemote: false,
   rmSecretKey: '',
   rmDisableControlPanel: false,
+  rmAccessPath: '',
   rmPanelRepo: '',
   authDir: '',
   apiKeysText: '',

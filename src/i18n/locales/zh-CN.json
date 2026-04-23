@@ -1210,6 +1210,9 @@
           "disable_panel_desc": "禁用内置的 Web 控制面板",
           "secret_key": "管理密钥",
           "secret_key_placeholder": "设置管理密钥",
+          "access_path": "访问路径隐藏 (access-path)",
+          "access_path_placeholder": "my-random-path",
+          "access_path_hint": "只填写单一路径段，不替代管理密钥；设置后管理页面、管理 API 和 OAuth 回调都会加此前缀。",
           "panel_repo": "面板仓库"
         },
         "auth": {
@@ -1379,6 +1382,7 @@
       "validation": {
         "validation_blocked": "请先修复表单校验错误再保存",
         "port_range": "请输入 1 到 65535 之间的有效端口",
+        "management_access_path": "请输入合法的单一路径段：最多 128 个字符，仅支持字母、数字、点、下划线和连字符，不能是 . 或 ..",
         "non_negative_integer": "请输入非负整数",
         "integer_list": "请输入用逗号或换行分隔的整数列表",
         "http_status_range": "请输入 400 到 599 之间的 HTTP 状态码",

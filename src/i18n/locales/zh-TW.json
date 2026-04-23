@@ -1227,6 +1227,9 @@
           "disable_panel_desc": "停用內建的 Web 控制面板",
           "secret_key": "管理金鑰",
           "secret_key_placeholder": "設定管理金鑰",
+          "access_path": "存取路徑隱藏（access-path）",
+          "access_path_placeholder": "my-random-path",
+          "access_path_hint": "只填單一路徑段，不取代管理金鑰；設定後管理頁面、管理 API 和 OAuth 回調都會加此前綴。",
           "panel_repo": "面板儲存庫"
         },
         "auth": {
@@ -1396,6 +1399,7 @@
       "validation": {
         "validation_blocked": "請先修復表單驗證錯誤再儲存",
         "port_range": "請輸入 1 到 65535 之間的有效連接埠",
+        "management_access_path": "請輸入合法的單一路徑段：最多 128 個字元，僅支援字母、數字、點、底線和連字符，不能是 . 或 ..",
         "non_negative_integer": "請輸入非負整數",
         "integer_list": "請輸入用逗號或換行分隔的整數列表",
         "http_status_range": "請輸入 400 到 599 之間的 HTTP 狀態碼",

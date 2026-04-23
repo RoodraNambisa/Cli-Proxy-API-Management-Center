@@ -40,6 +40,12 @@ const normalizeNumber = (value: unknown): number | undefined => {
   return undefined;
 };
 
+const normalizeString = (value: unknown): string | undefined => {
+  if (typeof value === 'string') return value;
+  if (value === undefined || value === null) return undefined;
+  return String(value);
+};
+
 const normalizeIntegerArray = (value: unknown): number[] | undefined => {
   if (!Array.isArray(value)) return undefined;
 
@@ -450,6 +456,25 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     raw['enable-gemini-cli-endpoint'] ?? raw.enableGeminiCliEndpoint
   );
   config.forceModelPrefix = normalizeBoolean(raw['force-model-prefix'] ?? raw.forceModelPrefix);
+  const remoteManagement = raw['remote-management'] ?? raw.remoteManagement;
+  if (isRecord(remoteManagement)) {
+    config.remoteManagement = {
+      allowRemote: normalizeBoolean(
+        remoteManagement['allow-remote'] ?? remoteManagement.allowRemote
+      ),
+      secretKey: normalizeString(remoteManagement['secret-key'] ?? remoteManagement.secretKey),
+      disableControlPanel: normalizeBoolean(
+        remoteManagement['disable-control-panel'] ?? remoteManagement.disableControlPanel
+      ),
+      accessPath: normalizeString(remoteManagement['access-path'] ?? remoteManagement.accessPath),
+      panelGithubRepository: normalizeString(
+        remoteManagement['panel-github-repository'] ??
+          remoteManagement.panelGithubRepository ??
+          remoteManagement['panel-repo'] ??
+          remoteManagement.panelRepo
+      ),
+    };
+  }
   const authMaintenance = raw['auth-maintenance'] ?? raw.authMaintenance;
   if (isRecord(authMaintenance)) {
     config.authMaintenance = {

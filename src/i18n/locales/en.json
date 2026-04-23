@@ -1210,6 +1210,9 @@
           "disable_panel_desc": "Disable the built-in web control panel",
           "secret_key": "Management Key",
           "secret_key_placeholder": "Set management key",
+          "access_path": "Access Path Hiding (access-path)",
+          "access_path_placeholder": "my-random-path",
+          "access_path_hint": "Enter one path segment only. It does not replace the management key; management page, API, and OAuth callbacks will use this prefix when set.",
           "panel_repo": "Panel Repository"
         },
         "auth": {
@@ -1379,6 +1382,7 @@
       "validation": {
         "validation_blocked": "Fix validation errors before saving",
         "port_range": "Enter a valid port between 1 and 65535",
+        "management_access_path": "Enter a valid single path segment: at most 128 characters, letters, digits, dot, underscore, and hyphen only, and not . or ..",
         "non_negative_integer": "Enter a non-negative whole number",
         "integer_list": "Enter integers separated by commas or line breaks",
         "http_status_range": "Enter an HTTP status code between 400 and 599",

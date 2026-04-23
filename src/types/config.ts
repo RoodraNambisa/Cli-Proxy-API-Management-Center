@@ -35,6 +35,14 @@ export interface ImagesConfig {
   overrideInputFidelity?: boolean;
 }
 
+export interface RemoteManagementConfig {
+  allowRemote?: boolean;
+  secretKey?: string;
+  disableControlPanel?: boolean;
+  accessPath?: string;
+  panelGithubRepository?: string;
+}
+
 export interface Config {
   debug?: boolean;
   proxyUrl?: string;
@@ -48,6 +56,7 @@ export interface Config {
   wsAuth?: boolean;
   enableGeminiCliEndpoint?: boolean;
   forceModelPrefix?: boolean;
+  remoteManagement?: RemoteManagementConfig;
   authMaintenance?: AuthMaintenanceConfig;
   images?: ImagesConfig;
   routingStrategy?: string;
@@ -75,6 +84,7 @@ export type RawConfigSection =
   | 'ws-auth'
   | 'enable-gemini-cli-endpoint'
   | 'force-model-prefix'
+  | 'remote-management'
   | 'auth-maintenance'
   | 'images'
   | 'routing/strategy'

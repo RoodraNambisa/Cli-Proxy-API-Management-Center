@@ -216,6 +216,14 @@ function getPortError(value: string): 'port_range' | undefined {
   return parsed >= 1 && parsed <= 65535 ? undefined : 'port_range';
 }
 
+function getManagementAccessPathError(value: string): 'management_access_path' | undefined {
+  const normalized = value.trim().replace(/^\/+|\/+$/g, '');
+  if (!normalized) return undefined;
+  if (normalized.length > 128) return 'management_access_path';
+  if (normalized === '.' || normalized === '..') return 'management_access_path';
+  return /^[A-Za-z0-9._-]+$/.test(normalized) ? undefined : 'management_access_path';
+}
+
 function getHttpStatusRangeError(value: string): 'http_status_range' | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
@@ -229,6 +237,7 @@ export function getVisualConfigValidationErrors(
 ): VisualConfigValidationErrors {
   return {
     port: getPortError(values.port),
+    rmAccessPath: getManagementAccessPathError(values.rmAccessPath),
     logsMaxTotalSizeMb: getNonNegativeIntegerError(values.logsMaxTotalSizeMb),
     usageStatisticsPersistIntervalSeconds: getNonNegativeIntegerError(
       values.usageStatisticsPersistIntervalSeconds
@@ -687,6 +696,9 @@ function getNextDirtyFields(
       nextValues.rmDisableControlPanel === baselineValues.rmDisableControlPanel
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'rmAccessPath')) {
+    updateDirty('rmAccessPath', nextValues.rmAccessPath === baselineValues.rmAccessPath);
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'rmPanelRepo')) {
     updateDirty('rmPanelRepo', nextValues.rmPanelRepo === baselineValues.rmPanelRepo);
   }
@@ -1091,6 +1103,12 @@ export function useVisualConfig() {
             ? remoteManagement['secret-key']
             : '',
         rmDisableControlPanel: Boolean(remoteManagement?.['disable-control-panel']),
+        rmAccessPath:
+          typeof remoteManagement?.['access-path'] === 'string'
+            ? remoteManagement['access-path']
+            : typeof remoteManagement?.accessPath === 'string'
+              ? remoteManagement.accessPath
+              : '',
         rmPanelRepo:
           typeof remoteManagement?.['panel-github-repository'] === 'string'
             ? remoteManagement['panel-github-repository']
@@ -1248,6 +1266,7 @@ export function useVisualConfig() {
           values.rmAllowRemote ||
           values.rmSecretKey.trim() ||
           values.rmDisableControlPanel ||
+          values.rmAccessPath.trim() ||
           values.rmPanelRepo.trim()
         ) {
           ensureMapInDoc(doc, ['remote-management']);
@@ -1258,6 +1277,7 @@ export function useVisualConfig() {
             ['remote-management', 'disable-control-panel'],
             values.rmDisableControlPanel
           );
+          setStringInDoc(doc, ['remote-management', 'access-path'], values.rmAccessPath);
           setStringInDoc(doc, ['remote-management', 'panel-github-repository'], values.rmPanelRepo);
           if (docHas(doc, ['remote-management', 'panel-repo'])) {
             doc.deleteIn(['remote-management', 'panel-repo']);
