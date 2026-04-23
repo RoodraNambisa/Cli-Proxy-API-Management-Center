@@ -98,13 +98,16 @@ export function LoginPage() {
 
   const detectedBase = useMemo(() => detectApiBaseFromLocation(), []);
   const detectedManagementAccessPath = useMemo(() => detectManagementAccessPathFromLocation(), []);
+  const effectiveAccessPathForCustomConnection = showCustomBase
+    ? managementAccessPath
+    : detectedManagementAccessPath;
   const currentConnectionDisplay = useMemo(() => {
     const parsed = parseConnectionTarget(
       apiBase || detectedBase,
-      managementAccessPath || detectedManagementAccessPath
+      effectiveAccessPathForCustomConnection
     );
     return `${parsed.apiBase}${parsed.managementAccessPath}`;
-  }, [apiBase, detectedBase, detectedManagementAccessPath, managementAccessPath]);
+  }, [apiBase, detectedBase, effectiveAccessPathForCustomConnection]);
   const languageOptions = useMemo(
     () =>
       LANGUAGE_ORDER.map((lang) => ({
@@ -163,7 +166,7 @@ export function LoginPage() {
 
     const target = parseConnectionTarget(
       apiBase || detectedBase,
-      managementAccessPath || detectedManagementAccessPath
+      effectiveAccessPathForCustomConnection
     );
     setLoading(true);
     setError('');
@@ -186,9 +189,8 @@ export function LoginPage() {
   }, [
     apiBase,
     detectedBase,
-    detectedManagementAccessPath,
+    effectiveAccessPathForCustomConnection,
     login,
-    managementAccessPath,
     managementKey,
     navigate,
     rememberPassword,

@@ -110,10 +110,13 @@ export const useAuthStore = create<AuthStoreState>()(
 
       // 登录
       login: async (credentials) => {
-        const currentAccessPath =
-          credentials.managementAccessPath ||
-          get().managementAccessPath ||
-          detectManagementAccessPathFromLocation();
+        const hasExplicitManagementAccessPath = Object.prototype.hasOwnProperty.call(
+          credentials,
+          'managementAccessPath'
+        );
+        const currentAccessPath = hasExplicitManagementAccessPath
+          ? credentials.managementAccessPath ?? ''
+          : get().managementAccessPath || detectManagementAccessPathFromLocation();
         const { apiBase, managementAccessPath } = parseConnectionTarget(
           credentials.apiBase,
           currentAccessPath
