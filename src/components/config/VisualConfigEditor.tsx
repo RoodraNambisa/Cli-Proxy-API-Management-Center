@@ -1134,6 +1134,22 @@ export function VisualConfigEditor({
                     })
                   }
                 />
+                <ToggleRow
+                  title={t('config_management.visual.sections.images.override_input_fidelity')}
+                  description={t(
+                    'config_management.visual.sections.images.override_input_fidelity_desc'
+                  )}
+                  checked={values.images.overrideInputFidelity}
+                  disabled={disabled}
+                  onChange={(overrideInputFidelity) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        overrideInputFidelity,
+                      },
+                    })
+                  }
+                />
               </SectionGrid>
             </SectionStack>
           </ConfigSection>

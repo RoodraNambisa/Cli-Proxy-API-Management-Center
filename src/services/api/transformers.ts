@@ -517,6 +517,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       overrideTransparentBackground: normalizeBoolean(
         images['override-transparent-background'] ?? images.overrideTransparentBackground
       ),
+      overrideInputFidelity: normalizeBoolean(
+        images['override-input-fidelity'] ?? images.overrideInputFidelity
+      ),
     };
   }
   const routing = raw.routing;

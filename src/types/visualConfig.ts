@@ -80,6 +80,7 @@ export interface ImagesVisualConfig {
   overrideResponseFormatUrl: boolean;
   responseFormatUrlDataUrl: boolean;
   overrideTransparentBackground: boolean;
+  overrideInputFidelity: boolean;
   unsupportedStatusCode: string;
 }
 
@@ -173,6 +174,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     overrideResponseFormatUrl: false,
     responseFormatUrlDataUrl: false,
     overrideTransparentBackground: false,
+    overrideInputFidelity: false,
     unsupportedStatusCode: '400',
   },
   routingStrategy: 'round-robin',

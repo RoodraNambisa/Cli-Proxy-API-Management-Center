@@ -874,6 +874,12 @@ function getNextDirtyFields(
           baselineValues.images.overrideTransparentBackground
       );
     }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'overrideInputFidelity')) {
+      updateDirty(
+        'images.overrideInputFidelity',
+        nextValues.images.overrideInputFidelity === baselineValues.images.overrideInputFidelity
+      );
+    }
     if (Object.prototype.hasOwnProperty.call(imagesPatch, 'unsupportedStatusCode')) {
       updateDirty(
         'images.unsupportedStatusCode',
@@ -1065,6 +1071,11 @@ export function useVisualConfig() {
           : Boolean(
               images?.['override-transparent-background'] ?? images?.overrideTransparentBackground
             );
+      const imagesOverrideInputFidelity =
+        images?.['override-input-fidelity'] === undefined &&
+        images?.overrideInputFidelity === undefined
+          ? legacyImagesOverrideUnsupportedParams
+          : Boolean(images?.['override-input-fidelity'] ?? images?.overrideInputFidelity);
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === 'string' ? parsed.host : '',
@@ -1158,6 +1169,7 @@ export function useVisualConfig() {
           overrideResponseFormatUrl: imagesOverrideResponseFormatUrl,
           responseFormatUrlDataUrl: imagesResponseFormatUrlDataUrl,
           overrideTransparentBackground: imagesOverrideTransparentBackground,
+          overrideInputFidelity: imagesOverrideInputFidelity,
           unsupportedStatusCode:
             images?.['unsupported-status-code'] === undefined &&
             images?.unsupportedStatusCode === undefined
@@ -1369,6 +1381,7 @@ export function useVisualConfig() {
           values.images.responseFormatUrlDataUrl !== imagesDefaults.responseFormatUrlDataUrl ||
           values.images.overrideTransparentBackground !==
             imagesDefaults.overrideTransparentBackground ||
+          values.images.overrideInputFidelity !== imagesDefaults.overrideInputFidelity ||
           values.images.unsupportedStatusCode !== imagesDefaults.unsupportedStatusCode;
         if (imagesDefined) {
           ensureMapInDoc(doc, ['images']);
@@ -1387,6 +1400,7 @@ export function useVisualConfig() {
             ['images', 'override-transparent-background'],
             values.images.overrideTransparentBackground
           );
+          doc.setIn(['images', 'override-input-fidelity'], values.images.overrideInputFidelity);
           setIntFromStringInDoc(
             doc,
             ['images', 'unsupported-status-code'],

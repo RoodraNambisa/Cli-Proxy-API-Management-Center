@@ -1269,6 +1269,8 @@
           "response_format_url_data_url_desc": "По умолчанию выключено. Если включено, response_format=url оборачивает base64 изображения как data:<mime>;base64,... и возвращает его в поле url",
           "override_transparent_background": "Переопределять transparent background",
           "override_transparent_background_desc": "По умолчанию выключено. Если включено, background=transparent приводится к auto",
+          "override_input_fidelity": "Переопределять input_fidelity",
+          "override_input_fidelity_desc": "По умолчанию выключено. Если включено, image-запросы не передают input_fidelity, чтобы избежать invalid_input_fidelity_model от gpt-image-2",
           "unsupported_status_code": "HTTP-код неподдерживаемой опции",
           "unsupported_status_code_hint": "HTTP-код для неподдерживаемых возможностей, например response_format=url, transparent background или file_id. Диапазон: 400-599"
         },

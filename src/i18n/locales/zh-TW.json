@@ -1297,6 +1297,8 @@
           "response_format_url_data_url_desc": "預設關閉；開啟後 response_format=url 會把圖片 base64 包裝成 data:<mime>;base64,... 回傳到 url 欄位",
           "override_transparent_background": "覆蓋透明背景",
           "override_transparent_background_desc": "預設關閉；開啟後將 background=transparent 歸一為 auto",
+          "override_input_fidelity": "覆蓋 input_fidelity",
+          "override_input_fidelity_desc": "預設關閉；開啟後圖片請求會自動不透傳 input_fidelity，避免 gpt-image-2 回傳 invalid_input_fidelity_model",
           "unsupported_status_code": "不支援參數狀態碼",
           "unsupported_status_code_hint": "response_format=url、transparent background、file_id 等不支援能力回傳的 HTTP 狀態碼，範圍 400-599"
         },

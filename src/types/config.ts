@@ -32,6 +32,7 @@ export interface ImagesConfig {
   overrideResponseFormatUrl?: boolean;
   responseFormatUrlDataUrl?: boolean;
   overrideTransparentBackground?: boolean;
+  overrideInputFidelity?: boolean;
 }
 
 export interface Config {
