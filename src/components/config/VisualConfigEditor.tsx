@@ -1101,6 +1101,22 @@ export function VisualConfigEditor({
                   }
                 />
                 <ToggleRow
+                  title={t('config_management.visual.sections.images.response_format_url_data_url')}
+                  description={t(
+                    'config_management.visual.sections.images.response_format_url_data_url_desc'
+                  )}
+                  checked={values.images.responseFormatUrlDataUrl}
+                  disabled={disabled}
+                  onChange={(responseFormatUrlDataUrl) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        responseFormatUrlDataUrl,
+                      },
+                    })
+                  }
+                />
+                <ToggleRow
                   title={t(
                     'config_management.visual.sections.images.override_transparent_background'
                   )}

@@ -30,6 +30,7 @@ export interface ImagesConfig {
   unsupportedStatusCode?: number;
   overrideUnsupportedParams?: boolean;
   overrideResponseFormatUrl?: boolean;
+  responseFormatUrlDataUrl?: boolean;
   overrideTransparentBackground?: boolean;
 }
 

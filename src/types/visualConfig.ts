@@ -78,6 +78,7 @@ export interface ImagesVisualConfig {
   imageModel: string;
   enableNAggregation: boolean;
   overrideResponseFormatUrl: boolean;
+  responseFormatUrlDataUrl: boolean;
   overrideTransparentBackground: boolean;
   unsupportedStatusCode: string;
 }
@@ -170,6 +171,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     imageModel: 'gpt-image-2',
     enableNAggregation: false,
     overrideResponseFormatUrl: false,
+    responseFormatUrlDataUrl: false,
     overrideTransparentBackground: false,
     unsupportedStatusCode: '400',
   },

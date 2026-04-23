@@ -1293,6 +1293,8 @@
           "enable_n_aggregation_desc": "預設關閉；開啟後 n > 1 會拆成多次 Codex 圖片呼叫並聚合結果，關閉後直接回傳不支援錯誤",
           "override_response_format_url": "覆蓋 response_format=url",
           "override_response_format_url_desc": "預設關閉；開啟後將 response_format=url 歸一為 b64_json",
+          "response_format_url_data_url": "URL 格式回傳 data URL",
+          "response_format_url_data_url_desc": "預設關閉；開啟後 response_format=url 會把圖片 base64 包裝成 data:<mime>;base64,... 回傳到 url 欄位",
           "override_transparent_background": "覆蓋透明背景",
           "override_transparent_background_desc": "預設關閉；開啟後將 background=transparent 歸一為 auto",
           "unsupported_status_code": "不支援參數狀態碼",

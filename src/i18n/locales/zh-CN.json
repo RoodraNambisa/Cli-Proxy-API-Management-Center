@@ -1266,6 +1266,8 @@
           "enable_n_aggregation_desc": "默认关闭；开启后 n > 1 会拆成多次 Codex 图片调用并聚合结果，关闭后直接返回不支持错误",
           "override_response_format_url": "覆盖 response_format=url",
           "override_response_format_url_desc": "默认关闭；开启后将 response_format=url 归一为 b64_json",
+          "response_format_url_data_url": "URL 格式返回 data URL",
+          "response_format_url_data_url_desc": "默认关闭；开启后 response_format=url 会把图片 base64 包装成 data:<mime>;base64,... 返回到 url 字段",
           "override_transparent_background": "覆盖透明背景",
           "override_transparent_background_desc": "默认关闭；开启后将 background=transparent 归一为 auto",
           "unsupported_status_code": "不支持参数状态码",

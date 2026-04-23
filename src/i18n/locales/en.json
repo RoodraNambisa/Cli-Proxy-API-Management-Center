@@ -1266,6 +1266,8 @@
           "enable_n_aggregation_desc": "Disabled by default. When enabled, n > 1 is split into multiple Codex image calls and aggregated; when disabled, n > 1 returns an unsupported option error",
           "override_response_format_url": "Override response_format=url",
           "override_response_format_url_desc": "Disabled by default. When enabled, response_format=url is coerced to b64_json",
+          "response_format_url_data_url": "Return Data URL for URL Format",
+          "response_format_url_data_url_desc": "Disabled by default. When enabled, response_format=url wraps image base64 as data:<mime>;base64,... and returns it in the url field",
           "override_transparent_background": "Override Transparent Background",
           "override_transparent_background_desc": "Disabled by default. When enabled, background=transparent is coerced to auto",
           "unsupported_status_code": "Unsupported Option Status Code",

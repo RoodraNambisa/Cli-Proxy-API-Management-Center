@@ -1265,6 +1265,8 @@
           "enable_n_aggregation_desc": "По умолчанию выключено. Если включено, n > 1 разбивается на несколько Codex image-вызовов и агрегируется; если выключено, n > 1 возвращает ошибку неподдерживаемой опции",
           "override_response_format_url": "Переопределять response_format=url",
           "override_response_format_url_desc": "По умолчанию выключено. Если включено, response_format=url приводится к b64_json",
+          "response_format_url_data_url": "Возвращать Data URL для формата URL",
+          "response_format_url_data_url_desc": "По умолчанию выключено. Если включено, response_format=url оборачивает base64 изображения как data:<mime>;base64,... и возвращает его в поле url",
           "override_transparent_background": "Переопределять transparent background",
           "override_transparent_background_desc": "По умолчанию выключено. Если включено, background=transparent приводится к auto",
           "unsupported_status_code": "HTTP-код неподдерживаемой опции",

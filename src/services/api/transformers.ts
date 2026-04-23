@@ -509,6 +509,11 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
           images.overrideResponseFormatUrl ??
           images.overrideResponseFormatURL
       ),
+      responseFormatUrlDataUrl: normalizeBoolean(
+        images['response-format-url-data-url'] ??
+          images.responseFormatUrlDataUrl ??
+          images.responseFormatURLDataURL
+      ),
       overrideTransparentBackground: normalizeBoolean(
         images['override-transparent-background'] ?? images.overrideTransparentBackground
       ),

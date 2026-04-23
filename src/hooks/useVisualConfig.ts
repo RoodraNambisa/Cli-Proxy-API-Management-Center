@@ -860,6 +860,13 @@ function getNextDirtyFields(
           baselineValues.images.overrideResponseFormatUrl
       );
     }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'responseFormatUrlDataUrl')) {
+      updateDirty(
+        'images.responseFormatUrlDataUrl',
+        nextValues.images.responseFormatUrlDataUrl ===
+          baselineValues.images.responseFormatUrlDataUrl
+      );
+    }
     if (Object.prototype.hasOwnProperty.call(imagesPatch, 'overrideTransparentBackground')) {
       updateDirty(
         'images.overrideTransparentBackground',
@@ -1041,6 +1048,16 @@ export function useVisualConfig() {
               images?.overrideResponseFormatUrl ??
               images?.overrideResponseFormatURL
             );
+      const imagesResponseFormatUrlDataUrl =
+        images?.['response-format-url-data-url'] === undefined &&
+        images?.responseFormatUrlDataUrl === undefined &&
+        images?.responseFormatURLDataURL === undefined
+          ? DEFAULT_VISUAL_VALUES.images.responseFormatUrlDataUrl
+          : Boolean(
+              images?.['response-format-url-data-url'] ??
+              images?.responseFormatUrlDataUrl ??
+              images?.responseFormatURLDataURL
+            );
       const imagesOverrideTransparentBackground =
         images?.['override-transparent-background'] === undefined &&
         images?.overrideTransparentBackground === undefined
@@ -1139,6 +1156,7 @@ export function useVisualConfig() {
               ? DEFAULT_VISUAL_VALUES.images.enableNAggregation
               : Boolean(images?.['enable-n-aggregation'] ?? images?.enableNAggregation),
           overrideResponseFormatUrl: imagesOverrideResponseFormatUrl,
+          responseFormatUrlDataUrl: imagesResponseFormatUrlDataUrl,
           overrideTransparentBackground: imagesOverrideTransparentBackground,
           unsupportedStatusCode:
             images?.['unsupported-status-code'] === undefined &&
@@ -1348,6 +1366,7 @@ export function useVisualConfig() {
           values.images.imageModel !== imagesDefaults.imageModel ||
           values.images.enableNAggregation !== imagesDefaults.enableNAggregation ||
           values.images.overrideResponseFormatUrl !== imagesDefaults.overrideResponseFormatUrl ||
+          values.images.responseFormatUrlDataUrl !== imagesDefaults.responseFormatUrlDataUrl ||
           values.images.overrideTransparentBackground !==
             imagesDefaults.overrideTransparentBackground ||
           values.images.unsupportedStatusCode !== imagesDefaults.unsupportedStatusCode;
@@ -1359,6 +1378,10 @@ export function useVisualConfig() {
           doc.setIn(
             ['images', 'override-response-format-url'],
             values.images.overrideResponseFormatUrl
+          );
+          doc.setIn(
+            ['images', 'response-format-url-data-url'],
+            values.images.responseFormatUrlDataUrl
           );
           doc.setIn(
             ['images', 'override-transparent-background'],
