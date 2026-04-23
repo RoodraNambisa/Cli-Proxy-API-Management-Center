@@ -1389,6 +1389,28 @@
           "filter_rules_desc": "透過 JSON Path 預篩選上游請求體，自動剔除不合規/冗餘參數（Request Sanitization）"
         }
       },
+      "codex_custom_models": {
+        "title": "Codex 自訂模型",
+        "description": "為 Codex OAuth / 檔案憑證依方案分組追加自訂模型，不影響 codex-api-key 自身的 models 設定",
+        "item_title": "模型 #{{index}}",
+        "id": "模型 ID",
+        "id_placeholder": "例如 gpt-5.5-codex",
+        "display_name": "顯示名稱 (display-name)",
+        "display_name_placeholder": "例如 GPT 5.5 Codex",
+        "display_name_hint": "留空時後端會預設使用模型 ID 作為顯示名稱",
+        "groups": "方案分組",
+        "groups_hint": "至少選擇一個分組；儲存時會依後端規範順序寫回",
+        "add": "新增自訂模型",
+        "empty": "尚無自訂模型",
+        "groups_options": {
+          "free": "Free",
+          "plus": "Plus",
+          "pro": "Pro",
+          "team": "Team",
+          "business": "Business",
+          "go": "Go"
+        }
+      },
       "api_keys": {
         "label": "API 金鑰清單（api-keys）",
         "add": "新增 API 金鑰",
@@ -1445,6 +1467,9 @@
         "non_negative_integer": "請輸入非負整數",
         "integer_list": "請輸入用逗號或換行分隔的整數列表",
         "http_status_range": "請輸入 400 到 599 之間的 HTTP 狀態碼",
+        "codex_custom_model_id_required": "請輸入模型 ID",
+        "codex_custom_model_id_duplicate": "模型 ID 不能重複（不區分大小寫）",
+        "codex_custom_model_groups_required": "請至少選擇一個方案分組",
         "payload_invalid_number": "請輸入有效數字",
         "payload_invalid_boolean": "請選擇 true 或 false",
         "payload_invalid_json": "請輸入有效的 JSON"

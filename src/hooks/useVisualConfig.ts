@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useReducer } from 'react';
 import { isMap, parse as parseYaml, parseDocument } from 'yaml';
 import type {
+  CodexCustomModelValidationErrors,
+  CodexCustomModelVisualEntry,
   PayloadFilterRule,
   PayloadParamEntry,
   PayloadParamValueType,
@@ -9,7 +11,11 @@ import type {
   VisualConfigValidationErrors,
   PayloadParamValidationErrorCode,
 } from '@/types/visualConfig';
-import { DEFAULT_VISUAL_VALUES } from '@/types/visualConfig';
+import { DEFAULT_VISUAL_VALUES, makeClientId } from '@/types/visualConfig';
+import {
+  CODEX_CUSTOM_MODEL_GROUPS,
+  type CodexCustomModelGroup,
+} from '@/types/config';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -195,6 +201,54 @@ function setIntListFromTextInDoc(doc: YamlDocument, path: YamlPath, value: unkno
   doc.setIn(path, values);
 }
 
+function normalizeCodexCustomModelGroups(value: unknown): CodexCustomModelGroup[] {
+  if (!Array.isArray(value)) return [];
+
+  const requested = new Set(
+    value
+      .map((item) => String(item ?? '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  return CODEX_CUSTOM_MODEL_GROUPS.filter((group) => requested.has(group));
+}
+
+function parseCodexCustomModels(raw: unknown): CodexCustomModelVisualEntry[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.reduce<CodexCustomModelVisualEntry[]>((result, item) => {
+    const record = asRecord(item);
+    if (!record) return result;
+
+    const idRaw = record.id;
+    const displayNameRaw = record['display-name'] ?? record.displayName;
+    result.push({
+      clientId: makeClientId(),
+      id: typeof idRaw === 'string' ? idRaw : String(idRaw ?? ''),
+      displayName:
+        typeof displayNameRaw === 'string' ? displayNameRaw : String(displayNameRaw ?? ''),
+      groups: normalizeCodexCustomModelGroups(record.groups),
+    });
+    return result;
+  }, []);
+}
+
+function serializeCodexCustomModelsForYaml(
+  models: CodexCustomModelVisualEntry[]
+): Array<Record<string, unknown>> {
+  return models.map((model) => {
+    const entry: Record<string, unknown> = {
+      id: model.id,
+      groups: normalizeCodexCustomModelGroups(model.groups),
+    };
+    const displayName = model.displayName.trim();
+    if (displayName) {
+      entry['display-name'] = displayName;
+    }
+    return entry;
+  });
+}
+
 function getNonNegativeIntegerError(value: string): 'non_negative_integer' | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
@@ -375,6 +429,60 @@ function arePayloadFilterRulesEqual(
     }
   }
   return true;
+}
+
+function areCodexCustomModelsEqual(
+  left: CodexCustomModelVisualEntry[],
+  right: CodexCustomModelVisualEntry[]
+): boolean {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+
+  for (let i = 0; i < left.length; i += 1) {
+    const a = left[i];
+    const b = right[i];
+    if (!a || !b) return false;
+    if (a.id !== b.id || a.displayName !== b.displayName) return false;
+    if (a.groups.length !== b.groups.length) return false;
+    for (let j = 0; j < a.groups.length; j += 1) {
+      if (a.groups[j] !== b.groups[j]) return false;
+    }
+  }
+
+  return true;
+}
+
+export function getCodexCustomModelValidationErrors(
+  models: CodexCustomModelVisualEntry[]
+): CodexCustomModelValidationErrors {
+  const duplicateCount = new Map<string, number>();
+  models.forEach((model) => {
+    const key = model.id.trim().toLowerCase();
+    if (!key) return;
+    duplicateCount.set(key, (duplicateCount.get(key) ?? 0) + 1);
+  });
+
+  return models.reduce<CodexCustomModelValidationErrors>((result, model) => {
+    const idKey = model.id.trim().toLowerCase();
+    const groups = normalizeCodexCustomModelGroups(model.groups);
+    const entryErrors: CodexCustomModelValidationErrors[string] = {};
+
+    if (!idKey) {
+      entryErrors.id = 'codex_custom_model_id_required';
+    } else if ((duplicateCount.get(idKey) ?? 0) > 1) {
+      entryErrors.id = 'codex_custom_model_id_duplicate';
+    }
+
+    if (groups.length === 0) {
+      entryErrors.groups = 'codex_custom_model_groups_required';
+    }
+
+    if (entryErrors.id || entryErrors.groups) {
+      result[model.clientId] = entryErrors;
+    }
+
+    return result;
+  }, {});
 }
 
 function parsePayloadParamValue(raw: unknown): { valueType: PayloadParamValueType; value: string } {
@@ -708,6 +816,12 @@ function getNextDirtyFields(
   if (Object.prototype.hasOwnProperty.call(patch, 'apiKeysText')) {
     updateDirty('apiKeysText', nextValues.apiKeysText === baselineValues.apiKeysText);
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexCustomModels')) {
+    updateDirty(
+      'codexCustomModels',
+      areCodexCustomModelsEqual(nextValues.codexCustomModels, baselineValues.codexCustomModels)
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'debug')) {
     updateDirty('debug', nextValues.debug === baselineValues.debug);
   }
@@ -1029,6 +1143,17 @@ export function useVisualConfig() {
     () => getVisualConfigValidationErrors(visualValues),
     [visualValues]
   );
+  const visualCodexCustomModelValidationErrors = useMemo(
+    () => getCodexCustomModelValidationErrors(visualValues.codexCustomModels),
+    [visualValues.codexCustomModels]
+  );
+  const visualHasCodexCustomModelValidationErrors = useMemo(
+    () =>
+      Object.values(visualCodexCustomModelValidationErrors).some(
+        (entry) => Boolean(entry.id || entry.groups)
+      ),
+    [visualCodexCustomModelValidationErrors]
+  );
   const visualHasPayloadValidationErrors = useMemo(
     () =>
       hasPayloadParamValidationErrors(visualValues.payloadDefaultRules) ||
@@ -1132,6 +1257,9 @@ export function useVisualConfig() {
 
         authDir: typeof parsed['auth-dir'] === 'string' ? parsed['auth-dir'] : '',
         apiKeysText: resolveApiKeysText(parsed),
+        codexCustomModels: parseCodexCustomModels(
+          parsed['codex-custom-models'] ?? parsed.codexCustomModels
+        ),
 
         debug: Boolean(parsed.debug),
         commercialMode: Boolean(parsed['commercial-mode']),
@@ -1311,6 +1439,25 @@ export function useVisualConfig() {
           doc.deleteIn(['api-keys']);
         }
         deleteLegacyApiKeysProvider(doc);
+
+        if (
+          docHas(doc, ['codex-custom-models']) ||
+          docHas(doc, ['codexCustomModels']) ||
+          values.codexCustomModels.length > 0
+        ) {
+          if (values.codexCustomModels.length > 0) {
+            doc.setIn(
+              ['codex-custom-models'],
+              serializeCodexCustomModelsForYaml(values.codexCustomModels)
+            );
+          } else if (docHas(doc, ['codex-custom-models'])) {
+            doc.deleteIn(['codex-custom-models']);
+          }
+
+          if (docHas(doc, ['codexCustomModels'])) {
+            doc.deleteIn(['codexCustomModels']);
+          }
+        }
 
         setBooleanInDoc(doc, ['debug'], values.debug);
 
@@ -1559,6 +1706,8 @@ export function useVisualConfig() {
     visualDirty,
     visualParseError,
     visualValidationErrors,
+    visualCodexCustomModelValidationErrors,
+    visualHasCodexCustomModelValidationErrors,
     visualHasPayloadValidationErrors,
     loadVisualValuesFromYaml,
     applyVisualChangesToYaml,

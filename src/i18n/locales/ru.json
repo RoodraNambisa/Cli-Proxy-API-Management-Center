@@ -1366,6 +1366,28 @@
           "filter_rules_desc": "Предварительно фильтровать тело исходящего запроса через JSON Path, автоматически удалять несоответствующие или лишние параметры (санитизация запроса)"
         }
       },
+      "codex_custom_models": {
+        "title": "Пользовательские модели Codex",
+        "description": "Добавляйте пользовательские модели для Codex OAuth / файловых учётных данных по группам планов. Это не влияет на models у codex-api-key.",
+        "item_title": "Модель #{{index}}",
+        "id": "ID модели",
+        "id_placeholder": "Например gpt-5.5-codex",
+        "display_name": "Отображаемое имя (display-name)",
+        "display_name_placeholder": "Например GPT 5.5 Codex",
+        "display_name_hint": "Оставьте пустым, чтобы backend использовал ID модели как отображаемое имя",
+        "groups": "Группы планов",
+        "groups_hint": "Выберите хотя бы одну группу. При сохранении порядок будет приведён к backend-формату.",
+        "add": "Добавить модель",
+        "empty": "Пользовательские модели отсутствуют",
+        "groups_options": {
+          "free": "Free",
+          "plus": "Plus",
+          "pro": "Pro",
+          "team": "Team",
+          "business": "Business",
+          "go": "Go"
+        }
+      },
       "api_keys": {
         "label": "Список API-ключей (api-keys)",
         "add": "Добавить API-ключ",
@@ -1422,6 +1444,9 @@
         "non_negative_integer": "Введите неотрицательное целое число",
         "integer_list": "Введите список целых чисел через запятую или перевод строки",
         "http_status_range": "Введите HTTP-код состояния от 400 до 599",
+        "codex_custom_model_id_required": "Введите ID модели",
+        "codex_custom_model_id_duplicate": "ID моделей должны быть уникальными без учёта регистра",
+        "codex_custom_model_groups_required": "Выберите хотя бы одну группу плана",
         "payload_invalid_number": "Введите корректное число",
         "payload_invalid_boolean": "Выберите true или false",
         "payload_invalid_json": "Введите корректный JSON"

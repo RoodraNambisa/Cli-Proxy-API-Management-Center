@@ -44,6 +44,23 @@ export interface RemoteManagementConfig {
   panelGithubRepository?: string;
 }
 
+export const CODEX_CUSTOM_MODEL_GROUPS = [
+  'free',
+  'plus',
+  'pro',
+  'team',
+  'business',
+  'go',
+] as const;
+
+export type CodexCustomModelGroup = (typeof CODEX_CUSTOM_MODEL_GROUPS)[number];
+
+export interface CodexCustomModelConfig {
+  id: string;
+  displayName?: string;
+  groups: CodexCustomModelGroup[];
+}
+
 export interface Config {
   debug?: boolean;
   proxyUrl?: string;
@@ -69,6 +86,7 @@ export interface Config {
   vertexApiKeys?: ProviderKeyConfig[];
   openaiCompatibility?: OpenAIProviderConfig[];
   oauthExcludedModels?: Record<string, string[]>;
+  codexCustomModels?: CodexCustomModelConfig[];
   raw?: Record<string, unknown>;
 }
 
@@ -96,7 +114,8 @@ export type RawConfigSection =
   | 'claude-api-key'
   | 'vertex-api-key'
   | 'openai-compatibility'
-  | 'oauth-excluded-models';
+  | 'oauth-excluded-models'
+  | 'codex-custom-models';
 
 export interface ConfigCache {
   data: Config;

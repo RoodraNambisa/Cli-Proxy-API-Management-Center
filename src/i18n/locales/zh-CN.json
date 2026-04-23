@@ -1352,10 +1352,10 @@
           "nonstream_keepalive_hint": "非流式响应时每隔 N 秒发送空行以防止空闲超时，设置为 0 或留空表示禁用",
           "disabled": "已禁用"
         },
-        "payload": {
-          "title": "Payload 配置",
-          "description": "默认值、原始 JSON 规则、覆盖规则与过滤规则",
-          "default_rules": "默认规则",
+      "payload": {
+        "title": "Payload 配置",
+        "description": "默认值、原始 JSON 规则、覆盖规则与过滤规则",
+        "default_rules": "默认规则",
           "default_rules_desc": "当请求中未指定参数时，使用这些默认值",
           "default_raw_rules": "默认 Raw 规则",
           "default_raw_rules_desc": "当请求中未指定参数时，按原始 JSON 片段写入这些值，例如 true、123、\"high\" 或 {\"type\":\"object\"}",
@@ -1365,6 +1365,28 @@
           "override_raw_rules_desc": "始终按原始 JSON 片段覆盖参数值，适合 response_format、schema 等复杂字段",
           "filter_rules": "过滤规则",
           "filter_rules_desc": "通过 JSON Path 预过滤上游请求体，自动剔除不合规/冗余参数（Request Sanitization）"
+        }
+      },
+      "codex_custom_models": {
+        "title": "Codex 自定义模型",
+        "description": "为 Codex OAuth / 文件凭证按计划类型追加自定义模型，不影响 codex-api-key 自身的 models 配置",
+        "item_title": "模型 #{{index}}",
+        "id": "模型 ID",
+        "id_placeholder": "例如 gpt-5.5-codex",
+        "display_name": "显示名称 (display-name)",
+        "display_name_placeholder": "例如 GPT 5.5 Codex",
+        "display_name_hint": "留空时后端会默认使用模型 ID 作为显示名称",
+        "groups": "计划分组",
+        "groups_hint": "至少选择一个分组；保存时会按后端规范顺序写回",
+        "add": "添加自定义模型",
+        "empty": "暂无自定义模型",
+        "groups_options": {
+          "free": "Free",
+          "plus": "Plus",
+          "pro": "Pro",
+          "team": "Team",
+          "business": "Business",
+          "go": "Go"
         }
       },
       "api_keys": {
@@ -1423,6 +1445,9 @@
         "non_negative_integer": "请输入非负整数",
         "integer_list": "请输入用逗号或换行分隔的整数列表",
         "http_status_range": "请输入 400 到 599 之间的 HTTP 状态码",
+        "codex_custom_model_id_required": "请输入模型 ID",
+        "codex_custom_model_id_duplicate": "模型 ID 不能重复（不区分大小写）",
+        "codex_custom_model_groups_required": "请至少选择一个计划分组",
         "payload_invalid_number": "请输入有效数字",
         "payload_invalid_boolean": "请选择 true 或 false",
         "payload_invalid_json": "请输入有效的 JSON"

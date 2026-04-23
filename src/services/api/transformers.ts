@@ -9,7 +9,12 @@ import type {
   AmpcodeModelMapping,
   AmpcodeUpstreamApiKeyMapping,
 } from '@/types';
-import type { Config } from '@/types/config';
+import {
+  CODEX_CUSTOM_MODEL_GROUPS,
+  type CodexCustomModelConfig,
+  type CodexCustomModelGroup,
+  type Config,
+} from '@/types/config';
 import { buildHeaderObject } from '@/utils/headers';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -59,6 +64,60 @@ const normalizeIntegerArray = (value: unknown): number[] | undefined => {
   }, []);
 
   return normalized.length > 0 ? normalized : [];
+};
+
+const normalizeCodexCustomModelGroups = (value: unknown): CodexCustomModelGroup[] => {
+  if (!Array.isArray(value)) return [];
+
+  const requested = new Set(
+    value
+      .map((item) => String(item ?? '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  return CODEX_CUSTOM_MODEL_GROUPS.filter((group) => requested.has(group));
+};
+
+const normalizeCodexCustomModels = (value: unknown): CodexCustomModelConfig[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+
+  const indexById = new Map<string, number>();
+  const models: CodexCustomModelConfig[] = [];
+
+  value.forEach((item) => {
+    if (!isRecord(item)) return;
+
+    const id = String(item.id ?? '').trim();
+    if (!id) return;
+
+    const groups = normalizeCodexCustomModelGroups(item.groups);
+    if (groups.length === 0) return;
+
+    const displayNameRaw = item['display-name'] ?? item.displayName;
+    const displayName = normalizeString(displayNameRaw)?.trim() || undefined;
+    const key = id.toLowerCase();
+    const existingIndex = indexById.get(key);
+
+    if (existingIndex !== undefined) {
+      const existing = models[existingIndex];
+      const merged = new Set<CodexCustomModelGroup>(existing.groups);
+      groups.forEach((group) => merged.add(group));
+      existing.groups = CODEX_CUSTOM_MODEL_GROUPS.filter((group) => merged.has(group));
+      if (!existing.displayName && displayName) {
+        existing.displayName = displayName;
+      }
+      return;
+    }
+
+    indexById.set(key, models.length);
+    models.push({
+      id,
+      displayName,
+      groups,
+    });
+  });
+
+  return models;
 };
 
 const normalizeModelAliases = (models: unknown): ModelAlias[] => {
@@ -610,6 +669,13 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     config.oauthExcludedModels = oauthExcluded;
   }
 
+  const codexCustomModels = normalizeCodexCustomModels(
+    raw['codex-custom-models'] ?? raw.codexCustomModels
+  );
+  if (codexCustomModels) {
+    config.codexCustomModels = codexCustomModels;
+  }
+
   return config;
 };
 
@@ -624,4 +690,5 @@ export {
   normalizeAmpcodeConfig,
   normalizeAmpcodeModelMappings,
   normalizeAmpcodeUpstreamApiKeys,
+  normalizeCodexCustomModels,
 };

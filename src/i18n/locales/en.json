@@ -1352,10 +1352,10 @@
           "nonstream_keepalive_hint": "Send blank lines every N seconds for non-streaming responses to prevent idle timeout, set to 0 or leave empty to disable",
           "disabled": "Disabled"
         },
-        "payload": {
-          "title": "Payload Configuration",
-          "description": "Default values, raw JSON rules, override rules, and filter rules",
-          "default_rules": "Default Rules",
+      "payload": {
+        "title": "Payload Configuration",
+        "description": "Default values, raw JSON rules, override rules, and filter rules",
+        "default_rules": "Default Rules",
           "default_rules_desc": "Use these default values when parameters are not specified in the request",
           "default_raw_rules": "Default Raw Rules",
           "default_raw_rules_desc": "When parameters are missing, write these values as raw JSON fragments such as true, 123, \"high\", or {\"type\":\"object\"}",
@@ -1365,6 +1365,28 @@
           "override_raw_rules_desc": "Always overwrite parameter values as raw JSON fragments, useful for response_format, schemas, and other complex fields",
           "filter_rules": "Filter Rules",
           "filter_rules_desc": "Pre-filter upstream request body via JSON Path, automatically remove non-compliant/redundant parameters (Request Sanitization)"
+        }
+      },
+      "codex_custom_models": {
+        "title": "Codex Custom Models",
+        "description": "Append custom models for Codex OAuth / file-backed credentials by plan group. This does not affect codex-api-key models.",
+        "item_title": "Model #{{index}}",
+        "id": "Model ID",
+        "id_placeholder": "For example gpt-5.5-codex",
+        "display_name": "Display Name (display-name)",
+        "display_name_placeholder": "For example GPT 5.5 Codex",
+        "display_name_hint": "Leave empty to let the backend fall back to the model ID",
+        "groups": "Plan Groups",
+        "groups_hint": "Select at least one group. Values are saved in backend-defined order.",
+        "add": "Add Custom Model",
+        "empty": "No custom models",
+        "groups_options": {
+          "free": "Free",
+          "plus": "Plus",
+          "pro": "Pro",
+          "team": "Team",
+          "business": "Business",
+          "go": "Go"
         }
       },
       "api_keys": {
@@ -1423,6 +1445,9 @@
         "non_negative_integer": "Enter a non-negative whole number",
         "integer_list": "Enter integers separated by commas or line breaks",
         "http_status_range": "Enter an HTTP status code between 400 and 599",
+        "codex_custom_model_id_required": "Enter a model ID",
+        "codex_custom_model_id_duplicate": "Model IDs must be unique (case-insensitive)",
+        "codex_custom_model_groups_required": "Select at least one plan group",
         "payload_invalid_number": "Enter a valid number",
         "payload_invalid_boolean": "Choose true or false",
         "payload_invalid_json": "Enter valid JSON"

@@ -3,19 +3,25 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
+import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { useNotificationStore } from '@/stores';
 import styles from './VisualConfigEditor.module.scss';
 import { copyToClipboard } from '@/utils/clipboard';
 import type {
+  CodexCustomModelValidationErrors,
+  CodexCustomModelVisualEntry,
   PayloadFilterRule,
   PayloadModelEntry,
   PayloadParamEntry,
   PayloadParamValidationErrorCode,
   PayloadParamValueType,
   PayloadRule,
+  VisualConfigValidationErrorCode,
 } from '@/types/visualConfig';
 import { makeClientId } from '@/types/visualConfig';
+import { CODEX_CUSTOM_MODEL_GROUPS, type CodexCustomModelGroup } from '@/types/config';
 import {
+  getCodexCustomModelValidationErrors,
   getPayloadParamValidationError,
   VISUAL_CONFIG_PAYLOAD_VALUE_TYPE_OPTIONS,
   VISUAL_CONFIG_PROTOCOL_OPTIONS,
@@ -128,7 +134,7 @@ function ExpandableInput({
 
 function getValidationMessage(
   t: ReturnType<typeof useTranslation>['t'],
-  errorCode?: PayloadParamValidationErrorCode
+  errorCode?: PayloadParamValidationErrorCode | VisualConfigValidationErrorCode
 ) {
   if (!errorCode) return undefined;
   return t(`config_management.visual.validation.${errorCode}`);
@@ -443,6 +449,161 @@ const StringListEditor = memo(function StringListEditor({
       <div className={styles.actionRow}>
         <Button variant="secondary" size="sm" onClick={addItem} disabled={disabled}>
           {t('config_management.visual.common.add')}
+        </Button>
+      </div>
+    </div>
+  );
+});
+
+export const CodexCustomModelsEditor = memo(function CodexCustomModelsEditor({
+  value,
+  validationErrors,
+  disabled,
+  onChange,
+}: {
+  value: CodexCustomModelVisualEntry[];
+  validationErrors?: CodexCustomModelValidationErrors;
+  disabled?: boolean;
+  onChange: (next: CodexCustomModelVisualEntry[]) => void;
+}) {
+  const { t } = useTranslation();
+  const models = value;
+  const effectiveValidationErrors = useMemo(
+    () => validationErrors ?? getCodexCustomModelValidationErrors(models),
+    [models, validationErrors]
+  );
+  const groupOptions = useMemo(
+    () =>
+      CODEX_CUSTOM_MODEL_GROUPS.map((group) => ({
+        value: group,
+        label: t(`config_management.visual.codex_custom_models.groups_options.${group}`),
+      })),
+    [t]
+  );
+
+  const addModel = () =>
+    onChange([
+      ...models,
+      {
+        clientId: makeClientId(),
+        id: '',
+        displayName: '',
+        groups: [],
+      },
+    ]);
+
+  const removeModel = (clientId: string) =>
+    onChange(models.filter((model) => model.clientId !== clientId));
+
+  const updateModel = (clientId: string, patch: Partial<CodexCustomModelVisualEntry>) =>
+    onChange(models.map((model) => (model.clientId === clientId ? { ...model, ...patch } : model)));
+
+  const toggleGroup = (
+    clientId: string,
+    group: CodexCustomModelGroup,
+    checked: boolean
+  ) => {
+    const current = models.find((model) => model.clientId === clientId);
+    if (!current) return;
+
+    const nextGroups = checked
+      ? CODEX_CUSTOM_MODEL_GROUPS.filter((item) => [...current.groups, group].includes(item))
+      : current.groups.filter((item) => item !== group);
+
+    updateModel(clientId, { groups: nextGroups });
+  };
+
+  return (
+    <div className={styles.blockStack}>
+      {models.map((model, index) => {
+        const errors = effectiveValidationErrors[model.clientId];
+        const idError = getValidationMessage(t, errors?.id);
+        const groupsError = getValidationMessage(t, errors?.groups);
+
+        return (
+          <div key={model.clientId} className={styles.ruleCard}>
+            <div className={styles.ruleCardHeader}>
+              <div className={styles.ruleCardTitle}>
+                {t('config_management.visual.codex_custom_models.item_title', {
+                  index: index + 1,
+                })}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeModel(model.clientId)}
+                disabled={disabled}
+              >
+                {t('config_management.visual.common.delete')}
+              </Button>
+            </div>
+
+            <div className={styles.codexCustomModelFieldGrid}>
+              <div className="form-group">
+                <label>{t('config_management.visual.codex_custom_models.id')}</label>
+                <ExpandableInput
+                  placeholder={t('config_management.visual.codex_custom_models.id_placeholder')}
+                  ariaLabel={t('config_management.visual.codex_custom_models.id')}
+                  value={model.id}
+                  onChange={(nextValue) => updateModel(model.clientId, { id: nextValue })}
+                  disabled={disabled}
+                />
+                {idError ? <div className="error-box">{idError}</div> : null}
+              </div>
+
+              <div className="form-group">
+                <label>{t('config_management.visual.codex_custom_models.display_name')}</label>
+                <ExpandableInput
+                  placeholder={t(
+                    'config_management.visual.codex_custom_models.display_name_placeholder'
+                  )}
+                  ariaLabel={t('config_management.visual.codex_custom_models.display_name')}
+                  value={model.displayName}
+                  onChange={(nextValue) => updateModel(model.clientId, { displayName: nextValue })}
+                  disabled={disabled}
+                />
+                <div className="hint">
+                  {t('config_management.visual.codex_custom_models.display_name_hint')}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.blockStack}>
+              <div className={styles.blockLabel}>
+                {t('config_management.visual.codex_custom_models.groups')}
+              </div>
+              <div className={styles.codexCustomModelGroups}>
+                {groupOptions.map((option) => (
+                  <SelectionCheckbox
+                    key={option.value}
+                    checked={model.groups.includes(option.value)}
+                    onChange={(checked) => toggleGroup(model.clientId, option.value, checked)}
+                    label={option.label}
+                    ariaLabel={option.label}
+                    disabled={disabled}
+                    className={styles.codexCustomModelGroupOption}
+                    labelClassName={styles.codexCustomModelGroupLabel}
+                  />
+                ))}
+              </div>
+              <div className="hint">
+                {t('config_management.visual.codex_custom_models.groups_hint')}
+              </div>
+              {groupsError ? <div className="error-box">{groupsError}</div> : null}
+            </div>
+          </div>
+        );
+      })}
+
+      {models.length === 0 ? (
+        <div className={styles.emptyState}>
+          {t('config_management.visual.codex_custom_models.empty')}
+        </div>
+      ) : null}
+
+      <div className={styles.actionRow}>
+        <Button variant="secondary" size="sm" onClick={addModel} disabled={disabled}>
+          {t('config_management.visual.codex_custom_models.add')}
         </Button>
       </div>
     </div>

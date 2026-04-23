@@ -50,6 +50,8 @@ export function ConfigPage() {
     visualDirty,
     visualParseError,
     visualValidationErrors,
+    visualCodexCustomModelValidationErrors,
+    visualHasCodexCustomModelValidationErrors,
     visualHasPayloadValidationErrors,
     loadVisualValuesFromYaml,
     applyVisualChangesToYaml,
@@ -87,7 +89,9 @@ export function ConfigPage() {
   const hasVisualModeError = !!visualParseError;
   const hasVisualValidationErrors =
     activeTab === 'visual' &&
-    (Object.values(visualValidationErrors).some(Boolean) || visualHasPayloadValidationErrors);
+    (Object.values(visualValidationErrors).some(Boolean) ||
+      visualHasCodexCustomModelValidationErrors ||
+      visualHasPayloadValidationErrors);
 
   const loadConfig = useCallback(async () => {
     setLoading(true);
@@ -554,6 +558,7 @@ export function ConfigPage() {
             <VisualConfigEditor
               values={visualValues}
               validationErrors={visualValidationErrors}
+              codexCustomModelValidationErrors={visualCodexCustomModelValidationErrors}
               hasPayloadValidationErrors={visualHasPayloadValidationErrors}
               disabled={disableControls || loading}
               onChange={setVisualValues}

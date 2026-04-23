@@ -29,6 +29,7 @@ import {
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import type {
+  CodexCustomModelValidationErrors,
   PayloadFilterRule,
   PayloadParamValidationErrorCode,
   PayloadRule,
@@ -39,6 +40,7 @@ import type {
 } from '@/types/visualConfig';
 import {
   ApiKeysCardEditor,
+  CodexCustomModelsEditor,
   PayloadFilterRulesEditor,
   PayloadRulesEditor,
 } from './VisualConfigEditorBlocks';
@@ -68,6 +70,7 @@ type VisualSection = {
 interface VisualConfigEditorProps {
   values: VisualConfigValues;
   validationErrors?: VisualConfigValidationErrors;
+  codexCustomModelValidationErrors?: CodexCustomModelValidationErrors;
   hasPayloadValidationErrors?: boolean;
   disabled?: boolean;
   onChange: (values: Partial<VisualConfigValues>) => void;
@@ -175,6 +178,7 @@ function FieldShell({
 export function VisualConfigEditor({
   values,
   validationErrors,
+  codexCustomModelValidationErrors,
   hasPayloadValidationErrors = false,
   disabled = false,
   onChange,
@@ -260,6 +264,10 @@ export function VisualConfigEditor({
     (apiKeysText: string) => onChange({ apiKeysText }),
     [onChange]
   );
+  const handleCodexCustomModelsChange = useCallback(
+    (codexCustomModels: VisualConfigValues['codexCustomModels']) => onChange({ codexCustomModels }),
+    [onChange]
+  );
   const handlePayloadDefaultRulesChange = useCallback(
     (payloadDefaultRules: PayloadRule[]) => onChange({ payloadDefaultRules }),
     [onChange]
@@ -285,6 +293,14 @@ export function VisualConfigEditor({
     (fields: VisualConfigFieldPath[]) =>
       fields.reduce((total, field) => total + (validationErrors?.[field] ? 1 : 0), 0),
     [validationErrors]
+  );
+  const authSectionErrorCount = useMemo(
+    () =>
+      Object.values(codexCustomModelValidationErrors ?? {}).reduce(
+        (total, entry) => total + (entry.id ? 1 : 0) + (entry.groups ? 1 : 0),
+        0
+      ),
+    [codexCustomModelValidationErrors]
   );
 
   const sections = useMemo<VisualSection[]>(
@@ -315,7 +331,7 @@ export function VisualConfigEditor({
         title: t('config_management.visual.sections.auth.title'),
         description: t('config_management.visual.sections.auth.description'),
         icon: IconKey,
-        errorCount: 0,
+        errorCount: authSectionErrorCount,
       },
       {
         id: 'system',
@@ -377,7 +393,7 @@ export function VisualConfigEditor({
         errorCount: hasPayloadValidationErrors ? 1 : 0,
       },
     ],
-    [countErrors, hasPayloadValidationErrors, t]
+    [authSectionErrorCount, countErrors, hasPayloadValidationErrors, t]
   );
 
   const hasValidationIssues =
@@ -822,6 +838,17 @@ export function VisualConfigEditor({
                   onChange={handleApiKeysTextChange}
                 />
               </div>
+              <SectionSubsection
+                title={t('config_management.visual.codex_custom_models.title')}
+                description={t('config_management.visual.codex_custom_models.description')}
+              >
+                <CodexCustomModelsEditor
+                  value={values.codexCustomModels}
+                  validationErrors={codexCustomModelValidationErrors}
+                  disabled={disabled}
+                  onChange={handleCodexCustomModelsChange}
+                />
+              </SectionSubsection>
             </SectionStack>
           </ConfigSection>
 

@@ -1,3 +1,5 @@
+import type { CodexCustomModelGroup } from './config';
+
 export type PayloadParamValueType = 'string' | 'number' | 'boolean' | 'json';
 export type PayloadParamValidationErrorCode =
   | 'payload_invalid_number'
@@ -27,7 +29,10 @@ export type VisualConfigValidationErrorCode =
   | 'management_access_path'
   | 'http_status_range'
   | 'non_negative_integer'
-  | 'integer_list';
+  | 'integer_list'
+  | 'codex_custom_model_id_required'
+  | 'codex_custom_model_id_duplicate'
+  | 'codex_custom_model_groups_required';
 
 export type VisualConfigValidationErrors = Partial<
   Record<VisualConfigFieldPath, VisualConfigValidationErrorCode>
@@ -87,6 +92,24 @@ export interface ImagesVisualConfig {
   unsupportedStatusCode: string;
 }
 
+export interface CodexCustomModelVisualEntry {
+  clientId: string;
+  id: string;
+  displayName: string;
+  groups: CodexCustomModelGroup[];
+}
+
+export type CodexCustomModelValidationErrors = Record<
+  string,
+  {
+    id?: Extract<
+      VisualConfigValidationErrorCode,
+      'codex_custom_model_id_required' | 'codex_custom_model_id_duplicate'
+    >;
+    groups?: Extract<VisualConfigValidationErrorCode, 'codex_custom_model_groups_required'>;
+  }
+>;
+
 export type VisualConfigValues = {
   host: string;
   port: string;
@@ -100,6 +123,7 @@ export type VisualConfigValues = {
   rmPanelRepo: string;
   authDir: string;
   apiKeysText: string;
+  codexCustomModels: CodexCustomModelVisualEntry[];
   debug: boolean;
   commercialMode: boolean;
   loggingToFile: boolean;
@@ -147,6 +171,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   rmPanelRepo: '',
   authDir: '',
   apiKeysText: '',
+  codexCustomModels: [],
   debug: false,
   commercialMode: false,
   loggingToFile: false,
