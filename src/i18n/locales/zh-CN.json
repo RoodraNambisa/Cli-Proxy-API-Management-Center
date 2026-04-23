@@ -1269,11 +1269,11 @@
           "response_format_url_data_url": "URL 格式返回 data URL",
           "response_format_url_data_url_desc": "默认关闭；开启后 response_format=url 会把图片 base64 包装成 data:<mime>;base64,... 返回到 url 字段",
           "override_transparent_background": "覆盖透明背景",
-          "override_transparent_background_desc": "默认关闭；开启后将 background=transparent 归一为 auto",
+          "override_transparent_background_desc": "默认关闭时 background=transparent 会原样透传给 Codex；开启后将其归一为 auto",
           "override_input_fidelity": "覆盖 input_fidelity",
           "override_input_fidelity_desc": "默认关闭；开启后图片请求会自动不透传 input_fidelity，避免 gpt-image-2 返回 invalid_input_fidelity_model",
           "unsupported_status_code": "不支持参数状态码",
-          "unsupported_status_code_hint": "response_format=url、transparent background、file_id 等不支持能力返回的 HTTP 状态码，范围 400-599"
+          "unsupported_status_code_hint": "response_format=url、file_id 等不支持能力返回的 HTTP 状态码，范围 400-599"
         },
         "quota": {
           "title": "配额回退",

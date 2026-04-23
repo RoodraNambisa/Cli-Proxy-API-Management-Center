@@ -1269,11 +1269,11 @@
           "response_format_url_data_url": "Return Data URL for URL Format",
           "response_format_url_data_url_desc": "Disabled by default. When enabled, response_format=url wraps image base64 as data:<mime>;base64,... and returns it in the url field",
           "override_transparent_background": "Override Transparent Background",
-          "override_transparent_background_desc": "Disabled by default. When enabled, background=transparent is coerced to auto",
+          "override_transparent_background_desc": "Disabled by default, background=transparent is forwarded to Codex unchanged. When enabled, it is coerced to auto",
           "override_input_fidelity": "Override input_fidelity",
           "override_input_fidelity_desc": "Disabled by default. When enabled, image requests omit input_fidelity to avoid invalid_input_fidelity_model from gpt-image-2",
           "unsupported_status_code": "Unsupported Option Status Code",
-          "unsupported_status_code_hint": "HTTP status code for unsupported capabilities such as response_format=url, transparent background, or file_id. Range: 400-599"
+          "unsupported_status_code_hint": "HTTP status code for unsupported capabilities such as response_format=url or file_id. Range: 400-599"
         },
         "quota": {
           "title": "Quota Fallback",
