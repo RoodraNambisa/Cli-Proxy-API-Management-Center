@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { usageApi } from '@/services/api';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { collectUsageDetails, computeKeyStatsFromDetails, type KeyStats, type UsageDetail } from '@/utils/usage';
+import {
+  collectUsageDetails,
+  computeKeyStatsFromDetails,
+  type KeyStats,
+  type UsageDetail,
+} from '@/utils/usage';
 import i18n from '@/i18n';
 
 export const USAGE_STATS_STALE_TIME_MS = 240_000;
@@ -49,8 +54,8 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
   loadUsageStats: async (options = {}) => {
     const force = options.force === true;
     const staleTimeMs = options.staleTimeMs ?? USAGE_STATS_STALE_TIME_MS;
-    const { apiBase = '', managementKey = '' } = useAuthStore.getState();
-    const scopeKey = `${apiBase}::${managementKey}`;
+    const { apiBase = '', managementAccessPath = '', managementKey = '' } = useAuthStore.getState();
+    const scopeKey = `${apiBase}::${managementAccessPath}::${managementKey}`;
     const state = get();
     const scopeChanged = state.scopeKey !== scopeKey;
 
@@ -82,7 +87,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
         usageDetails: [],
         error: null,
         lastRefreshedAt: null,
-        scopeKey
+        scopeKey,
       });
     }
 
@@ -106,7 +111,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
           loading: false,
           error: null,
           lastRefreshedAt: Date.now(),
-          scopeKey
+          scopeKey,
         });
       } catch (error: unknown) {
         if (requestId !== usageRequestToken) return;
@@ -114,7 +119,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
         set({
           loading: false,
           error: message,
-          scopeKey
+          scopeKey,
         });
         throw new Error(message);
       } finally {
@@ -138,7 +143,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
       loading: false,
       error: null,
       lastRefreshedAt: null,
-      scopeKey: ''
+      scopeKey: '',
     });
-  }
+  },
 }));

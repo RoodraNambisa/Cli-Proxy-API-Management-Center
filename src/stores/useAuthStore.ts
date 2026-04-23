@@ -12,7 +12,11 @@ import { apiClient } from '@/services/api/client';
 import { useConfigStore } from './useConfigStore';
 import { useUsageStatsStore } from './useUsageStatsStore';
 import { useModelsStore } from './useModelsStore';
-import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
+import {
+  detectApiBaseFromLocation,
+  detectManagementAccessPathFromLocation,
+  parseConnectionTarget,
+} from '@/utils/connection';
 
 interface AuthStoreState extends AuthState {
   connectionStatus: ConnectionStatus;
@@ -35,6 +39,7 @@ export const useAuthStore = create<AuthStoreState>()(
       // 初始状态
       isAuthenticated: false,
       apiBase: '',
+      managementAccessPath: '',
       managementKey: '',
       rememberPassword: false,
       serverVersion: null,
@@ -47,32 +52,48 @@ export const useAuthStore = create<AuthStoreState>()(
         if (restoreSessionPromise) return restoreSessionPromise;
 
         restoreSessionPromise = (async () => {
-          obfuscatedStorage.migratePlaintextKeys(['apiBase', 'apiUrl', 'managementKey']);
+          obfuscatedStorage.migratePlaintextKeys([
+            'apiBase',
+            'apiUrl',
+            'managementAccessPath',
+            'managementKey',
+          ]);
 
           const wasLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
           const legacyBase =
             obfuscatedStorage.getItem<string>('apiBase') ||
             obfuscatedStorage.getItem<string>('apiUrl', { encrypt: true });
+          const legacyAccessPath = obfuscatedStorage.getItem<string>('managementAccessPath');
           const legacyKey = obfuscatedStorage.getItem<string>('managementKey');
 
-          const { apiBase, managementKey, rememberPassword } = get();
-          const resolvedBase = normalizeApiBase(apiBase || legacyBase || detectApiBaseFromLocation());
+          const { apiBase, managementAccessPath, managementKey, rememberPassword } = get();
+          const resolvedTarget = parseConnectionTarget(
+            apiBase || legacyBase || detectApiBaseFromLocation(),
+            managementAccessPath || legacyAccessPath || detectManagementAccessPathFromLocation()
+          );
           const resolvedKey = managementKey || legacyKey || '';
-          const resolvedRememberPassword = rememberPassword || Boolean(managementKey) || Boolean(legacyKey);
+          const resolvedRememberPassword =
+            rememberPassword || Boolean(managementKey) || Boolean(legacyKey);
 
           set({
-            apiBase: resolvedBase,
+            apiBase: resolvedTarget.apiBase,
+            managementAccessPath: resolvedTarget.managementAccessPath,
             managementKey: resolvedKey,
-            rememberPassword: resolvedRememberPassword
+            rememberPassword: resolvedRememberPassword,
           });
-          apiClient.setConfig({ apiBase: resolvedBase, managementKey: resolvedKey });
+          apiClient.setConfig({
+            apiBase: resolvedTarget.apiBase,
+            managementAccessPath: resolvedTarget.managementAccessPath,
+            managementKey: resolvedKey,
+          });
 
-          if (wasLoggedIn && resolvedBase && resolvedKey) {
+          if (wasLoggedIn && resolvedTarget.apiBase && resolvedKey) {
             try {
               await get().login({
-                apiBase: resolvedBase,
+                apiBase: resolvedTarget.apiBase,
+                managementAccessPath: resolvedTarget.managementAccessPath,
                 managementKey: resolvedKey,
-                rememberPassword: resolvedRememberPassword
+                rememberPassword: resolvedRememberPassword,
               });
               return true;
             } catch (error) {
@@ -89,7 +110,14 @@ export const useAuthStore = create<AuthStoreState>()(
 
       // 登录
       login: async (credentials) => {
-        const apiBase = normalizeApiBase(credentials.apiBase);
+        const currentAccessPath =
+          credentials.managementAccessPath ||
+          get().managementAccessPath ||
+          detectManagementAccessPathFromLocation();
+        const { apiBase, managementAccessPath } = parseConnectionTarget(
+          credentials.apiBase,
+          currentAccessPath
+        );
         const managementKey = credentials.managementKey.trim();
         const rememberPassword = credentials.rememberPassword ?? get().rememberPassword ?? false;
 
@@ -100,7 +128,8 @@ export const useAuthStore = create<AuthStoreState>()(
           // 配置 API 客户端
           apiClient.setConfig({
             apiBase,
-            managementKey
+            managementAccessPath,
+            managementKey,
           });
 
           // 测试连接 - 获取配置
@@ -110,10 +139,11 @@ export const useAuthStore = create<AuthStoreState>()(
           set({
             isAuthenticated: true,
             apiBase,
+            managementAccessPath,
             managementKey,
             rememberPassword,
             connectionStatus: 'connected',
-            connectionError: null
+            connectionError: null,
           });
           if (rememberPassword) {
             localStorage.setItem('isLoggedIn', 'true');
@@ -129,7 +159,7 @@ export const useAuthStore = create<AuthStoreState>()(
                 : 'Connection failed';
           set({
             connectionStatus: 'error',
-            connectionError: message || 'Connection failed'
+            connectionError: message || 'Connection failed',
           });
           throw error;
         }
@@ -144,18 +174,19 @@ export const useAuthStore = create<AuthStoreState>()(
         set({
           isAuthenticated: false,
           apiBase: '',
+          managementAccessPath: '',
           managementKey: '',
           serverVersion: null,
           serverBuildDate: null,
           connectionStatus: 'disconnected',
-          connectionError: null
+          connectionError: null,
         });
         localStorage.removeItem('isLoggedIn');
       },
 
       // 检查认证状态
       checkAuth: async () => {
-        const { managementKey, apiBase } = get();
+        const { managementKey, apiBase, managementAccessPath } = get();
 
         if (!managementKey || !apiBase) {
           return false;
@@ -163,21 +194,21 @@ export const useAuthStore = create<AuthStoreState>()(
 
         try {
           // 重新配置客户端
-          apiClient.setConfig({ apiBase, managementKey });
+          apiClient.setConfig({ apiBase, managementAccessPath, managementKey });
 
           // 验证连接
           await useConfigStore.getState().fetchConfig();
 
           set({
             isAuthenticated: true,
-            connectionStatus: 'connected'
+            connectionStatus: 'connected',
           });
 
           return true;
         } catch {
           set({
             isAuthenticated: false,
-            connectionStatus: 'error'
+            connectionStatus: 'error',
           });
           return false;
         }
@@ -192,9 +223,9 @@ export const useAuthStore = create<AuthStoreState>()(
       updateConnectionStatus: (status, error = null) => {
         set({
           connectionStatus: status,
-          connectionError: error
+          connectionError: error,
         });
-      }
+      },
     }),
     {
       name: STORAGE_KEY_AUTH,
@@ -208,15 +239,16 @@ export const useAuthStore = create<AuthStoreState>()(
         },
         removeItem: (name) => {
           obfuscatedStorage.removeItem(name);
-        }
+        },
       })),
       partialize: (state) => ({
         apiBase: state.apiBase,
+        managementAccessPath: state.managementAccessPath,
         ...(state.rememberPassword ? { managementKey: state.managementKey } : {}),
         rememberPassword: state.rememberPassword,
         serverVersion: state.serverVersion,
-        serverBuildDate: state.serverBuildDate
-      })
+        serverBuildDate: state.serverBuildDate,
+      }),
     }
   )
 );
@@ -227,11 +259,8 @@ if (typeof window !== 'undefined') {
     useAuthStore.getState().logout();
   });
 
-  window.addEventListener(
-    'server-version-update',
-    ((e: CustomEvent) => {
-      const detail = e.detail || {};
-      useAuthStore.getState().updateServerVersion(detail.version || null, detail.buildDate || null);
-    }) as EventListener
-  );
+  window.addEventListener('server-version-update', ((e: CustomEvent) => {
+    const detail = e.detail || {};
+    useAuthStore.getState().updateServerVersion(detail.version || null, detail.buildDate || null);
+  }) as EventListener);
 }

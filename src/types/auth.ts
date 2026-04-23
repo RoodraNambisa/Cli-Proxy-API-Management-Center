@@ -6,6 +6,7 @@
 // 登录凭据
 export interface LoginCredentials {
   apiBase: string;
+  managementAccessPath?: string;
   managementKey: string;
   rememberPassword?: boolean;
 }
@@ -14,6 +15,7 @@ export interface LoginCredentials {
 export interface AuthState {
   isAuthenticated: boolean;
   apiBase: string;
+  managementAccessPath: string;
   managementKey: string;
   rememberPassword: boolean;
   serverVersion: string | null;

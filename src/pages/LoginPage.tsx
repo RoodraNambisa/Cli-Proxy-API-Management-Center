@@ -7,7 +7,11 @@ import { Select } from '@/components/ui/Select';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { IconEye, IconEyeOff } from '@/components/ui/icons';
 import { useAuthStore, useLanguageStore, useNotificationStore } from '@/stores';
-import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
+import {
+  detectApiBaseFromLocation,
+  detectManagementAccessPathFromLocation,
+  parseConnectionTarget,
+} from '@/utils/connection';
 import { LANGUAGE_LABEL_KEYS, LANGUAGE_ORDER } from '@/utils/constants';
 import { isSupportedLanguage } from '@/utils/language';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
@@ -77,10 +81,12 @@ export function LoginPage() {
   const login = useAuthStore((state) => state.login);
   const restoreSession = useAuthStore((state) => state.restoreSession);
   const storedBase = useAuthStore((state) => state.apiBase);
+  const storedManagementAccessPath = useAuthStore((state) => state.managementAccessPath);
   const storedKey = useAuthStore((state) => state.managementKey);
   const storedRememberPassword = useAuthStore((state) => state.rememberPassword);
 
   const [apiBase, setApiBase] = useState('');
+  const [managementAccessPath, setManagementAccessPath] = useState('');
   const [managementKey, setManagementKey] = useState('');
   const [showCustomBase, setShowCustomBase] = useState(false);
   const [showKey, setShowKey] = useState(false);
@@ -91,11 +97,19 @@ export function LoginPage() {
   const [error, setError] = useState('');
 
   const detectedBase = useMemo(() => detectApiBaseFromLocation(), []);
+  const detectedManagementAccessPath = useMemo(() => detectManagementAccessPathFromLocation(), []);
+  const currentConnectionDisplay = useMemo(() => {
+    const parsed = parseConnectionTarget(
+      apiBase || detectedBase,
+      managementAccessPath || detectedManagementAccessPath
+    );
+    return `${parsed.apiBase}${parsed.managementAccessPath}`;
+  }, [apiBase, detectedBase, detectedManagementAccessPath, managementAccessPath]);
   const languageOptions = useMemo(
     () =>
       LANGUAGE_ORDER.map((lang) => ({
         value: lang,
-        label: t(LANGUAGE_LABEL_KEYS[lang])
+        label: t(LANGUAGE_LABEL_KEYS[lang]),
       })),
     [t]
   );
@@ -121,7 +135,12 @@ export function LoginPage() {
             navigate(redirect, { replace: true });
           }, 1500);
         } else {
-          setApiBase(storedBase || detectedBase);
+          const parsedStoredTarget = parseConnectionTarget(
+            storedBase || detectedBase,
+            storedManagementAccessPath || detectedManagementAccessPath
+          );
+          setApiBase(parsedStoredTarget.apiBase);
+          setManagementAccessPath(parsedStoredTarget.managementAccessPath);
           setManagementKey(storedKey || '');
           setRememberPassword(storedRememberPassword || Boolean(storedKey));
         }
@@ -142,14 +161,18 @@ export function LoginPage() {
       return;
     }
 
-    const baseToUse = apiBase ? normalizeApiBase(apiBase) : detectedBase;
+    const target = parseConnectionTarget(
+      apiBase || detectedBase,
+      managementAccessPath || detectedManagementAccessPath
+    );
     setLoading(true);
     setError('');
     try {
       await login({
-        apiBase: baseToUse,
+        apiBase: target.apiBase,
+        managementAccessPath: target.managementAccessPath,
         managementKey: managementKey.trim(),
-        rememberPassword
+        rememberPassword,
       });
       showNotification(t('common.connected_status'), 'success');
       navigate('/', { replace: true });
@@ -160,7 +183,18 @@ export function LoginPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiBase, detectedBase, login, managementKey, navigate, rememberPassword, showNotification, t]);
+  }, [
+    apiBase,
+    detectedBase,
+    detectedManagementAccessPath,
+    login,
+    managementAccessPath,
+    managementKey,
+    navigate,
+    rememberPassword,
+    showNotification,
+    t,
+  ]);
 
   const handleSubmitKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
@@ -228,7 +262,7 @@ export function LoginPage() {
 
               <div className={styles.connectionBox}>
                 <div className={styles.label}>{t('login.connection_current')}</div>
-                <div className={styles.value}>{apiBase || detectedBase}</div>
+                <div className={styles.value}>{currentConnectionDisplay}</div>
                 <div className={styles.hint}>{t('login.connection_auto_hint')}</div>
               </div>
 
@@ -243,13 +277,22 @@ export function LoginPage() {
               </div>
 
               {showCustomBase && (
-                <Input
-                  label={t('login.custom_connection_label')}
-                  placeholder={t('login.custom_connection_placeholder')}
-                  value={apiBase}
-                  onChange={(e) => setApiBase(e.target.value)}
-                  hint={t('login.custom_connection_hint')}
-                />
+                <>
+                  <Input
+                    label={t('login.custom_connection_label')}
+                    placeholder={t('login.custom_connection_placeholder')}
+                    value={apiBase}
+                    onChange={(e) => setApiBase(e.target.value)}
+                    hint={t('login.custom_connection_hint')}
+                  />
+                  <Input
+                    label={t('login.management_access_path_label')}
+                    placeholder={t('login.management_access_path_placeholder')}
+                    value={managementAccessPath}
+                    onChange={(e) => setManagementAccessPath(e.target.value)}
+                    hint={t('login.management_access_path_hint')}
+                  />
+                </>
               )}
 
               <Input
