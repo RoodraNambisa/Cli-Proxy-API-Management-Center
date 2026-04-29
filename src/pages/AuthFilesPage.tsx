@@ -31,6 +31,7 @@ import {
   QUOTA_PROVIDER_TYPES,
   clampCardPageSize,
   getAuthFileIcon,
+  getAuthFileStatusMessage,
   getTypeColor,
   getTypeLabel,
   hasAuthFileStatusMessage,
@@ -40,6 +41,7 @@ import {
   type QuotaProviderType,
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
+import { resolveCodexPlanType } from '@/utils/quota';
 import { AuthFileCard } from '@/features/authFiles/components/AuthFileCard';
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
@@ -69,6 +71,7 @@ const BATCH_BAR_BASE_TRANSFORM = 'translateX(-50%)';
 const BATCH_BAR_HIDDEN_TRANSFORM = 'translateX(-50%) translateY(56px)';
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
 const DEFAULT_COMPACT_PAGE_SIZE = 12;
+const ALL_PLAN_FILTER = 'all';
 
 const escapeWildcardSearchSegment = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -77,6 +80,17 @@ const buildWildcardSearch = (value: string): RegExp | null => {
   if (!value.includes('*')) return null;
   const pattern = value.split('*').map(escapeWildcardSearchSegment).join('.*');
   return new RegExp(pattern, 'i');
+};
+
+const stringifySearchValue = (value: unknown): string => {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '';
+  }
 };
 
 const isCodexPlanRefreshRunning = (task: CodexPlanTypeRefreshTask | null): boolean =>
@@ -137,6 +151,7 @@ export function AuthFilesPage() {
   const navigate = useNavigate();
 
   const [filter, setFilter] = useState<'all' | string>('all');
+  const [planFilter, setPlanFilter] = useState(ALL_PLAN_FILTER);
   const [problemOnly, setProblemOnly] = useState(false);
   const [disabledOnly, setDisabledOnly] = useState(false);
   const [compactMode, setCompactMode] = useState(false);
@@ -258,6 +273,9 @@ export function AuthFilesPage() {
       if (typeof persisted.filter === 'string' && persisted.filter.trim()) {
         setFilter(persisted.filter);
       }
+      if (typeof persisted.planFilter === 'string' && persisted.planFilter.trim()) {
+        setPlanFilter(persisted.planFilter);
+      }
       if (typeof persisted.problemOnly === 'boolean') {
         setProblemOnly(persisted.problemOnly);
       }
@@ -305,6 +323,7 @@ export function AuthFilesPage() {
 
     writeAuthFilesUiState({
       filter,
+      planFilter,
       problemOnly,
       disabledOnly,
       compactMode,
@@ -323,6 +342,7 @@ export function AuthFilesPage() {
     page,
     pageSize,
     pageSizeByMode,
+    planFilter,
     problemOnly,
     search,
     sortMode,
@@ -435,6 +455,28 @@ export function AuthFilesPage() {
     [disabledOnly, files, problemOnly]
   );
 
+  const planFilterOptions = useMemo(() => {
+    const plans = new Set<string>();
+    filesMatchingStatusFilters.forEach((file) => {
+      const planType = resolveCodexPlanType(file);
+      if (planType) plans.add(planType);
+    });
+
+    return [
+      { value: ALL_PLAN_FILTER, label: t('auth_files.plan_filter_all') },
+      ...Array.from(plans)
+        .sort((a, b) => a.localeCompare(b))
+        .map((planType) => {
+          const key = `codex_quota.plan_${planType}`;
+          const translated = t(key);
+          return {
+            value: planType,
+            label: translated === key ? planType : translated,
+          };
+        }),
+    ];
+  }, [filesMatchingStatusFilters, t]);
+
   const sortOptions = useMemo(
     () => [
       { value: 'default', label: t('auth_files.sort_default') },
@@ -461,17 +503,31 @@ export function AuthFilesPage() {
 
     return filesMatchingStatusFilters.filter((item) => {
       const matchType = filter === 'all' || item.type === filter;
+      const itemPlanType = resolveCodexPlanType(item);
+      const matchPlan = planFilter === ALL_PLAN_FILTER || itemPlanType === planFilter;
       const matchSearch =
         !normalizedSearch ||
-        [item.name, item.type, item.provider].some((value) => {
-          const content = (value || '').toString();
+        [
+          item.name,
+          item.type,
+          item.provider,
+          itemPlanType,
+          item.status,
+          item.note,
+          item.error,
+          item['error_message'],
+          item['last_error'],
+          item.lastError,
+          getAuthFileStatusMessage(item),
+        ].some((value) => {
+          const content = stringifySearchValue(value);
           return wildcardSearch
             ? wildcardSearch.test(content)
             : content.toLowerCase().includes(normalizedTerm);
         });
-      return matchType && matchSearch;
+      return matchType && matchPlan && matchSearch;
     });
-  }, [filesMatchingStatusFilters, filter, normalizedSearch, wildcardSearch]);
+  }, [filesMatchingStatusFilters, filter, normalizedSearch, planFilter, wildcardSearch]);
 
   const sorted = useMemo(() => {
     const copy = [...filtered];
@@ -929,6 +985,20 @@ export function AuthFilesPage() {
                       setPage(1);
                     }}
                     placeholder={t('auth_files.search_placeholder')}
+                  />
+                </div>
+                <div className={styles.filterItem}>
+                  <label>{t('auth_files.plan_filter_label')}</label>
+                  <Select
+                    className={styles.sortSelect}
+                    value={planFilter}
+                    options={planFilterOptions}
+                    onChange={(value) => {
+                      setPlanFilter(value || ALL_PLAN_FILTER);
+                      setPage(1);
+                    }}
+                    ariaLabel={t('auth_files.plan_filter_label')}
+                    fullWidth
                   />
                 </div>
                 <div className={styles.filterItem}>

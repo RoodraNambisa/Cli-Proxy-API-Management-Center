@@ -39,7 +39,7 @@ export const QUOTA_PROVIDER_TYPES = new Set<QuotaProviderType>([
 ]);
 
 export const MIN_CARD_PAGE_SIZE = 3;
-export const MAX_CARD_PAGE_SIZE = 30;
+export const MAX_CARD_PAGE_SIZE = 100;
 export const AUTH_FILE_REFRESH_WARNING_MS = 24 * 60 * 60 * 1000;
 
 export const INTEGER_STRING_PATTERN = /^[+-]?\d+$/;

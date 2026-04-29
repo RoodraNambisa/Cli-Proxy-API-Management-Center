@@ -449,7 +449,9 @@
 
 .filterControls {
   display: grid;
-  grid-template-columns: minmax(240px, 1.4fr) repeat(2, minmax(120px, 0.72fr)) minmax(220px, auto);
+  grid-template-columns:
+    minmax(240px, 1.4fr) repeat(3, minmax(120px, 0.72fr))
+    minmax(220px, auto);
   gap: $spacing-md;
   align-items: flex-end;
 
@@ -464,7 +466,7 @@
   }
 
   @include tablet {
-    grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(140px, 0.8fr));
+    grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(130px, 0.8fr));
   }
 
   @include mobile {
