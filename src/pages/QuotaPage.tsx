@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useAuthStore } from '@/stores';
 import { authFilesApi, configFileApi } from '@/services/api';
+import { Input } from '@/components/ui/Input';
 import {
   QuotaSection,
   ANTIGRAVITY_CONFIG,
@@ -25,6 +26,7 @@ export function QuotaPage() {
   const [files, setFiles] = useState<AuthFileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
 
   const disableControls = connectionStatus !== 'connected';
 
@@ -69,6 +71,16 @@ export function QuotaPage() {
         <p className={styles.description}>{t('quota_management.description')}</p>
       </div>
 
+      <div className={styles.searchPanel}>
+        <Input
+          label={t('quota_management.search_label')}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder={t('quota_management.search_placeholder')}
+          autoComplete="off"
+        />
+      </div>
+
       {error && <div className={styles.errorBox}>{error}</div>}
 
       <QuotaSection
@@ -76,30 +88,35 @@ export function QuotaPage() {
         files={files}
         loading={loading}
         disabled={disableControls}
+        searchTerm={search}
       />
       <QuotaSection
         config={ANTIGRAVITY_CONFIG}
         files={files}
         loading={loading}
         disabled={disableControls}
+        searchTerm={search}
       />
       <QuotaSection
         config={CODEX_CONFIG}
         files={files}
         loading={loading}
         disabled={disableControls}
+        searchTerm={search}
       />
       <QuotaSection
         config={GEMINI_CLI_CONFIG}
         files={files}
         loading={loading}
         disabled={disableControls}
+        searchTerm={search}
       />
       <QuotaSection
         config={KIMI_CONFIG}
         files={files}
         loading={loading}
         disabled={disableControls}
+        searchTerm={search}
       />
     </div>
   );

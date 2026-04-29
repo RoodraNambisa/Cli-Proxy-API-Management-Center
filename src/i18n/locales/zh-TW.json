@@ -1508,6 +1508,10 @@
   "quota_management": {
     "title": "配額管理",
     "description": "集中查看 OAuth 配額與剩餘情況",
+    "search_label": "搜尋憑證",
+    "search_placeholder": "輸入名稱、類型、方案、專案或錯誤關鍵字",
+    "search_empty_title": "沒有符合的憑證",
+    "search_empty_desc": "請調整搜尋關鍵字後重試。",
     "refresh_files": "重新整理驗證檔案",
     "refresh_files_and_quota": "重新整理驗證檔案&配額",
     "refresh_all_credentials": "重新整理全部憑證",
