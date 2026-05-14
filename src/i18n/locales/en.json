@@ -1347,7 +1347,9 @@
           "switch_preview_model": "Switch to Preview Model",
           "switch_preview_model_desc": "Switch to preview model version when quota is exceeded",
           "antigravity_credits": "Antigravity Credits Retry",
-          "antigravity_credits_desc": "Retry once with enabledCreditTypes=[\"GOOGLE_ONE_AI\"] when Antigravity returns quota_exhausted 429"
+          "antigravity_credits_desc": "Retry once with enabledCreditTypes=[\"GOOGLE_ONE_AI\"] when Antigravity returns quota_exhausted 429",
+          "no_cooldown_status_codes": "Skip Cooldown Status Codes",
+          "no_cooldown_status_codes_desc": "These HTTP status codes record the failure without scheduling auth/model cooldowns. Use commas or line breaks. Range: 100-599"
         },
         "maintenance": {
           "title": "Auth Maintenance",
@@ -1469,6 +1471,7 @@
         "non_negative_integer": "Enter a non-negative whole number",
         "integer_list": "Enter integers separated by commas or line breaks",
         "http_status_range": "Enter an HTTP status code between 400 and 599",
+        "http_status_list": "Enter HTTP status codes between 100 and 599",
         "codex_custom_model_id_required": "Enter a model ID",
         "codex_custom_model_id_duplicate": "Model IDs must be unique (case-insensitive)",
         "codex_custom_model_groups_required": "Select at least one plan group",

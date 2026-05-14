@@ -186,7 +186,12 @@ function parseIntegerListText(value: string): { values: number[]; valid: boolean
   return { values, valid: true };
 }
 
-function setIntListFromTextInDoc(doc: YamlDocument, path: YamlPath, value: unknown): void {
+function setIntListFromTextInDoc(
+  doc: YamlDocument,
+  path: YamlPath,
+  value: unknown,
+  options: { preserveEmpty?: boolean } = {}
+): void {
   const safe = typeof value === 'string' ? value : '';
   const { values, valid } = parseIntegerListText(safe);
   if (!valid) {
@@ -194,6 +199,10 @@ function setIntListFromTextInDoc(doc: YamlDocument, path: YamlPath, value: unkno
   }
 
   if (values.length === 0) {
+    if (options.preserveEmpty) {
+      doc.setIn(path, []);
+      return;
+    }
     if (docHas(doc, path)) doc.deleteIn(path);
     return;
   }
@@ -286,6 +295,16 @@ function getHttpStatusRangeError(value: string): 'http_status_range' | undefined
   return parsed >= 400 && parsed <= 599 ? undefined : 'http_status_range';
 }
 
+function getHttpStatusListError(
+  value: string
+): 'integer_list' | 'http_status_list' | undefined {
+  const parsed = parseIntegerListText(value);
+  if (!parsed.valid) return 'integer_list';
+  return parsed.values.every((statusCode) => statusCode >= 100 && statusCode <= 599)
+    ? undefined
+    : 'http_status_list';
+}
+
 export function getVisualConfigValidationErrors(
   values: VisualConfigValues
 ): VisualConfigValidationErrors {
@@ -299,6 +318,7 @@ export function getVisualConfigValidationErrors(
     requestRetry: getNonNegativeIntegerError(values.requestRetry),
     maxRetryCredentials: getNonNegativeIntegerError(values.maxRetryCredentials),
     maxRetryInterval: getNonNegativeIntegerError(values.maxRetryInterval),
+    noCooldownStatusCodes: getHttpStatusListError(values.noCooldownStatusCodes),
     'authMaintenance.scanIntervalSeconds': getNonNegativeIntegerError(
       values.authMaintenance.scanIntervalSeconds
     ),
@@ -880,6 +900,12 @@ function getNextDirtyFields(
       nextValues.maxRetryInterval === baselineValues.maxRetryInterval
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'noCooldownStatusCodes')) {
+    updateDirty(
+      'noCooldownStatusCodes',
+      nextValues.noCooldownStatusCodes === baselineValues.noCooldownStatusCodes
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'wsAuth')) {
     updateDirty('wsAuth', nextValues.wsAuth === baselineValues.wsAuth);
   }
@@ -1276,6 +1302,10 @@ export function useVisualConfig() {
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryCredentials: String(parsed['max-retry-credentials'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
+        noCooldownStatusCodes:
+          parsed['no-cooldown-status-codes'] === undefined
+            ? DEFAULT_VISUAL_VALUES.noCooldownStatusCodes
+            : parseIntegerList(parsed['no-cooldown-status-codes']),
         wsAuth: Boolean(parsed['ws-auth']),
 
         quotaSwitchProject: Boolean(quotaExceeded?.['switch-project'] ?? true),
@@ -1482,6 +1512,14 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['request-retry'], values.requestRetry);
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
+        if (docHas(doc, ['no-cooldown-status-codes']) || values.noCooldownStatusCodes.trim()) {
+          setIntListFromTextInDoc(
+            doc,
+            ['no-cooldown-status-codes'],
+            values.noCooldownStatusCodes,
+            { preserveEmpty: docHas(doc, ['no-cooldown-status-codes']) }
+          );
+        }
         setBooleanInDoc(doc, ['ws-auth'], values.wsAuth);
 
         if (

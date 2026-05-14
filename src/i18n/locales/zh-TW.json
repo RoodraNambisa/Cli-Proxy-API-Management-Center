@@ -1345,7 +1345,9 @@
           "switch_preview_model": "切換預覽模型",
           "switch_preview_model_desc": "配額耗盡時切換到預覽版本模型",
           "antigravity_credits": "Antigravity Credits 重試",
-          "antigravity_credits_desc": "Antigravity 回傳 quota_exhausted 429 時，使用 enabledCreditTypes=[\"GOOGLE_ONE_AI\"] 重試一次"
+          "antigravity_credits_desc": "Antigravity 回傳 quota_exhausted 429 時，使用 enabledCreditTypes=[\"GOOGLE_ONE_AI\"] 重試一次",
+          "no_cooldown_status_codes": "略過冷卻狀態碼",
+          "no_cooldown_status_codes_desc": "這些 HTTP 狀態碼只記錄失敗，不安排帳號/模型冷卻；支援逗號或換行分隔，範圍 100-599"
         },
         "images": {
           "title": "OpenAI Images 相容",
@@ -1489,6 +1491,7 @@
         "non_negative_integer": "請輸入非負整數",
         "integer_list": "請輸入用逗號或換行分隔的整數列表",
         "http_status_range": "請輸入 400 到 599 之間的 HTTP 狀態碼",
+        "http_status_list": "請輸入 100 到 599 之間的 HTTP 狀態碼列表",
         "codex_custom_model_id_required": "請輸入模型 ID",
         "codex_custom_model_id_duplicate": "模型 ID 不能重複（不區分大小寫）",
         "codex_custom_model_groups_required": "請至少選擇一個方案分組",

@@ -515,6 +515,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     raw['enable-gemini-cli-endpoint'] ?? raw.enableGeminiCliEndpoint
   );
   config.forceModelPrefix = normalizeBoolean(raw['force-model-prefix'] ?? raw.forceModelPrefix);
+  config.noCooldownStatusCodes = normalizeIntegerArray(
+    raw['no-cooldown-status-codes'] ?? raw.noCooldownStatusCodes
+  );
   const remoteManagement = raw['remote-management'] ?? raw.remoteManagement;
   if (isRecord(remoteManagement)) {
     config.remoteManagement = {

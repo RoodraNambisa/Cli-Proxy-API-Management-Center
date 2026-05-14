@@ -1346,7 +1346,9 @@
           "switch_preview_model": "Переключить на preview-модель",
           "switch_preview_model_desc": "Переключаться на preview-версию модели при превышении квоты",
           "antigravity_credits": "Повтор Antigravity Credits",
-          "antigravity_credits_desc": "При ответе Antigravity quota_exhausted 429 повторять запрос один раз с enabledCreditTypes=[\"GOOGLE_ONE_AI\"]"
+          "antigravity_credits_desc": "При ответе Antigravity quota_exhausted 429 повторять запрос один раз с enabledCreditTypes=[\"GOOGLE_ONE_AI\"]",
+          "no_cooldown_status_codes": "Коды без cooldown",
+          "no_cooldown_status_codes_desc": "Эти HTTP-коды только фиксируют сбой без cooldown для auth/модели. Разделяйте запятыми или строками. Диапазон: 100-599"
         },
         "maintenance": {
           "title": "Обслуживание auth",
@@ -1468,6 +1470,7 @@
         "non_negative_integer": "Введите неотрицательное целое число",
         "integer_list": "Введите список целых чисел через запятую или перевод строки",
         "http_status_range": "Введите HTTP-код состояния от 400 до 599",
+        "http_status_list": "Введите HTTP-коды состояния от 100 до 599",
         "codex_custom_model_id_required": "Введите ID модели",
         "codex_custom_model_id_duplicate": "ID моделей должны быть уникальными без учёта регистра",
         "codex_custom_model_groups_required": "Выберите хотя бы одну группу плана",

@@ -65,6 +65,7 @@ export interface Config {
   debug?: boolean;
   proxyUrl?: string;
   requestRetry?: number;
+  noCooldownStatusCodes?: number[];
   quotaExceeded?: QuotaExceededConfig;
   usageStatisticsEnabled?: boolean;
   usageStatisticsPersistIntervalSeconds?: number;
@@ -94,6 +95,7 @@ export type RawConfigSection =
   | 'debug'
   | 'proxy-url'
   | 'request-retry'
+  | 'no-cooldown-status-codes'
   | 'quota-exceeded'
   | 'usage-statistics-enabled'
   | 'usage-statistics-persist-interval-seconds'

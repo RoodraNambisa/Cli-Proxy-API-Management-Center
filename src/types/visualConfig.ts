@@ -14,6 +14,7 @@ export type VisualConfigFieldPath =
   | 'requestRetry'
   | 'maxRetryCredentials'
   | 'maxRetryInterval'
+  | 'noCooldownStatusCodes'
   | 'authMaintenance.scanIntervalSeconds'
   | 'authMaintenance.deleteIntervalSeconds'
   | 'authMaintenance.deleteStatusCodes'
@@ -30,6 +31,7 @@ export type VisualConfigValidationErrorCode =
   | 'http_status_range'
   | 'non_negative_integer'
   | 'integer_list'
+  | 'http_status_list'
   | 'codex_custom_model_id_required'
   | 'codex_custom_model_id_duplicate'
   | 'codex_custom_model_groups_required';
@@ -136,6 +138,7 @@ export type VisualConfigValues = {
   requestRetry: string;
   maxRetryCredentials: string;
   maxRetryInterval: string;
+  noCooldownStatusCodes: string;
   quotaSwitchProject: boolean;
   quotaSwitchPreviewModel: boolean;
   quotaAntigravityCredits: boolean;
@@ -184,6 +187,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   requestRetry: '',
   maxRetryCredentials: '',
   maxRetryInterval: '',
+  noCooldownStatusCodes: '',
   quotaSwitchProject: true,
   quotaSwitchPreviewModel: true,
   quotaAntigravityCredits: true,

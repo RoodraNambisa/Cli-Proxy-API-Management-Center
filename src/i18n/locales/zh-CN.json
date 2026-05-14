@@ -1347,7 +1347,9 @@
           "switch_preview_model": "切换预览模型",
           "switch_preview_model_desc": "配额耗尽时切换到预览版本模型",
           "antigravity_credits": "Antigravity Credits 重试",
-          "antigravity_credits_desc": "Antigravity 返回 quota_exhausted 429 时，使用 enabledCreditTypes=[\"GOOGLE_ONE_AI\"] 重试一次"
+          "antigravity_credits_desc": "Antigravity 返回 quota_exhausted 429 时，使用 enabledCreditTypes=[\"GOOGLE_ONE_AI\"] 重试一次",
+          "no_cooldown_status_codes": "跳过冷却状态码",
+          "no_cooldown_status_codes_desc": "这些 HTTP 状态码只记录失败，不安排账号/模型冷却；支持逗号或换行分隔，范围 100-599"
         },
         "maintenance": {
           "title": "账号自动维护",
@@ -1469,6 +1471,7 @@
         "non_negative_integer": "请输入非负整数",
         "integer_list": "请输入用逗号或换行分隔的整数列表",
         "http_status_range": "请输入 400 到 599 之间的 HTTP 状态码",
+        "http_status_list": "请输入 100 到 599 之间的 HTTP 状态码列表",
         "codex_custom_model_id_required": "请输入模型 ID",
         "codex_custom_model_id_duplicate": "模型 ID 不能重复（不区分大小写）",
         "codex_custom_model_groups_required": "请至少选择一个计划分组",

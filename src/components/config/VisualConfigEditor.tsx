@@ -194,6 +194,9 @@ export function VisualConfigEditor({
   const maintenanceDeleteStatusCodesInputId = useId();
   const maintenanceDeleteStatusCodesHintId = `${maintenanceDeleteStatusCodesInputId}-hint`;
   const maintenanceDeleteStatusCodesErrorId = `${maintenanceDeleteStatusCodesInputId}-error`;
+  const noCooldownStatusCodesInputId = useId();
+  const noCooldownStatusCodesHintId = `${noCooldownStatusCodesInputId}-hint`;
+  const noCooldownStatusCodesErrorId = `${noCooldownStatusCodesInputId}-error`;
   const keepaliveInputId = useId();
   const keepaliveHintId = `${keepaliveInputId}-hint`;
   const keepaliveErrorId = `${keepaliveInputId}-error`;
@@ -226,6 +229,10 @@ export function VisualConfigEditor({
   const requestRetryError = getValidationMessage(t, validationErrors?.requestRetry);
   const maxRetryCredentialsError = getValidationMessage(t, validationErrors?.maxRetryCredentials);
   const maxRetryIntervalError = getValidationMessage(t, validationErrors?.maxRetryInterval);
+  const noCooldownStatusCodesError = getValidationMessage(
+    t,
+    validationErrors?.noCooldownStatusCodes
+  );
   const imagesUnsupportedStatusCodeError = getValidationMessage(
     t,
     validationErrors?.['images.unsupportedStatusCode']
@@ -359,7 +366,7 @@ export function VisualConfigEditor({
         title: t('config_management.visual.sections.quota.title'),
         description: t('config_management.visual.sections.quota.description'),
         icon: IconTimer,
-        errorCount: 0,
+        errorCount: countErrors(['noCooldownStatusCodes']),
       },
       {
         id: 'maintenance',
@@ -1221,29 +1228,53 @@ export function VisualConfigEditor({
             title={t('config_management.visual.sections.quota.title')}
             description={t('config_management.visual.sections.quota.description')}
           >
-            <SectionGrid>
-              <ToggleRow
-                title={t('config_management.visual.sections.quota.switch_project')}
-                description={t('config_management.visual.sections.quota.switch_project_desc')}
-                checked={values.quotaSwitchProject}
-                disabled={disabled}
-                onChange={(quotaSwitchProject) => onChange({ quotaSwitchProject })}
-              />
-              <ToggleRow
-                title={t('config_management.visual.sections.quota.switch_preview_model')}
-                description={t('config_management.visual.sections.quota.switch_preview_model_desc')}
-                checked={values.quotaSwitchPreviewModel}
-                disabled={disabled}
-                onChange={(quotaSwitchPreviewModel) => onChange({ quotaSwitchPreviewModel })}
-              />
-              <ToggleRow
-                title={t('config_management.visual.sections.quota.antigravity_credits')}
-                description={t('config_management.visual.sections.quota.antigravity_credits_desc')}
-                checked={values.quotaAntigravityCredits}
-                disabled={disabled}
-                onChange={(quotaAntigravityCredits) => onChange({ quotaAntigravityCredits })}
-              />
-            </SectionGrid>
+            <SectionStack>
+              <SectionGrid>
+                <ToggleRow
+                  title={t('config_management.visual.sections.quota.switch_project')}
+                  description={t('config_management.visual.sections.quota.switch_project_desc')}
+                  checked={values.quotaSwitchProject}
+                  disabled={disabled}
+                  onChange={(quotaSwitchProject) => onChange({ quotaSwitchProject })}
+                />
+                <ToggleRow
+                  title={t('config_management.visual.sections.quota.switch_preview_model')}
+                  description={t('config_management.visual.sections.quota.switch_preview_model_desc')}
+                  checked={values.quotaSwitchPreviewModel}
+                  disabled={disabled}
+                  onChange={(quotaSwitchPreviewModel) => onChange({ quotaSwitchPreviewModel })}
+                />
+                <ToggleRow
+                  title={t('config_management.visual.sections.quota.antigravity_credits')}
+                  description={t('config_management.visual.sections.quota.antigravity_credits_desc')}
+                  checked={values.quotaAntigravityCredits}
+                  disabled={disabled}
+                  onChange={(quotaAntigravityCredits) => onChange({ quotaAntigravityCredits })}
+                />
+              </SectionGrid>
+              <FieldShell
+                label={t('config_management.visual.sections.quota.no_cooldown_status_codes')}
+                htmlFor={noCooldownStatusCodesInputId}
+                hint={t('config_management.visual.sections.quota.no_cooldown_status_codes_desc')}
+                hintId={noCooldownStatusCodesHintId}
+                error={noCooldownStatusCodesError}
+                errorId={noCooldownStatusCodesErrorId}
+              >
+                <div className={styles.fieldControl}>
+                  <textarea
+                    id={noCooldownStatusCodesInputId}
+                    className={`input ${styles.fieldTextarea}`}
+                    placeholder="404, 409"
+                    value={values.noCooldownStatusCodes}
+                    onChange={(e) => onChange({ noCooldownStatusCodes: e.target.value })}
+                    disabled={disabled}
+                    rows={3}
+                    aria-invalid={Boolean(noCooldownStatusCodesError)}
+                    aria-describedby={`${noCooldownStatusCodesHintId} ${noCooldownStatusCodesError ? noCooldownStatusCodesErrorId : ''}`.trim()}
+                  />
+                </div>
+              </FieldShell>
+            </SectionStack>
           </ConfigSection>
 
           <ConfigSection
