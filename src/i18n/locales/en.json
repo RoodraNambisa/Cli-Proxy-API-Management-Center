@@ -1344,7 +1344,11 @@
           "override_input_fidelity": "Override input_fidelity",
           "override_input_fidelity_desc": "Disabled by default. When enabled, image requests omit input_fidelity to avoid invalid_input_fidelity_model from gpt-image-2",
           "unsupported_status_code": "Unsupported Option Status Code",
-          "unsupported_status_code_hint": "HTTP status code for unsupported capabilities such as response_format=url or file_id. Range: 400-599"
+          "unsupported_status_code_hint": "HTTP status code for unsupported capabilities such as response_format=url or file_id. Range: 400-599",
+          "stream_flush_interval_ms": "Stream Flush Merge Interval (ms)",
+          "stream_flush_interval_ms_hint": "Wait up to N milliseconds before flushing image stream chunks. 0 keeps per-chunk flushes.",
+          "stream_flush_min_bytes": "Stream Flush Minimum Bytes",
+          "stream_flush_min_bytes_hint": "Flush image streams once N pending bytes are buffered. 0 disables the byte threshold."
         },
         "quota": {
           "title": "Quota Fallback",

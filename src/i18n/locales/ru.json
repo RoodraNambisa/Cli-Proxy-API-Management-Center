@@ -1343,7 +1343,11 @@
           "override_input_fidelity": "Переопределять input_fidelity",
           "override_input_fidelity_desc": "По умолчанию выключено. Если включено, image-запросы не передают input_fidelity, чтобы избежать invalid_input_fidelity_model от gpt-image-2",
           "unsupported_status_code": "HTTP-код неподдерживаемой опции",
-          "unsupported_status_code_hint": "HTTP-код для неподдерживаемых возможностей, например response_format=url или file_id. Диапазон: 400-599"
+          "unsupported_status_code_hint": "HTTP-код для неподдерживаемых возможностей, например response_format=url или file_id. Диапазон: 400-599",
+          "stream_flush_interval_ms": "Интервал объединения stream flush (мс)",
+          "stream_flush_interval_ms_hint": "Ждать до N мс перед flush chunk-ов image stream. 0 сохраняет flush каждого chunk.",
+          "stream_flush_min_bytes": "Минимум байт для stream flush",
+          "stream_flush_min_bytes_hint": "Flush image stream после накопления N байт. 0 отключает порог по байтам."
         },
         "quota": {
           "title": "Резерв по квоте",

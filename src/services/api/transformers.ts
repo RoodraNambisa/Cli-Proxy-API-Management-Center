@@ -641,6 +641,14 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       overrideInputFidelity: normalizeBoolean(
         images['override-input-fidelity'] ?? images.overrideInputFidelity
       ),
+      streamFlushIntervalMs: normalizeNumber(
+        images['stream-flush-interval-ms'] ??
+          images.streamFlushIntervalMs ??
+          images.streamFlushIntervalMS
+      ),
+      streamFlushMinBytes: normalizeNumber(
+        images['stream-flush-min-bytes'] ?? images.streamFlushMinBytes
+      ),
     };
   }
   const routing = raw.routing;

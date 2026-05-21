@@ -1376,7 +1376,11 @@
           "override_input_fidelity": "覆蓋 input_fidelity",
           "override_input_fidelity_desc": "預設關閉；開啟後圖片請求會自動不透傳 input_fidelity，避免 gpt-image-2 回傳 invalid_input_fidelity_model",
           "unsupported_status_code": "不支援參數狀態碼",
-          "unsupported_status_code_hint": "response_format=url、file_id 等不支援能力回傳的 HTTP 狀態碼，範圍 400-599"
+          "unsupported_status_code_hint": "response_format=url、file_id 等不支援能力回傳的 HTTP 狀態碼，範圍 400-599",
+          "stream_flush_interval_ms": "流式 flush 合併間隔（毫秒）",
+          "stream_flush_interval_ms_hint": "圖片流式輸出最多等待 N 毫秒再 flush，0 表示每個 chunk 立即 flush",
+          "stream_flush_min_bytes": "流式 flush 最小位元組數",
+          "stream_flush_min_bytes_hint": "圖片流式輸出累計到 N 位元組後立即 flush，0 表示停用位元組閾值"
         },
         "maintenance": {
           "title": "帳號自動維護",

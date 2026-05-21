@@ -237,6 +237,14 @@ export function VisualConfigEditor({
     t,
     validationErrors?.['images.unsupportedStatusCode']
   );
+  const imagesStreamFlushIntervalError = getValidationMessage(
+    t,
+    validationErrors?.['images.streamFlushIntervalMs']
+  );
+  const imagesStreamFlushMinBytesError = getValidationMessage(
+    t,
+    validationErrors?.['images.streamFlushMinBytes']
+  );
   const authMaintenanceScanIntervalError = getValidationMessage(
     t,
     validationErrors?.['authMaintenance.scanIntervalSeconds']
@@ -359,7 +367,11 @@ export function VisualConfigEditor({
         title: t('config_management.visual.sections.images.title'),
         description: t('config_management.visual.sections.images.description'),
         icon: IconDiamond,
-        errorCount: countErrors(['images.unsupportedStatusCode']),
+        errorCount: countErrors([
+          'images.unsupportedStatusCode',
+          'images.streamFlushIntervalMs',
+          'images.streamFlushMinBytes',
+        ]),
       },
       {
         id: 'quota',
@@ -1125,6 +1137,40 @@ export function VisualConfigEditor({
                   disabled={disabled}
                   hint={t('config_management.visual.sections.images.unsupported_status_code_hint')}
                   error={imagesUnsupportedStatusCodeError}
+                />
+                <Input
+                  label={t('config_management.visual.sections.images.stream_flush_interval_ms')}
+                  type="number"
+                  placeholder="0"
+                  value={values.images.streamFlushIntervalMs}
+                  onChange={(e) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        streamFlushIntervalMs: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={disabled}
+                  hint={t('config_management.visual.sections.images.stream_flush_interval_ms_hint')}
+                  error={imagesStreamFlushIntervalError}
+                />
+                <Input
+                  label={t('config_management.visual.sections.images.stream_flush_min_bytes')}
+                  type="number"
+                  placeholder="0"
+                  value={values.images.streamFlushMinBytes}
+                  onChange={(e) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        streamFlushMinBytes: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={disabled}
+                  hint={t('config_management.visual.sections.images.stream_flush_min_bytes_hint')}
+                  error={imagesStreamFlushMinBytesError}
                 />
               </SectionGrid>
 

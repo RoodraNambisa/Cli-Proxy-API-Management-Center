@@ -34,6 +34,8 @@ export interface ImagesConfig {
   responseFormatUrlDataUrl?: boolean;
   overrideTransparentBackground?: boolean;
   overrideInputFidelity?: boolean;
+  streamFlushIntervalMs?: number;
+  streamFlushMinBytes?: number;
 }
 
 export interface RemoteManagementConfig {

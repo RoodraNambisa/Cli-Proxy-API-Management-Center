@@ -21,6 +21,8 @@ export type VisualConfigFieldPath =
   | 'authMaintenance.quotaStrikeThreshold'
   | 'authMaintenance.disableQuotaStrikeThreshold'
   | 'images.unsupportedStatusCode'
+  | 'images.streamFlushIntervalMs'
+  | 'images.streamFlushMinBytes'
   | 'streaming.keepaliveSeconds'
   | 'streaming.bootstrapRetries'
   | 'streaming.nonstreamKeepaliveInterval';
@@ -92,6 +94,8 @@ export interface ImagesVisualConfig {
   overrideTransparentBackground: boolean;
   overrideInputFidelity: boolean;
   unsupportedStatusCode: string;
+  streamFlushIntervalMs: string;
+  streamFlushMinBytes: string;
 }
 
 export interface CodexCustomModelVisualEntry {
@@ -215,6 +219,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     overrideTransparentBackground: false,
     overrideInputFidelity: false,
     unsupportedStatusCode: '400',
+    streamFlushIntervalMs: '0',
+    streamFlushMinBytes: '0',
   },
   routingStrategy: 'round-robin',
   routingSessionAffinity: false,

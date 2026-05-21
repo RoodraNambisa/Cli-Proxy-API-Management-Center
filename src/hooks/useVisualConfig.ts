@@ -334,6 +334,8 @@ export function getVisualConfigValidationErrors(
       values.authMaintenance.disableQuotaStrikeThreshold
     ),
     'images.unsupportedStatusCode': getHttpStatusRangeError(values.images.unsupportedStatusCode),
+    'images.streamFlushIntervalMs': getNonNegativeIntegerError(values.images.streamFlushIntervalMs),
+    'images.streamFlushMinBytes': getNonNegativeIntegerError(values.images.streamFlushMinBytes),
     'streaming.keepaliveSeconds': getNonNegativeIntegerError(values.streaming.keepaliveSeconds),
     'streaming.bootstrapRetries': getNonNegativeIntegerError(values.streaming.bootstrapRetries),
     'streaming.nonstreamKeepaliveInterval': getNonNegativeIntegerError(
@@ -1050,6 +1052,18 @@ function getNextDirtyFields(
         nextValues.images.unsupportedStatusCode === baselineValues.images.unsupportedStatusCode
       );
     }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'streamFlushIntervalMs')) {
+      updateDirty(
+        'images.streamFlushIntervalMs',
+        nextValues.images.streamFlushIntervalMs === baselineValues.images.streamFlushIntervalMs
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'streamFlushMinBytes')) {
+      updateDirty(
+        'images.streamFlushMinBytes',
+        nextValues.images.streamFlushMinBytes === baselineValues.images.streamFlushMinBytes
+      );
+    }
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingStrategy')) {
     updateDirty('routingStrategy', nextValues.routingStrategy === baselineValues.routingStrategy);
@@ -1372,6 +1386,22 @@ export function useVisualConfig() {
             images?.unsupportedStatusCode === undefined
               ? DEFAULT_VISUAL_VALUES.images.unsupportedStatusCode
               : String(images?.['unsupported-status-code'] ?? images?.unsupportedStatusCode ?? ''),
+          streamFlushIntervalMs:
+            images?.['stream-flush-interval-ms'] === undefined &&
+            images?.streamFlushIntervalMs === undefined &&
+            images?.streamFlushIntervalMS === undefined
+              ? DEFAULT_VISUAL_VALUES.images.streamFlushIntervalMs
+              : String(
+                  images?.['stream-flush-interval-ms'] ??
+                    images?.streamFlushIntervalMs ??
+                    images?.streamFlushIntervalMS ??
+                    ''
+                ),
+          streamFlushMinBytes:
+            images?.['stream-flush-min-bytes'] === undefined &&
+            images?.streamFlushMinBytes === undefined
+              ? DEFAULT_VISUAL_VALUES.images.streamFlushMinBytes
+              : String(images?.['stream-flush-min-bytes'] ?? images?.streamFlushMinBytes ?? ''),
         },
 
         routingStrategy:
@@ -1612,7 +1642,9 @@ export function useVisualConfig() {
           values.images.overrideTransparentBackground !==
             imagesDefaults.overrideTransparentBackground ||
           values.images.overrideInputFidelity !== imagesDefaults.overrideInputFidelity ||
-          values.images.unsupportedStatusCode !== imagesDefaults.unsupportedStatusCode;
+          values.images.unsupportedStatusCode !== imagesDefaults.unsupportedStatusCode ||
+          values.images.streamFlushIntervalMs !== imagesDefaults.streamFlushIntervalMs ||
+          values.images.streamFlushMinBytes !== imagesDefaults.streamFlushMinBytes;
         if (imagesDefined) {
           ensureMapInDoc(doc, ['images']);
           setStringInDoc(doc, ['images', 'codex-model'], values.images.codexModel);
@@ -1639,6 +1671,16 @@ export function useVisualConfig() {
             doc,
             ['images', 'unsupported-status-code'],
             values.images.unsupportedStatusCode
+          );
+          setIntFromStringInDoc(
+            doc,
+            ['images', 'stream-flush-interval-ms'],
+            values.images.streamFlushIntervalMs
+          );
+          setIntFromStringInDoc(
+            doc,
+            ['images', 'stream-flush-min-bytes'],
+            values.images.streamFlushMinBytes
           );
           deleteIfMapEmpty(doc, ['images']);
         }
