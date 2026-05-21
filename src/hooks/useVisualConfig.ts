@@ -12,10 +12,7 @@ import type {
   PayloadParamValidationErrorCode,
 } from '@/types/visualConfig';
 import { DEFAULT_VISUAL_VALUES, makeClientId } from '@/types/visualConfig';
-import {
-  CODEX_CUSTOM_MODEL_GROUPS,
-  type CodexCustomModelGroup,
-} from '@/types/config';
+import { CODEX_CUSTOM_MODEL_GROUPS, type CodexCustomModelGroup } from '@/types/config';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -215,7 +212,11 @@ function normalizeCodexCustomModelGroups(value: unknown): CodexCustomModelGroup[
 
   const requested = new Set(
     value
-      .map((item) => String(item ?? '').trim().toLowerCase())
+      .map((item) =>
+        String(item ?? '')
+          .trim()
+          .toLowerCase()
+      )
       .filter(Boolean)
   );
 
@@ -295,9 +296,7 @@ function getHttpStatusRangeError(value: string): 'http_status_range' | undefined
   return parsed >= 400 && parsed <= 599 ? undefined : 'http_status_range';
 }
 
-function getHttpStatusListError(
-  value: string
-): 'integer_list' | 'http_status_list' | undefined {
+function getHttpStatusListError(value: string): 'integer_list' | 'http_status_list' | undefined {
   const parsed = parseIntegerListText(value);
   if (!parsed.valid) return 'integer_list';
   return parsed.values.every((statusCode) => statusCode >= 100 && statusCode <= 599)
@@ -870,6 +869,12 @@ function getNextDirtyFields(
         baselineValues.usageStatisticsPersistIntervalSeconds
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'pprofEnable')) {
+    updateDirty('pprofEnable', nextValues.pprofEnable === baselineValues.pprofEnable);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'pprofAddr')) {
+    updateDirty('pprofAddr', nextValues.pprofAddr === baselineValues.pprofAddr);
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'proxyUrl')) {
     updateDirty('proxyUrl', nextValues.proxyUrl === baselineValues.proxyUrl);
   }
@@ -1175,8 +1180,8 @@ export function useVisualConfig() {
   );
   const visualHasCodexCustomModelValidationErrors = useMemo(
     () =>
-      Object.values(visualCodexCustomModelValidationErrors).some(
-        (entry) => Boolean(entry.id || entry.groups)
+      Object.values(visualCodexCustomModelValidationErrors).some((entry) =>
+        Boolean(entry.id || entry.groups)
       ),
     [visualCodexCustomModelValidationErrors]
   );
@@ -1208,6 +1213,7 @@ export function useVisualConfig() {
       const quotaExceeded = asRecord(parsed['quota-exceeded']);
       const authMaintenance = asRecord(parsed['auth-maintenance']);
       const images = asRecord(parsed.images);
+      const pprof = asRecord(parsed.pprof);
       const routing = asRecord(parsed.routing);
       const payload = asRecord(parsed.payload);
       const streaming = asRecord(parsed.streaming);
@@ -1250,9 +1256,7 @@ export function useVisualConfig() {
         images?.['enable-free-plan-image-model'] === undefined &&
         images?.enableFreePlanImageModel === undefined
           ? DEFAULT_VISUAL_VALUES.images.enableFreePlanImageModel
-          : Boolean(
-              images?.['enable-free-plan-image-model'] ?? images?.enableFreePlanImageModel
-            );
+          : Boolean(images?.['enable-free-plan-image-model'] ?? images?.enableFreePlanImageModel);
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === 'string' ? parsed.host : '',
@@ -1295,6 +1299,8 @@ export function useVisualConfig() {
         usageStatisticsPersistIntervalSeconds: String(
           parsed['usage-statistics-persist-interval-seconds'] ?? ''
         ),
+        pprofEnable: Boolean(pprof?.enable),
+        pprofAddr: typeof pprof?.addr === 'string' ? pprof.addr : '',
 
         proxyUrl: typeof parsed['proxy-url'] === 'string' ? parsed['proxy-url'] : '',
         enableGeminiCliEndpoint: Boolean(parsed['enable-gemini-cli-endpoint']),
@@ -1505,6 +1511,12 @@ export function useVisualConfig() {
             values.usageStatisticsPersistIntervalSeconds
           );
         }
+        if (docHas(doc, ['pprof']) || values.pprofEnable || values.pprofAddr.trim()) {
+          ensureMapInDoc(doc, ['pprof']);
+          doc.setIn(['pprof', 'enable'], values.pprofEnable);
+          setStringInDoc(doc, ['pprof', 'addr'], values.pprofAddr);
+          deleteIfMapEmpty(doc, ['pprof']);
+        }
 
         setStringInDoc(doc, ['proxy-url'], values.proxyUrl);
         setBooleanInDoc(doc, ['enable-gemini-cli-endpoint'], values.enableGeminiCliEndpoint);
@@ -1513,12 +1525,9 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
         if (docHas(doc, ['no-cooldown-status-codes']) || values.noCooldownStatusCodes.trim()) {
-          setIntListFromTextInDoc(
-            doc,
-            ['no-cooldown-status-codes'],
-            values.noCooldownStatusCodes,
-            { preserveEmpty: docHas(doc, ['no-cooldown-status-codes']) }
-          );
+          setIntListFromTextInDoc(doc, ['no-cooldown-status-codes'], values.noCooldownStatusCodes, {
+            preserveEmpty: docHas(doc, ['no-cooldown-status-codes']),
+          });
         }
         setBooleanInDoc(doc, ['ws-auth'], values.wsAuth);
 

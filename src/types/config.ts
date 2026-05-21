@@ -44,14 +44,21 @@ export interface RemoteManagementConfig {
   panelGithubRepository?: string;
 }
 
-export const CODEX_CUSTOM_MODEL_GROUPS = [
-  'free',
-  'plus',
-  'pro',
-  'team',
-  'business',
-  'go',
-] as const;
+export interface PprofManagementConfig {
+  profiles?: string[];
+  formats?: string[];
+  goToolAvailable?: boolean;
+  graphvizAvailable?: boolean;
+  maxSeconds?: number;
+}
+
+export interface PprofConfig {
+  enable?: boolean;
+  addr?: string;
+  management?: PprofManagementConfig;
+}
+
+export const CODEX_CUSTOM_MODEL_GROUPS = ['free', 'plus', 'pro', 'team', 'business', 'go'] as const;
 
 export type CodexCustomModelGroup = (typeof CODEX_CUSTOM_MODEL_GROUPS)[number];
 
@@ -76,6 +83,7 @@ export interface Config {
   enableGeminiCliEndpoint?: boolean;
   forceModelPrefix?: boolean;
   remoteManagement?: RemoteManagementConfig;
+  pprof?: PprofConfig;
   authMaintenance?: AuthMaintenanceConfig;
   images?: ImagesConfig;
   routingStrategy?: string;
@@ -106,6 +114,7 @@ export type RawConfigSection =
   | 'enable-gemini-cli-endpoint'
   | 'force-model-prefix'
   | 'remote-management'
+  | 'pprof'
   | 'auth-maintenance'
   | 'images'
   | 'routing/strategy'

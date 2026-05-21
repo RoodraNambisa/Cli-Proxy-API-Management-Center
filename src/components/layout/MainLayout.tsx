@@ -18,6 +18,7 @@ import {
   IconSidebarDashboard,
   IconSidebarLogs,
   IconSidebarOauth,
+  IconSidebarPprof,
   IconSidebarProviders,
   IconSidebarQuota,
   IconSidebarSystem,
@@ -45,6 +46,7 @@ const sidebarIcons: Record<string, ReactNode> = {
   usage: <IconSidebarUsage size={18} />,
   config: <IconSidebarConfig size={18} />,
   logs: <IconSidebarLogs size={18} />,
+  pprof: <IconSidebarPprof size={18} />,
   system: <IconSidebarSystem size={18} />,
 };
 
@@ -390,6 +392,9 @@ export function MainLayout() {
     { path: '/usage', label: t('nav.usage_stats'), icon: sidebarIcons.usage },
     ...(config?.loggingToFile
       ? [{ path: '/logs', label: t('nav.logs'), icon: sidebarIcons.logs }]
+      : []),
+    ...(config?.pprof?.enable
+      ? [{ path: '/pprof', label: t('nav.pprof'), icon: sidebarIcons.pprof }]
       : []),
     { path: '/system', label: t('nav.system_info'), icon: sidebarIcons.system },
   ];

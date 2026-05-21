@@ -1,0 +1,205 @@
+@use '../styles/mixins' as *;
+
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+
+  @include mobile {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 $spacing-xs 0;
+}
+
+.pageDescription {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.warningBox {
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  border: 1px solid color-mix(in srgb, var(--warning-color, #f59e0b) 32%, transparent);
+  background: color-mix(in srgb, var(--warning-color, #f59e0b) 12%, transparent);
+  color: var(--text-primary);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.runtimeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-md;
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.runtimeItem {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  min-height: 88px;
+  padding: $spacing-md;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: color-mix(in srgb, var(--bg-secondary) 84%, transparent);
+}
+
+.runtimeLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.runtimeValue {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 15px;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.statusPill,
+.capabilityPill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: $radius-full;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.statusPillOn {
+  color: var(--success-color);
+  border-color: color-mix(in srgb, var(--success-color) 35%, transparent);
+  background: color-mix(in srgb, var(--success-color) 12%, transparent);
+}
+
+.statusPillOff,
+.capabilityPillOff {
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  background: var(--bg-primary);
+}
+
+.capabilityList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.capabilityPill {
+  color: var(--primary-color);
+  border-color: color-mix(in srgb, var(--primary-color) 28%, transparent);
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+
+.captureGrid {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(180px, 1fr) auto;
+  gap: $spacing-md;
+  align-items: end;
+
+  :global(.form-group) {
+    margin: 0;
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.captureAction {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+
+  @include mobile {
+    justify-content: stretch;
+
+    :global(.btn) {
+      width: 100%;
+    }
+  }
+}
+
+.captureHint {
+  margin: $spacing-md 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.downloadNotice {
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.svgPreview {
+  overflow: auto;
+  max-height: 70vh;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: #fff;
+  padding: $spacing-md;
+
+  img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+  }
+}
+
+.textPreview {
+  max-height: 70vh;
+  overflow: auto;
+  margin: 0;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  background: #111827;
+  color: #f8fafc;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre;
+}

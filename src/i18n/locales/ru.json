@@ -22,6 +22,8 @@
     "connecting": "Подключение...",
     "connected": "Подключено",
     "disconnected": "Отключено",
+    "enabled": "Включено",
+    "disabled": "Отключено",
     "connecting_status": "Подключение",
     "connected_status": "Подключено",
     "disconnected_status": "Отключено",
@@ -121,6 +123,7 @@
     "usage_stats": "Статистика использования",
     "config_management": "Панель конфигурации",
     "logs": "Просмотр логов",
+    "pprof": "Профилирование",
     "system_info": "Информация системы"
   },
   "dashboard": {
@@ -1291,6 +1294,10 @@
           "logs_max_size": "Максимальный размер файла журнала (МБ)",
           "usage_statistics_persist": "Интервал сохранения снимка статистики (сек)",
           "usage_statistics_persist_desc": "Установите 0 или оставьте пустым, чтобы отключить автосохранение снимка",
+          "pprof_enable": "Включить pprof-профилирование",
+          "pprof_enable_desc": "Когда включено, открывает защищённые управленческой авторизацией endpoints /v0/management/pprof/*",
+          "pprof_addr": "Адрес прослушивания pprof",
+          "pprof_addr_desc": "Влияет только на опциональный отдельный pprof-сервер. Рекомендуется привязка к 127.0.0.1.",
           "usage_retention_days": "Хранить статистику (дней)",
           "usage_retention_hint": "0 означает без ограничений (без очистки)"
         },
@@ -1498,6 +1505,48 @@
     "refresh_files_and_quota": "Обновить файлы и квоты",
     "refresh_all_credentials": "Обновить все учётные данные",
     "card_idle_hint": "Используйте кнопку «Обновить все учётные данные» сверху, чтобы загрузить актуальные данные по квотам."
+  },
+  "pprof": {
+    "title": "Профилирование",
+    "description": "Собирайте CPU, heap, goroutine и trace через backend pprof management API для диагностики нагрузки и памяти.",
+    "runtime_title": "Состояние runtime",
+    "capture_title": "Сбор и анализ",
+    "enable": "Переключатель pprof",
+    "addr": "Адрес прослушивания",
+    "max_seconds": "Макс. секунд сбора",
+    "capabilities": "Локальные возможности",
+    "capability_go_tool": "go tool pprof",
+    "capability_graphviz": "Graphviz dot",
+    "profile": "Тип профиля",
+    "format": "Формат вывода",
+    "seconds": "Секунды сбора",
+    "seconds_hint": "CPU и trace ждут указанное время. Максимум {{max}} сек.",
+    "collect": "Начать сбор",
+    "capture_hint": "top/text/svg отображаются на странице; proto скачивает исходный .pb.gz файл напрямую.",
+    "disabled_notice": "pprof сейчас отключен. Сначала включите pprof в разделе System страницы конфигурации и сохраните настройки.",
+    "config_load_failed": "Не удалось загрузить конфигурацию pprof",
+    "collect_failed": "Сбор pprof не удался",
+    "collect_success": "Сбор pprof завершён",
+    "download_success": "Скачивание исходного pprof-файла начато",
+    "download_result": "Скачать результат",
+    "result_title": "{{profile}} / {{format}}",
+    "proto_downloaded": "Исходный профиль скачан: {{filename}}",
+    "profiles": {
+      "profile": "CPU",
+      "heap": "Heap",
+      "allocs": "Allocations",
+      "goroutine": "Goroutine",
+      "block": "Block",
+      "mutex": "Mutex",
+      "threadcreate": "Thread Create",
+      "trace": "Trace"
+    },
+    "formats": {
+      "top": "Top text analysis",
+      "svg": "SVG flame/call graph",
+      "proto": "Raw Proto",
+      "text": "Runtime text"
+    }
   },
   "system_info": {
     "title": "Информация о центре управления",

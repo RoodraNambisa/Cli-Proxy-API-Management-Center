@@ -22,6 +22,8 @@
     "connecting": "連線中...",
     "connected": "已連線",
     "disconnected": "未連線",
+    "enabled": "已啟用",
+    "disabled": "已停用",
     "connecting_status": "連線中",
     "connected_status": "已連線",
     "disconnected_status": "未連線",
@@ -121,6 +123,7 @@
     "usage_stats": "使用統計",
     "config_management": "設定面板",
     "logs": "記錄檢視",
+    "pprof": "效能分析",
     "system_info": "中心資訊"
   },
   "dashboard": {
@@ -1313,7 +1316,11 @@
           "usage_statistics_desc": "收集使用統計資訊",
           "logs_max_size": "記錄檔大小限制（MB）",
           "usage_statistics_persist": "統計快照落盤間隔（秒）",
-          "usage_statistics_persist_desc": "設定為 0 或留空表示停用自動快照落盤"
+          "usage_statistics_persist_desc": "設定為 0 或留空表示停用自動快照落盤",
+          "pprof_enable": "啟用 pprof 效能分析",
+          "pprof_enable_desc": "開啟後會暴露受管理驗證保護的 /v0/management/pprof/* 採樣介面",
+          "pprof_addr": "pprof 監聽位址",
+          "pprof_addr_desc": "僅影響後端可選的獨立 pprof 服務，建議保持 127.0.0.1 綁定"
         },
         "network": {
           "title": "網路設定",
@@ -1519,6 +1526,48 @@
     "refresh_files_and_quota": "重新整理驗證檔案&配額",
     "refresh_all_credentials": "重新整理全部憑證",
     "card_idle_hint": "請使用頂部「重新整理全部憑證」按鈕取得最新配額。"
+  },
+  "pprof": {
+    "title": "效能分析",
+    "description": "透過後端 pprof 管理介面採集 CPU、堆、協程和 trace 資料，用於定位高並行或記憶體問題。",
+    "runtime_title": "執行狀態",
+    "capture_title": "採樣與分析",
+    "enable": "pprof 開關",
+    "addr": "監聽位址",
+    "max_seconds": "最長採樣秒數",
+    "capabilities": "本機能力",
+    "capability_go_tool": "go tool pprof",
+    "capability_graphviz": "Graphviz dot",
+    "profile": "採樣類型",
+    "format": "輸出格式",
+    "seconds": "採樣秒數",
+    "seconds_hint": "CPU 與 trace 採樣會等待指定秒數，最大 {{max}} 秒",
+    "collect": "開始採樣",
+    "capture_hint": "top/text/svg 會在頁面內預覽；proto 會直接下載原始 .pb.gz 檔案。",
+    "disabled_notice": "pprof 目前未啟用。請先在設定頁 System 區塊開啟 pprof 後儲存設定。",
+    "config_load_failed": "載入 pprof 設定失敗",
+    "collect_failed": "pprof 採樣失敗",
+    "collect_success": "pprof 採樣完成",
+    "download_success": "pprof 原始檔案已開始下載",
+    "download_result": "下載結果",
+    "result_title": "{{profile}} / {{format}}",
+    "proto_downloaded": "原始 profile 已下載：{{filename}}",
+    "profiles": {
+      "profile": "CPU",
+      "heap": "堆記憶體",
+      "allocs": "分配",
+      "goroutine": "協程",
+      "block": "阻塞",
+      "mutex": "互斥鎖",
+      "threadcreate": "執行緒建立",
+      "trace": "Trace"
+    },
+    "formats": {
+      "top": "Top 文字分析",
+      "svg": "SVG 火焰/呼叫圖",
+      "proto": "原始 Proto",
+      "text": "執行時文字"
+    }
   },
   "system_info": {
     "title": "管理中心資訊",

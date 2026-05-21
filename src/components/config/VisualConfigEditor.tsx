@@ -899,6 +899,13 @@ export function VisualConfigEditor({
                   disabled={disabled}
                   onChange={(usageStatisticsEnabled) => onChange({ usageStatisticsEnabled })}
                 />
+                <ToggleRow
+                  title={t('config_management.visual.sections.system.pprof_enable')}
+                  description={t('config_management.visual.sections.system.pprof_enable_desc')}
+                  checked={values.pprofEnable}
+                  disabled={disabled}
+                  onChange={(pprofEnable) => onChange({ pprofEnable })}
+                />
               </SectionGrid>
 
               <SectionGrid>
@@ -922,6 +929,14 @@ export function VisualConfigEditor({
                   disabled={disabled}
                   hint={t('config_management.visual.sections.system.usage_statistics_persist_desc')}
                   error={usageStatisticsPersistIntervalError}
+                />
+                <Input
+                  label={t('config_management.visual.sections.system.pprof_addr')}
+                  placeholder="127.0.0.1:8316"
+                  value={values.pprofAddr}
+                  onChange={(e) => onChange({ pprofAddr: e.target.value })}
+                  disabled={disabled || !values.pprofEnable}
+                  hint={t('config_management.visual.sections.system.pprof_addr_desc')}
                 />
               </SectionGrid>
             </SectionStack>
@@ -1115,9 +1130,7 @@ export function VisualConfigEditor({
 
               <SectionGrid>
                 <ToggleRow
-                  title={t(
-                    'config_management.visual.sections.images.enable_free_plan_image_model'
-                  )}
+                  title={t('config_management.visual.sections.images.enable_free_plan_image_model')}
                   description={t(
                     'config_management.visual.sections.images.enable_free_plan_image_model_desc'
                   )}
@@ -1239,14 +1252,18 @@ export function VisualConfigEditor({
                 />
                 <ToggleRow
                   title={t('config_management.visual.sections.quota.switch_preview_model')}
-                  description={t('config_management.visual.sections.quota.switch_preview_model_desc')}
+                  description={t(
+                    'config_management.visual.sections.quota.switch_preview_model_desc'
+                  )}
                   checked={values.quotaSwitchPreviewModel}
                   disabled={disabled}
                   onChange={(quotaSwitchPreviewModel) => onChange({ quotaSwitchPreviewModel })}
                 />
                 <ToggleRow
                   title={t('config_management.visual.sections.quota.antigravity_credits')}
-                  description={t('config_management.visual.sections.quota.antigravity_credits_desc')}
+                  description={t(
+                    'config_management.visual.sections.quota.antigravity_credits_desc'
+                  )}
                   checked={values.quotaAntigravityCredits}
                   disabled={disabled}
                   onChange={(quotaAntigravityCredits) => onChange({ quotaAntigravityCredits })}

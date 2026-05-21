@@ -132,6 +132,8 @@ export type VisualConfigValues = {
   logsMaxTotalSizeMb: string;
   usageStatisticsEnabled: boolean;
   usageStatisticsPersistIntervalSeconds: string;
+  pprofEnable: boolean;
+  pprofAddr: string;
   proxyUrl: string;
   enableGeminiCliEndpoint: boolean;
   forceModelPrefix: boolean;
@@ -181,6 +183,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   logsMaxTotalSizeMb: '',
   usageStatisticsEnabled: false,
   usageStatisticsPersistIntervalSeconds: '',
+  pprofEnable: false,
+  pprofAddr: '',
   proxyUrl: '',
   enableGeminiCliEndpoint: false,
   forceModelPrefix: false,

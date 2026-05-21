@@ -22,6 +22,8 @@
     "connecting": "Connecting...",
     "connected": "Connected",
     "disconnected": "Disconnected",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
     "connecting_status": "Connecting",
     "connected_status": "Connected",
     "disconnected_status": "Disconnected",
@@ -121,6 +123,7 @@
     "usage_stats": "Usage Statistics",
     "config_management": "Config Panel",
     "logs": "Logs Viewer",
+    "pprof": "Performance Profiling",
     "system_info": "Management Center Info"
   },
   "dashboard": {
@@ -1293,7 +1296,11 @@
           "usage_statistics_desc": "Collect usage statistics",
           "logs_max_size": "Log File Size Limit (MB)",
           "usage_statistics_persist": "Usage Snapshot Persist Interval (seconds)",
-          "usage_statistics_persist_desc": "Set to 0 or leave empty to disable automatic snapshot persistence"
+          "usage_statistics_persist_desc": "Set to 0 or leave empty to disable automatic snapshot persistence",
+          "pprof_enable": "Enable pprof profiling",
+          "pprof_enable_desc": "Expose management-authenticated /v0/management/pprof/* sampling endpoints when enabled",
+          "pprof_addr": "pprof Listen Address",
+          "pprof_addr_desc": "Only affects the optional standalone pprof server. Keep it bound to 127.0.0.1."
         },
         "network": {
           "title": "Network Configuration",
@@ -1378,10 +1385,10 @@
           "nonstream_keepalive_hint": "Send blank lines every N seconds for non-streaming responses to prevent idle timeout, set to 0 or leave empty to disable",
           "disabled": "Disabled"
         },
-      "payload": {
-        "title": "Payload Configuration",
-        "description": "Default values, raw JSON rules, override rules, and filter rules",
-        "default_rules": "Default Rules",
+        "payload": {
+          "title": "Payload Configuration",
+          "description": "Default values, raw JSON rules, override rules, and filter rules",
+          "default_rules": "Default Rules",
           "default_rules_desc": "Use these default values when parameters are not specified in the request",
           "default_raw_rules": "Default Raw Rules",
           "default_raw_rules_desc": "When parameters are missing, write these values as raw JSON fragments such as true, 123, \"high\", or {\"type\":\"object\"}",
@@ -1499,6 +1506,48 @@
     "refresh_files_and_quota": "Refresh files & quota",
     "refresh_all_credentials": "Refresh all credentials",
     "card_idle_hint": "Use the top \"Refresh all credentials\" button to fetch the latest quota data."
+  },
+  "pprof": {
+    "title": "Performance Profiling",
+    "description": "Collect CPU, heap, goroutine, and trace data through the backend pprof management API to diagnose concurrency or memory issues.",
+    "runtime_title": "Runtime Status",
+    "capture_title": "Capture and Analyze",
+    "enable": "pprof Switch",
+    "addr": "Listen Address",
+    "max_seconds": "Max Capture Seconds",
+    "capabilities": "Local Capabilities",
+    "capability_go_tool": "go tool pprof",
+    "capability_graphviz": "Graphviz dot",
+    "profile": "Profile Type",
+    "format": "Output Format",
+    "seconds": "Capture Seconds",
+    "seconds_hint": "CPU and trace captures wait for this duration. Max {{max}} seconds.",
+    "collect": "Start Capture",
+    "capture_hint": "top/text/svg are previewed inline; proto downloads the raw .pb.gz file directly.",
+    "disabled_notice": "pprof is currently disabled. Enable pprof in the Config page System section and save the configuration first.",
+    "config_load_failed": "Failed to load pprof configuration",
+    "collect_failed": "pprof capture failed",
+    "collect_success": "pprof capture completed",
+    "download_success": "Raw pprof file download started",
+    "download_result": "Download Result",
+    "result_title": "{{profile}} / {{format}}",
+    "proto_downloaded": "Raw profile downloaded: {{filename}}",
+    "profiles": {
+      "profile": "CPU",
+      "heap": "Heap",
+      "allocs": "Allocations",
+      "goroutine": "Goroutine",
+      "block": "Block",
+      "mutex": "Mutex",
+      "threadcreate": "Thread Create",
+      "trace": "Trace"
+    },
+    "formats": {
+      "top": "Top Text Analysis",
+      "svg": "SVG Flame/Call Graph",
+      "proto": "Raw Proto",
+      "text": "Runtime Text"
+    }
   },
   "system_info": {
     "title": "Management Center Info",

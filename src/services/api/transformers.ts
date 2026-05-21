@@ -51,6 +51,12 @@ const normalizeString = (value: unknown): string | undefined => {
   return String(value);
 };
 
+const normalizeStringArray = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+
+  return value.map((item) => String(item ?? '').trim()).filter(Boolean);
+};
+
 const normalizeIntegerArray = (value: unknown): number[] | undefined => {
   if (!Array.isArray(value)) return undefined;
 
@@ -71,7 +77,11 @@ const normalizeCodexCustomModelGroups = (value: unknown): CodexCustomModelGroup[
 
   const requested = new Set(
     value
-      .map((item) => String(item ?? '').trim().toLowerCase())
+      .map((item) =>
+        String(item ?? '')
+          .trim()
+          .toLowerCase()
+      )
       .filter(Boolean)
   );
 
@@ -535,6 +545,27 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
           remoteManagement['panel-repo'] ??
           remoteManagement.panelRepo
       ),
+    };
+  }
+  const pprof = raw.pprof;
+  if (isRecord(pprof)) {
+    const management = pprof.management;
+    config.pprof = {
+      enable: normalizeBoolean(pprof.enable),
+      addr: normalizeString(pprof.addr),
+      management: isRecord(management)
+        ? {
+            profiles: normalizeStringArray(management.profiles),
+            formats: normalizeStringArray(management.formats),
+            goToolAvailable: normalizeBoolean(
+              management['go_tool_available'] ?? management.goToolAvailable
+            ),
+            graphvizAvailable: normalizeBoolean(
+              management['graphviz_available'] ?? management.graphvizAvailable
+            ),
+            maxSeconds: normalizeNumber(management['max_seconds'] ?? management.maxSeconds),
+          }
+        : undefined,
     };
   }
   const authMaintenance = raw['auth-maintenance'] ?? raw.authMaintenance;

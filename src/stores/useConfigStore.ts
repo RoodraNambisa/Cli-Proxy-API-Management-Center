@@ -48,6 +48,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'enable-gemini-cli-endpoint',
   'force-model-prefix',
   'remote-management',
+  'pprof',
   'auth-maintenance',
   'images',
   'routing/strategy',
@@ -93,6 +94,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.forceModelPrefix;
     case 'remote-management':
       return config.remoteManagement;
+    case 'pprof':
+      return config.pprof;
     case 'auth-maintenance':
       return config.authMaintenance;
     case 'images':
@@ -257,6 +260,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'remote-management':
           nextConfig.remoteManagement = value as Config['remoteManagement'];
+          break;
+        case 'pprof':
+          nextConfig.pprof = value as Config['pprof'];
           break;
         case 'auth-maintenance':
           nextConfig.authMaintenance = value as Config['authMaintenance'];

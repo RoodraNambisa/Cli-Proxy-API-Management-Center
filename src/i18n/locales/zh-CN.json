@@ -22,6 +22,8 @@
     "connecting": "连接中...",
     "connected": "已连接",
     "disconnected": "未连接",
+    "enabled": "已启用",
+    "disabled": "已禁用",
     "connecting_status": "连接中",
     "connected_status": "已连接",
     "disconnected_status": "未连接",
@@ -121,6 +123,7 @@
     "usage_stats": "使用统计",
     "config_management": "配置面板",
     "logs": "日志查看",
+    "pprof": "性能分析",
     "system_info": "中心信息"
   },
   "dashboard": {
@@ -1293,7 +1296,11 @@
           "usage_statistics_desc": "收集使用统计信息",
           "logs_max_size": "日志文件大小限制 (MB)",
           "usage_statistics_persist": "统计快照落盘间隔 (秒)",
-          "usage_statistics_persist_desc": "设置为 0 或留空表示禁用自动快照落盘"
+          "usage_statistics_persist_desc": "设置为 0 或留空表示禁用自动快照落盘",
+          "pprof_enable": "启用 pprof 性能分析",
+          "pprof_enable_desc": "开启后会暴露受管理鉴权保护的 /v0/management/pprof/* 采样接口",
+          "pprof_addr": "pprof 监听地址",
+          "pprof_addr_desc": "仅影响后端可选的独立 pprof 服务，建议保持 127.0.0.1 绑定"
         },
         "network": {
           "title": "网络配置",
@@ -1378,10 +1385,10 @@
           "nonstream_keepalive_hint": "非流式响应时每隔 N 秒发送空行以防止空闲超时，设置为 0 或留空表示禁用",
           "disabled": "已禁用"
         },
-      "payload": {
-        "title": "Payload 配置",
-        "description": "默认值、原始 JSON 规则、覆盖规则与过滤规则",
-        "default_rules": "默认规则",
+        "payload": {
+          "title": "Payload 配置",
+          "description": "默认值、原始 JSON 规则、覆盖规则与过滤规则",
+          "default_rules": "默认规则",
           "default_rules_desc": "当请求中未指定参数时，使用这些默认值",
           "default_raw_rules": "默认 Raw 规则",
           "default_raw_rules_desc": "当请求中未指定参数时，按原始 JSON 片段写入这些值，例如 true、123、\"high\" 或 {\"type\":\"object\"}",
@@ -1499,6 +1506,48 @@
     "refresh_files_and_quota": "刷新认证文件&额度",
     "refresh_all_credentials": "刷新全部凭证",
     "card_idle_hint": "请使用顶部“刷新全部凭证”按钮获取最新额度。"
+  },
+  "pprof": {
+    "title": "性能分析",
+    "description": "通过后端 pprof 管理接口采集 CPU、堆、协程和 trace 数据，用于定位高并发或内存问题。",
+    "runtime_title": "运行状态",
+    "capture_title": "采样与分析",
+    "enable": "pprof 开关",
+    "addr": "监听地址",
+    "max_seconds": "最长采样秒数",
+    "capabilities": "本机能力",
+    "capability_go_tool": "go tool pprof",
+    "capability_graphviz": "Graphviz dot",
+    "profile": "采样类型",
+    "format": "输出格式",
+    "seconds": "采样秒数",
+    "seconds_hint": "CPU 与 trace 采样会等待指定秒数，最大 {{max}} 秒",
+    "collect": "开始采样",
+    "capture_hint": "top/text/svg 会在页面内预览；proto 会直接下载原始 .pb.gz 文件。",
+    "disabled_notice": "pprof 当前未启用。请先在配置页 System 区块开启 pprof 后保存配置。",
+    "config_load_failed": "加载 pprof 配置失败",
+    "collect_failed": "pprof 采样失败",
+    "collect_success": "pprof 采样完成",
+    "download_success": "pprof 原始文件已开始下载",
+    "download_result": "下载结果",
+    "result_title": "{{profile}} / {{format}}",
+    "proto_downloaded": "原始 profile 已下载：{{filename}}",
+    "profiles": {
+      "profile": "CPU",
+      "heap": "堆内存",
+      "allocs": "分配",
+      "goroutine": "协程",
+      "block": "阻塞",
+      "mutex": "互斥锁",
+      "threadcreate": "线程创建",
+      "trace": "Trace"
+    },
+    "formats": {
+      "top": "Top 文本分析",
+      "svg": "SVG 火焰/调用图",
+      "proto": "原始 Proto",
+      "text": "运行时文本"
+    }
   },
   "system_info": {
     "title": "管理中心信息",
