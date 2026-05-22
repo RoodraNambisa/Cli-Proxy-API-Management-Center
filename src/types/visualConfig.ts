@@ -25,6 +25,8 @@ export type VisualConfigFieldPath =
   | 'images.streamFlushMinBytes'
   | 'streaming.keepaliveSeconds'
   | 'streaming.bootstrapRetries'
+  | 'streaming.streamFlushIntervalMs'
+  | 'streaming.streamFlushMinBytes'
   | 'streaming.nonstreamKeepaliveInterval';
 
 export type VisualConfigValidationErrorCode =
@@ -70,6 +72,10 @@ export type PayloadFilterRule = {
 export interface StreamingConfig {
   keepaliveSeconds: string;
   bootstrapRetries: string;
+  enableStreamFlush: boolean;
+  streamFlushIntervalMs: string;
+  streamFlushMinBytes: string;
+  trustUpstreamSSE: boolean;
   nonstreamKeepaliveInterval: string;
 }
 
@@ -89,6 +95,7 @@ export interface ImagesVisualConfig {
   imageModel: string;
   enableFreePlanImageModel: boolean;
   enableNAggregation: boolean;
+  enableStreamFlush: boolean;
   overrideResponseFormatUrl: boolean;
   responseFormatUrlDataUrl: boolean;
   overrideTransparentBackground: boolean;
@@ -214,6 +221,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     imageModel: 'gpt-image-2',
     enableFreePlanImageModel: false,
     enableNAggregation: false,
+    enableStreamFlush: true,
     overrideResponseFormatUrl: false,
     responseFormatUrlDataUrl: false,
     overrideTransparentBackground: false,
@@ -234,6 +242,10 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   streaming: {
     keepaliveSeconds: '',
     bootstrapRetries: '',
+    enableStreamFlush: false,
+    streamFlushIntervalMs: '0',
+    streamFlushMinBytes: '0',
+    trustUpstreamSSE: false,
     nonstreamKeepaliveInterval: '',
   },
 };

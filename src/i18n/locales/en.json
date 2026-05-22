@@ -1335,6 +1335,8 @@
           "enable_free_plan_image_model_desc": "Disabled by default. When enabled, free-plan Codex credentials can also expose and use the image model.",
           "enable_n_aggregation": "Enable n Aggregation",
           "enable_n_aggregation_desc": "Disabled by default. When enabled, n > 1 is split into multiple Codex image calls and aggregated; when disabled, n > 1 returns an unsupported option error",
+          "enable_stream_flush": "Enable Image Stream Flush Batching",
+          "enable_stream_flush_desc": "Enabled by default. Disable it to flush every image stream chunk immediately.",
           "override_response_format_url": "Override response_format=url",
           "override_response_format_url_desc": "Disabled by default. When enabled, response_format=url is coerced to b64_json",
           "response_format_url_data_url": "Return Data URL for URL Format",
@@ -1346,9 +1348,9 @@
           "unsupported_status_code": "Unsupported Option Status Code",
           "unsupported_status_code_hint": "HTTP status code for unsupported capabilities such as response_format=url or file_id. Range: 400-599",
           "stream_flush_interval_ms": "Stream Flush Merge Interval (ms)",
-          "stream_flush_interval_ms_hint": "Wait up to N milliseconds before flushing image stream chunks. 0 keeps per-chunk flushes.",
+          "stream_flush_interval_ms_hint": "Wait up to N milliseconds before flushing image stream chunks. 0 falls back to global streaming thresholds.",
           "stream_flush_min_bytes": "Stream Flush Minimum Bytes",
-          "stream_flush_min_bytes_hint": "Flush image streams once N pending bytes are buffered. 0 disables the byte threshold."
+          "stream_flush_min_bytes_hint": "Flush image streams once N pending bytes are buffered. 0 falls back to global streaming thresholds."
         },
         "quota": {
           "title": "Quota Fallback",
@@ -1380,11 +1382,19 @@
         },
         "streaming": {
           "title": "Streaming Configuration",
-          "description": "Keepalive and bootstrap retry settings",
+          "description": "Keepalive, bootstrap retry, and SSE flush behavior",
           "keepalive_seconds": "Keepalive Seconds",
           "keepalive_hint": "Set to 0 or leave empty to disable keepalive",
           "bootstrap_retries": "Bootstrap Retries",
           "bootstrap_hint": "Number of retries during stream startup (before first byte)",
+          "enable_stream_flush": "Enable Regular Stream Flush Batching",
+          "enable_stream_flush_desc": "Disabled by default to preserve token-level latency. When enabled, flushes are batched by the thresholds below.",
+          "stream_flush_interval_ms": "Regular Stream Flush Merge Interval (ms)",
+          "stream_flush_interval_hint": "Wait up to N milliseconds before flushing regular stream chunks. 0 disables the time threshold.",
+          "stream_flush_min_bytes": "Regular Stream Flush Minimum Bytes",
+          "stream_flush_min_bytes_hint": "Flush regular streams once N pending bytes are buffered. 0 disables the byte threshold.",
+          "trust_upstream_sse": "Trust Upstream Responses SSE",
+          "trust_upstream_sse_desc": "Skip OpenAI Responses SSE repair and validation, forwarding upstream event frames directly.",
           "nonstream_keepalive": "Non-stream Keepalive Interval (seconds)",
           "nonstream_keepalive_hint": "Send blank lines every N seconds for non-streaming responses to prevent idle timeout, set to 0 or leave empty to disable",
           "disabled": "Disabled"

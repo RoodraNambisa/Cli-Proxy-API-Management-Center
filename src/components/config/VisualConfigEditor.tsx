@@ -270,6 +270,14 @@ export function VisualConfigEditor({
     t,
     validationErrors?.['streaming.bootstrapRetries']
   );
+  const streamFlushIntervalError = getValidationMessage(
+    t,
+    validationErrors?.['streaming.streamFlushIntervalMs']
+  );
+  const streamFlushMinBytesError = getValidationMessage(
+    t,
+    validationErrors?.['streaming.streamFlushMinBytes']
+  );
   const nonstreamKeepaliveError = getValidationMessage(
     t,
     validationErrors?.['streaming.nonstreamKeepaliveInterval']
@@ -401,6 +409,8 @@ export function VisualConfigEditor({
         errorCount: countErrors([
           'streaming.keepaliveSeconds',
           'streaming.bootstrapRetries',
+          'streaming.streamFlushIntervalMs',
+          'streaming.streamFlushMinBytes',
           'streaming.nonstreamKeepaliveInterval',
         ]),
       },
@@ -1208,6 +1218,22 @@ export function VisualConfigEditor({
                   }
                 />
                 <ToggleRow
+                  title={t('config_management.visual.sections.images.enable_stream_flush')}
+                  description={t(
+                    'config_management.visual.sections.images.enable_stream_flush_desc'
+                  )}
+                  checked={values.images.enableStreamFlush}
+                  disabled={disabled}
+                  onChange={(enableStreamFlush) =>
+                    onChange({
+                      images: {
+                        ...values.images,
+                        enableStreamFlush,
+                      },
+                    })
+                  }
+                />
+                <ToggleRow
                   title={t('config_management.visual.sections.images.override_response_format_url')}
                   description={t(
                     'config_management.visual.sections.images.override_response_format_url_desc'
@@ -1562,6 +1588,80 @@ export function VisualConfigEditor({
                   disabled={disabled}
                   hint={t('config_management.visual.sections.streaming.bootstrap_hint')}
                   error={bootstrapRetriesError}
+                />
+              </SectionGrid>
+
+              <SectionGrid>
+                <Input
+                  label={t('config_management.visual.sections.streaming.stream_flush_interval_ms')}
+                  type="number"
+                  placeholder="0"
+                  value={values.streaming.streamFlushIntervalMs}
+                  onChange={(e) =>
+                    onChange({
+                      streaming: {
+                        ...values.streaming,
+                        streamFlushIntervalMs: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={disabled}
+                  hint={t('config_management.visual.sections.streaming.stream_flush_interval_hint')}
+                  error={streamFlushIntervalError}
+                />
+                <Input
+                  label={t('config_management.visual.sections.streaming.stream_flush_min_bytes')}
+                  type="number"
+                  placeholder="0"
+                  value={values.streaming.streamFlushMinBytes}
+                  onChange={(e) =>
+                    onChange({
+                      streaming: {
+                        ...values.streaming,
+                        streamFlushMinBytes: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={disabled}
+                  hint={t(
+                    'config_management.visual.sections.streaming.stream_flush_min_bytes_hint'
+                  )}
+                  error={streamFlushMinBytesError}
+                />
+              </SectionGrid>
+
+              <SectionGrid>
+                <ToggleRow
+                  title={t('config_management.visual.sections.streaming.enable_stream_flush')}
+                  description={t(
+                    'config_management.visual.sections.streaming.enable_stream_flush_desc'
+                  )}
+                  checked={values.streaming.enableStreamFlush}
+                  disabled={disabled}
+                  onChange={(enableStreamFlush) =>
+                    onChange({
+                      streaming: {
+                        ...values.streaming,
+                        enableStreamFlush,
+                      },
+                    })
+                  }
+                />
+                <ToggleRow
+                  title={t('config_management.visual.sections.streaming.trust_upstream_sse')}
+                  description={t(
+                    'config_management.visual.sections.streaming.trust_upstream_sse_desc'
+                  )}
+                  checked={values.streaming.trustUpstreamSSE}
+                  disabled={disabled}
+                  onChange={(trustUpstreamSSE) =>
+                    onChange({
+                      streaming: {
+                        ...values.streaming,
+                        trustUpstreamSSE,
+                      },
+                    })
+                  }
                 />
               </SectionGrid>
 

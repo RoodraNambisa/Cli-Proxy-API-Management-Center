@@ -28,6 +28,7 @@ export interface ImagesConfig {
   imageModel?: string;
   enableFreePlanImageModel?: boolean;
   enableNAggregation?: boolean;
+  enableStreamFlush?: boolean;
   unsupportedStatusCode?: number;
   overrideUnsupportedParams?: boolean;
   overrideResponseFormatUrl?: boolean;
@@ -36,6 +37,15 @@ export interface ImagesConfig {
   overrideInputFidelity?: boolean;
   streamFlushIntervalMs?: number;
   streamFlushMinBytes?: number;
+}
+
+export interface StreamingConfig {
+  keepaliveSeconds?: number;
+  bootstrapRetries?: number;
+  enableStreamFlush?: boolean;
+  streamFlushIntervalMs?: number;
+  streamFlushMinBytes?: number;
+  trustUpstreamSSE?: boolean;
 }
 
 export interface RemoteManagementConfig {
@@ -88,6 +98,7 @@ export interface Config {
   pprof?: PprofConfig;
   authMaintenance?: AuthMaintenanceConfig;
   images?: ImagesConfig;
+  streaming?: StreamingConfig;
   routingStrategy?: string;
   apiKeys?: string[];
   ampcode?: AmpcodeConfig;
@@ -119,6 +130,7 @@ export type RawConfigSection =
   | 'pprof'
   | 'auth-maintenance'
   | 'images'
+  | 'streaming'
   | 'routing/strategy'
   | 'api-keys'
   | 'ampcode'

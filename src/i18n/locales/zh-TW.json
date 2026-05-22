@@ -1367,6 +1367,8 @@
           "enable_free_plan_image_model_desc": "預設關閉；開啟後 free plan 的 Codex 憑證也會顯示並使用圖片模型",
           "enable_n_aggregation": "啟用 n 聚合",
           "enable_n_aggregation_desc": "預設關閉；開啟後 n > 1 會拆成多次 Codex 圖片呼叫並聚合結果，關閉後直接回傳不支援錯誤",
+          "enable_stream_flush": "啟用圖片流式 flush 合併",
+          "enable_stream_flush_desc": "預設開啟；關閉後圖片流式回應每個 chunk 立即 flush",
           "override_response_format_url": "覆蓋 response_format=url",
           "override_response_format_url_desc": "預設關閉；開啟後將 response_format=url 歸一為 b64_json",
           "response_format_url_data_url": "URL 格式回傳 data URL",
@@ -1378,9 +1380,9 @@
           "unsupported_status_code": "不支援參數狀態碼",
           "unsupported_status_code_hint": "response_format=url、file_id 等不支援能力回傳的 HTTP 狀態碼，範圍 400-599",
           "stream_flush_interval_ms": "流式 flush 合併間隔（毫秒）",
-          "stream_flush_interval_ms_hint": "圖片流式輸出最多等待 N 毫秒再 flush，0 表示每個 chunk 立即 flush",
+          "stream_flush_interval_ms_hint": "圖片流式輸出最多等待 N 毫秒再 flush，0 表示使用全域流式閾值",
           "stream_flush_min_bytes": "流式 flush 最小位元組數",
-          "stream_flush_min_bytes_hint": "圖片流式輸出累計到 N 位元組後立即 flush，0 表示停用位元組閾值"
+          "stream_flush_min_bytes_hint": "圖片流式輸出累計到 N 位元組後立即 flush，0 表示使用全域流式閾值"
         },
         "maintenance": {
           "title": "帳號自動維護",
@@ -1400,11 +1402,19 @@
         },
         "streaming": {
           "title": "串流傳輸設定",
-          "description": "Keepalive 與 bootstrap 重試設定",
+          "description": "Keepalive、bootstrap 重試與 SSE flush 策略",
           "keepalive_seconds": "Keepalive 秒數",
           "keepalive_hint": "設定為 0 或留空表示停用 keepalive",
           "bootstrap_retries": "Bootstrap 重試次數",
           "bootstrap_hint": "串流傳輸啟動時（首包前）的重試次數",
+          "enable_stream_flush": "啟用普通串流 flush 合併",
+          "enable_stream_flush_desc": "預設關閉以保留 token 級低延遲；開啟後按下方時間或位元組閾值合併 flush",
+          "stream_flush_interval_ms": "普通串流 flush 合併間隔（毫秒）",
+          "stream_flush_interval_hint": "普通串流輸出最多等待 N 毫秒再 flush，0 表示停用時間閾值",
+          "stream_flush_min_bytes": "普通串流 flush 最小位元組數",
+          "stream_flush_min_bytes_hint": "普通串流輸出累計到 N 位元組後立即 flush，0 表示停用位元組閾值",
+          "trust_upstream_sse": "信任上游 Responses SSE",
+          "trust_upstream_sse_desc": "跳過 OpenAI Responses SSE 修復與校驗，直接轉發上游事件幀",
           "nonstream_keepalive": "非串流 Keepalive 間隔（秒）",
           "nonstream_keepalive_hint": "非串流回應時每隔 N 秒發送空行以防止閒置逾時，設定為 0 或留空表示停用",
           "disabled": "已停用"

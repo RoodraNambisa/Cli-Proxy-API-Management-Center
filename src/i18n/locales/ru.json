@@ -1334,6 +1334,8 @@
           "enable_free_plan_image_model_desc": "По умолчанию выключено. При включении free-plan учётные данные Codex тоже смогут видеть и использовать image model.",
           "enable_n_aggregation": "Включить агрегацию n",
           "enable_n_aggregation_desc": "По умолчанию выключено. Если включено, n > 1 разбивается на несколько Codex image-вызовов и агрегируется; если выключено, n > 1 возвращает ошибку неподдерживаемой опции",
+          "enable_stream_flush": "Включить batching flush для image stream",
+          "enable_stream_flush_desc": "По умолчанию включено. Отключите, чтобы flush каждого image stream chunk выполнялся сразу.",
           "override_response_format_url": "Переопределять response_format=url",
           "override_response_format_url_desc": "По умолчанию выключено. Если включено, response_format=url приводится к b64_json",
           "response_format_url_data_url": "Возвращать Data URL для формата URL",
@@ -1345,9 +1347,9 @@
           "unsupported_status_code": "HTTP-код неподдерживаемой опции",
           "unsupported_status_code_hint": "HTTP-код для неподдерживаемых возможностей, например response_format=url или file_id. Диапазон: 400-599",
           "stream_flush_interval_ms": "Интервал объединения stream flush (мс)",
-          "stream_flush_interval_ms_hint": "Ждать до N мс перед flush chunk-ов image stream. 0 сохраняет flush каждого chunk.",
+          "stream_flush_interval_ms_hint": "Ждать до N мс перед flush chunk-ов image stream. 0 использует глобальные пороги streaming.",
           "stream_flush_min_bytes": "Минимум байт для stream flush",
-          "stream_flush_min_bytes_hint": "Flush image stream после накопления N байт. 0 отключает порог по байтам."
+          "stream_flush_min_bytes_hint": "Flush image stream после накопления N байт. 0 использует глобальные пороги streaming."
         },
         "quota": {
           "title": "Резерв по квоте",
@@ -1379,11 +1381,19 @@
         },
         "streaming": {
           "title": "Настройки стриминга",
-          "description": "Параметры keepalive и повторов запуска",
+          "description": "Keepalive, повторы запуска и поведение SSE flush",
           "keepalive_seconds": "Период keepalive (сек)",
           "keepalive_hint": "Установите 0 или оставьте поле пустым, чтобы отключить keepalive",
           "bootstrap_retries": "Повторы запуска",
           "bootstrap_hint": "Количество попыток при запуске стрима (до первого байта)",
+          "enable_stream_flush": "Включить batching flush для обычного stream",
+          "enable_stream_flush_desc": "По умолчанию выключено для сохранения минимальной задержки токенов. При включении flush объединяется по порогам ниже.",
+          "stream_flush_interval_ms": "Интервал объединения обычного stream flush (мс)",
+          "stream_flush_interval_hint": "Ждать до N мс перед flush обычных stream chunk. 0 отключает временной порог.",
+          "stream_flush_min_bytes": "Минимум байт для обычного stream flush",
+          "stream_flush_min_bytes_hint": "Flush обычного stream после накопления N байт. 0 отключает порог по байтам.",
+          "trust_upstream_sse": "Доверять upstream Responses SSE",
+          "trust_upstream_sse_desc": "Пропустить repair и validation для OpenAI Responses SSE, пересылая upstream event frames напрямую.",
           "nonstream_keepalive": "Интервал keepalive для нестиминговых ответов (сек)",
           "nonstream_keepalive_hint": "Отправлять пустые строки каждые N секунд для нестиминговых ответов, чтобы избежать простоя; установите 0 или оставьте пустым для отключения",
           "disabled": "Отключено"

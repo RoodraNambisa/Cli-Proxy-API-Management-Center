@@ -1335,6 +1335,8 @@
           "enable_free_plan_image_model_desc": "默认关闭；开启后 free plan 的 Codex 凭证也会显示并使用图片模型",
           "enable_n_aggregation": "启用 n 聚合",
           "enable_n_aggregation_desc": "默认关闭；开启后 n > 1 会拆成多次 Codex 图片调用并聚合结果，关闭后直接返回不支持错误",
+          "enable_stream_flush": "启用图片流式 flush 合并",
+          "enable_stream_flush_desc": "默认开启；关闭后图片流式响应每个 chunk 立即 flush",
           "override_response_format_url": "覆盖 response_format=url",
           "override_response_format_url_desc": "默认关闭；开启后将 response_format=url 归一为 b64_json",
           "response_format_url_data_url": "URL 格式返回 data URL",
@@ -1346,9 +1348,9 @@
           "unsupported_status_code": "不支持参数状态码",
           "unsupported_status_code_hint": "response_format=url、file_id 等不支持能力返回的 HTTP 状态码，范围 400-599",
           "stream_flush_interval_ms": "流式 flush 合并间隔 (毫秒)",
-          "stream_flush_interval_ms_hint": "图片流式输出最多等待 N 毫秒再 flush，0 表示每个 chunk 立即 flush",
+          "stream_flush_interval_ms_hint": "图片流式输出最多等待 N 毫秒再 flush，0 表示使用全局流式阈值",
           "stream_flush_min_bytes": "流式 flush 最小字节数",
-          "stream_flush_min_bytes_hint": "图片流式输出累计到 N 字节后立即 flush，0 表示禁用字节阈值"
+          "stream_flush_min_bytes_hint": "图片流式输出累计到 N 字节后立即 flush，0 表示使用全局流式阈值"
         },
         "quota": {
           "title": "配额回退",
@@ -1380,11 +1382,19 @@
         },
         "streaming": {
           "title": "流式传输配置",
-          "description": "Keepalive 与 bootstrap 重试设置",
+          "description": "Keepalive、bootstrap 重试与 SSE flush 策略",
           "keepalive_seconds": "Keepalive 秒数",
           "keepalive_hint": "设置为 0 或留空表示禁用 keepalive",
           "bootstrap_retries": "Bootstrap 重试次数",
           "bootstrap_hint": "流式传输启动时（首包前）的重试次数",
+          "enable_stream_flush": "启用普通流式 flush 合并",
+          "enable_stream_flush_desc": "默认关闭以保留 token 级低延迟；开启后按下方时间或字节阈值合并 flush",
+          "stream_flush_interval_ms": "普通流式 flush 合并间隔 (毫秒)",
+          "stream_flush_interval_hint": "普通流式输出最多等待 N 毫秒再 flush，0 表示禁用时间阈值",
+          "stream_flush_min_bytes": "普通流式 flush 最小字节数",
+          "stream_flush_min_bytes_hint": "普通流式输出累计到 N 字节后立即 flush，0 表示禁用字节阈值",
+          "trust_upstream_sse": "信任上游 Responses SSE",
+          "trust_upstream_sse_desc": "跳过 OpenAI Responses SSE 修复与校验，直接转发上游事件帧",
           "nonstream_keepalive": "非流式 Keepalive 间隔 (秒)",
           "nonstream_keepalive_hint": "非流式响应时每隔 N 秒发送空行以防止空闲超时，设置为 0 或留空表示禁用",
           "disabled": "已禁用"

@@ -596,6 +596,31 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       ),
     };
   }
+  const streaming = raw.streaming;
+  if (isRecord(streaming)) {
+    config.streaming = {
+      keepaliveSeconds: normalizeNumber(
+        streaming['keepalive-seconds'] ?? streaming.keepaliveSeconds
+      ),
+      bootstrapRetries: normalizeNumber(
+        streaming['bootstrap-retries'] ?? streaming.bootstrapRetries
+      ),
+      enableStreamFlush: normalizeBoolean(
+        streaming['enable-stream-flush'] ?? streaming.enableStreamFlush
+      ),
+      streamFlushIntervalMs: normalizeNumber(
+        streaming['stream-flush-interval-ms'] ??
+          streaming.streamFlushIntervalMs ??
+          streaming.streamFlushIntervalMS
+      ),
+      streamFlushMinBytes: normalizeNumber(
+        streaming['stream-flush-min-bytes'] ?? streaming.streamFlushMinBytes
+      ),
+      trustUpstreamSSE: normalizeBoolean(
+        streaming['trust-upstream-sse'] ?? streaming.trustUpstreamSSE ?? streaming.trustUpstreamSse
+      ),
+    };
+  }
   const images = raw.images;
   if (isRecord(images)) {
     const codexModel = images['codex-model'] ?? images.codexModel;
@@ -618,6 +643,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       ),
       enableNAggregation: normalizeBoolean(
         images['enable-n-aggregation'] ?? images.enableNAggregation
+      ),
+      enableStreamFlush: normalizeBoolean(
+        images['enable-stream-flush'] ?? images.enableStreamFlush
       ),
       unsupportedStatusCode: normalizeNumber(
         images['unsupported-status-code'] ?? images.unsupportedStatusCode

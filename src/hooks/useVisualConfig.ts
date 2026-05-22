@@ -338,6 +338,12 @@ export function getVisualConfigValidationErrors(
     'images.streamFlushMinBytes': getNonNegativeIntegerError(values.images.streamFlushMinBytes),
     'streaming.keepaliveSeconds': getNonNegativeIntegerError(values.streaming.keepaliveSeconds),
     'streaming.bootstrapRetries': getNonNegativeIntegerError(values.streaming.bootstrapRetries),
+    'streaming.streamFlushIntervalMs': getNonNegativeIntegerError(
+      values.streaming.streamFlushIntervalMs
+    ),
+    'streaming.streamFlushMinBytes': getNonNegativeIntegerError(
+      values.streaming.streamFlushMinBytes
+    ),
     'streaming.nonstreamKeepaliveInterval': getNonNegativeIntegerError(
       values.streaming.nonstreamKeepaliveInterval
     ),
@@ -1019,6 +1025,12 @@ function getNextDirtyFields(
         nextValues.images.enableNAggregation === baselineValues.images.enableNAggregation
       );
     }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'enableStreamFlush')) {
+      updateDirty(
+        'images.enableStreamFlush',
+        nextValues.images.enableStreamFlush === baselineValues.images.enableStreamFlush
+      );
+    }
     if (Object.prototype.hasOwnProperty.call(imagesPatch, 'overrideResponseFormatUrl')) {
       updateDirty(
         'images.overrideResponseFormatUrl',
@@ -1125,6 +1137,31 @@ function getNextDirtyFields(
       updateDirty(
         'streaming.bootstrapRetries',
         nextValues.streaming.bootstrapRetries === baselineValues.streaming.bootstrapRetries
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(streamingPatch, 'enableStreamFlush')) {
+      updateDirty(
+        'streaming.enableStreamFlush',
+        nextValues.streaming.enableStreamFlush === baselineValues.streaming.enableStreamFlush
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(streamingPatch, 'streamFlushIntervalMs')) {
+      updateDirty(
+        'streaming.streamFlushIntervalMs',
+        nextValues.streaming.streamFlushIntervalMs ===
+          baselineValues.streaming.streamFlushIntervalMs
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(streamingPatch, 'streamFlushMinBytes')) {
+      updateDirty(
+        'streaming.streamFlushMinBytes',
+        nextValues.streaming.streamFlushMinBytes === baselineValues.streaming.streamFlushMinBytes
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(streamingPatch, 'trustUpstreamSSE')) {
+      updateDirty(
+        'streaming.trustUpstreamSSE',
+        nextValues.streaming.trustUpstreamSSE === baselineValues.streaming.trustUpstreamSSE
       );
     }
     if (Object.prototype.hasOwnProperty.call(streamingPatch, 'nonstreamKeepaliveInterval')) {
@@ -1271,6 +1308,10 @@ export function useVisualConfig() {
         images?.enableFreePlanImageModel === undefined
           ? DEFAULT_VISUAL_VALUES.images.enableFreePlanImageModel
           : Boolean(images?.['enable-free-plan-image-model'] ?? images?.enableFreePlanImageModel);
+      const imagesEnableStreamFlush =
+        images?.['enable-stream-flush'] === undefined && images?.enableStreamFlush === undefined
+          ? DEFAULT_VISUAL_VALUES.images.enableStreamFlush
+          : Boolean(images?.['enable-stream-flush'] ?? images?.enableStreamFlush);
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === 'string' ? parsed.host : '',
@@ -1377,6 +1418,7 @@ export function useVisualConfig() {
             images?.enableNAggregation === undefined
               ? DEFAULT_VISUAL_VALUES.images.enableNAggregation
               : Boolean(images?.['enable-n-aggregation'] ?? images?.enableNAggregation),
+          enableStreamFlush: imagesEnableStreamFlush,
           overrideResponseFormatUrl: imagesOverrideResponseFormatUrl,
           responseFormatUrlDataUrl: imagesResponseFormatUrlDataUrl,
           overrideTransparentBackground: imagesOverrideTransparentBackground,
@@ -1431,6 +1473,32 @@ export function useVisualConfig() {
         streaming: {
           keepaliveSeconds: String(streaming?.['keepalive-seconds'] ?? ''),
           bootstrapRetries: String(streaming?.['bootstrap-retries'] ?? ''),
+          enableStreamFlush: Boolean(
+            streaming?.['enable-stream-flush'] ?? streaming?.enableStreamFlush
+          ),
+          streamFlushIntervalMs:
+            streaming?.['stream-flush-interval-ms'] === undefined &&
+            streaming?.streamFlushIntervalMs === undefined &&
+            streaming?.streamFlushIntervalMS === undefined
+              ? DEFAULT_VISUAL_VALUES.streaming.streamFlushIntervalMs
+              : String(
+                  streaming?.['stream-flush-interval-ms'] ??
+                    streaming?.streamFlushIntervalMs ??
+                    streaming?.streamFlushIntervalMS ??
+                    ''
+                ),
+          streamFlushMinBytes:
+            streaming?.['stream-flush-min-bytes'] === undefined &&
+            streaming?.streamFlushMinBytes === undefined
+              ? DEFAULT_VISUAL_VALUES.streaming.streamFlushMinBytes
+              : String(
+                  streaming?.['stream-flush-min-bytes'] ?? streaming?.streamFlushMinBytes ?? ''
+                ),
+          trustUpstreamSSE: Boolean(
+            streaming?.['trust-upstream-sse'] ??
+            streaming?.trustUpstreamSSE ??
+            streaming?.trustUpstreamSse
+          ),
           nonstreamKeepaliveInterval: String(parsed['nonstream-keepalive-interval'] ?? ''),
         },
       };
@@ -1637,6 +1705,7 @@ export function useVisualConfig() {
           values.images.imageModel !== imagesDefaults.imageModel ||
           values.images.enableFreePlanImageModel !== imagesDefaults.enableFreePlanImageModel ||
           values.images.enableNAggregation !== imagesDefaults.enableNAggregation ||
+          values.images.enableStreamFlush !== imagesDefaults.enableStreamFlush ||
           values.images.overrideResponseFormatUrl !== imagesDefaults.overrideResponseFormatUrl ||
           values.images.responseFormatUrlDataUrl !== imagesDefaults.responseFormatUrlDataUrl ||
           values.images.overrideTransparentBackground !==
@@ -1654,6 +1723,7 @@ export function useVisualConfig() {
             values.images.enableFreePlanImageModel
           );
           doc.setIn(['images', 'enable-n-aggregation'], values.images.enableNAggregation);
+          doc.setIn(['images', 'enable-stream-flush'], values.images.enableStreamFlush);
           doc.setIn(
             ['images', 'override-response-format-url'],
             values.images.overrideResponseFormatUrl
@@ -1710,17 +1780,48 @@ export function useVisualConfig() {
           typeof values.streaming?.bootstrapRetries === 'string'
             ? values.streaming.bootstrapRetries
             : '';
+        const streamFlushIntervalMs =
+          typeof values.streaming?.streamFlushIntervalMs === 'string'
+            ? values.streaming.streamFlushIntervalMs
+            : '';
+        const streamFlushMinBytes =
+          typeof values.streaming?.streamFlushMinBytes === 'string'
+            ? values.streaming.streamFlushMinBytes
+            : '';
         const nonstreamKeepaliveInterval =
           typeof values.streaming?.nonstreamKeepaliveInterval === 'string'
             ? values.streaming.nonstreamKeepaliveInterval
             : '';
+        const streamingDefaults = DEFAULT_VISUAL_VALUES.streaming;
 
         const streamingDefined =
-          docHas(doc, ['streaming']) || keepaliveSeconds.trim() || bootstrapRetries.trim();
+          docHas(doc, ['streaming']) ||
+          keepaliveSeconds.trim() ||
+          bootstrapRetries.trim() ||
+          values.streaming.enableStreamFlush !== streamingDefaults.enableStreamFlush ||
+          streamFlushIntervalMs !== streamingDefaults.streamFlushIntervalMs ||
+          streamFlushMinBytes !== streamingDefaults.streamFlushMinBytes ||
+          values.streaming.trustUpstreamSSE !== streamingDefaults.trustUpstreamSSE;
         if (streamingDefined) {
           ensureMapInDoc(doc, ['streaming']);
           setIntFromStringInDoc(doc, ['streaming', 'keepalive-seconds'], keepaliveSeconds);
           setIntFromStringInDoc(doc, ['streaming', 'bootstrap-retries'], bootstrapRetries);
+          setBooleanInDoc(
+            doc,
+            ['streaming', 'enable-stream-flush'],
+            values.streaming.enableStreamFlush
+          );
+          setIntFromStringInDoc(
+            doc,
+            ['streaming', 'stream-flush-interval-ms'],
+            streamFlushIntervalMs
+          );
+          setIntFromStringInDoc(doc, ['streaming', 'stream-flush-min-bytes'], streamFlushMinBytes);
+          setBooleanInDoc(
+            doc,
+            ['streaming', 'trust-upstream-sse'],
+            values.streaming.trustUpstreamSSE
+          );
           deleteIfMapEmpty(doc, ['streaming']);
         }
 
