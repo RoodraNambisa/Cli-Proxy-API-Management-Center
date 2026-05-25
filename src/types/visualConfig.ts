@@ -148,6 +148,9 @@ export type VisualConfigValues = {
   proxyUrl: string;
   enableGeminiCliEndpoint: boolean;
   forceModelPrefix: boolean;
+  codexFingerprintJA3: boolean;
+  codexFingerprintBrowserHeaders: boolean;
+  codexFingerprintStabilizePerAccount: boolean;
   requestRetry: string;
   maxRetryCredentials: string;
   maxRetryInterval: string;
@@ -199,6 +202,9 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   proxyUrl: '',
   enableGeminiCliEndpoint: false,
   forceModelPrefix: false,
+  codexFingerprintJA3: false,
+  codexFingerprintBrowserHeaders: false,
+  codexFingerprintStabilizePerAccount: true,
   requestRetry: '',
   maxRetryCredentials: '',
   maxRetryInterval: '',

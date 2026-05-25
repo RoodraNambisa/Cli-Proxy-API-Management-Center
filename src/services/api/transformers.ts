@@ -547,6 +547,18 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       ),
     };
   }
+  const codexFingerprint = raw['codex-fingerprint'] ?? raw.codexFingerprint;
+  if (isRecord(codexFingerprint)) {
+    config.codexFingerprint = {
+      ja3: normalizeBoolean(codexFingerprint.ja3 ?? codexFingerprint.JA3),
+      browserHeaders: normalizeBoolean(
+        codexFingerprint['browser-headers'] ?? codexFingerprint.browserHeaders
+      ),
+      stabilizePerAccount: normalizeBoolean(
+        codexFingerprint['stabilize-per-account'] ?? codexFingerprint.stabilizePerAccount
+      ),
+    };
+  }
   const pprof = raw.pprof;
   if (isRecord(pprof)) {
     const management = pprof.management;

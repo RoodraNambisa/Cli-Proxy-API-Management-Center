@@ -48,6 +48,12 @@ export interface StreamingConfig {
   trustUpstreamSSE?: boolean;
 }
 
+export interface CodexFingerprintConfig {
+  ja3?: boolean;
+  browserHeaders?: boolean;
+  stabilizePerAccount?: boolean;
+}
+
 export interface RemoteManagementConfig {
   allowRemote?: boolean;
   secretKey?: string;
@@ -95,6 +101,7 @@ export interface Config {
   enableGeminiCliEndpoint?: boolean;
   forceModelPrefix?: boolean;
   remoteManagement?: RemoteManagementConfig;
+  codexFingerprint?: CodexFingerprintConfig;
   pprof?: PprofConfig;
   authMaintenance?: AuthMaintenanceConfig;
   images?: ImagesConfig;
@@ -127,6 +134,7 @@ export type RawConfigSection =
   | 'enable-gemini-cli-endpoint'
   | 'force-model-prefix'
   | 'remote-management'
+  | 'codex-fingerprint'
   | 'pprof'
   | 'auth-maintenance'
   | 'images'

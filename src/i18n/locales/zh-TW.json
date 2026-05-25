@@ -1342,7 +1342,13 @@
           "force_model_prefix_desc": "未帶前綴的模型請求只使用無前綴憑證",
           "session_affinity": "會話黏性路由",
           "ws_auth": "WebSocket 驗證",
-          "ws_auth_desc": "啟用 WebSocket 連線驗證（/v1/ws）"
+          "ws_auth_desc": "啟用 WebSocket 連線驗證（/v1/ws）",
+          "codex_fingerprint_ja3": "Codex JA3 指紋模擬",
+          "codex_fingerprint_ja3_desc": "對 Codex 上游 HTTPS 請求使用 Chrome 風格 uTLS ClientHello，預設關閉",
+          "codex_fingerprint_browser_headers": "Codex 瀏覽器請求頭模擬",
+          "codex_fingerprint_browser_headers_desc": "為 Codex HTTP 與 WebSocket 上游請求補充 sec-ch-ua、sec-fetch、Origin、Referer 等瀏覽器頭",
+          "codex_fingerprint_stabilize": "按帳號穩定指紋",
+          "codex_fingerprint_stabilize_desc": "預設開啟；同一 OAuth 郵箱或 API key 固定映射到同一瀏覽器 persona，關閉後每次請求輪換"
         },
         "quota": {
           "title": "配額回退",

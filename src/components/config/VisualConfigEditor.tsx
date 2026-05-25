@@ -1086,6 +1086,42 @@ export function VisualConfigEditor({
                   onChange={(wsAuth) => onChange({ wsAuth })}
                 />
               </SectionGrid>
+
+              <SectionGrid>
+                <ToggleRow
+                  title={t('config_management.visual.sections.network.codex_fingerprint_ja3')}
+                  description={t(
+                    'config_management.visual.sections.network.codex_fingerprint_ja3_desc'
+                  )}
+                  checked={values.codexFingerprintJA3}
+                  disabled={disabled}
+                  onChange={(codexFingerprintJA3) => onChange({ codexFingerprintJA3 })}
+                />
+                <ToggleRow
+                  title={t(
+                    'config_management.visual.sections.network.codex_fingerprint_browser_headers'
+                  )}
+                  description={t(
+                    'config_management.visual.sections.network.codex_fingerprint_browser_headers_desc'
+                  )}
+                  checked={values.codexFingerprintBrowserHeaders}
+                  disabled={disabled}
+                  onChange={(codexFingerprintBrowserHeaders) =>
+                    onChange({ codexFingerprintBrowserHeaders })
+                  }
+                />
+                <ToggleRow
+                  title={t('config_management.visual.sections.network.codex_fingerprint_stabilize')}
+                  description={t(
+                    'config_management.visual.sections.network.codex_fingerprint_stabilize_desc'
+                  )}
+                  checked={values.codexFingerprintStabilizePerAccount}
+                  disabled={disabled}
+                  onChange={(codexFingerprintStabilizePerAccount) =>
+                    onChange({ codexFingerprintStabilizePerAccount })
+                  }
+                />
+              </SectionGrid>
             </SectionStack>
           </ConfigSection>
 

@@ -898,6 +898,25 @@ function getNextDirtyFields(
       nextValues.forceModelPrefix === baselineValues.forceModelPrefix
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintJA3')) {
+    updateDirty(
+      'codexFingerprintJA3',
+      nextValues.codexFingerprintJA3 === baselineValues.codexFingerprintJA3
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintBrowserHeaders')) {
+    updateDirty(
+      'codexFingerprintBrowserHeaders',
+      nextValues.codexFingerprintBrowserHeaders === baselineValues.codexFingerprintBrowserHeaders
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintStabilizePerAccount')) {
+    updateDirty(
+      'codexFingerprintStabilizePerAccount',
+      nextValues.codexFingerprintStabilizePerAccount ===
+        baselineValues.codexFingerprintStabilizePerAccount
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'requestRetry')) {
     updateDirty('requestRetry', nextValues.requestRetry === baselineValues.requestRetry);
   }
@@ -1261,6 +1280,7 @@ export function useVisualConfig() {
       const parsed = asRecord(parsedRaw) ?? {};
       const tls = asRecord(parsed.tls);
       const remoteManagement = asRecord(parsed['remote-management']);
+      const codexFingerprint = asRecord(parsed['codex-fingerprint'] ?? parsed.codexFingerprint);
       const quotaExceeded = asRecord(parsed['quota-exceeded']);
       const authMaintenance = asRecord(parsed['auth-maintenance']);
       const images = asRecord(parsed.images);
@@ -1360,6 +1380,17 @@ export function useVisualConfig() {
         proxyUrl: typeof parsed['proxy-url'] === 'string' ? parsed['proxy-url'] : '',
         enableGeminiCliEndpoint: Boolean(parsed['enable-gemini-cli-endpoint']),
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
+        codexFingerprintJA3: Boolean(codexFingerprint?.ja3 ?? codexFingerprint?.JA3),
+        codexFingerprintBrowserHeaders: Boolean(
+          codexFingerprint?.['browser-headers'] ?? codexFingerprint?.browserHeaders
+        ),
+        codexFingerprintStabilizePerAccount:
+          codexFingerprint?.['stabilize-per-account'] === undefined &&
+          codexFingerprint?.stabilizePerAccount === undefined
+            ? DEFAULT_VISUAL_VALUES.codexFingerprintStabilizePerAccount
+            : Boolean(
+                codexFingerprint?.['stabilize-per-account'] ?? codexFingerprint?.stabilizePerAccount
+              ),
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryCredentials: String(parsed['max-retry-credentials'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
@@ -1622,6 +1653,24 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['request-retry'], values.requestRetry);
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
+        if (
+          docHas(doc, ['codex-fingerprint']) ||
+          values.codexFingerprintJA3 ||
+          values.codexFingerprintBrowserHeaders ||
+          !values.codexFingerprintStabilizePerAccount
+        ) {
+          ensureMapInDoc(doc, ['codex-fingerprint']);
+          doc.setIn(['codex-fingerprint', 'ja3'], values.codexFingerprintJA3);
+          doc.setIn(
+            ['codex-fingerprint', 'browser-headers'],
+            values.codexFingerprintBrowserHeaders
+          );
+          doc.setIn(
+            ['codex-fingerprint', 'stabilize-per-account'],
+            values.codexFingerprintStabilizePerAccount
+          );
+          deleteIfMapEmpty(doc, ['codex-fingerprint']);
+        }
         if (docHas(doc, ['no-cooldown-status-codes']) || values.noCooldownStatusCodes.trim()) {
           setIntListFromTextInDoc(doc, ['no-cooldown-status-codes'], values.noCooldownStatusCodes, {
             preserveEmpty: docHas(doc, ['no-cooldown-status-codes']),

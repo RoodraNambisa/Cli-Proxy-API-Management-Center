@@ -1321,7 +1321,13 @@
           "force_model_prefix_desc": "Запросы к моделям без префикса используют только учётные данные без префикса",
           "session_affinity": "Маршрутизация с привязкой к сессии",
           "ws_auth": "Аутентификация WebSocket",
-          "ws_auth_desc": "Включить аутентификацию WebSocket (/v1/ws)"
+          "ws_auth_desc": "Включить аутентификацию WebSocket (/v1/ws)",
+          "codex_fingerprint_ja3": "Эмуляция JA3 fingerprint для Codex",
+          "codex_fingerprint_ja3_desc": "Использовать Chrome-подобный uTLS ClientHello для HTTPS-запросов к Codex upstream. По умолчанию выключено.",
+          "codex_fingerprint_browser_headers": "Эмуляция browser headers для Codex",
+          "codex_fingerprint_browser_headers_desc": "Добавлять browser-style sec-ch-ua, sec-fetch, Origin, Referer и связанные заголовки в HTTP и WebSocket запросы Codex upstream.",
+          "codex_fingerprint_stabilize": "Стабильный fingerprint на аккаунт",
+          "codex_fingerprint_stabilize_desc": "По умолчанию включено. Один OAuth email или API key стабильно получает один browser persona; выключите для ротации на каждый запрос."
         },
         "images": {
           "title": "Совместимость OpenAI Images",

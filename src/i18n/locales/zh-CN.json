@@ -1322,7 +1322,13 @@
           "force_model_prefix_desc": "未带前缀的模型请求只使用无前缀凭据",
           "session_affinity": "会话粘性路由",
           "ws_auth": "WebSocket 认证",
-          "ws_auth_desc": "启用 WebSocket 连接认证 (/v1/ws)"
+          "ws_auth_desc": "启用 WebSocket 连接认证 (/v1/ws)",
+          "codex_fingerprint_ja3": "Codex JA3 指纹模拟",
+          "codex_fingerprint_ja3_desc": "对 Codex 上游 HTTPS 请求使用 Chrome 风格 uTLS ClientHello，默认关闭",
+          "codex_fingerprint_browser_headers": "Codex 浏览器请求头模拟",
+          "codex_fingerprint_browser_headers_desc": "为 Codex HTTP 与 WebSocket 上游请求补充 sec-ch-ua、sec-fetch、Origin、Referer 等浏览器头",
+          "codex_fingerprint_stabilize": "按账号稳定指纹",
+          "codex_fingerprint_stabilize_desc": "默认开启；同一 OAuth 邮箱或 API key 固定映射到同一浏览器 persona，关闭后每次请求轮换"
         },
         "images": {
           "title": "OpenAI Images 兼容",

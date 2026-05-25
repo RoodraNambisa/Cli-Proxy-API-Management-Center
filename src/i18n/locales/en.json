@@ -1322,7 +1322,13 @@
           "force_model_prefix_desc": "Unprefixed model requests only use credentials without prefix",
           "session_affinity": "Session Affinity Routing",
           "ws_auth": "WebSocket Authentication",
-          "ws_auth_desc": "Enable WebSocket authentication (/v1/ws)"
+          "ws_auth_desc": "Enable WebSocket authentication (/v1/ws)",
+          "codex_fingerprint_ja3": "Codex JA3 Fingerprint Emulation",
+          "codex_fingerprint_ja3_desc": "Use a Chrome-style uTLS ClientHello for Codex upstream HTTPS requests. Disabled by default.",
+          "codex_fingerprint_browser_headers": "Codex Browser Header Emulation",
+          "codex_fingerprint_browser_headers_desc": "Add browser-style sec-ch-ua, sec-fetch, Origin, Referer, and related headers to Codex HTTP and WebSocket upstream requests.",
+          "codex_fingerprint_stabilize": "Stabilize Fingerprint per Account",
+          "codex_fingerprint_stabilize_desc": "Enabled by default. The same OAuth email or API key maps to a stable browser persona; disable to rotate per request."
         },
         "images": {
           "title": "OpenAI Images Compatibility",
