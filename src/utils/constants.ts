@@ -25,6 +25,7 @@ export const LOG_REFRESH_DELAY_MS = 500;
 export const MAX_LOG_LINES = 2000;
 export const LOG_FETCH_LIMIT = 2500;
 export const LOGS_TIMEOUT_MS = 60 * 1000;
+export const AUTH_FILE_UPLOAD_TIMEOUT_MS = 60 * 1000;
 
 // 认证文件分页
 export const DEFAULT_AUTH_FILES_PAGE_SIZE = 20;
@@ -45,7 +46,7 @@ export const LANGUAGE_LABEL_KEYS: Record<Language, string> = {
   'zh-CN': 'language.chinese',
   'zh-TW': 'language.chinese_tw',
   en: 'language.english',
-  ru: 'language.russian'
+  ru: 'language.russian',
 };
 export const SUPPORTED_LANGUAGES = LANGUAGE_ORDER;
 
@@ -58,14 +59,14 @@ export const OAUTH_CARD_IDS = [
   'anthropic-oauth-card',
   'antigravity-oauth-card',
   'gemini-cli-oauth-card',
-  'kimi-oauth-card'
+  'kimi-oauth-card',
 ];
 export const OAUTH_PROVIDERS = {
   CODEX: 'codex',
   ANTHROPIC: 'anthropic',
   ANTIGRAVITY: 'antigravity',
   GEMINI_CLI: 'gemini-cli',
-  KIMI: 'kimi'
+  KIMI: 'kimi',
 } as const;
 
 // API 端点
@@ -77,5 +78,5 @@ export const API_ENDPOINTS = {
   AUTH_FILES: '/auth-files',
   OAUTH: '/oauth',
   USAGE: '/usage',
-  LOGS: '/logs'
+  LOGS: '/logs',
 } as const;
