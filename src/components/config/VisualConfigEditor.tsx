@@ -1121,6 +1121,32 @@ export function VisualConfigEditor({
                     onChange({ codexFingerprintStabilizePerAccount })
                   }
                 />
+                <ToggleRow
+                  title={t(
+                    'config_management.visual.sections.network.codex_fingerprint_force_http1'
+                  )}
+                  description={t(
+                    'config_management.visual.sections.network.codex_fingerprint_force_http1_desc'
+                  )}
+                  checked={values.codexFingerprintForceHTTP1}
+                  disabled={disabled}
+                  onChange={(codexFingerprintForceHTTP1) =>
+                    onChange({ codexFingerprintForceHTTP1 })
+                  }
+                />
+                <ToggleRow
+                  title={t(
+                    'config_management.visual.sections.network.codex_fingerprint_images_force_http1'
+                  )}
+                  description={t(
+                    'config_management.visual.sections.network.codex_fingerprint_images_force_http1_desc'
+                  )}
+                  checked={values.codexFingerprintImagesForceHTTP1}
+                  disabled={disabled}
+                  onChange={(codexFingerprintImagesForceHTTP1) =>
+                    onChange({ codexFingerprintImagesForceHTTP1 })
+                  }
+                />
               </SectionGrid>
             </SectionStack>
           </ConfigSection>

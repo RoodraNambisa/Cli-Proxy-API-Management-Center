@@ -1348,7 +1348,11 @@
           "codex_fingerprint_browser_headers": "Codex 瀏覽器請求頭模擬",
           "codex_fingerprint_browser_headers_desc": "為 Codex HTTP 與 WebSocket 上游請求補充 sec-ch-ua、sec-fetch、Origin、Referer 等瀏覽器頭",
           "codex_fingerprint_stabilize": "按帳號穩定指紋",
-          "codex_fingerprint_stabilize_desc": "預設開啟；同一 OAuth 郵箱或 API key 固定映射到同一瀏覽器 persona，關閉後每次請求輪換"
+          "codex_fingerprint_stabilize_desc": "預設開啟；同一 OAuth 郵箱或 API key 固定映射到同一瀏覽器 persona，關閉後每次請求輪換",
+          "codex_fingerprint_force_http1": "強制 Codex HTTP/1.1",
+          "codex_fingerprint_force_http1_desc": "強制所有 Codex HTTPS 上游請求使用 HTTP/1.1，預設關閉",
+          "codex_fingerprint_images_force_http1": "僅圖片請求強制 HTTP/1.1",
+          "codex_fingerprint_images_force_http1_desc": "僅對 image_generation 圖片請求強制使用 HTTP/1.1，可與 JA3/uTLS 組合使用"
         },
         "quota": {
           "title": "配額回退",

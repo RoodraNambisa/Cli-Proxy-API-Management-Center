@@ -917,6 +917,19 @@ function getNextDirtyFields(
         baselineValues.codexFingerprintStabilizePerAccount
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintForceHTTP1')) {
+    updateDirty(
+      'codexFingerprintForceHTTP1',
+      nextValues.codexFingerprintForceHTTP1 === baselineValues.codexFingerprintForceHTTP1
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintImagesForceHTTP1')) {
+    updateDirty(
+      'codexFingerprintImagesForceHTTP1',
+      nextValues.codexFingerprintImagesForceHTTP1 ===
+        baselineValues.codexFingerprintImagesForceHTTP1
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'requestRetry')) {
     updateDirty('requestRetry', nextValues.requestRetry === baselineValues.requestRetry);
   }
@@ -1391,6 +1404,16 @@ export function useVisualConfig() {
             : Boolean(
                 codexFingerprint?.['stabilize-per-account'] ?? codexFingerprint?.stabilizePerAccount
               ),
+        codexFingerprintForceHTTP1: Boolean(
+          codexFingerprint?.['force-http1'] ??
+          codexFingerprint?.forceHTTP1 ??
+          codexFingerprint?.forceHttp1
+        ),
+        codexFingerprintImagesForceHTTP1: Boolean(
+          codexFingerprint?.['images-force-http1'] ??
+          codexFingerprint?.imagesForceHTTP1 ??
+          codexFingerprint?.imagesForceHttp1
+        ),
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryCredentials: String(parsed['max-retry-credentials'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
@@ -1657,7 +1680,9 @@ export function useVisualConfig() {
           docHas(doc, ['codex-fingerprint']) ||
           values.codexFingerprintJA3 ||
           values.codexFingerprintBrowserHeaders ||
-          !values.codexFingerprintStabilizePerAccount
+          !values.codexFingerprintStabilizePerAccount ||
+          values.codexFingerprintForceHTTP1 ||
+          values.codexFingerprintImagesForceHTTP1
         ) {
           ensureMapInDoc(doc, ['codex-fingerprint']);
           doc.setIn(['codex-fingerprint', 'ja3'], values.codexFingerprintJA3);
@@ -1668,6 +1693,11 @@ export function useVisualConfig() {
           doc.setIn(
             ['codex-fingerprint', 'stabilize-per-account'],
             values.codexFingerprintStabilizePerAccount
+          );
+          doc.setIn(['codex-fingerprint', 'force-http1'], values.codexFingerprintForceHTTP1);
+          doc.setIn(
+            ['codex-fingerprint', 'images-force-http1'],
+            values.codexFingerprintImagesForceHTTP1
           );
           deleteIfMapEmpty(doc, ['codex-fingerprint']);
         }

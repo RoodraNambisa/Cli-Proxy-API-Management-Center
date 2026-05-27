@@ -1328,7 +1328,11 @@
           "codex_fingerprint_browser_headers": "Codex Browser Header Emulation",
           "codex_fingerprint_browser_headers_desc": "Add browser-style sec-ch-ua, sec-fetch, Origin, Referer, and related headers to Codex HTTP and WebSocket upstream requests.",
           "codex_fingerprint_stabilize": "Stabilize Fingerprint per Account",
-          "codex_fingerprint_stabilize_desc": "Enabled by default. The same OAuth email or API key maps to a stable browser persona; disable to rotate per request."
+          "codex_fingerprint_stabilize_desc": "Enabled by default. The same OAuth email or API key maps to a stable browser persona; disable to rotate per request.",
+          "codex_fingerprint_force_http1": "Force Codex HTTP/1.1",
+          "codex_fingerprint_force_http1_desc": "Force all Codex HTTPS upstream requests to use HTTP/1.1. Disabled by default.",
+          "codex_fingerprint_images_force_http1": "Force HTTP/1.1 for Images Only",
+          "codex_fingerprint_images_force_http1_desc": "Only force image_generation requests to use HTTP/1.1. Can be combined with JA3/uTLS."
         },
         "images": {
           "title": "OpenAI Images Compatibility",

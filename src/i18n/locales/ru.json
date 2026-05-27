@@ -1327,7 +1327,11 @@
           "codex_fingerprint_browser_headers": "Эмуляция browser headers для Codex",
           "codex_fingerprint_browser_headers_desc": "Добавлять browser-style sec-ch-ua, sec-fetch, Origin, Referer и связанные заголовки в HTTP и WebSocket запросы Codex upstream.",
           "codex_fingerprint_stabilize": "Стабильный fingerprint на аккаунт",
-          "codex_fingerprint_stabilize_desc": "По умолчанию включено. Один OAuth email или API key стабильно получает один browser persona; выключите для ротации на каждый запрос."
+          "codex_fingerprint_stabilize_desc": "По умолчанию включено. Один OAuth email или API key стабильно получает один browser persona; выключите для ротации на каждый запрос.",
+          "codex_fingerprint_force_http1": "Принудительно Codex HTTP/1.1",
+          "codex_fingerprint_force_http1_desc": "Заставлять все HTTPS-запросы Codex upstream использовать HTTP/1.1. По умолчанию выключено.",
+          "codex_fingerprint_images_force_http1": "HTTP/1.1 только для изображений",
+          "codex_fingerprint_images_force_http1_desc": "Заставлять только image_generation запросы использовать HTTP/1.1. Можно комбинировать с JA3/uTLS."
         },
         "images": {
           "title": "Совместимость OpenAI Images",

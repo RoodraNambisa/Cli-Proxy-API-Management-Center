@@ -151,6 +151,8 @@ export type VisualConfigValues = {
   codexFingerprintJA3: boolean;
   codexFingerprintBrowserHeaders: boolean;
   codexFingerprintStabilizePerAccount: boolean;
+  codexFingerprintForceHTTP1: boolean;
+  codexFingerprintImagesForceHTTP1: boolean;
   requestRetry: string;
   maxRetryCredentials: string;
   maxRetryInterval: string;
@@ -205,6 +207,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexFingerprintJA3: false,
   codexFingerprintBrowserHeaders: false,
   codexFingerprintStabilizePerAccount: true,
+  codexFingerprintForceHTTP1: false,
+  codexFingerprintImagesForceHTTP1: false,
   requestRetry: '',
   maxRetryCredentials: '',
   maxRetryInterval: '',

@@ -557,6 +557,16 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       stabilizePerAccount: normalizeBoolean(
         codexFingerprint['stabilize-per-account'] ?? codexFingerprint.stabilizePerAccount
       ),
+      forceHTTP1: normalizeBoolean(
+        codexFingerprint['force-http1'] ??
+          codexFingerprint.forceHTTP1 ??
+          codexFingerprint.forceHttp1
+      ),
+      imagesForceHTTP1: normalizeBoolean(
+        codexFingerprint['images-force-http1'] ??
+          codexFingerprint.imagesForceHTTP1 ??
+          codexFingerprint.imagesForceHttp1
+      ),
     };
   }
   const pprof = raw.pprof;

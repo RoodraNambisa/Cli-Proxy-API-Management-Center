@@ -1328,7 +1328,11 @@
           "codex_fingerprint_browser_headers": "Codex 浏览器请求头模拟",
           "codex_fingerprint_browser_headers_desc": "为 Codex HTTP 与 WebSocket 上游请求补充 sec-ch-ua、sec-fetch、Origin、Referer 等浏览器头",
           "codex_fingerprint_stabilize": "按账号稳定指纹",
-          "codex_fingerprint_stabilize_desc": "默认开启；同一 OAuth 邮箱或 API key 固定映射到同一浏览器 persona，关闭后每次请求轮换"
+          "codex_fingerprint_stabilize_desc": "默认开启；同一 OAuth 邮箱或 API key 固定映射到同一浏览器 persona，关闭后每次请求轮换",
+          "codex_fingerprint_force_http1": "强制 Codex HTTP/1.1",
+          "codex_fingerprint_force_http1_desc": "强制所有 Codex HTTPS 上游请求使用 HTTP/1.1，默认关闭",
+          "codex_fingerprint_images_force_http1": "仅图片请求强制 HTTP/1.1",
+          "codex_fingerprint_images_force_http1_desc": "仅对 image_generation 图片请求强制使用 HTTP/1.1，可与 JA3/uTLS 组合使用"
         },
         "images": {
           "title": "OpenAI Images 兼容",

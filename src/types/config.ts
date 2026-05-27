@@ -52,6 +52,8 @@ export interface CodexFingerprintConfig {
   ja3?: boolean;
   browserHeaders?: boolean;
   stabilizePerAccount?: boolean;
+  forceHTTP1?: boolean;
+  imagesForceHTTP1?: boolean;
 }
 
 export interface RemoteManagementConfig {
