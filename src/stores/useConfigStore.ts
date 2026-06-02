@@ -48,10 +48,15 @@ const SECTION_KEYS: RawConfigSection[] = [
   'enable-gemini-cli-endpoint',
   'force-model-prefix',
   'remote-management',
+  'codex',
+  'codex-fingerprint',
   'pprof',
   'auth-maintenance',
   'images',
   'routing/strategy',
+  'routing/session-affinity',
+  'routing/session-affinity-failover',
+  'routing/session-affinity-ttl',
   'api-keys',
   'ampcode',
   'gemini-api-key',
@@ -94,6 +99,10 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.forceModelPrefix;
     case 'remote-management':
       return config.remoteManagement;
+    case 'codex':
+      return config.codex;
+    case 'codex-fingerprint':
+      return config.codexFingerprint;
     case 'pprof':
       return config.pprof;
     case 'auth-maintenance':
@@ -102,6 +111,12 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.images;
     case 'routing/strategy':
       return config.routingStrategy;
+    case 'routing/session-affinity':
+      return config.routingSessionAffinity;
+    case 'routing/session-affinity-failover':
+      return config.routingSessionAffinityFailover;
+    case 'routing/session-affinity-ttl':
+      return config.routingSessionAffinityTTL;
     case 'api-keys':
       return config.apiKeys;
     case 'ampcode':
@@ -261,6 +276,12 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         case 'remote-management':
           nextConfig.remoteManagement = value as Config['remoteManagement'];
           break;
+        case 'codex':
+          nextConfig.codex = value as Config['codex'];
+          break;
+        case 'codex-fingerprint':
+          nextConfig.codexFingerprint = value as Config['codexFingerprint'];
+          break;
         case 'pprof':
           nextConfig.pprof = value as Config['pprof'];
           break;
@@ -272,6 +293,16 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'routing/strategy':
           nextConfig.routingStrategy = value as Config['routingStrategy'];
+          break;
+        case 'routing/session-affinity':
+          nextConfig.routingSessionAffinity = value as Config['routingSessionAffinity'];
+          break;
+        case 'routing/session-affinity-failover':
+          nextConfig.routingSessionAffinityFailover =
+            value as Config['routingSessionAffinityFailover'];
+          break;
+        case 'routing/session-affinity-ttl':
+          nextConfig.routingSessionAffinityTTL = value as Config['routingSessionAffinityTTL'];
           break;
         case 'api-keys':
           nextConfig.apiKeys = value as Config['apiKeys'];

@@ -56,6 +56,10 @@ export interface CodexFingerprintConfig {
   imagesForceHTTP1?: boolean;
 }
 
+export interface CodexConfig {
+  identityConfuse?: boolean;
+}
+
 export interface RemoteManagementConfig {
   allowRemote?: boolean;
   secretKey?: string;
@@ -103,12 +107,16 @@ export interface Config {
   enableGeminiCliEndpoint?: boolean;
   forceModelPrefix?: boolean;
   remoteManagement?: RemoteManagementConfig;
+  codex?: CodexConfig;
   codexFingerprint?: CodexFingerprintConfig;
   pprof?: PprofConfig;
   authMaintenance?: AuthMaintenanceConfig;
   images?: ImagesConfig;
   streaming?: StreamingConfig;
   routingStrategy?: string;
+  routingSessionAffinity?: boolean;
+  routingSessionAffinityFailover?: boolean;
+  routingSessionAffinityTTL?: string;
   apiKeys?: string[];
   ampcode?: AmpcodeConfig;
   geminiApiKeys?: GeminiKeyConfig[];
@@ -136,12 +144,16 @@ export type RawConfigSection =
   | 'enable-gemini-cli-endpoint'
   | 'force-model-prefix'
   | 'remote-management'
+  | 'codex'
   | 'codex-fingerprint'
   | 'pprof'
   | 'auth-maintenance'
   | 'images'
   | 'streaming'
   | 'routing/strategy'
+  | 'routing/session-affinity'
+  | 'routing/session-affinity-failover'
+  | 'routing/session-affinity-ttl'
   | 'api-keys'
   | 'ampcode'
   | 'gemini-api-key'

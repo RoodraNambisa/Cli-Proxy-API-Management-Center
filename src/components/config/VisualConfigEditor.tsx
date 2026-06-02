@@ -1079,6 +1079,17 @@ export function VisualConfigEditor({
                   onChange={(routingSessionAffinity) => onChange({ routingSessionAffinity })}
                 />
                 <ToggleRow
+                  title={t('config_management.visual.sections.network.session_affinity_failover')}
+                  description={t(
+                    'config_management.visual.sections.network.session_affinity_failover_desc'
+                  )}
+                  checked={values.routingSessionAffinityFailover}
+                  disabled={disabled}
+                  onChange={(routingSessionAffinityFailover) =>
+                    onChange({ routingSessionAffinityFailover })
+                  }
+                />
+                <ToggleRow
                   title={t('config_management.visual.sections.network.ws_auth')}
                   description={t('config_management.visual.sections.network.ws_auth_desc')}
                   checked={values.wsAuth}
@@ -1088,6 +1099,15 @@ export function VisualConfigEditor({
               </SectionGrid>
 
               <SectionGrid>
+                <ToggleRow
+                  title={t('config_management.visual.sections.network.codex_identity_confuse')}
+                  description={t(
+                    'config_management.visual.sections.network.codex_identity_confuse_desc'
+                  )}
+                  checked={values.codexIdentityConfuse}
+                  disabled={disabled}
+                  onChange={(codexIdentityConfuse) => onChange({ codexIdentityConfuse })}
+                />
                 <ToggleRow
                   title={t('config_management.visual.sections.network.codex_fingerprint_ja3')}
                   description={t(

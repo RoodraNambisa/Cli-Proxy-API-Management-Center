@@ -148,6 +148,7 @@ export type VisualConfigValues = {
   proxyUrl: string;
   enableGeminiCliEndpoint: boolean;
   forceModelPrefix: boolean;
+  codexIdentityConfuse: boolean;
   codexFingerprintJA3: boolean;
   codexFingerprintBrowserHeaders: boolean;
   codexFingerprintStabilizePerAccount: boolean;
@@ -164,6 +165,7 @@ export type VisualConfigValues = {
   images: ImagesVisualConfig;
   routingStrategy: 'round-robin' | 'fill-first' | 'random';
   routingSessionAffinity: boolean;
+  routingSessionAffinityFailover: boolean;
   routingSessionAffinityTTL: string;
   wsAuth: boolean;
   payloadDefaultRules: PayloadRule[];
@@ -204,6 +206,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   proxyUrl: '',
   enableGeminiCliEndpoint: false,
   forceModelPrefix: false,
+  codexIdentityConfuse: false,
   codexFingerprintJA3: false,
   codexFingerprintBrowserHeaders: false,
   codexFingerprintStabilizePerAccount: true,
@@ -242,6 +245,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   },
   routingStrategy: 'round-robin',
   routingSessionAffinity: false,
+  routingSessionAffinityFailover: true,
   routingSessionAffinityTTL: '',
   wsAuth: false,
   payloadDefaultRules: [],

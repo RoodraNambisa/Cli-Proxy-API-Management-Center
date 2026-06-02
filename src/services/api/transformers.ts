@@ -547,6 +547,12 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       ),
     };
   }
+  const codex = raw.codex;
+  if (isRecord(codex)) {
+    config.codex = {
+      identityConfuse: normalizeBoolean(codex['identity-confuse'] ?? codex.identityConfuse),
+    };
+  }
   const codexFingerprint = raw['codex-fingerprint'] ?? raw.codexFingerprint;
   if (isRecord(codexFingerprint)) {
     config.codexFingerprint = {
@@ -707,6 +713,17 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     : (raw['routing-strategy'] ?? raw.routingStrategy);
   if (strategyRaw !== undefined && strategyRaw !== null) {
     config.routingStrategy = String(strategyRaw);
+  }
+  if (isRecord(routing)) {
+    config.routingSessionAffinity = normalizeBoolean(
+      routing['session-affinity'] ?? routing.sessionAffinity
+    );
+    const failoverRaw = routing['session-affinity-failover'] ?? routing.sessionAffinityFailover;
+    config.routingSessionAffinityFailover =
+      failoverRaw === undefined || failoverRaw === null ? true : normalizeBoolean(failoverRaw);
+    config.routingSessionAffinityTTL = normalizeString(
+      routing['session-affinity-ttl'] ?? routing.sessionAffinityTTL
+    );
   }
   const apiKeysRaw = raw['api-keys'] ?? raw.apiKeys;
   if (Array.isArray(apiKeysRaw)) {

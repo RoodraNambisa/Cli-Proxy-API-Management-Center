@@ -898,6 +898,12 @@ function getNextDirtyFields(
       nextValues.forceModelPrefix === baselineValues.forceModelPrefix
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexIdentityConfuse')) {
+    updateDirty(
+      'codexIdentityConfuse',
+      nextValues.codexIdentityConfuse === baselineValues.codexIdentityConfuse
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintJA3')) {
     updateDirty(
       'codexFingerprintJA3',
@@ -1118,6 +1124,12 @@ function getNextDirtyFields(
       nextValues.routingSessionAffinity === baselineValues.routingSessionAffinity
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinityFailover')) {
+    updateDirty(
+      'routingSessionAffinityFailover',
+      nextValues.routingSessionAffinityFailover === baselineValues.routingSessionAffinityFailover
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinityTTL')) {
     updateDirty(
       'routingSessionAffinityTTL',
@@ -1293,6 +1305,7 @@ export function useVisualConfig() {
       const parsed = asRecord(parsedRaw) ?? {};
       const tls = asRecord(parsed.tls);
       const remoteManagement = asRecord(parsed['remote-management']);
+      const codex = asRecord(parsed.codex);
       const codexFingerprint = asRecord(parsed['codex-fingerprint'] ?? parsed.codexFingerprint);
       const quotaExceeded = asRecord(parsed['quota-exceeded']);
       const authMaintenance = asRecord(parsed['auth-maintenance']);
@@ -1345,6 +1358,10 @@ export function useVisualConfig() {
         images?.['enable-stream-flush'] === undefined && images?.enableStreamFlush === undefined
           ? DEFAULT_VISUAL_VALUES.images.enableStreamFlush
           : Boolean(images?.['enable-stream-flush'] ?? images?.enableStreamFlush);
+      const routingSessionAffinityFailoverRaw =
+        routing?.['session-affinity-failover'] ??
+        routing?.sessionAffinityFailover ??
+        routing?.['sessionAffinityFailover'];
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === 'string' ? parsed.host : '',
@@ -1393,6 +1410,7 @@ export function useVisualConfig() {
         proxyUrl: typeof parsed['proxy-url'] === 'string' ? parsed['proxy-url'] : '',
         enableGeminiCliEndpoint: Boolean(parsed['enable-gemini-cli-endpoint']),
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
+        codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
         codexFingerprintJA3: Boolean(codexFingerprint?.ja3 ?? codexFingerprint?.JA3),
         codexFingerprintBrowserHeaders: Boolean(
           codexFingerprint?.['browser-headers'] ?? codexFingerprint?.browserHeaders
@@ -1509,6 +1527,11 @@ export function useVisualConfig() {
         routingSessionAffinity: Boolean(
           routing?.['session-affinity'] ?? routing?.sessionAffinity ?? routing?.['sessionAffinity']
         ),
+        routingSessionAffinityFailover:
+          routingSessionAffinityFailoverRaw === undefined ||
+          routingSessionAffinityFailoverRaw === null
+            ? DEFAULT_VISUAL_VALUES.routingSessionAffinityFailover
+            : Boolean(routingSessionAffinityFailoverRaw),
         routingSessionAffinityTTL:
           typeof routing?.['session-affinity-ttl'] === 'string'
             ? routing['session-affinity-ttl']
@@ -1676,6 +1699,11 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['request-retry'], values.requestRetry);
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
+        if (docHas(doc, ['codex']) || values.codexIdentityConfuse) {
+          ensureMapInDoc(doc, ['codex']);
+          doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
+          deleteIfMapEmpty(doc, ['codex']);
+        }
         if (
           docHas(doc, ['codex-fingerprint']) ||
           values.codexFingerprintJA3 ||
@@ -1838,11 +1866,23 @@ export function useVisualConfig() {
           docHas(doc, ['routing']) ||
           values.routingStrategy !== 'round-robin' ||
           values.routingSessionAffinity ||
+          values.routingSessionAffinityFailover !==
+            DEFAULT_VISUAL_VALUES.routingSessionAffinityFailover ||
           values.routingSessionAffinityTTL.trim()
         ) {
           ensureMapInDoc(doc, ['routing']);
           doc.setIn(['routing', 'strategy'], values.routingStrategy);
           setBooleanInDoc(doc, ['routing', 'session-affinity'], values.routingSessionAffinity);
+          if (
+            docHas(doc, ['routing', 'session-affinity-failover']) ||
+            values.routingSessionAffinityFailover !==
+              DEFAULT_VISUAL_VALUES.routingSessionAffinityFailover
+          ) {
+            doc.setIn(
+              ['routing', 'session-affinity-failover'],
+              values.routingSessionAffinityFailover
+            );
+          }
           setStringInDoc(
             doc,
             ['routing', 'session-affinity-ttl'],
