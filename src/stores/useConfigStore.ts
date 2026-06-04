@@ -50,6 +50,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'remote-management',
   'codex',
   'codex-fingerprint',
+  'codex-header-defaults',
   'pprof',
   'auth-maintenance',
   'images',
@@ -103,6 +104,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.codex;
     case 'codex-fingerprint':
       return config.codexFingerprint;
+    case 'codex-header-defaults':
+      return config.codexHeaderDefaults;
     case 'pprof':
       return config.pprof;
     case 'auth-maintenance':
@@ -281,6 +284,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'codex-fingerprint':
           nextConfig.codexFingerprint = value as Config['codexFingerprint'];
+          break;
+        case 'codex-header-defaults':
+          nextConfig.codexHeaderDefaults = value as Config['codexHeaderDefaults'];
           break;
         case 'pprof':
           nextConfig.pprof = value as Config['pprof'];

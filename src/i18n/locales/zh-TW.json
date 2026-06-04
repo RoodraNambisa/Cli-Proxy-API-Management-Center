@@ -1355,16 +1355,15 @@
           "ws_auth_desc": "啟用 WebSocket 連線驗證（/v1/ws）",
           "codex_identity_confuse": "Codex 身份混淆",
           "codex_identity_confuse_desc": "按帳號穩定混淆 Codex session、window 和 turn 身份，上游返回後再恢復原始 ID",
-          "codex_fingerprint_ja3": "Codex JA3 指紋模擬",
-          "codex_fingerprint_ja3_desc": "對 Codex 上游 HTTPS 請求使用 Chrome 風格 uTLS ClientHello，預設關閉",
-          "codex_fingerprint_browser_headers": "Codex 瀏覽器請求頭模擬",
-          "codex_fingerprint_browser_headers_desc": "為 Codex HTTP 與 WebSocket 上游請求補充 sec-ch-ua、sec-fetch、Origin、Referer 等瀏覽器頭",
-          "codex_fingerprint_stabilize": "按帳號穩定指紋",
-          "codex_fingerprint_stabilize_desc": "預設開啟；同一 OAuth 郵箱或 API key 固定映射到同一瀏覽器 persona，關閉後每次請求輪換",
+          "codex_fingerprint_ja3": "強制 Codex TLS 特徵",
+          "codex_fingerprint_ja3_desc": "對 Codex 上游請求強制使用 Codex 原生 TLS 1.2 ClientHello、HTTP/1.1 和 Codex 請求頭順序，預設關閉",
           "codex_fingerprint_force_http1": "強制 Codex HTTP/1.1",
           "codex_fingerprint_force_http1_desc": "強制所有 Codex HTTPS 上游請求使用 HTTP/1.1，預設關閉",
           "codex_fingerprint_images_force_http1": "僅圖片請求強制 HTTP/1.1",
-          "codex_fingerprint_images_force_http1_desc": "僅對 image_generation 圖片請求強制使用 HTTP/1.1，可與 JA3/uTLS 組合使用"
+          "codex_fingerprint_images_force_http1_desc": "僅對 image_generation 圖片請求強制使用 HTTP/1.1，可與全域 HTTP/1.1 開關同時開啟",
+          "codex_header_defaults_user_agent": "Codex User-Agent 預設值",
+          "codex_header_defaults_beta_features": "Codex Beta-Features 預設值",
+          "codex_header_defaults_originator": "Codex Originator 預設值"
         },
         "quota": {
           "title": "配額回退",

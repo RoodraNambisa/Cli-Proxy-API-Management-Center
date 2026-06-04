@@ -1334,16 +1334,15 @@
           "ws_auth_desc": "Включить аутентификацию WebSocket (/v1/ws)",
           "codex_identity_confuse": "Codex identity confuse",
           "codex_identity_confuse_desc": "Стабильно переназначать session, window и turn ID Codex на аккаунт перед upstream-запросами, затем восстанавливать исходные ID в ответах.",
-          "codex_fingerprint_ja3": "Эмуляция JA3 fingerprint для Codex",
-          "codex_fingerprint_ja3_desc": "Использовать Chrome-подобный uTLS ClientHello для HTTPS-запросов к Codex upstream. По умолчанию выключено.",
-          "codex_fingerprint_browser_headers": "Эмуляция browser headers для Codex",
-          "codex_fingerprint_browser_headers_desc": "Добавлять browser-style sec-ch-ua, sec-fetch, Origin, Referer и связанные заголовки в HTTP и WebSocket запросы Codex upstream.",
-          "codex_fingerprint_stabilize": "Стабильный fingerprint на аккаунт",
-          "codex_fingerprint_stabilize_desc": "По умолчанию включено. Один OAuth email или API key стабильно получает один browser persona; выключите для ротации на каждый запрос.",
+          "codex_fingerprint_ja3": "Принудительный TLS-профиль Codex",
+          "codex_fingerprint_ja3_desc": "Заставлять upstream-запросы Codex использовать нативный Codex TLS 1.2 ClientHello, HTTP/1.1 и порядок заголовков Codex. По умолчанию выключено.",
           "codex_fingerprint_force_http1": "Принудительно Codex HTTP/1.1",
           "codex_fingerprint_force_http1_desc": "Заставлять все HTTPS-запросы Codex upstream использовать HTTP/1.1. По умолчанию выключено.",
           "codex_fingerprint_images_force_http1": "HTTP/1.1 только для изображений",
-          "codex_fingerprint_images_force_http1_desc": "Заставлять только image_generation запросы использовать HTTP/1.1. Можно комбинировать с JA3/uTLS."
+          "codex_fingerprint_images_force_http1_desc": "Заставлять только image_generation запросы использовать HTTP/1.1. Можно включать вместе с глобальным переключателем HTTP/1.1.",
+          "codex_header_defaults_user_agent": "Codex User-Agent по умолчанию",
+          "codex_header_defaults_beta_features": "Codex Beta-Features по умолчанию",
+          "codex_header_defaults_originator": "Codex Originator по умолчанию"
         },
         "images": {
           "title": "Совместимость OpenAI Images",

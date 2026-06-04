@@ -910,19 +910,6 @@ function getNextDirtyFields(
       nextValues.codexFingerprintJA3 === baselineValues.codexFingerprintJA3
     );
   }
-  if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintBrowserHeaders')) {
-    updateDirty(
-      'codexFingerprintBrowserHeaders',
-      nextValues.codexFingerprintBrowserHeaders === baselineValues.codexFingerprintBrowserHeaders
-    );
-  }
-  if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintStabilizePerAccount')) {
-    updateDirty(
-      'codexFingerprintStabilizePerAccount',
-      nextValues.codexFingerprintStabilizePerAccount ===
-        baselineValues.codexFingerprintStabilizePerAccount
-    );
-  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintForceHTTP1')) {
     updateDirty(
       'codexFingerprintForceHTTP1',
@@ -934,6 +921,24 @@ function getNextDirtyFields(
       'codexFingerprintImagesForceHTTP1',
       nextValues.codexFingerprintImagesForceHTTP1 ===
         baselineValues.codexFingerprintImagesForceHTTP1
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexHeaderDefaultsUserAgent')) {
+    updateDirty(
+      'codexHeaderDefaultsUserAgent',
+      nextValues.codexHeaderDefaultsUserAgent === baselineValues.codexHeaderDefaultsUserAgent
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexHeaderDefaultsBetaFeatures')) {
+    updateDirty(
+      'codexHeaderDefaultsBetaFeatures',
+      nextValues.codexHeaderDefaultsBetaFeatures === baselineValues.codexHeaderDefaultsBetaFeatures
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexHeaderDefaultsOriginator')) {
+    updateDirty(
+      'codexHeaderDefaultsOriginator',
+      nextValues.codexHeaderDefaultsOriginator === baselineValues.codexHeaderDefaultsOriginator
     );
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'requestRetry')) {
@@ -1307,6 +1312,9 @@ export function useVisualConfig() {
       const remoteManagement = asRecord(parsed['remote-management']);
       const codex = asRecord(parsed.codex);
       const codexFingerprint = asRecord(parsed['codex-fingerprint'] ?? parsed.codexFingerprint);
+      const codexHeaderDefaults = asRecord(
+        parsed['codex-header-defaults'] ?? parsed.codexHeaderDefaults
+      );
       const quotaExceeded = asRecord(parsed['quota-exceeded']);
       const authMaintenance = asRecord(parsed['auth-maintenance']);
       const images = asRecord(parsed.images);
@@ -1362,6 +1370,21 @@ export function useVisualConfig() {
         routing?.['session-affinity-failover'] ??
         routing?.sessionAffinityFailover ??
         routing?.['sessionAffinityFailover'];
+      const codexFingerprintJA3 = Boolean(codexFingerprint?.ja3 ?? codexFingerprint?.JA3);
+      const codexFingerprintForceHTTP1 = codexFingerprintJA3
+        ? false
+        : Boolean(
+            codexFingerprint?.['force-http1'] ??
+            codexFingerprint?.forceHTTP1 ??
+            codexFingerprint?.forceHttp1
+          );
+      const codexFingerprintImagesForceHTTP1 = codexFingerprintJA3
+        ? false
+        : Boolean(
+            codexFingerprint?.['images-force-http1'] ??
+            codexFingerprint?.imagesForceHTTP1 ??
+            codexFingerprint?.imagesForceHttp1
+          );
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === 'string' ? parsed.host : '',
@@ -1411,27 +1434,23 @@ export function useVisualConfig() {
         enableGeminiCliEndpoint: Boolean(parsed['enable-gemini-cli-endpoint']),
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
-        codexFingerprintJA3: Boolean(codexFingerprint?.ja3 ?? codexFingerprint?.JA3),
-        codexFingerprintBrowserHeaders: Boolean(
-          codexFingerprint?.['browser-headers'] ?? codexFingerprint?.browserHeaders
-        ),
-        codexFingerprintStabilizePerAccount:
-          codexFingerprint?.['stabilize-per-account'] === undefined &&
-          codexFingerprint?.stabilizePerAccount === undefined
-            ? DEFAULT_VISUAL_VALUES.codexFingerprintStabilizePerAccount
-            : Boolean(
-                codexFingerprint?.['stabilize-per-account'] ?? codexFingerprint?.stabilizePerAccount
-              ),
-        codexFingerprintForceHTTP1: Boolean(
-          codexFingerprint?.['force-http1'] ??
-          codexFingerprint?.forceHTTP1 ??
-          codexFingerprint?.forceHttp1
-        ),
-        codexFingerprintImagesForceHTTP1: Boolean(
-          codexFingerprint?.['images-force-http1'] ??
-          codexFingerprint?.imagesForceHTTP1 ??
-          codexFingerprint?.imagesForceHttp1
-        ),
+        codexFingerprintJA3,
+        codexFingerprintForceHTTP1,
+        codexFingerprintImagesForceHTTP1,
+        codexHeaderDefaultsUserAgent:
+          typeof codexHeaderDefaults?.['user-agent'] === 'string'
+            ? codexHeaderDefaults['user-agent']
+            : typeof codexHeaderDefaults?.userAgent === 'string'
+              ? codexHeaderDefaults.userAgent
+              : '',
+        codexHeaderDefaultsBetaFeatures:
+          typeof codexHeaderDefaults?.['beta-features'] === 'string'
+            ? codexHeaderDefaults['beta-features']
+            : typeof codexHeaderDefaults?.betaFeatures === 'string'
+              ? codexHeaderDefaults.betaFeatures
+              : '',
+        codexHeaderDefaultsOriginator:
+          typeof codexHeaderDefaults?.originator === 'string' ? codexHeaderDefaults.originator : '',
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryCredentials: String(parsed['max-retry-credentials'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
@@ -1707,27 +1726,46 @@ export function useVisualConfig() {
         if (
           docHas(doc, ['codex-fingerprint']) ||
           values.codexFingerprintJA3 ||
-          values.codexFingerprintBrowserHeaders ||
-          !values.codexFingerprintStabilizePerAccount ||
           values.codexFingerprintForceHTTP1 ||
           values.codexFingerprintImagesForceHTTP1
         ) {
+          const codexFingerprintForceHTTP1 = values.codexFingerprintJA3
+            ? false
+            : values.codexFingerprintForceHTTP1;
+          const codexFingerprintImagesForceHTTP1 = values.codexFingerprintJA3
+            ? false
+            : values.codexFingerprintImagesForceHTTP1;
           ensureMapInDoc(doc, ['codex-fingerprint']);
           doc.setIn(['codex-fingerprint', 'ja3'], values.codexFingerprintJA3);
-          doc.setIn(
-            ['codex-fingerprint', 'browser-headers'],
-            values.codexFingerprintBrowserHeaders
-          );
-          doc.setIn(
-            ['codex-fingerprint', 'stabilize-per-account'],
-            values.codexFingerprintStabilizePerAccount
-          );
-          doc.setIn(['codex-fingerprint', 'force-http1'], values.codexFingerprintForceHTTP1);
-          doc.setIn(
-            ['codex-fingerprint', 'images-force-http1'],
-            values.codexFingerprintImagesForceHTTP1
-          );
+          doc.deleteIn(['codex-fingerprint', 'browser-headers']);
+          doc.deleteIn(['codex-fingerprint', 'stabilize-per-account']);
+          doc.setIn(['codex-fingerprint', 'force-http1'], codexFingerprintForceHTTP1);
+          doc.setIn(['codex-fingerprint', 'images-force-http1'], codexFingerprintImagesForceHTTP1);
           deleteIfMapEmpty(doc, ['codex-fingerprint']);
+        }
+        if (
+          docHas(doc, ['codex-header-defaults']) ||
+          values.codexHeaderDefaultsUserAgent.trim() ||
+          values.codexHeaderDefaultsBetaFeatures.trim() ||
+          values.codexHeaderDefaultsOriginator.trim()
+        ) {
+          ensureMapInDoc(doc, ['codex-header-defaults']);
+          setStringInDoc(
+            doc,
+            ['codex-header-defaults', 'user-agent'],
+            values.codexHeaderDefaultsUserAgent
+          );
+          setStringInDoc(
+            doc,
+            ['codex-header-defaults', 'beta-features'],
+            values.codexHeaderDefaultsBetaFeatures
+          );
+          setStringInDoc(
+            doc,
+            ['codex-header-defaults', 'originator'],
+            values.codexHeaderDefaultsOriginator
+          );
+          deleteIfMapEmpty(doc, ['codex-header-defaults']);
         }
         if (docHas(doc, ['no-cooldown-status-codes']) || values.noCooldownStatusCodes.trim()) {
           setIntListFromTextInDoc(doc, ['no-cooldown-status-codes'], values.noCooldownStatusCodes, {

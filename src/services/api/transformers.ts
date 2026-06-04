@@ -557,12 +557,6 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   if (isRecord(codexFingerprint)) {
     config.codexFingerprint = {
       ja3: normalizeBoolean(codexFingerprint.ja3 ?? codexFingerprint.JA3),
-      browserHeaders: normalizeBoolean(
-        codexFingerprint['browser-headers'] ?? codexFingerprint.browserHeaders
-      ),
-      stabilizePerAccount: normalizeBoolean(
-        codexFingerprint['stabilize-per-account'] ?? codexFingerprint.stabilizePerAccount
-      ),
       forceHTTP1: normalizeBoolean(
         codexFingerprint['force-http1'] ??
           codexFingerprint.forceHTTP1 ??
@@ -573,6 +567,18 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
           codexFingerprint.imagesForceHTTP1 ??
           codexFingerprint.imagesForceHttp1
       ),
+    };
+  }
+  const codexHeaderDefaults = raw['codex-header-defaults'] ?? raw.codexHeaderDefaults;
+  if (isRecord(codexHeaderDefaults)) {
+    config.codexHeaderDefaults = {
+      userAgent: normalizeString(
+        codexHeaderDefaults['user-agent'] ?? codexHeaderDefaults.userAgent
+      ),
+      betaFeatures: normalizeString(
+        codexHeaderDefaults['beta-features'] ?? codexHeaderDefaults.betaFeatures
+      ),
+      originator: normalizeString(codexHeaderDefaults.originator),
     };
   }
   const pprof = raw.pprof;

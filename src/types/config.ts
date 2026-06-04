@@ -50,10 +50,14 @@ export interface StreamingConfig {
 
 export interface CodexFingerprintConfig {
   ja3?: boolean;
-  browserHeaders?: boolean;
-  stabilizePerAccount?: boolean;
   forceHTTP1?: boolean;
   imagesForceHTTP1?: boolean;
+}
+
+export interface CodexHeaderDefaultsConfig {
+  userAgent?: string;
+  betaFeatures?: string;
+  originator?: string;
 }
 
 export interface CodexConfig {
@@ -109,6 +113,7 @@ export interface Config {
   remoteManagement?: RemoteManagementConfig;
   codex?: CodexConfig;
   codexFingerprint?: CodexFingerprintConfig;
+  codexHeaderDefaults?: CodexHeaderDefaultsConfig;
   pprof?: PprofConfig;
   authMaintenance?: AuthMaintenanceConfig;
   images?: ImagesConfig;
@@ -146,6 +151,7 @@ export type RawConfigSection =
   | 'remote-management'
   | 'codex'
   | 'codex-fingerprint'
+  | 'codex-header-defaults'
   | 'pprof'
   | 'auth-maintenance'
   | 'images'

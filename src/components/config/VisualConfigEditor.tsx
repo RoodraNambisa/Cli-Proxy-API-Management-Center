@@ -1115,30 +1115,16 @@ export function VisualConfigEditor({
                   )}
                   checked={values.codexFingerprintJA3}
                   disabled={disabled}
-                  onChange={(codexFingerprintJA3) => onChange({ codexFingerprintJA3 })}
-                />
-                <ToggleRow
-                  title={t(
-                    'config_management.visual.sections.network.codex_fingerprint_browser_headers'
-                  )}
-                  description={t(
-                    'config_management.visual.sections.network.codex_fingerprint_browser_headers_desc'
-                  )}
-                  checked={values.codexFingerprintBrowserHeaders}
-                  disabled={disabled}
-                  onChange={(codexFingerprintBrowserHeaders) =>
-                    onChange({ codexFingerprintBrowserHeaders })
-                  }
-                />
-                <ToggleRow
-                  title={t('config_management.visual.sections.network.codex_fingerprint_stabilize')}
-                  description={t(
-                    'config_management.visual.sections.network.codex_fingerprint_stabilize_desc'
-                  )}
-                  checked={values.codexFingerprintStabilizePerAccount}
-                  disabled={disabled}
-                  onChange={(codexFingerprintStabilizePerAccount) =>
-                    onChange({ codexFingerprintStabilizePerAccount })
+                  onChange={(codexFingerprintJA3) =>
+                    onChange({
+                      codexFingerprintJA3,
+                      ...(codexFingerprintJA3
+                        ? {
+                            codexFingerprintForceHTTP1: false,
+                            codexFingerprintImagesForceHTTP1: false,
+                          }
+                        : {}),
+                    })
                   }
                 />
                 <ToggleRow
@@ -1149,9 +1135,12 @@ export function VisualConfigEditor({
                     'config_management.visual.sections.network.codex_fingerprint_force_http1_desc'
                   )}
                   checked={values.codexFingerprintForceHTTP1}
-                  disabled={disabled}
+                  disabled={disabled || values.codexFingerprintJA3}
                   onChange={(codexFingerprintForceHTTP1) =>
-                    onChange({ codexFingerprintForceHTTP1 })
+                    onChange({
+                      codexFingerprintForceHTTP1,
+                      ...(codexFingerprintForceHTTP1 ? { codexFingerprintJA3: false } : {}),
+                    })
                   }
                 />
                 <ToggleRow
@@ -1162,10 +1151,40 @@ export function VisualConfigEditor({
                     'config_management.visual.sections.network.codex_fingerprint_images_force_http1_desc'
                   )}
                   checked={values.codexFingerprintImagesForceHTTP1}
-                  disabled={disabled}
+                  disabled={disabled || values.codexFingerprintJA3}
                   onChange={(codexFingerprintImagesForceHTTP1) =>
-                    onChange({ codexFingerprintImagesForceHTTP1 })
+                    onChange({
+                      codexFingerprintImagesForceHTTP1,
+                      ...(codexFingerprintImagesForceHTTP1 ? { codexFingerprintJA3: false } : {}),
+                    })
                   }
+                />
+              </SectionGrid>
+
+              <SectionGrid>
+                <Input
+                  label={t(
+                    'config_management.visual.sections.network.codex_header_defaults_user_agent'
+                  )}
+                  value={values.codexHeaderDefaultsUserAgent}
+                  onChange={(e) => onChange({ codexHeaderDefaultsUserAgent: e.target.value })}
+                  disabled={disabled}
+                />
+                <Input
+                  label={t(
+                    'config_management.visual.sections.network.codex_header_defaults_beta_features'
+                  )}
+                  value={values.codexHeaderDefaultsBetaFeatures}
+                  onChange={(e) => onChange({ codexHeaderDefaultsBetaFeatures: e.target.value })}
+                  disabled={disabled}
+                />
+                <Input
+                  label={t(
+                    'config_management.visual.sections.network.codex_header_defaults_originator'
+                  )}
+                  value={values.codexHeaderDefaultsOriginator}
+                  onChange={(e) => onChange({ codexHeaderDefaultsOriginator: e.target.value })}
+                  disabled={disabled}
                 />
               </SectionGrid>
             </SectionStack>

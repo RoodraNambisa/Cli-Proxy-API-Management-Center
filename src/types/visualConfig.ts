@@ -150,10 +150,11 @@ export type VisualConfigValues = {
   forceModelPrefix: boolean;
   codexIdentityConfuse: boolean;
   codexFingerprintJA3: boolean;
-  codexFingerprintBrowserHeaders: boolean;
-  codexFingerprintStabilizePerAccount: boolean;
   codexFingerprintForceHTTP1: boolean;
   codexFingerprintImagesForceHTTP1: boolean;
+  codexHeaderDefaultsUserAgent: string;
+  codexHeaderDefaultsBetaFeatures: string;
+  codexHeaderDefaultsOriginator: string;
   requestRetry: string;
   maxRetryCredentials: string;
   maxRetryInterval: string;
@@ -208,10 +209,11 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   forceModelPrefix: false,
   codexIdentityConfuse: false,
   codexFingerprintJA3: false,
-  codexFingerprintBrowserHeaders: false,
-  codexFingerprintStabilizePerAccount: true,
   codexFingerprintForceHTTP1: false,
   codexFingerprintImagesForceHTTP1: false,
+  codexHeaderDefaultsUserAgent: '',
+  codexHeaderDefaultsBetaFeatures: '',
+  codexHeaderDefaultsOriginator: '',
   requestRetry: '',
   maxRetryCredentials: '',
   maxRetryInterval: '',

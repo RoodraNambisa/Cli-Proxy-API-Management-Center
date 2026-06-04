@@ -1335,16 +1335,15 @@
           "ws_auth_desc": "Enable WebSocket authentication (/v1/ws)",
           "codex_identity_confuse": "Codex Identity Confuse",
           "codex_identity_confuse_desc": "Stably remap Codex session, window, and turn identities per account before upstream requests, then restore original IDs in responses.",
-          "codex_fingerprint_ja3": "Codex JA3 Fingerprint Emulation",
-          "codex_fingerprint_ja3_desc": "Use a Chrome-style uTLS ClientHello for Codex upstream HTTPS requests. Disabled by default.",
-          "codex_fingerprint_browser_headers": "Codex Browser Header Emulation",
-          "codex_fingerprint_browser_headers_desc": "Add browser-style sec-ch-ua, sec-fetch, Origin, Referer, and related headers to Codex HTTP and WebSocket upstream requests.",
-          "codex_fingerprint_stabilize": "Stabilize Fingerprint per Account",
-          "codex_fingerprint_stabilize_desc": "Enabled by default. The same OAuth email or API key maps to a stable browser persona; disable to rotate per request.",
+          "codex_fingerprint_ja3": "Force Codex TLS Profile",
+          "codex_fingerprint_ja3_desc": "Force Codex upstream requests to use the native Codex TLS 1.2 ClientHello, HTTP/1.1, and Codex request header order. Disabled by default.",
           "codex_fingerprint_force_http1": "Force Codex HTTP/1.1",
           "codex_fingerprint_force_http1_desc": "Force all Codex HTTPS upstream requests to use HTTP/1.1. Disabled by default.",
           "codex_fingerprint_images_force_http1": "Force HTTP/1.1 for Images Only",
-          "codex_fingerprint_images_force_http1_desc": "Only force image_generation requests to use HTTP/1.1. Can be combined with JA3/uTLS."
+          "codex_fingerprint_images_force_http1_desc": "Only force image_generation requests to use HTTP/1.1. Can be enabled together with the global HTTP/1.1 switch.",
+          "codex_header_defaults_user_agent": "Codex User-Agent Default",
+          "codex_header_defaults_beta_features": "Codex Beta-Features Default",
+          "codex_header_defaults_originator": "Codex Originator Default"
         },
         "images": {
           "title": "OpenAI Images Compatibility",
