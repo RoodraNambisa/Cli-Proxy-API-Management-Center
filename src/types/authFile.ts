@@ -42,9 +42,12 @@ export interface AuthFilesResponse {
 export type CodexPlanTypeRefreshState =
   | 'idle'
   | 'running'
+  | 'paused'
   | 'completed'
   | 'completed_with_errors'
   | 'failed';
+
+export type CodexPlanTypeRefreshMode = 'all' | 'failed';
 
 export type CodexPlanTypeRefreshResultStatus = 'updated' | 'unchanged' | 'skipped' | 'failed';
 
@@ -70,6 +73,10 @@ export interface CodexPlanTypeRefreshResult {
 export interface CodexPlanTypeRefreshTask {
   state: CodexPlanTypeRefreshState | string;
   running: boolean;
+  paused?: boolean;
+  pauseRequested?: boolean;
+  mode?: CodexPlanTypeRefreshMode | string;
+  canRetryFailed: boolean;
   startedAt?: string;
   finishedAt?: string;
   currentName?: string;

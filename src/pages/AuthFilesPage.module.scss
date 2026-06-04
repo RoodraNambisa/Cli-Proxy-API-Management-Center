@@ -86,12 +86,11 @@
   margin-bottom: $spacing-md;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--primary-color) 20%, var(--border-color));
-  background:
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--bg-secondary) 92%, var(--primary-color) 6%),
-      color-mix(in srgb, var(--bg-primary) 96%, transparent)
-    );
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--bg-secondary) 92%, var(--primary-color) 6%),
+    color-mix(in srgb, var(--bg-primary) 96%, transparent)
+  );
 }
 
 .codexPlanRefreshHeader {
@@ -166,6 +165,12 @@
   border: 1px solid var(--warning-border);
 }
 
+.codexPlanRefreshStatePaused {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-tertiary) 88%, var(--primary-color) 6%);
+  border: 1px solid color-mix(in srgb, var(--border-color) 70%, var(--primary-color) 20%);
+}
+
 .codexPlanRefreshStateFailed {
   color: var(--danger-color);
   background: rgba($error-color, 0.1);
@@ -177,6 +182,29 @@
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.5;
+}
+
+.codexPlanRefreshSide {
+  min-width: min(100%, 280px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+
+  @include mobile {
+    align-items: stretch;
+  }
+}
+
+.codexPlanRefreshActions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  @include mobile {
+    justify-content: flex-start;
+  }
 }
 
 .codexPlanRefreshCurrent {
@@ -309,7 +337,6 @@
   }
 }
 
-
 .filterAllIconWrap {
   position: relative;
   border-color: color-mix(in srgb, var(--primary-color) 20%, var(--border-color));
@@ -327,7 +354,6 @@
   display: block;
   color: color-mix(in srgb, var(--primary-color) 70%, var(--text-primary));
 }
-
 
 .filterContent {
   display: flex;

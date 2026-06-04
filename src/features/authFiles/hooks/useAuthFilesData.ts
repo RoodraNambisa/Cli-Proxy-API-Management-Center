@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
 import { apiClient } from '@/services/api/client';
 import { useNotificationStore } from '@/stores';
-import type { AuthFileItem, CodexPlanTypeRefreshTask } from '@/types';
+import type { AuthFileItem, CodexPlanTypeRefreshMode, CodexPlanTypeRefreshTask } from '@/types';
 import { formatFileSize } from '@/utils/format';
 import { MAX_AUTH_FILE_SIZE } from '@/utils/constants';
 import { downloadBlob } from '@/utils/download';
@@ -19,11 +19,12 @@ const getArchiveDownloadErrorMeta = (
   err: unknown
 ): { status?: number; message: string; unsupported: boolean } => {
   const status =
-    typeof err === 'object' && err && 'status' in err ? Number((err as { status?: unknown }).status) : undefined;
+    typeof err === 'object' && err && 'status' in err
+      ? Number((err as { status?: unknown }).status)
+      : undefined;
   const message = err instanceof Error ? err.message : '';
   const normalizedMessage = message.trim().toLowerCase();
-  const unsupported =
-    status === 405 || (status === 404 && normalizedMessage !== 'file not found');
+  const unsupported = status === 405 || (status === 404 && normalizedMessage !== 'file not found');
 
   return { status, message, unsupported };
 };
@@ -32,7 +33,9 @@ const getCodexPlanRefreshErrorMeta = (
   err: unknown
 ): { status?: number; message: string; unsupported: boolean } => {
   const status =
-    typeof err === 'object' && err && 'status' in err ? Number((err as { status?: unknown }).status) : undefined;
+    typeof err === 'object' && err && 'status' in err
+      ? Number((err as { status?: unknown }).status)
+      : undefined;
   const message = err instanceof Error ? err.message : '';
 
   return {
@@ -45,12 +48,23 @@ const getCodexPlanRefreshErrorMeta = (
 const isCodexPlanRefreshRunning = (task: CodexPlanTypeRefreshTask | null): boolean =>
   Boolean(task && (task.running || task.state === 'running'));
 
+const isCodexPlanRefreshPaused = (task: CodexPlanTypeRefreshTask | null): boolean =>
+  Boolean(task && (task.paused || task.state === 'paused'));
+
+const isCodexPlanRefreshPauseRequested = (task: CodexPlanTypeRefreshTask | null): boolean =>
+  Boolean(task?.pauseRequested);
+
+const isCodexPlanRefreshActive = (task: CodexPlanTypeRefreshTask | null): boolean =>
+  isCodexPlanRefreshRunning(task) ||
+  isCodexPlanRefreshPaused(task) ||
+  isCodexPlanRefreshPauseRequested(task);
+
 const isCodexPlanRefreshTerminal = (task: CodexPlanTypeRefreshTask | null): boolean =>
   Boolean(
     task &&
-      (task.state === 'completed' ||
-        task.state === 'completed_with_errors' ||
-        task.state === 'failed')
+    (task.state === 'completed' ||
+      task.state === 'completed_with_errors' ||
+      task.state === 'failed')
   );
 
 type DeleteAllOptions = {
@@ -76,6 +90,7 @@ export type UseAuthFilesDataResult = {
   codexPlanRefreshTask: CodexPlanTypeRefreshTask | null;
   codexPlanRefreshLoading: boolean;
   codexPlanRefreshStarting: boolean;
+  codexPlanRefreshActionLoading: boolean;
   statusUpdating: Record<string, boolean>;
   batchStatusUpdating: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
@@ -95,6 +110,10 @@ export type UseAuthFilesDataResult = {
   downloadAllArchive: () => Promise<void>;
   refreshCodexPlanTypeRefreshStatus: () => Promise<void>;
   startCodexPlanTypeRefresh: () => Promise<void>;
+  clearCodexPlanTypeRefresh: () => Promise<void>;
+  pauseCodexPlanTypeRefresh: () => Promise<void>;
+  resumeCodexPlanTypeRefresh: () => Promise<void>;
+  retryFailedCodexPlanTypeRefresh: () => Promise<void>;
   batchSetStatus: (names: string[], enabled: boolean) => Promise<void>;
   batchDelete: (names: string[]) => void;
 };
@@ -122,6 +141,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   );
   const [codexPlanRefreshLoading, setCodexPlanRefreshLoading] = useState(false);
   const [codexPlanRefreshStarting, setCodexPlanRefreshStarting] = useState(false);
+  const [codexPlanRefreshActionLoading, setCodexPlanRefreshActionLoading] = useState(false);
   const [codexPlanRefreshSupported, setCodexPlanRefreshSupported] = useState<boolean | null>(null);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
   const [batchStatusUpdating, setBatchStatusUpdating] = useState(false);
@@ -180,13 +200,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   }, []);
 
   const applyDeletedFiles = useCallback((names: string[]) => {
-    const deletedNames = Array.from(
-      new Set(
-        names
-          .map((name) => name.trim())
-          .filter(Boolean)
-      )
-    );
+    const deletedNames = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
     if (deletedNames.length === 0) return;
 
     const deletedSet = new Set(deletedNames);
@@ -253,9 +267,9 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
       const transitionedToTerminal =
         notifyTerminal &&
-        isCodexPlanRefreshRunning(previousTask) &&
+        isCodexPlanRefreshActive(previousTask) &&
         isCodexPlanRefreshTerminal(task) &&
-        !isCodexPlanRefreshRunning(task);
+        !isCodexPlanRefreshActive(task);
 
       if (!transitionedToTerminal) return;
 
@@ -298,7 +312,11 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   );
 
   const fetchCodexPlanRefreshStatus = useCallback(
-    async (options?: { markLoading?: boolean; notifyTerminal?: boolean; silentUnsupported?: boolean }) => {
+    async (options?: {
+      markLoading?: boolean;
+      notifyTerminal?: boolean;
+      silentUnsupported?: boolean;
+    }) => {
       if (options?.markLoading) {
         setCodexPlanRefreshLoading(true);
       }
@@ -329,21 +347,111 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     [applyCodexPlanRefreshTask, showNotification, t]
   );
 
-  const startCodexPlanTypeRefresh = useCallback(async () => {
-    if (codexPlanRefreshStarting) return;
-    if (codexPlanRefreshSupported === false) {
-      showNotification(t('auth_files.codex_plan_refresh_unsupported'), 'warning');
+  const runCodexPlanTypeRefresh = useCallback(
+    async (mode: CodexPlanTypeRefreshMode) => {
+      if (codexPlanRefreshStarting) return;
+      if (codexPlanRefreshSupported === false) {
+        showNotification(t('auth_files.codex_plan_refresh_unsupported'), 'warning');
+        return;
+      }
+      if (isCodexPlanRefreshActive(codexPlanRefreshTaskRef.current)) {
+        return;
+      }
+
+      setCodexPlanRefreshStarting(true);
+      try {
+        const task = await authFilesApi.startCodexPlanTypeRefresh(mode);
+        await applyCodexPlanRefreshTask(task);
+        if (mode === 'failed' && !isCodexPlanRefreshActive(task) && !task.canRetryFailed) {
+          showNotification(t('auth_files.codex_plan_refresh_no_failed_retry'), 'warning');
+          return;
+        }
+        showNotification(t('auth_files.codex_plan_refresh_started'), 'success');
+      } catch (err: unknown) {
+        const { message, unsupported } = getCodexPlanRefreshErrorMeta(err);
+        if (unsupported) {
+          setCodexPlanRefreshSupported(false);
+          showNotification(t('auth_files.codex_plan_refresh_unsupported'), 'warning');
+        } else {
+          showNotification(`${t('notification.refresh_failed')}: ${message}`, 'error');
+        }
+      } finally {
+        setCodexPlanRefreshStarting(false);
+      }
+    },
+    [
+      applyCodexPlanRefreshTask,
+      codexPlanRefreshStarting,
+      codexPlanRefreshSupported,
+      showNotification,
+      t,
+    ]
+  );
+
+  const startCodexPlanTypeRefresh = useCallback(
+    () => runCodexPlanTypeRefresh('all'),
+    [runCodexPlanTypeRefresh]
+  );
+
+  const retryFailedCodexPlanTypeRefresh = useCallback(async () => {
+    const currentTask = codexPlanRefreshTaskRef.current;
+    if (!currentTask?.canRetryFailed) {
+      showNotification(t('auth_files.codex_plan_refresh_no_failed_retry'), 'warning');
       return;
     }
-    if (isCodexPlanRefreshRunning(codexPlanRefreshTaskRef.current)) {
+    await runCodexPlanTypeRefresh('failed');
+  }, [runCodexPlanTypeRefresh, showNotification, t]);
+
+  const controlCodexPlanTypeRefresh = useCallback(
+    async (action: 'pause' | 'resume') => {
+      if (codexPlanRefreshActionLoading) return;
+      const currentTask = codexPlanRefreshTaskRef.current;
+      if (action === 'pause' && !isCodexPlanRefreshRunning(currentTask)) return;
+      if (action === 'resume' && !isCodexPlanRefreshPaused(currentTask)) return;
+
+      setCodexPlanRefreshActionLoading(true);
+      try {
+        const task = await authFilesApi.controlCodexPlanTypeRefresh(action);
+        await applyCodexPlanRefreshTask(task);
+      } catch (err: unknown) {
+        const { message, unsupported } = getCodexPlanRefreshErrorMeta(err);
+        if (unsupported) {
+          setCodexPlanRefreshSupported(false);
+          showNotification(t('auth_files.codex_plan_refresh_unsupported'), 'warning');
+        } else {
+          showNotification(`${t('notification.refresh_failed')}: ${message}`, 'error');
+        }
+      } finally {
+        setCodexPlanRefreshActionLoading(false);
+      }
+    },
+    [applyCodexPlanRefreshTask, codexPlanRefreshActionLoading, showNotification, t]
+  );
+
+  const pauseCodexPlanTypeRefresh = useCallback(
+    () => controlCodexPlanTypeRefresh('pause'),
+    [controlCodexPlanTypeRefresh]
+  );
+
+  const resumeCodexPlanTypeRefresh = useCallback(
+    () => controlCodexPlanTypeRefresh('resume'),
+    [controlCodexPlanTypeRefresh]
+  );
+
+  const clearCodexPlanTypeRefresh = useCallback(async () => {
+    if (codexPlanRefreshActionLoading) return;
+    if (isCodexPlanRefreshActive(codexPlanRefreshTaskRef.current)) {
+      showNotification(t('auth_files.codex_plan_refresh_clear_unavailable'), 'warning');
       return;
     }
 
-    setCodexPlanRefreshStarting(true);
+    setCodexPlanRefreshActionLoading(true);
     try {
-      const task = await authFilesApi.startCodexPlanTypeRefresh();
+      const task = await authFilesApi.clearCodexPlanTypeRefreshStatus();
       await applyCodexPlanRefreshTask(task);
-      showNotification(t('auth_files.codex_plan_refresh_started'), 'success');
+      if (isCodexPlanRefreshActive(task)) {
+        showNotification(t('auth_files.codex_plan_refresh_clear_unavailable'), 'warning');
+      }
     } catch (err: unknown) {
       const { message, unsupported } = getCodexPlanRefreshErrorMeta(err);
       if (unsupported) {
@@ -353,15 +461,9 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         showNotification(`${t('notification.refresh_failed')}: ${message}`, 'error');
       }
     } finally {
-      setCodexPlanRefreshStarting(false);
+      setCodexPlanRefreshActionLoading(false);
     }
-  }, [
-    applyCodexPlanRefreshTask,
-    codexPlanRefreshStarting,
-    codexPlanRefreshSupported,
-    showNotification,
-    t,
-  ]);
+  }, [applyCodexPlanRefreshTask, codexPlanRefreshActionLoading, showNotification, t]);
 
   const refreshCodexPlanTypeRefreshStatus = useCallback(
     () => fetchCodexPlanRefreshStatus({ markLoading: true, silentUnsupported: true }),
@@ -374,7 +476,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   }, [active, fetchCodexPlanRefreshStatus]);
 
   useEffect(() => {
-    if (!active || !isCodexPlanRefreshRunning(codexPlanRefreshTask)) return;
+    if (!active || !isCodexPlanRefreshActive(codexPlanRefreshTask)) return;
 
     const timer = window.setInterval(() => {
       void fetchCodexPlanRefreshStatus({ notifyTerminal: true, silentUnsupported: true });
@@ -440,9 +542,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         }
 
         if (result.failed.length > 0) {
-          const details = result.failed
-            .map((item) => `${item.name}: ${item.error}`)
-            .join('; ');
+          const details = result.failed.map((item) => `${item.name}: ${item.error}`).join('; ');
           showNotification(`${t('notification.upload_failed')}: ${details}`, 'error');
         }
       } catch (err: unknown) {
@@ -542,9 +642,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
                 return;
               }
 
-              const result = await authFilesApi.deleteFiles(
-                filesToDelete.map((file) => file.name)
-              );
+              const result = await authFilesApi.deleteFiles(filesToDelete.map((file) => file.name));
               const success = result.deleted;
               const failed = result.failed.length;
 
@@ -739,7 +837,10 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         );
 
         if (failCount === 0) {
-          showNotification(t('auth_files.batch_status_success', { count: successCount }), 'success');
+          showNotification(
+            t('auth_files.batch_status_success', { count: successCount }),
+            'success'
+          );
         } else {
           showNotification(
             t('auth_files.batch_status_partial', { success: successCount, failed: failCount }),
@@ -802,13 +903,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
   const batchArchiveDownload = useCallback(
     async (names: string[]) => {
-      const uniqueNames = Array.from(
-        new Set(
-          names
-            .map((name) => name.trim())
-            .filter(Boolean)
-        )
-      );
+      const uniqueNames = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
       if (uniqueNames.length === 0 || archiveDownloadingSelected) return;
 
       setArchiveDownloadingSelected(true);
@@ -907,6 +1002,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     codexPlanRefreshTask,
     codexPlanRefreshLoading,
     codexPlanRefreshStarting,
+    codexPlanRefreshActionLoading,
     statusUpdating,
     batchStatusUpdating,
     fileInputRef,
@@ -926,6 +1022,10 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     downloadAllArchive,
     refreshCodexPlanTypeRefreshStatus,
     startCodexPlanTypeRefresh,
+    clearCodexPlanTypeRefresh,
+    pauseCodexPlanTypeRefresh,
+    resumeCodexPlanTypeRefresh,
+    retryFailedCodexPlanTypeRefresh,
     batchSetStatus,
     batchDelete,
   };

@@ -6,6 +6,7 @@ import { apiClient } from './client';
 import type {
   AuthFilesResponse,
   CodexPlanTypeRefreshResult,
+  CodexPlanTypeRefreshMode,
   CodexPlanTypeRefreshSummary,
   CodexPlanTypeRefreshTask,
 } from '@/types/authFile';
@@ -73,6 +74,17 @@ const readNumberValue = (value: unknown): number | undefined => {
   if (typeof value === 'string' && value.trim() !== '') {
     const parsed = Number(value);
     if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+};
+
+const readBooleanValue = (value: unknown): boolean | undefined => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'n', 'off'].includes(normalized)) return false;
   }
   return undefined;
 };
@@ -536,15 +548,24 @@ const normalizeCodexPlanTypeRefreshResult = (
 const normalizeCodexPlanTypeRefreshTask = (payload: unknown): CodexPlanTypeRefreshTask => {
   const source = isRecord(payload) ? (payload as RawCodexPlanTypeRefreshTask) : {};
   const state = readStringValue(source.state) ?? 'idle';
+  const paused = readBooleanValue(source.paused) ?? state === 'paused';
+  const pauseRequested = readBooleanValue(source.pause_requested ?? source.pauseRequested) ?? false;
   const results = Array.isArray(source.results)
     ? (source.results
         .map((entry) => normalizeCodexPlanTypeRefreshResult(entry))
         .filter(Boolean) as CodexPlanTypeRefreshResult[])
     : [];
+  const canRetryFailed =
+    readBooleanValue(source.can_retry_failed ?? source.canRetryFailed) ??
+    results.some((result) => result.status === 'failed');
 
   return {
     state,
-    running: source.running === true || state === 'running',
+    running: readBooleanValue(source.running) ?? state === 'running',
+    paused,
+    pauseRequested,
+    mode: readStringValue(source.mode),
+    canRetryFailed,
     startedAt: readStringValue(source.started_at ?? source.startedAt),
     finishedAt: readStringValue(source.finished_at ?? source.finishedAt),
     currentName: readStringValue(source.current_name ?? source.currentName),
@@ -632,11 +653,37 @@ export const authFilesApi = {
       await apiClient.get<RawCodexPlanTypeRefreshTask>('/auth-files/codex/plan-type-refresh')
     ),
 
-  startCodexPlanTypeRefresh: async (): Promise<CodexPlanTypeRefreshTask> => {
+  startCodexPlanTypeRefresh: async (
+    mode: CodexPlanTypeRefreshMode = 'all'
+  ): Promise<CodexPlanTypeRefreshTask> => {
     const response = await apiClient.requestRaw({
       url: '/auth-files/codex/plan-type-refresh',
       method: 'POST',
-      validateStatus: (status) => status === 202 || status === 409,
+      data: mode === 'all' ? undefined : { mode },
+      validateStatus: (status) => status === 200 || status === 202 || status === 409,
+    });
+
+    return normalizeCodexPlanTypeRefreshTask(response.data);
+  },
+
+  controlCodexPlanTypeRefresh: async (
+    action: 'pause' | 'resume'
+  ): Promise<CodexPlanTypeRefreshTask> => {
+    const response = await apiClient.requestRaw({
+      url: '/auth-files/codex/plan-type-refresh',
+      method: 'PATCH',
+      data: { action },
+      validateStatus: (status) => status === 200 || status === 202 || status === 409,
+    });
+
+    return normalizeCodexPlanTypeRefreshTask(response.data);
+  },
+
+  clearCodexPlanTypeRefreshStatus: async (): Promise<CodexPlanTypeRefreshTask> => {
+    const response = await apiClient.requestRaw({
+      url: '/auth-files/codex/plan-type-refresh',
+      method: 'DELETE',
+      validateStatus: (status) => status === 200 || status === 409,
     });
 
     return normalizeCodexPlanTypeRefreshTask(response.data);

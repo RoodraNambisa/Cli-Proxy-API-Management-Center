@@ -73,8 +73,7 @@ const DEFAULT_REGULAR_PAGE_SIZE = 9;
 const DEFAULT_COMPACT_PAGE_SIZE = 12;
 const ALL_PLAN_FILTER = 'all';
 
-const escapeWildcardSearchSegment = (value: string) =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeWildcardSearchSegment = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const buildWildcardSearch = (value: string): RegExp | null => {
   if (!value.includes('*')) return null;
@@ -96,6 +95,23 @@ const stringifySearchValue = (value: unknown): string => {
 const isCodexPlanRefreshRunning = (task: CodexPlanTypeRefreshTask | null): boolean =>
   Boolean(task && (task.running || task.state === 'running'));
 
+const isCodexPlanRefreshPaused = (task: CodexPlanTypeRefreshTask | null): boolean =>
+  Boolean(task && (task.paused || task.state === 'paused'));
+
+const isCodexPlanRefreshPauseRequested = (task: CodexPlanTypeRefreshTask | null): boolean =>
+  Boolean(task?.pauseRequested);
+
+const isCodexPlanRefreshActive = (task: CodexPlanTypeRefreshTask | null): boolean =>
+  isCodexPlanRefreshRunning(task) ||
+  isCodexPlanRefreshPaused(task) ||
+  isCodexPlanRefreshPauseRequested(task);
+
+const getCodexPlanRefreshDisplayState = (task: CodexPlanTypeRefreshTask): string => {
+  if (isCodexPlanRefreshPauseRequested(task)) return 'pause_requested';
+  if (isCodexPlanRefreshPaused(task)) return 'paused';
+  return task.state;
+};
+
 const getCodexPlanRefreshStateLabel = (t: TFunction, state: string): string => {
   const key = `auth_files.codex_plan_refresh_state_${state}`;
   const translated = t(key);
@@ -109,6 +125,16 @@ const getCodexPlanRefreshResultStatusLabel = (t: TFunction, status: string): str
 };
 
 const getCodexPlanRefreshHint = (t: TFunction, task: CodexPlanTypeRefreshTask): string => {
+  if (isCodexPlanRefreshPauseRequested(task)) {
+    return task.currentName
+      ? t('auth_files.codex_plan_refresh_running_hint', { name: task.currentName })
+      : t('auth_files.codex_plan_refresh_state_pause_requested');
+  }
+
+  if (isCodexPlanRefreshPaused(task)) {
+    return t('auth_files.codex_plan_refresh_state_paused');
+  }
+
   if (task.state === 'running') {
     return task.currentName
       ? t('auth_files.codex_plan_refresh_running_hint', { name: task.currentName })
@@ -186,6 +212,7 @@ export function AuthFilesPage() {
     codexPlanRefreshTask,
     codexPlanRefreshLoading,
     codexPlanRefreshStarting,
+    codexPlanRefreshActionLoading,
     statusUpdating,
     batchStatusUpdating,
     fileInputRef,
@@ -205,6 +232,10 @@ export function AuthFilesPage() {
     downloadAllArchive,
     refreshCodexPlanTypeRefreshStatus,
     startCodexPlanTypeRefresh,
+    clearCodexPlanTypeRefresh,
+    pauseCodexPlanTypeRefresh,
+    resumeCodexPlanTypeRefresh,
+    retryFailedCodexPlanTypeRefresh,
     batchSetStatus,
     batchDelete,
   } = useAuthFilesData({ refreshKeyStats, active: isCurrentLayer });
@@ -282,10 +313,7 @@ export function AuthFilesPage() {
       if (typeof persisted.disabledOnly === 'boolean') {
         setDisabledOnly(persisted.disabledOnly);
       }
-      if (
-        typeof persistedCompactMode !== 'boolean' &&
-        typeof persisted.compactMode === 'boolean'
-      ) {
+      if (typeof persistedCompactMode !== 'boolean' && typeof persisted.compactMode === 'boolean') {
         setCompactMode(persisted.compactMode);
       }
       if (typeof persisted.search === 'string') {
@@ -301,11 +329,11 @@ export function AuthFilesPage() {
       const regularPageSize =
         typeof persisted.regularPageSize === 'number' && Number.isFinite(persisted.regularPageSize)
           ? clampCardPageSize(persisted.regularPageSize)
-          : legacyPageSize ?? DEFAULT_REGULAR_PAGE_SIZE;
+          : (legacyPageSize ?? DEFAULT_REGULAR_PAGE_SIZE);
       const compactPageSize =
         typeof persisted.compactPageSize === 'number' && Number.isFinite(persisted.compactPageSize)
           ? clampCardPageSize(persisted.compactPageSize)
-          : legacyPageSize ?? DEFAULT_COMPACT_PAGE_SIZE;
+          : (legacyPageSize ?? DEFAULT_COMPACT_PAGE_SIZE);
       setPageSizeByMode({
         regular: regularPageSize,
         compact: compactPageSize,
@@ -569,14 +597,20 @@ export function AuthFilesPage() {
     [selectedNames, statusUpdating]
   );
   const codexPlanRefreshRunning = isCodexPlanRefreshRunning(codexPlanRefreshTask);
+  const codexPlanRefreshPaused = isCodexPlanRefreshPaused(codexPlanRefreshTask);
+  const codexPlanRefreshPauseRequested = isCodexPlanRefreshPauseRequested(codexPlanRefreshTask);
+  const codexPlanRefreshActive = isCodexPlanRefreshActive(codexPlanRefreshTask);
+  const codexPlanRefreshCanRetryFailed = Boolean(
+    codexPlanRefreshTask?.state === 'completed_with_errors' && codexPlanRefreshTask.canRetryFailed
+  );
   const showCodexPlanRefreshPanel = Boolean(
     codexPlanRefreshTask &&
-      (codexPlanRefreshLoading ||
-        codexPlanRefreshRunning ||
-        codexPlanRefreshTask.state !== 'idle' ||
-        codexPlanRefreshTask.summary.processed > 0 ||
-        codexPlanRefreshTask.results.length > 0 ||
-        codexPlanRefreshTask.currentName)
+    (codexPlanRefreshLoading ||
+      codexPlanRefreshActive ||
+      codexPlanRefreshTask.state !== 'idle' ||
+      codexPlanRefreshTask.summary.processed > 0 ||
+      codexPlanRefreshTask.results.length > 0 ||
+      codexPlanRefreshTask.currentName)
   );
   const codexPlanRefreshSummaryItems = useMemo(
     () =>
@@ -598,22 +632,29 @@ export function AuthFilesPage() {
       [],
     [codexPlanRefreshTask]
   );
+  const codexPlanRefreshDisplayState = codexPlanRefreshTask
+    ? getCodexPlanRefreshDisplayState(codexPlanRefreshTask)
+    : 'idle';
   const codexPlanRefreshStateLabel = codexPlanRefreshTask
-    ? getCodexPlanRefreshStateLabel(t, codexPlanRefreshTask.state)
+    ? getCodexPlanRefreshStateLabel(t, codexPlanRefreshDisplayState)
     : '';
   const codexPlanRefreshHintText = codexPlanRefreshTask
     ? getCodexPlanRefreshHint(t, codexPlanRefreshTask)
     : '';
   const codexPlanRefreshStateBadgeClass = codexPlanRefreshTask
-    ? codexPlanRefreshTask.state === 'completed'
+    ? codexPlanRefreshDisplayState === 'completed'
       ? styles.codexPlanRefreshStateCompleted
-      : codexPlanRefreshTask.state === 'completed_with_errors'
+      : codexPlanRefreshDisplayState === 'completed_with_errors'
         ? styles.codexPlanRefreshStateWarning
-        : codexPlanRefreshTask.state === 'failed'
+        : codexPlanRefreshDisplayState === 'failed'
           ? styles.codexPlanRefreshStateFailed
-          : codexPlanRefreshTask.state === 'running'
+          : codexPlanRefreshDisplayState === 'running'
             ? styles.codexPlanRefreshStateRunning
-            : styles.codexPlanRefreshStateIdle
+            : codexPlanRefreshDisplayState === 'pause_requested'
+              ? styles.codexPlanRefreshStateWarning
+              : codexPlanRefreshDisplayState === 'paused'
+                ? styles.codexPlanRefreshStatePaused
+                : styles.codexPlanRefreshStateIdle
     : styles.codexPlanRefreshStateIdle;
   const batchStatusButtonsDisabled =
     disableControls ||
@@ -849,7 +890,7 @@ export function AuthFilesPage() {
                 disableControls ||
                 codexPlanRefreshLoading ||
                 codexPlanRefreshStarting ||
-                codexPlanRefreshRunning
+                codexPlanRefreshActive
               }
               loading={codexPlanRefreshStarting}
             >
@@ -923,16 +964,78 @@ export function AuthFilesPage() {
                 <p className={styles.codexPlanRefreshHint}>{codexPlanRefreshHintText}</p>
               </div>
 
-              {codexPlanRefreshTask.currentName && (
-                <div className={styles.codexPlanRefreshCurrent}>
-                  <span className={styles.codexPlanRefreshCurrentLabel}>
-                    {t('auth_files.codex_plan_refresh_current')}
-                  </span>
-                  <span className={styles.codexPlanRefreshCurrentValue}>
-                    {codexPlanRefreshTask.currentName}
-                  </span>
+              <div className={styles.codexPlanRefreshSide}>
+                <div className={styles.codexPlanRefreshActions}>
+                  {codexPlanRefreshRunning && !codexPlanRefreshPaused && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void pauseCodexPlanTypeRefresh()}
+                      disabled={
+                        disableControls ||
+                        codexPlanRefreshActionLoading ||
+                        codexPlanRefreshPauseRequested
+                      }
+                    >
+                      {codexPlanRefreshPauseRequested
+                        ? t('auth_files.codex_plan_refresh_state_pause_requested')
+                        : t('auth_files.codex_plan_refresh_pause')}
+                    </Button>
+                  )}
+                  {codexPlanRefreshPaused && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void resumeCodexPlanTypeRefresh()}
+                      disabled={disableControls || codexPlanRefreshActionLoading}
+                    >
+                      {t('auth_files.codex_plan_refresh_resume')}
+                    </Button>
+                  )}
+                  {codexPlanRefreshCanRetryFailed && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void retryFailedCodexPlanTypeRefresh()}
+                      disabled={
+                        disableControls ||
+                        codexPlanRefreshActive ||
+                        codexPlanRefreshStarting ||
+                        codexPlanRefreshLoading
+                      }
+                      loading={codexPlanRefreshStarting}
+                    >
+                      {t('auth_files.codex_plan_refresh_retry_failed')}
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void clearCodexPlanTypeRefresh()}
+                    disabled={
+                      disableControls || codexPlanRefreshActive || codexPlanRefreshActionLoading
+                    }
+                    title={
+                      codexPlanRefreshActive
+                        ? t('auth_files.codex_plan_refresh_clear_unavailable')
+                        : undefined
+                    }
+                  >
+                    {t('auth_files.codex_plan_refresh_close_task')}
+                  </Button>
                 </div>
-              )}
+
+                {codexPlanRefreshTask.currentName && (
+                  <div className={styles.codexPlanRefreshCurrent}>
+                    <span className={styles.codexPlanRefreshCurrentLabel}>
+                      {t('auth_files.codex_plan_refresh_current')}
+                    </span>
+                    <span className={styles.codexPlanRefreshCurrentValue}>
+                      {codexPlanRefreshTask.currentName}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className={styles.codexPlanRefreshSummaryGrid}>
@@ -1244,7 +1347,9 @@ export function AuthFilesPage() {
                     variant="secondary"
                     size="sm"
                     onClick={() => void batchArchiveDownload(selectedNames)}
-                    disabled={disableControls || selectedNames.length === 0 || archiveDownloadingSelected}
+                    disabled={
+                      disableControls || selectedNames.length === 0 || archiveDownloadingSelected
+                    }
                     loading={archiveDownloadingSelected}
                   >
                     {t('auth_files.archive_download_selected')}
