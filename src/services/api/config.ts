@@ -6,6 +6,26 @@ import { apiClient } from './client';
 import type { Config } from '@/types';
 import { normalizeConfigResponse } from './transformers';
 
+type NumericConfigKey = 'request-retry' | 'max-retry-credentials' | 'max-retry-interval';
+
+const readNumericConfigValue = (data: Record<string, unknown>, key: NumericConfigKey): number => {
+  const camelKey = key.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+  const rawValue = data[key] ?? data[camelKey] ?? data.value ?? 0;
+  const parsed = Number(rawValue);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getNumericConfig = async (key: NumericConfigKey): Promise<number> => {
+  const data = await apiClient.get<Record<string, unknown>>(`/${key}`);
+  return readNumericConfigValue(data, key);
+};
+
+const putNumericConfig = (key: NumericConfigKey, value: number) =>
+  apiClient.put(`/${key}`, { value });
+
+const patchNumericConfig = (key: NumericConfigKey, value: number) =>
+  apiClient.patch(`/${key}`, { value });
+
 export const configApi = {
   /**
    * 获取配置（会进行字段规范化）
@@ -36,9 +56,49 @@ export const configApi = {
   clearProxyUrl: () => apiClient.delete('/proxy-url'),
 
   /**
-   * 更新重试次数
+   * 获取失败后额外请求轮数
    */
-  updateRequestRetry: (retryCount: number) => apiClient.put('/request-retry', { value: retryCount }),
+  getRequestRetry: () => getNumericConfig('request-retry'),
+
+  /**
+   * 更新失败后额外请求轮数
+   */
+  updateRequestRetry: (retryCount: number) => putNumericConfig('request-retry', retryCount),
+
+  /**
+   * PATCH 更新失败后额外请求轮数
+   */
+  patchRequestRetry: (retryCount: number) => patchNumericConfig('request-retry', retryCount),
+
+  /**
+   * 获取每轮最多使用凭据数
+   */
+  getMaxRetryCredentials: () => getNumericConfig('max-retry-credentials'),
+
+  /**
+   * 更新每轮最多使用凭据数
+   */
+  updateMaxRetryCredentials: (value: number) => putNumericConfig('max-retry-credentials', value),
+
+  /**
+   * PATCH 更新每轮最多使用凭据数
+   */
+  patchMaxRetryCredentials: (value: number) => patchNumericConfig('max-retry-credentials', value),
+
+  /**
+   * 获取冷却等待上限
+   */
+  getMaxRetryInterval: () => getNumericConfig('max-retry-interval'),
+
+  /**
+   * 更新冷却等待上限
+   */
+  updateMaxRetryInterval: (value: number) => putNumericConfig('max-retry-interval', value),
+
+  /**
+   * PATCH 更新冷却等待上限
+   */
+  patchMaxRetryInterval: (value: number) => patchNumericConfig('max-retry-interval', value),
 
   /**
    * 配额回退：切换项目
@@ -81,8 +141,7 @@ export const configApi = {
   /**
    * 更新日志总大小上限（MB）
    */
-  updateLogsMaxTotalSizeMb: (value: number) =>
-    apiClient.put('/logs-max-total-size-mb', { value }),
+  updateLogsMaxTotalSizeMb: (value: number) => apiClient.put('/logs-max-total-size-mb', { value }),
 
   /**
    * WebSocket 鉴权开关
@@ -100,7 +159,8 @@ export const configApi = {
   /**
    * 更新强制模型前缀开关
    */
-  updateForceModelPrefix: (enabled: boolean) => apiClient.put('/force-model-prefix', { value: enabled }),
+  updateForceModelPrefix: (enabled: boolean) =>
+    apiClient.put('/force-model-prefix', { value: enabled }),
 
   /**
    * 获取路由策略
@@ -114,5 +174,6 @@ export const configApi = {
   /**
    * 更新路由策略
    */
-  updateRoutingStrategy: (strategy: string) => apiClient.put('/routing/strategy', { value: strategy }),
+  updateRoutingStrategy: (strategy: string) =>
+    apiClient.put('/routing/strategy', { value: strategy }),
 };

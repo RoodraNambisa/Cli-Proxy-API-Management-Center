@@ -990,6 +990,7 @@ export function VisualConfigEditor({
                   value={values.requestRetry}
                   onChange={(e) => onChange({ requestRetry: e.target.value })}
                   disabled={disabled}
+                  hint={t('config_management.visual.sections.network.request_retry_hint')}
                   error={requestRetryError}
                 />
                 <Input
@@ -1009,6 +1010,7 @@ export function VisualConfigEditor({
                   value={values.maxRetryInterval}
                   onChange={(e) => onChange({ maxRetryInterval: e.target.value })}
                   disabled={disabled}
+                  hint={t('config_management.visual.sections.network.max_retry_interval_hint')}
                   error={maxRetryIntervalError}
                 />
                 <FieldShell

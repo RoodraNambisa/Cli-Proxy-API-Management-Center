@@ -496,6 +496,10 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
         : String(proxyUrl);
   const requestRetry = raw['request-retry'] ?? raw.requestRetry;
   config.requestRetry = normalizeNumber(requestRetry);
+  const maxRetryCredentials = raw['max-retry-credentials'] ?? raw.maxRetryCredentials;
+  config.maxRetryCredentials = normalizeNumber(maxRetryCredentials);
+  const maxRetryInterval = raw['max-retry-interval'] ?? raw.maxRetryInterval;
+  config.maxRetryInterval = normalizeNumber(maxRetryInterval);
 
   const quota = raw['quota-exceeded'] ?? raw.quotaExceeded;
   if (isRecord(quota)) {

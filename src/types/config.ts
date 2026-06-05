@@ -100,6 +100,8 @@ export interface Config {
   debug?: boolean;
   proxyUrl?: string;
   requestRetry?: number;
+  maxRetryCredentials?: number;
+  maxRetryInterval?: number;
   noCooldownStatusCodes?: number[];
   quotaExceeded?: QuotaExceededConfig;
   usageStatisticsEnabled?: boolean;
@@ -138,6 +140,8 @@ export type RawConfigSection =
   | 'debug'
   | 'proxy-url'
   | 'request-retry'
+  | 'max-retry-credentials'
+  | 'max-retry-interval'
   | 'no-cooldown-status-codes'
   | 'quota-exceeded'
   | 'usage-statistics-enabled'
