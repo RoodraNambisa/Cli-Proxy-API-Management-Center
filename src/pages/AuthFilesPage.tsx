@@ -43,10 +43,12 @@ import {
 } from '@/features/authFiles/constants';
 import { resolveCodexPlanType } from '@/utils/quota';
 import { AuthFileCard } from '@/features/authFiles/components/AuthFileCard';
+import { AuthFilesBatchSettingsModal } from '@/features/authFiles/components/AuthFilesBatchSettingsModal';
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
+import { useAuthFilesBatchSettings } from '@/features/authFiles/hooks/useAuthFilesBatchSettings';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
 import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
 import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth';
@@ -240,6 +242,7 @@ export function AuthFilesPage() {
     batchDelete,
   } = useAuthFilesData({ refreshKeyStats, active: isCurrentLayer });
 
+  const disableControls = connectionStatus !== 'connected';
   const statusBarCache = useAuthFilesStatusBarCache(files, usageDetails);
 
   const {
@@ -279,12 +282,26 @@ export function AuthFilesPage() {
     handlePrefixProxyChange,
     handlePrefixProxySave,
   } = useAuthFilesPrefixProxyEditor({
-    disableControls: connectionStatus !== 'connected',
+    disableControls,
     loadFiles,
     loadKeyStats: refreshKeyStats,
   });
 
-  const disableControls = connectionStatus !== 'connected';
+  const {
+    batchSettings,
+    batchSettingsDirty,
+    openBatchSettings,
+    closeBatchSettings,
+    handleBatchSettingsChange,
+    saveBatchSettings,
+  } = useAuthFilesBatchSettings({
+    files,
+    disableControls,
+    loadFiles,
+    loadKeyStats: refreshKeyStats,
+    deselectAll,
+  });
+
   const normalizedFilter = normalizeProviderKey(String(filter));
   const quotaFilterType: QuotaProviderType | null = QUOTA_PROVIDER_TYPES.has(
     normalizedFilter as QuotaProviderType
@@ -1298,6 +1315,15 @@ export function AuthFilesPage() {
         onChange={handlePrefixProxyChange}
       />
 
+      <AuthFilesBatchSettingsModal
+        disableControls={disableControls}
+        state={batchSettings}
+        dirty={batchSettingsDirty}
+        onClose={closeBatchSettings}
+        onSave={saveBatchSettings}
+        onChange={handleBatchSettingsChange}
+      />
+
       {batchActionBarVisible && typeof document !== 'undefined'
         ? createPortal(
             <div className={styles.batchActionContainer} ref={floatingBatchActionsRef}>
@@ -1353,6 +1379,14 @@ export function AuthFilesPage() {
                     loading={archiveDownloadingSelected}
                   >
                     {t('auth_files.archive_download_selected')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => openBatchSettings(selectedNames)}
+                    disabled={disableControls || selectedNames.length === 0 || batchSettings.saving}
+                  >
+                    {t('auth_files.batch_settings_button')}
                   </Button>
                   <Button
                     size="sm"

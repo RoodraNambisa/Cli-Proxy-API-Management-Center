@@ -14,8 +14,8 @@ import {
   readCodexAuthFileWebsockets,
 } from '@/features/authFiles/constants';
 
-type AuthFileHeaders = Record<string, string>;
-type AuthFileHeadersErrorKey =
+export type AuthFileHeaders = Record<string, string>;
+export type AuthFileHeadersErrorKey =
   | 'auth_files.headers_invalid_json'
   | 'auth_files.headers_invalid_object'
   | 'auth_files.headers_invalid_value';
@@ -86,7 +86,7 @@ const validateHeadersValue = (value: unknown): AuthFileHeadersErrorKey | null =>
     : 'auth_files.headers_invalid_value';
 };
 
-const parseHeadersText = (
+export const parseHeadersText = (
   text: string
 ): { value: AuthFileHeaders | null; errorKey: AuthFileHeadersErrorKey | null } => {
   const trimmed = text.trim();
