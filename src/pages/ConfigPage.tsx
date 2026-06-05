@@ -47,6 +47,7 @@ export function ConfigPage() {
 
   const {
     visualValues,
+    baselineValues,
     visualDirty,
     visualParseError,
     visualValidationErrors,
@@ -557,6 +558,7 @@ export function ConfigPage() {
           {activeTab === 'visual' ? (
             <VisualConfigEditor
               values={visualValues}
+              baselineValues={baselineValues}
               validationErrors={visualValidationErrors}
               codexCustomModelValidationErrors={visualCodexCustomModelValidationErrors}
               hasPayloadValidationErrors={visualHasPayloadValidationErrors}

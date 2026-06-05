@@ -3,6 +3,8 @@ import { isMap, parse as parseYaml, parseDocument } from 'yaml';
 import type {
   CodexCustomModelValidationErrors,
   CodexCustomModelVisualEntry,
+  FixedErrorCooldownScope,
+  FixedErrorCooldownVisualEntry,
   PayloadFilterRule,
   PayloadParamEntry,
   PayloadParamValueType,
@@ -259,6 +261,90 @@ function serializeCodexCustomModelsForYaml(
   });
 }
 
+function normalizeFixedErrorCooldownScope(value: unknown): FixedErrorCooldownScope {
+  return value === 'auth' ? 'auth' : 'model';
+}
+
+function parseFixedErrorCooldowns(raw: unknown): FixedErrorCooldownVisualEntry[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.reduce<FixedErrorCooldownVisualEntry[]>((result, item) => {
+    const record = asRecord(item);
+    if (!record) return result;
+
+    const statusCodeRaw = record['status-code'] ?? record.statusCode;
+    const messageContainsRaw = record['message-contains'] ?? record.messageContains;
+    const cooldownSecondsRaw = record['cooldown-seconds'] ?? record.cooldownSeconds;
+
+    result.push({
+      clientId: makeClientId(),
+      statusCode:
+        statusCodeRaw === undefined || statusCodeRaw === null ? '' : String(statusCodeRaw),
+      messageContains:
+        typeof messageContainsRaw === 'string'
+          ? messageContainsRaw
+          : messageContainsRaw === undefined || messageContainsRaw === null
+            ? ''
+            : String(messageContainsRaw),
+      cooldownSeconds:
+        cooldownSecondsRaw === undefined || cooldownSecondsRaw === null
+          ? ''
+          : String(cooldownSecondsRaw),
+      scope: normalizeFixedErrorCooldownScope(record.scope),
+    });
+    return result;
+  }, []);
+}
+
+function areFixedErrorCooldownsEqual(
+  left: FixedErrorCooldownVisualEntry[],
+  right: FixedErrorCooldownVisualEntry[]
+): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((entry, index) => {
+    const other = right[index];
+    return (
+      Boolean(other) &&
+      entry.statusCode === other.statusCode &&
+      entry.messageContains === other.messageContains &&
+      entry.cooldownSeconds === other.cooldownSeconds &&
+      entry.scope === other.scope
+    );
+  });
+}
+
+function parsePositiveIntegerString(value: string): number | null {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseHttpStatusCodeString(value: string): number | null {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) && parsed >= 100 && parsed <= 599 ? parsed : null;
+}
+
+function serializeFixedErrorCooldownsForYaml(
+  rules: FixedErrorCooldownVisualEntry[]
+): Array<Record<string, unknown>> {
+  return rules.reduce<Array<Record<string, unknown>>>((result, rule) => {
+    const statusCode = parseHttpStatusCodeString(rule.statusCode);
+    const cooldownSeconds = parsePositiveIntegerString(rule.cooldownSeconds);
+    if (statusCode === null || cooldownSeconds === null) return result;
+
+    result.push({
+      'status-code': statusCode,
+      'message-contains': rule.messageContains,
+      'cooldown-seconds': cooldownSeconds,
+      scope: normalizeFixedErrorCooldownScope(rule.scope),
+    });
+    return result;
+  }, []);
+}
+
 function getNonNegativeIntegerError(value: string): 'non_negative_integer' | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
@@ -296,6 +382,21 @@ function getHttpStatusRangeError(value: string): 'http_status_range' | undefined
   return parsed >= 400 && parsed <= 599 ? undefined : 'http_status_range';
 }
 
+function getHttpStatusCodeError(value: string): 'http_status_code' | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return 'http_status_code';
+  if (!/^\d+$/.test(trimmed)) return 'http_status_code';
+  const parsed = Number(trimmed);
+  return parsed >= 100 && parsed <= 599 ? undefined : 'http_status_code';
+}
+
+function getPositiveIntegerError(value: string): 'positive_integer' | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return 'positive_integer';
+  if (!/^\d+$/.test(trimmed)) return 'positive_integer';
+  return Number(trimmed) > 0 ? undefined : 'positive_integer';
+}
+
 function getHttpStatusListError(value: string): 'integer_list' | 'http_status_list' | undefined {
   const parsed = parseIntegerListText(value);
   if (!parsed.valid) return 'integer_list';
@@ -307,6 +408,21 @@ function getHttpStatusListError(value: string): 'integer_list' | 'http_status_li
 export function getVisualConfigValidationErrors(
   values: VisualConfigValues
 ): VisualConfigValidationErrors {
+  const fixedErrorCooldownErrors = values.fixedErrorCooldowns.reduce<VisualConfigValidationErrors>(
+    (result, rule) => {
+      const statusCodeError = getHttpStatusCodeError(rule.statusCode);
+      if (statusCodeError) {
+        result[`fixedErrorCooldowns.${rule.clientId}.statusCode`] = statusCodeError;
+      }
+      const cooldownSecondsError = getPositiveIntegerError(rule.cooldownSeconds);
+      if (cooldownSecondsError) {
+        result[`fixedErrorCooldowns.${rule.clientId}.cooldownSeconds`] = cooldownSecondsError;
+      }
+      return result;
+    },
+    {}
+  );
+
   return {
     port: getPortError(values.port),
     rmAccessPath: getManagementAccessPathError(values.rmAccessPath),
@@ -318,6 +434,7 @@ export function getVisualConfigValidationErrors(
     maxRetryCredentials: getNonNegativeIntegerError(values.maxRetryCredentials),
     maxRetryInterval: getNonNegativeIntegerError(values.maxRetryInterval),
     noCooldownStatusCodes: getHttpStatusListError(values.noCooldownStatusCodes),
+    ...fixedErrorCooldownErrors,
     'authMaintenance.scanIntervalSeconds': getNonNegativeIntegerError(
       values.authMaintenance.scanIntervalSeconds
     ),
@@ -962,6 +1079,15 @@ function getNextDirtyFields(
       nextValues.noCooldownStatusCodes === baselineValues.noCooldownStatusCodes
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'fixedErrorCooldowns')) {
+    updateDirty(
+      'fixedErrorCooldowns',
+      areFixedErrorCooldownsEqual(
+        nextValues.fixedErrorCooldowns,
+        baselineValues.fixedErrorCooldowns
+      )
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'wsAuth')) {
     updateDirty('wsAuth', nextValues.wsAuth === baselineValues.wsAuth);
   }
@@ -1268,7 +1394,7 @@ export function useVisualConfig() {
     undefined,
     createInitialVisualConfigState
   );
-  const { visualValues, visualParseError } = state;
+  const { visualValues, baselineValues, visualParseError } = state;
   const visualDirty = state.dirtyFields.size > 0;
   const visualValidationErrors = useMemo(
     () => getVisualConfigValidationErrors(visualValues),
@@ -1458,6 +1584,9 @@ export function useVisualConfig() {
           parsed['no-cooldown-status-codes'] === undefined
             ? DEFAULT_VISUAL_VALUES.noCooldownStatusCodes
             : parseIntegerList(parsed['no-cooldown-status-codes']),
+        fixedErrorCooldowns: parseFixedErrorCooldowns(
+          parsed['fixed-error-cooldowns'] ?? parsed.fixedErrorCooldowns
+        ),
         wsAuth: Boolean(parsed['ws-auth']),
 
         quotaSwitchProject: Boolean(quotaExceeded?.['switch-project'] ?? true),
@@ -1772,6 +1901,14 @@ export function useVisualConfig() {
             preserveEmpty: docHas(doc, ['no-cooldown-status-codes']),
           });
         }
+        if (values.fixedErrorCooldowns.length > 0) {
+          doc.setIn(
+            ['fixed-error-cooldowns'],
+            serializeFixedErrorCooldownsForYaml(values.fixedErrorCooldowns)
+          );
+        } else if (docHas(doc, ['fixed-error-cooldowns'])) {
+          doc.deleteIn(['fixed-error-cooldowns']);
+        }
         setBooleanInDoc(doc, ['ws-auth'], values.wsAuth);
 
         if (
@@ -2050,6 +2187,7 @@ export function useVisualConfig() {
 
   return {
     visualValues,
+    baselineValues,
     visualDirty,
     visualParseError,
     visualValidationErrors,

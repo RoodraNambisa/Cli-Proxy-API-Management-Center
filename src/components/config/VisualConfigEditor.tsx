@@ -12,6 +12,7 @@ import {
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer';
+import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
@@ -30,6 +31,8 @@ import { ConfigSection } from '@/components/config/ConfigSection';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import type {
   CodexCustomModelValidationErrors,
+  FixedErrorCooldownScope,
+  FixedErrorCooldownVisualEntry,
   PayloadFilterRule,
   PayloadParamValidationErrorCode,
   PayloadRule,
@@ -38,6 +41,8 @@ import type {
   VisualConfigValidationErrors,
   VisualConfigValues,
 } from '@/types/visualConfig';
+import { makeClientId } from '@/types/visualConfig';
+import { configApi, type ProxyUrlCheckResult } from '@/services/api/config';
 import {
   ApiKeysCardEditor,
   CodexCustomModelsEditor,
@@ -69,6 +74,7 @@ type VisualSection = {
 
 interface VisualConfigEditorProps {
   values: VisualConfigValues;
+  baselineValues: VisualConfigValues;
   validationErrors?: VisualConfigValidationErrors;
   codexCustomModelValidationErrors?: CodexCustomModelValidationErrors;
   hasPayloadValidationErrors?: boolean;
@@ -177,6 +183,7 @@ function FieldShell({
 
 export function VisualConfigEditor({
   values,
+  baselineValues,
   validationErrors,
   codexCustomModelValidationErrors,
   hasPayloadValidationErrors = false,
@@ -218,6 +225,23 @@ export function VisualConfigEditor({
   const isNonstreamKeepaliveDisabled =
     values.streaming.nonstreamKeepaliveInterval === '' ||
     values.streaming.nonstreamKeepaliveInterval === '0';
+  const [proxyCheckLoading, setProxyCheckLoading] = useState(false);
+  const [proxyCheckResult, setProxyCheckResult] = useState<ProxyUrlCheckResult | null>(null);
+  const [proxyCheckError, setProxyCheckError] = useState('');
+  const proxyUrlDirty = values.proxyUrl !== baselineValues.proxyUrl;
+  const fixedErrorCooldownScopeOptions = useMemo(
+    () => [
+      {
+        value: 'model',
+        label: t('config_management.visual.sections.quota.fixed_error_cooldowns_scope_model'),
+      },
+      {
+        value: 'auth',
+        label: t('config_management.visual.sections.quota.fixed_error_cooldowns_scope_auth'),
+      },
+    ],
+    [t]
+  );
 
   const portError = getValidationMessage(t, validationErrors?.port);
   const rmAccessPathError = getValidationMessage(t, validationErrors?.rmAccessPath);
@@ -232,6 +256,12 @@ export function VisualConfigEditor({
   const noCooldownStatusCodesError = getValidationMessage(
     t,
     validationErrors?.noCooldownStatusCodes
+  );
+  const fixedErrorCooldownsErrorCount = useMemo(
+    () =>
+      Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('fixedErrorCooldowns.'))
+        .length,
+    [validationErrors]
   );
   const imagesUnsupportedStatusCodeError = getValidationMessage(
     t,
@@ -311,6 +341,70 @@ export function VisualConfigEditor({
     (payloadFilterRules: PayloadFilterRule[]) => onChange({ payloadFilterRules }),
     [onChange]
   );
+  const handleFixedErrorCooldownsChange = useCallback(
+    (fixedErrorCooldowns: FixedErrorCooldownVisualEntry[]) => onChange({ fixedErrorCooldowns }),
+    [onChange]
+  );
+  const addFixedErrorCooldown = useCallback(() => {
+    handleFixedErrorCooldownsChange([
+      ...values.fixedErrorCooldowns,
+      {
+        clientId: makeClientId(),
+        statusCode: '',
+        messageContains: '',
+        cooldownSeconds: '',
+        scope: 'model',
+      },
+    ]);
+  }, [handleFixedErrorCooldownsChange, values.fixedErrorCooldowns]);
+  const updateFixedErrorCooldown = useCallback(
+    (clientId: string, patch: Partial<FixedErrorCooldownVisualEntry>) => {
+      handleFixedErrorCooldownsChange(
+        values.fixedErrorCooldowns.map((rule) =>
+          rule.clientId === clientId ? { ...rule, ...patch } : rule
+        )
+      );
+    },
+    [handleFixedErrorCooldownsChange, values.fixedErrorCooldowns]
+  );
+  const removeFixedErrorCooldown = useCallback(
+    (clientId: string) => {
+      handleFixedErrorCooldownsChange(
+        values.fixedErrorCooldowns.filter((rule) => rule.clientId !== clientId)
+      );
+    },
+    [handleFixedErrorCooldownsChange, values.fixedErrorCooldowns]
+  );
+  const getFixedErrorCooldownError = useCallback(
+    (clientId: string, field: 'statusCode' | 'cooldownSeconds') =>
+      getValidationMessage(t, validationErrors?.[`fixedErrorCooldowns.${clientId}.${field}`]),
+    [t, validationErrors]
+  );
+  const handleProxyCheck = useCallback(async () => {
+    if (disabled || proxyCheckLoading) return;
+    setProxyCheckLoading(true);
+    setProxyCheckError('');
+    try {
+      const result = proxyUrlDirty
+        ? await configApi.checkProxyUrl(values.proxyUrl)
+        : await configApi.checkSavedProxyUrl();
+      setProxyCheckResult(result);
+    } catch (error: unknown) {
+      setProxyCheckResult(null);
+      setProxyCheckError(
+        error instanceof Error
+          ? error.message
+          : t('config_management.visual.sections.network.proxy_check_failed')
+      );
+    } finally {
+      setProxyCheckLoading(false);
+    }
+  }, [disabled, proxyCheckLoading, proxyUrlDirty, t, values.proxyUrl]);
+
+  useEffect(() => {
+    setProxyCheckResult(null);
+    setProxyCheckError('');
+  }, [values.proxyUrl]);
 
   const countErrors = useCallback(
     (fields: VisualConfigFieldPath[]) =>
@@ -386,7 +480,7 @@ export function VisualConfigEditor({
         title: t('config_management.visual.sections.quota.title'),
         description: t('config_management.visual.sections.quota.description'),
         icon: IconTimer,
-        errorCount: countErrors(['noCooldownStatusCodes']),
+        errorCount: countErrors(['noCooldownStatusCodes']) + fixedErrorCooldownsErrorCount,
       },
       {
         id: 'maintenance',
@@ -422,7 +516,13 @@ export function VisualConfigEditor({
         errorCount: hasPayloadValidationErrors ? 1 : 0,
       },
     ],
-    [authSectionErrorCount, countErrors, hasPayloadValidationErrors, t]
+    [
+      authSectionErrorCount,
+      countErrors,
+      fixedErrorCooldownsErrorCount,
+      hasPayloadValidationErrors,
+      t,
+    ]
   );
 
   const hasValidationIssues =
@@ -976,13 +1076,80 @@ export function VisualConfigEditor({
           >
             <SectionStack>
               <SectionGrid>
-                <Input
-                  label={t('config_management.visual.sections.network.proxy_url')}
-                  placeholder="socks5://user:pass@127.0.0.1:1080/"
-                  value={values.proxyUrl}
-                  onChange={(e) => onChange({ proxyUrl: e.target.value })}
-                  disabled={disabled}
-                />
+                <div className={styles.proxyCheckPanel}>
+                  <div className={styles.proxyCheckRow}>
+                    <Input
+                      label={t('config_management.visual.sections.network.proxy_url')}
+                      placeholder="socks5://user:pass@127.0.0.1:1080/"
+                      value={values.proxyUrl}
+                      onChange={(e) => onChange({ proxyUrl: e.target.value })}
+                      disabled={disabled}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void handleProxyCheck()}
+                      loading={proxyCheckLoading}
+                      disabled={disabled}
+                      className={styles.proxyCheckButton}
+                    >
+                      {t('config_management.visual.sections.network.proxy_check')}
+                    </Button>
+                  </div>
+                  {(proxyCheckResult || proxyCheckError) && (
+                    <div
+                      className={`${styles.proxyCheckResult} ${
+                        proxyCheckResult?.ok
+                          ? styles.proxyCheckResultOk
+                          : styles.proxyCheckResultError
+                      }`}
+                    >
+                      {proxyCheckResult && (
+                        <>
+                          <div className={styles.proxyCheckStatus}>
+                            {t(
+                              `config_management.visual.sections.network.proxy_check_mode_${proxyCheckResult.mode}`,
+                              { defaultValue: proxyCheckResult.mode }
+                            )}
+                          </div>
+                          {proxyCheckResult.ok ? (
+                            <div className={styles.proxyCheckMetrics}>
+                              {proxyCheckResult.ip && (
+                                <span>
+                                  {t('config_management.visual.sections.network.proxy_check_ip')}:{' '}
+                                  {proxyCheckResult.ip}
+                                </span>
+                              )}
+                              {proxyCheckResult.loc && (
+                                <span>
+                                  {t('config_management.visual.sections.network.proxy_check_loc')}:{' '}
+                                  {proxyCheckResult.loc}
+                                </span>
+                              )}
+                              {proxyCheckResult.colo && <span>Colo: {proxyCheckResult.colo}</span>}
+                              {proxyCheckResult.http && <span>HTTP: {proxyCheckResult.http}</span>}
+                              {proxyCheckResult.tls && <span>TLS: {proxyCheckResult.tls}</span>}
+                              {proxyCheckResult.elapsedMs !== null && (
+                                <span>{proxyCheckResult.elapsedMs}ms</span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className={styles.proxyCheckMessage}>
+                              {[proxyCheckResult.error, proxyCheckResult.message]
+                                .filter(Boolean)
+                                .join(' - ') ||
+                                t('config_management.visual.sections.network.proxy_check_failed')}
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {proxyCheckError && (
+                        <div className={styles.proxyCheckMessage}>{proxyCheckError}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <Input
                   label={t('config_management.visual.sections.network.request_retry')}
                   type="number"
@@ -1444,6 +1611,139 @@ export function VisualConfigEditor({
                   onChange={(quotaAntigravityCredits) => onChange({ quotaAntigravityCredits })}
                 />
               </SectionGrid>
+              <SectionSubsection
+                title={t('config_management.visual.sections.quota.fixed_error_cooldowns')}
+                description={t(
+                  'config_management.visual.sections.quota.fixed_error_cooldowns_desc'
+                )}
+              >
+                <div className={styles.blockHeaderRow}>
+                  <div className={styles.fieldHint}>
+                    {t('config_management.visual.sections.quota.fixed_error_cooldowns_hint')}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={addFixedErrorCooldown}
+                    disabled={disabled}
+                  >
+                    {t('config_management.visual.sections.quota.fixed_error_cooldowns_add')}
+                  </Button>
+                </div>
+                {values.fixedErrorCooldowns.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    {t('config_management.visual.sections.quota.fixed_error_cooldowns_empty')}
+                  </div>
+                ) : (
+                  <div className={styles.blockStack}>
+                    {values.fixedErrorCooldowns.map((rule, index) => {
+                      const statusCodeError = getFixedErrorCooldownError(
+                        rule.clientId,
+                        'statusCode'
+                      );
+                      const cooldownSecondsError = getFixedErrorCooldownError(
+                        rule.clientId,
+                        'cooldownSeconds'
+                      );
+
+                      return (
+                        <div key={rule.clientId} className={styles.ruleCard}>
+                          <div className={styles.ruleCardHeader}>
+                            <div className={styles.ruleCardTitle}>
+                              {t(
+                                'config_management.visual.sections.quota.fixed_error_cooldowns_rule',
+                                {
+                                  index: index + 1,
+                                }
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFixedErrorCooldown(rule.clientId)}
+                              disabled={disabled}
+                            >
+                              {t('config_management.visual.common.delete')}
+                            </Button>
+                          </div>
+                          <div className={styles.fixedCooldownGrid}>
+                            <Input
+                              label={t(
+                                'config_management.visual.sections.quota.fixed_error_cooldowns_status_code'
+                              )}
+                              type="number"
+                              placeholder="401"
+                              value={rule.statusCode}
+                              onChange={(event) =>
+                                updateFixedErrorCooldown(rule.clientId, {
+                                  statusCode: event.target.value,
+                                })
+                              }
+                              disabled={disabled}
+                              error={statusCodeError}
+                            />
+                            <Input
+                              label={t(
+                                'config_management.visual.sections.quota.fixed_error_cooldowns_cooldown_seconds'
+                              )}
+                              type="number"
+                              placeholder="2592000"
+                              value={rule.cooldownSeconds}
+                              onChange={(event) =>
+                                updateFixedErrorCooldown(rule.clientId, {
+                                  cooldownSeconds: event.target.value,
+                                })
+                              }
+                              disabled={disabled}
+                              error={cooldownSecondsError}
+                            />
+                            <div className="form-group">
+                              <label>
+                                {t(
+                                  'config_management.visual.sections.quota.fixed_error_cooldowns_scope'
+                                )}
+                              </label>
+                              <Select
+                                value={rule.scope}
+                                options={fixedErrorCooldownScopeOptions}
+                                disabled={disabled}
+                                ariaLabel={t(
+                                  'config_management.visual.sections.quota.fixed_error_cooldowns_scope'
+                                )}
+                                onChange={(scope) =>
+                                  updateFixedErrorCooldown(rule.clientId, {
+                                    scope: scope as FixedErrorCooldownScope,
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
+                          <Input
+                            label={t(
+                              'config_management.visual.sections.quota.fixed_error_cooldowns_message_contains'
+                            )}
+                            placeholder={t(
+                              'config_management.visual.sections.quota.fixed_error_cooldowns_message_placeholder'
+                            )}
+                            value={rule.messageContains}
+                            onChange={(event) =>
+                              updateFixedErrorCooldown(rule.clientId, {
+                                messageContains: event.target.value,
+                              })
+                            }
+                            disabled={disabled}
+                            hint={t(
+                              'config_management.visual.sections.quota.fixed_error_cooldowns_message_hint'
+                            )}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </SectionSubsection>
               <FieldShell
                 label={t('config_management.visual.sections.quota.no_cooldown_status_codes')}
                 htmlFor={noCooldownStatusCodesInputId}

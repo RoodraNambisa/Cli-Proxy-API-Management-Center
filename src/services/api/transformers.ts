@@ -72,6 +72,30 @@ const normalizeIntegerArray = (value: unknown): number[] | undefined => {
   return normalized.length > 0 ? normalized : [];
 };
 
+const normalizeFixedErrorCooldowns = (
+  value: unknown
+): Config['fixedErrorCooldowns'] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+
+  const normalized = value.reduce<NonNullable<Config['fixedErrorCooldowns']>>((result, item) => {
+    if (!isRecord(item)) return result;
+    const statusCode = normalizeNumber(item['status-code'] ?? item.statusCode);
+    const messageContains = normalizeString(item['message-contains'] ?? item.messageContains);
+    const cooldownSeconds = normalizeNumber(item['cooldown-seconds'] ?? item.cooldownSeconds);
+    const scopeRaw = normalizeString(item.scope);
+
+    result.push({
+      statusCode,
+      messageContains: messageContains ?? '',
+      cooldownSeconds,
+      scope: scopeRaw === 'auth' || scopeRaw === 'model' ? scopeRaw : (scopeRaw ?? 'model'),
+    });
+    return result;
+  }, []);
+
+  return normalized.length > 0 ? normalized : [];
+};
+
 const normalizeCodexCustomModelGroups = (value: unknown): CodexCustomModelGroup[] => {
   if (!Array.isArray(value)) return [];
 
@@ -531,6 +555,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   config.forceModelPrefix = normalizeBoolean(raw['force-model-prefix'] ?? raw.forceModelPrefix);
   config.noCooldownStatusCodes = normalizeIntegerArray(
     raw['no-cooldown-status-codes'] ?? raw.noCooldownStatusCodes
+  );
+  config.fixedErrorCooldowns = normalizeFixedErrorCooldowns(
+    raw['fixed-error-cooldowns'] ?? raw.fixedErrorCooldowns
   );
   const remoteManagement = raw['remote-management'] ?? raw.remoteManagement;
   if (isRecord(remoteManagement)) {

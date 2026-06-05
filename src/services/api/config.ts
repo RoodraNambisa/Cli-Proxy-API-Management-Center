@@ -8,6 +8,22 @@ import { normalizeConfigResponse } from './transformers';
 
 type NumericConfigKey = 'request-retry' | 'max-retry-credentials' | 'max-retry-interval';
 
+export type ProxyUrlCheckMode = 'inherit' | 'direct' | 'proxy' | 'invalid' | string;
+
+export type ProxyUrlCheckResult = {
+  ok: boolean;
+  mode: ProxyUrlCheckMode;
+  proxyUrl: string;
+  ip: string;
+  loc: string;
+  http: string;
+  tls: string;
+  colo: string;
+  elapsedMs: number | null;
+  error: string;
+  message: string;
+};
+
 const readNumericConfigValue = (data: Record<string, unknown>, key: NumericConfigKey): number => {
   const camelKey = key.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
   const rawValue = data[key] ?? data[camelKey] ?? data.value ?? 0;
@@ -25,6 +41,32 @@ const putNumericConfig = (key: NumericConfigKey, value: number) =>
 
 const patchNumericConfig = (key: NumericConfigKey, value: number) =>
   apiClient.patch(`/${key}`, { value });
+
+const readString = (value: unknown): string =>
+  value === undefined || value === null ? '' : String(value);
+
+const normalizeProxyUrlCheckResult = (data: unknown): ProxyUrlCheckResult => {
+  const source =
+    data && typeof data === 'object' && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : {};
+  const elapsedRaw = source.elapsed_ms ?? source.elapsedMs;
+  const elapsed = typeof elapsedRaw === 'number' ? elapsedRaw : Number(elapsedRaw);
+
+  return {
+    ok: Boolean(source.ok),
+    mode: readString(source.mode),
+    proxyUrl: readString(source['proxy-url'] ?? source.proxyUrl),
+    ip: readString(source.ip),
+    loc: readString(source.loc),
+    http: readString(source.http),
+    tls: readString(source.tls),
+    colo: readString(source.colo),
+    elapsedMs: Number.isFinite(elapsed) ? elapsed : null,
+    error: readString(source.error),
+    message: readString(source.message),
+  };
+};
 
 export const configApi = {
   /**
@@ -54,6 +96,22 @@ export const configApi = {
    * 清除代理 URL
    */
   clearProxyUrl: () => apiClient.delete('/proxy-url'),
+
+  /**
+   * 检测当前已保存的全局代理
+   */
+  async checkSavedProxyUrl(): Promise<ProxyUrlCheckResult> {
+    const data = await apiClient.get('/proxy-url/check');
+    return normalizeProxyUrlCheckResult(data);
+  },
+
+  /**
+   * 检测输入框内尚未保存的代理
+   */
+  async checkProxyUrl(proxyUrl: string): Promise<ProxyUrlCheckResult> {
+    const data = await apiClient.post('/proxy-url/check', { 'proxy-url': proxyUrl });
+    return normalizeProxyUrlCheckResult(data);
+  },
 
   /**
    * 获取失败后额外请求轮数

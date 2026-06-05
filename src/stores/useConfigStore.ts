@@ -40,6 +40,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'max-retry-credentials',
   'max-retry-interval',
   'no-cooldown-status-codes',
+  'fixed-error-cooldowns',
   'quota-exceeded',
   'usage-statistics-enabled',
   'usage-statistics-persist-interval-seconds',
@@ -86,6 +87,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.maxRetryInterval;
     case 'no-cooldown-status-codes':
       return config.noCooldownStatusCodes;
+    case 'fixed-error-cooldowns':
+      return config.fixedErrorCooldowns;
     case 'quota-exceeded':
       return config.quotaExceeded;
     case 'usage-statistics-enabled':
@@ -259,6 +262,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'no-cooldown-status-codes':
           nextConfig.noCooldownStatusCodes = value as Config['noCooldownStatusCodes'];
+          break;
+        case 'fixed-error-cooldowns':
+          nextConfig.fixedErrorCooldowns = value as Config['fixedErrorCooldowns'];
           break;
         case 'quota-exceeded':
           nextConfig.quotaExceeded = value as Config['quotaExceeded'];

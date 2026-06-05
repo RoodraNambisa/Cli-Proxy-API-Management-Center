@@ -12,6 +12,15 @@ export interface QuotaExceededConfig {
   antigravityCredits?: boolean;
 }
 
+export type FixedErrorCooldownScope = 'model' | 'auth';
+
+export interface FixedErrorCooldownConfig {
+  statusCode?: number;
+  messageContains?: string;
+  cooldownSeconds?: number;
+  scope?: FixedErrorCooldownScope | string;
+}
+
 export interface AuthMaintenanceConfig {
   enable?: boolean;
   scanIntervalSeconds?: number;
@@ -103,6 +112,7 @@ export interface Config {
   maxRetryCredentials?: number;
   maxRetryInterval?: number;
   noCooldownStatusCodes?: number[];
+  fixedErrorCooldowns?: FixedErrorCooldownConfig[];
   quotaExceeded?: QuotaExceededConfig;
   usageStatisticsEnabled?: boolean;
   usageStatisticsPersistIntervalSeconds?: number;
@@ -143,6 +153,7 @@ export type RawConfigSection =
   | 'max-retry-credentials'
   | 'max-retry-interval'
   | 'no-cooldown-status-codes'
+  | 'fixed-error-cooldowns'
   | 'quota-exceeded'
   | 'usage-statistics-enabled'
   | 'usage-statistics-persist-interval-seconds'

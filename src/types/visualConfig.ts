@@ -15,6 +15,7 @@ export type VisualConfigFieldPath =
   | 'maxRetryCredentials'
   | 'maxRetryInterval'
   | 'noCooldownStatusCodes'
+  | 'fixedErrorCooldowns'
   | 'authMaintenance.scanIntervalSeconds'
   | 'authMaintenance.deleteIntervalSeconds'
   | 'authMaintenance.deleteStatusCodes'
@@ -34,6 +35,8 @@ export type VisualConfigValidationErrorCode =
   | 'management_access_path'
   | 'http_status_range'
   | 'non_negative_integer'
+  | 'positive_integer'
+  | 'http_status_code'
   | 'integer_list'
   | 'http_status_list'
   | 'codex_custom_model_id_required'
@@ -41,7 +44,7 @@ export type VisualConfigValidationErrorCode =
   | 'codex_custom_model_groups_required';
 
 export type VisualConfigValidationErrors = Partial<
-  Record<VisualConfigFieldPath, VisualConfigValidationErrorCode>
+  Record<VisualConfigFieldPath | string, VisualConfigValidationErrorCode>
 >;
 
 export type PayloadParamEntry = {
@@ -112,6 +115,16 @@ export interface CodexCustomModelVisualEntry {
   groups: CodexCustomModelGroup[];
 }
 
+export type FixedErrorCooldownScope = 'model' | 'auth';
+
+export interface FixedErrorCooldownVisualEntry {
+  clientId: string;
+  statusCode: string;
+  messageContains: string;
+  cooldownSeconds: string;
+  scope: FixedErrorCooldownScope;
+}
+
 export type CodexCustomModelValidationErrors = Record<
   string,
   {
@@ -159,6 +172,7 @@ export type VisualConfigValues = {
   maxRetryCredentials: string;
   maxRetryInterval: string;
   noCooldownStatusCodes: string;
+  fixedErrorCooldowns: FixedErrorCooldownVisualEntry[];
   quotaSwitchProject: boolean;
   quotaSwitchPreviewModel: boolean;
   quotaAntigravityCredits: boolean;
@@ -218,6 +232,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   maxRetryCredentials: '',
   maxRetryInterval: '',
   noCooldownStatusCodes: '',
+  fixedErrorCooldowns: [],
   quotaSwitchProject: true,
   quotaSwitchPreviewModel: true,
   quotaAntigravityCredits: true,

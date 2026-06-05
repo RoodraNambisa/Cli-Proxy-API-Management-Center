@@ -667,6 +667,75 @@
   line-height: 1.6;
 }
 
+.proxyCheckPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.proxyCheckRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.proxyCheckButton {
+  min-height: 48px;
+  white-space: nowrap;
+}
+
+.proxyCheckResult {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
+  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
+}
+
+.proxyCheckResultOk {
+  border-color: color-mix(in srgb, var(--success-color, #22c55e) 34%, var(--border-color));
+}
+
+.proxyCheckResultError {
+  border-color: var(--error-border);
+  background: var(--error-bg);
+}
+
+.proxyCheckStatus {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.proxyCheckMetrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+  }
+}
+
+.proxyCheckMessage {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .inlinePill {
   position: absolute;
   right: 10px;
@@ -811,6 +880,12 @@
   gap: 12px;
 }
 
+.fixedCooldownGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .codexCustomModelGroups {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -888,6 +963,7 @@
 
 @media (max-width: 900px) {
   .codexCustomModelFieldGrid,
+  .fixedCooldownGrid,
   .codexCustomModelGroups,
   .payloadRuleModelRow,
   .payloadRuleModelRowProtocolFirst,
@@ -899,6 +975,16 @@
   .apiKeyModalInputRow {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .proxyCheckRow {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .proxyCheckButton {
+    width: 100%;
+    justify-content: center;
   }
 
   .payloadRowActionButton {
