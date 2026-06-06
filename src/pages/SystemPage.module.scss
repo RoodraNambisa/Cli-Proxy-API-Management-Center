@@ -238,6 +238,73 @@
   font-size: 12px;
 }
 
+.updatePanel {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.updateStatusRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.updateInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: $spacing-sm;
+}
+
+.updateInfoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-secondary) 86%, transparent);
+
+  span {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+      monospace;
+    font-size: 12px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+}
+
+.updateLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+  font-size: 13px;
+
+  a {
+    color: var(--primary-color);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.updateActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .versionCheck {
   display: flex;
   flex-direction: column;

@@ -267,6 +267,13 @@ function normalizeFixedErrorCooldownScope(value: unknown): FixedErrorCooldownSco
   return value === 'auth' ? 'auth' : 'model';
 }
 
+function formatOptionalFixedErrorStatusCode(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'number' && value === 0) return '';
+  if (typeof value === 'string' && value.trim() === '0') return '';
+  return String(value);
+}
+
 function parseFixedErrorCooldowns(raw: unknown): FixedErrorCooldownVisualEntry[] {
   if (!Array.isArray(raw)) return [];
 
@@ -280,8 +287,7 @@ function parseFixedErrorCooldowns(raw: unknown): FixedErrorCooldownVisualEntry[]
 
     result.push({
       clientId: makeClientId(),
-      statusCode:
-        statusCodeRaw === undefined || statusCodeRaw === null ? '' : String(statusCodeRaw),
+      statusCode: formatOptionalFixedErrorStatusCode(statusCodeRaw),
       messageContains:
         typeof messageContainsRaw === 'string'
           ? messageContainsRaw
@@ -333,16 +339,22 @@ function serializeFixedErrorCooldownsForYaml(
   rules: FixedErrorCooldownVisualEntry[]
 ): Array<Record<string, unknown>> {
   return rules.reduce<Array<Record<string, unknown>>>((result, rule) => {
-    const statusCode = parseHttpStatusCodeString(rule.statusCode);
     const cooldownSeconds = parsePositiveIntegerString(rule.cooldownSeconds);
-    if (statusCode === null || cooldownSeconds === null) return result;
+    if (cooldownSeconds === null) return result;
+    const statusCode = rule.statusCode.trim() ? parseHttpStatusCodeString(rule.statusCode) : null;
+    if (rule.statusCode.trim() && statusCode === null) return result;
+    if (statusCode === null && !rule.messageContains.trim()) return result;
 
-    result.push({
-      'status-code': statusCode,
+    const entry: Record<string, unknown> = {
       'message-contains': rule.messageContains,
       'cooldown-seconds': cooldownSeconds,
       scope: normalizeFixedErrorCooldownScope(rule.scope),
-    });
+    };
+    if (statusCode !== null) {
+      entry['status-code'] = statusCode;
+    }
+
+    result.push(entry);
     return result;
   }, []);
 }
@@ -473,9 +485,9 @@ function getHttpStatusRangeError(value: string): 'http_status_range' | undefined
   return parsed >= 400 && parsed <= 599 ? undefined : 'http_status_range';
 }
 
-function getHttpStatusCodeError(value: string): 'http_status_code' | undefined {
+function getOptionalHttpStatusCodeError(value: string): 'http_status_code' | undefined {
   const trimmed = value.trim();
-  if (!trimmed) return 'http_status_code';
+  if (!trimmed) return undefined;
   if (!/^\d+$/.test(trimmed)) return 'http_status_code';
   const parsed = Number(trimmed);
   return parsed >= 100 && parsed <= 599 ? undefined : 'http_status_code';
@@ -527,9 +539,15 @@ export function getVisualConfigValidationErrors(
     }, {});
   const fixedErrorCooldownErrors = values.fixedErrorCooldowns.reduce<VisualConfigValidationErrors>(
     (result, rule) => {
-      const statusCodeError = getHttpStatusCodeError(rule.statusCode);
+      const statusCodeError = getOptionalHttpStatusCodeError(rule.statusCode);
       if (statusCodeError) {
         result[`fixedErrorCooldowns.${rule.clientId}.statusCode`] = statusCodeError;
+      }
+      if (!rule.statusCode.trim() && !rule.messageContains.trim()) {
+        result[`fixedErrorCooldowns.${rule.clientId}.statusCode`] =
+          'fixed_error_cooldown_match_required';
+        result[`fixedErrorCooldowns.${rule.clientId}.messageContains`] =
+          'fixed_error_cooldown_match_required';
       }
       const cooldownSecondsError = getPositiveIntegerError(rule.cooldownSeconds);
       if (cooldownSecondsError) {

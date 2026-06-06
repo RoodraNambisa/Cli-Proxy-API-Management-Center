@@ -445,7 +445,7 @@ export function VisualConfigEditor({
     [handleFixedErrorCooldownsChange, values.fixedErrorCooldowns]
   );
   const getFixedErrorCooldownError = useCallback(
-    (clientId: string, field: 'statusCode' | 'cooldownSeconds') =>
+    (clientId: string, field: 'statusCode' | 'messageContains' | 'cooldownSeconds') =>
       getValidationMessage(t, validationErrors?.[`fixedErrorCooldowns.${clientId}.${field}`]),
     [t, validationErrors]
   );
@@ -1833,6 +1833,10 @@ export function VisualConfigEditor({
                         rule.clientId,
                         'cooldownSeconds'
                       );
+                      const messageContainsError = getFixedErrorCooldownError(
+                        rule.clientId,
+                        'messageContains'
+                      );
 
                       return (
                         <div key={rule.clientId} className={styles.ruleCard}>
@@ -1924,6 +1928,7 @@ export function VisualConfigEditor({
                             hint={t(
                               'config_management.visual.sections.quota.fixed_error_cooldowns_message_hint'
                             )}
+                            error={messageContainsError}
                           />
                         </div>
                       );

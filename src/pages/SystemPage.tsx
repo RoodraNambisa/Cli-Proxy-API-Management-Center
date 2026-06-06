@@ -13,6 +13,7 @@ import {
   useThemeStore,
 } from '@/stores';
 import { configApi, versionApi } from '@/services/api';
+import type { ControlPanelUpdateStatus } from '@/services/api/config';
 import { apiKeysApi } from '@/services/api/apiKeys';
 import { classifyModels } from '@/utils/models';
 import { STORAGE_KEY_AUTH } from '@/utils/constants';
@@ -92,6 +93,10 @@ export function SystemPage() {
   const [requestLogTouched, setRequestLogTouched] = useState(false);
   const [requestLogSaving, setRequestLogSaving] = useState(false);
   const [checkingVersion, setCheckingVersion] = useState(false);
+  const [controlPanelUpdateStatus, setControlPanelUpdateStatus] =
+    useState<ControlPanelUpdateStatus | null>(null);
+  const [checkingControlPanelUpdate, setCheckingControlPanelUpdate] = useState(false);
+  const [updatingControlPanel, setUpdatingControlPanel] = useState(false);
 
   const apiKeysCache = useRef<string[]>([]);
   const versionTapCount = useRef(0);
@@ -111,6 +116,15 @@ export function SystemPage() {
   const buildTime = auth.serverBuildDate
     ? new Date(auth.serverBuildDate).toLocaleString(i18n.language)
     : t('system_info.version_unknown');
+  const formatControlPanelDate = useCallback(
+    (value: string) => {
+      if (!value) return '-';
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return value;
+      return parsed.toLocaleString(i18n.language);
+    },
+    [i18n.language]
+  );
 
   const getIconForCategory = (categoryId: string): string | null => {
     const iconEntry = MODEL_CATEGORY_ICONS[categoryId];
@@ -321,11 +335,83 @@ export function SystemPage() {
     }
   }, [auth.serverVersion, showNotification, t]);
 
+  const loadControlPanelUpdateStatus = useCallback(
+    async ({ manual = false }: { manual?: boolean } = {}) => {
+      if (auth.connectionStatus !== 'connected') {
+        if (manual) {
+          showNotification(t('notification.connection_required'), 'warning');
+        }
+        return;
+      }
+
+      setCheckingControlPanelUpdate(true);
+      try {
+        const status = await configApi.getControlPanelUpdateStatus();
+        setControlPanelUpdateStatus(status);
+        if (status.error) {
+          showNotification(
+            `${t('system_info.control_panel_update_error')}: ${status.error}`,
+            'error'
+          );
+        } else if (manual) {
+          showNotification(t('system_info.control_panel_update_checked'), 'success');
+        }
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+        showNotification(
+          `${t('system_info.control_panel_update_check_failed')}${message ? `: ${message}` : ''}`,
+          'error'
+        );
+      } finally {
+        setCheckingControlPanelUpdate(false);
+      }
+    },
+    [auth.connectionStatus, showNotification, t]
+  );
+
+  const handleControlPanelUpdate = useCallback(async () => {
+    if (auth.connectionStatus !== 'connected') {
+      showNotification(t('notification.connection_required'), 'warning');
+      return;
+    }
+
+    setUpdatingControlPanel(true);
+    try {
+      const status = await configApi.updateControlPanel();
+      setControlPanelUpdateStatus(status);
+      if (status.error) {
+        showNotification(
+          `${t('system_info.control_panel_update_error')}: ${status.error}`,
+          'error'
+        );
+      }
+      if (status.updated) {
+        showNotification(t('system_info.control_panel_update_success_refresh'), 'success');
+      } else if (!status.error) {
+        showNotification(t('system_info.control_panel_update_no_change'), 'info');
+      }
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+      showNotification(
+        `${t('system_info.control_panel_update_failed')}${message ? `: ${message}` : ''}`,
+        'error'
+      );
+    } finally {
+      setUpdatingControlPanel(false);
+    }
+  }, [auth.connectionStatus, showNotification, t]);
+
   useEffect(() => {
     fetchConfig().catch(() => {
       // ignore
     });
   }, [fetchConfig]);
+
+  useEffect(() => {
+    void loadControlPanelUpdateStatus();
+  }, [loadControlPanelUpdateStatus]);
 
   useEffect(() => {
     if (requestLogModalOpen && !requestLogTouched) {
@@ -398,6 +484,129 @@ export function SystemPage() {
               <div className={styles.tileSub}>{auth.apiBase || '-'}</div>
             </div>
           </div>
+        </Card>
+
+        <Card
+          title={t('system_info.control_panel_update_title')}
+          extra={
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void loadControlPanelUpdateStatus({ manual: true })}
+              loading={checkingControlPanelUpdate}
+            >
+              {t('system_info.control_panel_update_check_button')}
+            </Button>
+          }
+        >
+          <p className={styles.sectionDescription}>{t('system_info.control_panel_update_desc')}</p>
+          {controlPanelUpdateStatus ? (
+            <div className={styles.updatePanel}>
+              <div className={styles.updateStatusRow}>
+                {controlPanelUpdateStatus.disabled ? (
+                  <span className="status-badge muted">
+                    {t('system_info.control_panel_update_disabled')}
+                  </span>
+                ) : controlPanelUpdateStatus.updateAvailable ? (
+                  <span className="status-badge warning">
+                    {t('system_info.control_panel_update_available')}
+                  </span>
+                ) : (
+                  <span className="status-badge success">
+                    {t('system_info.control_panel_update_latest')}
+                  </span>
+                )}
+                {controlPanelUpdateStatus.autoUpdateDisabled && (
+                  <span className="status-badge warning">
+                    {t('system_info.control_panel_update_auto_disabled')}
+                  </span>
+                )}
+                {controlPanelUpdateStatus.error && (
+                  <span className="status-badge error">
+                    {t('system_info.control_panel_update_error')}
+                  </span>
+                )}
+              </div>
+
+              <div className={styles.updateInfoGrid}>
+                <div className={styles.updateInfoItem}>
+                  <span>{t('system_info.control_panel_update_local_exists')}</span>
+                  <strong>
+                    {controlPanelUpdateStatus.localExists ? t('common.yes') : t('common.no')}
+                  </strong>
+                </div>
+                <div className={styles.updateInfoItem}>
+                  <span>{t('system_info.control_panel_update_checked_at')}</span>
+                  <strong>{formatControlPanelDate(controlPanelUpdateStatus.checkedAt)}</strong>
+                </div>
+                <div className={styles.updateInfoItem}>
+                  <span>{t('system_info.control_panel_update_local_hash')}</span>
+                  <strong>{controlPanelUpdateStatus.localHash || '-'}</strong>
+                </div>
+                <div className={styles.updateInfoItem}>
+                  <span>{t('system_info.control_panel_update_remote_hash')}</span>
+                  <strong>{controlPanelUpdateStatus.remoteHash || '-'}</strong>
+                </div>
+                <div className={styles.updateInfoItem}>
+                  <span>{t('system_info.control_panel_update_local_modified_at')}</span>
+                  <strong>
+                    {formatControlPanelDate(controlPanelUpdateStatus.localModifiedAt)}
+                  </strong>
+                </div>
+                <div className={styles.updateInfoItem}>
+                  <span>{t('system_info.control_panel_update_remote_digest')}</span>
+                  <strong>
+                    {controlPanelUpdateStatus.remoteDigestAvailable
+                      ? t('common.yes')
+                      : t('common.no')}
+                  </strong>
+                </div>
+              </div>
+
+              {controlPanelUpdateStatus.error && (
+                <div className="error-box">{controlPanelUpdateStatus.error}</div>
+              )}
+
+              {(controlPanelUpdateStatus.releaseUrl || controlPanelUpdateStatus.assetUrl) && (
+                <div className={styles.updateLinks}>
+                  {controlPanelUpdateStatus.releaseUrl && (
+                    <a
+                      href={controlPanelUpdateStatus.releaseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('system_info.control_panel_update_release_link')}
+                    </a>
+                  )}
+                  {controlPanelUpdateStatus.assetUrl && (
+                    <a
+                      href={controlPanelUpdateStatus.assetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('system_info.control_panel_update_asset_link')}
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {!controlPanelUpdateStatus.disabled && controlPanelUpdateStatus.updateAvailable && (
+                <div className={styles.updateActions}>
+                  <Button
+                    type="button"
+                    onClick={() => void handleControlPanelUpdate()}
+                    loading={updatingControlPanel}
+                    disabled={checkingControlPanelUpdate}
+                  >
+                    {t('system_info.control_panel_update_button')}
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="hint">{t('system_info.control_panel_update_not_checked')}</div>
+          )}
         </Card>
 
         <Card title={t('system_info.quick_links_title')}>

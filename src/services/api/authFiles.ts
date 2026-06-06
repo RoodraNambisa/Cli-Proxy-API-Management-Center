@@ -352,6 +352,12 @@ const normalizeAuthFileEntry = (entry: AuthFileEntry): AuthFileEntry => {
   if (planType) {
     normalized.planType = planType;
   }
+  const lastErrorStatusCode = readNumberValue(
+    entry.lastErrorStatusCode ?? entry['last_error_status_code']
+  );
+  if (lastErrorStatusCode !== undefined) {
+    normalized.lastErrorStatusCode = lastErrorStatusCode;
+  }
   return normalized;
 };
 

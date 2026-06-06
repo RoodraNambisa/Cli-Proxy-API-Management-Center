@@ -112,8 +112,23 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const statusData =
     (authIndexKey && statusBarCache.get(authIndexKey)) || calculateStatusBarData([]);
   const rawStatusMessage = getAuthFileStatusMessage(file);
+  const lastErrorStatusCodeRaw = file.lastErrorStatusCode ?? file['last_error_status_code'];
+  const lastErrorStatusCode =
+    typeof lastErrorStatusCodeRaw === 'number'
+      ? lastErrorStatusCodeRaw
+      : typeof lastErrorStatusCodeRaw === 'string'
+        ? Number.parseInt(lastErrorStatusCodeRaw, 10)
+        : 0;
+  const hasLastErrorStatusCode = Number.isFinite(lastErrorStatusCode) && lastErrorStatusCode > 0;
   const hasStatusWarning =
-    Boolean(rawStatusMessage) && !HEALTHY_STATUS_MESSAGES.has(rawStatusMessage.toLowerCase());
+    hasLastErrorStatusCode ||
+    (Boolean(rawStatusMessage) && !HEALTHY_STATUS_MESSAGES.has(rawStatusMessage.toLowerCase()));
+  const healthStatusTitle = [
+    hasLastErrorStatusCode ? `HTTP ${lastErrorStatusCode}` : '',
+    rawStatusMessage,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const priorityValue = parsePriorityValue(file.priority ?? file['priority']);
   const noteValue = typeof file.note === 'string' ? file.note.trim() : '';
@@ -230,10 +245,15 @@ export function AuthFileCard(props: AuthFileCardProps) {
             </div>
           )}
 
-          {rawStatusMessage && hasStatusWarning && (
-            <div className={styles.healthStatusMessage} title={rawStatusMessage}>
+          {hasStatusWarning && (rawStatusMessage || hasLastErrorStatusCode) && (
+            <div className={styles.healthStatusMessage} title={healthStatusTitle}>
               <IconInfo className={styles.messageIcon} size={14} />
-              <span>{rawStatusMessage}</span>
+              <span className={styles.healthStatusContent}>
+                {hasLastErrorStatusCode && (
+                  <span className={styles.httpStatusBadge}>HTTP {lastErrorStatusCode}</span>
+                )}
+                {rawStatusMessage && <span>{rawStatusMessage}</span>}
+              </span>
             </div>
           )}
 

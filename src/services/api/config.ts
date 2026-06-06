@@ -24,6 +24,22 @@ export type ProxyUrlCheckResult = {
   message: string;
 };
 
+export type ControlPanelUpdateStatus = {
+  disabled: boolean;
+  autoUpdateDisabled: boolean;
+  localExists: boolean;
+  localHash: string;
+  localModifiedAt: string;
+  remoteHash: string;
+  remoteDigestAvailable: boolean;
+  updateAvailable: boolean;
+  updated: boolean;
+  checkedAt: string;
+  releaseUrl: string;
+  assetUrl: string;
+  error: string;
+};
+
 const ROUTING_PRIORITY_OVERRIDE_STRATEGIES = new Set(['round-robin', 'fill-first', 'random']);
 
 const readNumericConfigValue = (data: Record<string, unknown>, key: NumericConfigKey): number => {
@@ -47,6 +63,17 @@ const patchNumericConfig = (key: NumericConfigKey, value: number) =>
 const readString = (value: unknown): string =>
   value === undefined || value === null ? '' : String(value);
 
+const readBoolean = (value: unknown): boolean => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+  }
+  return Boolean(value);
+};
+
 const normalizeProxyUrlCheckResult = (data: unknown): ProxyUrlCheckResult => {
   const source =
     data && typeof data === 'object' && !Array.isArray(data)
@@ -67,6 +94,31 @@ const normalizeProxyUrlCheckResult = (data: unknown): ProxyUrlCheckResult => {
     elapsedMs: Number.isFinite(elapsed) ? elapsed : null,
     error: readString(source.error),
     message: readString(source.message),
+  };
+};
+
+const normalizeControlPanelUpdateStatus = (data: unknown): ControlPanelUpdateStatus => {
+  const source =
+    data && typeof data === 'object' && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : {};
+
+  return {
+    disabled: readBoolean(source.disabled),
+    autoUpdateDisabled: readBoolean(source.auto_update_disabled ?? source.autoUpdateDisabled),
+    localExists: readBoolean(source.local_exists ?? source.localExists),
+    localHash: readString(source.local_hash ?? source.localHash),
+    localModifiedAt: readString(source.local_modified_at ?? source.localModifiedAt),
+    remoteHash: readString(source.remote_hash ?? source.remoteHash),
+    remoteDigestAvailable: readBoolean(
+      source.remote_digest_available ?? source.remoteDigestAvailable
+    ),
+    updateAvailable: readBoolean(source.update_available ?? source.updateAvailable),
+    updated: readBoolean(source.updated),
+    checkedAt: readString(source.checked_at ?? source.checkedAt),
+    releaseUrl: readString(source.release_url ?? source.releaseUrl),
+    assetUrl: readString(source.asset_url ?? source.assetUrl),
+    error: readString(source.error),
   };
 };
 
@@ -172,6 +224,22 @@ export const configApi = {
   async checkProxyUrl(proxyUrl: string): Promise<ProxyUrlCheckResult> {
     const data = await apiClient.post('/proxy-url/check', { 'proxy-url': proxyUrl });
     return normalizeProxyUrlCheckResult(data);
+  },
+
+  /**
+   * 检查管理面板更新状态
+   */
+  async getControlPanelUpdateStatus(): Promise<ControlPanelUpdateStatus> {
+    const data = await apiClient.get('/control-panel/update');
+    return normalizeControlPanelUpdateStatus(data);
+  },
+
+  /**
+   * 手动更新管理面板前端
+   */
+  async updateControlPanel(): Promise<ControlPanelUpdateStatus> {
+    const data = await apiClient.post('/control-panel/update');
+    return normalizeControlPanelUpdateStatus(data);
   },
 
   /**

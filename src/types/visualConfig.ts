@@ -40,6 +40,7 @@ export type VisualConfigValidationErrorCode =
   | 'http_status_code'
   | 'integer'
   | 'priority_duplicate'
+  | 'fixed_error_cooldown_match_required'
   | 'integer_list'
   | 'http_status_list'
   | 'codex_custom_model_id_required'

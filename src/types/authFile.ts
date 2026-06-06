@@ -29,6 +29,7 @@ export interface AuthFileItem {
   unavailable?: boolean;
   status?: string;
   statusMessage?: string;
+  lastErrorStatusCode?: number;
   lastRefresh?: string | number;
   modified?: number;
   [key: string]: unknown;
