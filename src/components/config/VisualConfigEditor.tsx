@@ -36,6 +36,8 @@ import type {
   PayloadFilterRule,
   PayloadParamValidationErrorCode,
   PayloadRule,
+  RoutingPriorityOverrideStrategy,
+  RoutingPriorityOverrideVisualEntry,
   VisualConfigFieldPath,
   VisualConfigValidationErrorCode,
   VisualConfigValidationErrors,
@@ -242,6 +244,27 @@ export function VisualConfigEditor({
     ],
     [t]
   );
+  const routingPriorityOverrideStrategyOptions = useMemo(
+    () => [
+      {
+        value: '',
+        label: t('config_management.visual.sections.network.priority_overrides_strategy_inherit'),
+      },
+      {
+        value: 'round-robin',
+        label: t('config_management.visual.sections.network.strategy_round_robin'),
+      },
+      {
+        value: 'fill-first',
+        label: t('config_management.visual.sections.network.strategy_fill_first'),
+      },
+      {
+        value: 'random',
+        label: t('config_management.visual.sections.network.strategy_random'),
+      },
+    ],
+    [t]
+  );
 
   const portError = getValidationMessage(t, validationErrors?.port);
   const rmAccessPathError = getValidationMessage(t, validationErrors?.rmAccessPath);
@@ -261,6 +284,13 @@ export function VisualConfigEditor({
     () =>
       Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('fixedErrorCooldowns.'))
         .length,
+    [validationErrors]
+  );
+  const routingPriorityOverridesErrorCount = useMemo(
+    () =>
+      Object.keys(validationErrors ?? {}).filter((key) =>
+        key.startsWith('routingPriorityOverrides.')
+      ).length,
     [validationErrors]
   );
   const imagesUnsupportedStatusCodeError = getValidationMessage(
@@ -344,6 +374,45 @@ export function VisualConfigEditor({
   const handleFixedErrorCooldownsChange = useCallback(
     (fixedErrorCooldowns: FixedErrorCooldownVisualEntry[]) => onChange({ fixedErrorCooldowns }),
     [onChange]
+  );
+  const handleRoutingPriorityOverridesChange = useCallback(
+    (routingPriorityOverrides: RoutingPriorityOverrideVisualEntry[]) =>
+      onChange({ routingPriorityOverrides }),
+    [onChange]
+  );
+  const addRoutingPriorityOverride = useCallback(() => {
+    handleRoutingPriorityOverridesChange([
+      ...values.routingPriorityOverrides,
+      {
+        clientId: makeClientId(),
+        priority: '',
+        strategy: '',
+        maxRetryCredentials: '',
+      },
+    ]);
+  }, [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]);
+  const updateRoutingPriorityOverride = useCallback(
+    (clientId: string, patch: Partial<RoutingPriorityOverrideVisualEntry>) => {
+      handleRoutingPriorityOverridesChange(
+        values.routingPriorityOverrides.map((rule) =>
+          rule.clientId === clientId ? { ...rule, ...patch } : rule
+        )
+      );
+    },
+    [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]
+  );
+  const removeRoutingPriorityOverride = useCallback(
+    (clientId: string) => {
+      handleRoutingPriorityOverridesChange(
+        values.routingPriorityOverrides.filter((rule) => rule.clientId !== clientId)
+      );
+    },
+    [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]
+  );
+  const getRoutingPriorityOverrideError = useCallback(
+    (clientId: string, field: 'priority' | 'maxRetryCredentials') =>
+      getValidationMessage(t, validationErrors?.[`routingPriorityOverrides.${clientId}.${field}`]),
+    [t, validationErrors]
   );
   const addFixedErrorCooldown = useCallback(() => {
     handleFixedErrorCooldownsChange([
@@ -462,7 +531,9 @@ export function VisualConfigEditor({
         title: t('config_management.visual.sections.network.title'),
         description: t('config_management.visual.sections.network.description'),
         icon: IconTrendingUp,
-        errorCount: countErrors(['requestRetry', 'maxRetryCredentials', 'maxRetryInterval']),
+        errorCount:
+          countErrors(['requestRetry', 'maxRetryCredentials', 'maxRetryInterval']) +
+          routingPriorityOverridesErrorCount,
       },
       {
         id: 'images',
@@ -521,6 +592,7 @@ export function VisualConfigEditor({
       countErrors,
       fixedErrorCooldownsErrorCount,
       hasPayloadValidationErrors,
+      routingPriorityOverridesErrorCount,
       t,
     ]
   );
@@ -1221,6 +1293,121 @@ export function VisualConfigEditor({
                   disabled={disabled}
                 />
               </SectionGrid>
+
+              <SectionSubsection
+                title={t('config_management.visual.sections.network.priority_overrides')}
+                description={t('config_management.visual.sections.network.priority_overrides_desc')}
+              >
+                <div className={styles.blockHeaderRow}>
+                  <div className={styles.fieldHint}>
+                    {t('config_management.visual.sections.network.priority_overrides_hint')}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={addRoutingPriorityOverride}
+                    disabled={disabled}
+                  >
+                    {t('config_management.visual.sections.network.priority_overrides_add')}
+                  </Button>
+                </div>
+                {values.routingPriorityOverrides.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    {t('config_management.visual.sections.network.priority_overrides_empty')}
+                  </div>
+                ) : (
+                  <div className={styles.blockStack}>
+                    {values.routingPriorityOverrides.map((rule, index) => {
+                      const priorityError = getRoutingPriorityOverrideError(
+                        rule.clientId,
+                        'priority'
+                      );
+                      const maxRetryCredentialsError = getRoutingPriorityOverrideError(
+                        rule.clientId,
+                        'maxRetryCredentials'
+                      );
+                      const strategyLabelId = `routing-priority-${rule.clientId}-strategy-label`;
+
+                      return (
+                        <div key={rule.clientId} className={styles.ruleCard}>
+                          <div className={styles.ruleCardHeader}>
+                            <div className={styles.ruleCardTitle}>
+                              {t(
+                                'config_management.visual.sections.network.priority_overrides_rule',
+                                {
+                                  index: index + 1,
+                                }
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeRoutingPriorityOverride(rule.clientId)}
+                              disabled={disabled}
+                            >
+                              {t('config_management.visual.common.delete')}
+                            </Button>
+                          </div>
+                          <div className={styles.priorityOverrideGrid}>
+                            <Input
+                              label={t(
+                                'config_management.visual.sections.network.priority_overrides_priority'
+                              )}
+                              type="number"
+                              placeholder="0"
+                              value={rule.priority}
+                              onChange={(event) =>
+                                updateRoutingPriorityOverride(rule.clientId, {
+                                  priority: event.target.value,
+                                })
+                              }
+                              disabled={disabled}
+                              error={priorityError}
+                            />
+                            <FieldShell
+                              label={t(
+                                'config_management.visual.sections.network.priority_overrides_strategy'
+                              )}
+                              labelId={strategyLabelId}
+                            >
+                              <Select
+                                value={rule.strategy}
+                                options={routingPriorityOverrideStrategyOptions}
+                                disabled={disabled}
+                                ariaLabelledBy={strategyLabelId}
+                                onChange={(strategy) =>
+                                  updateRoutingPriorityOverride(rule.clientId, {
+                                    strategy: strategy as RoutingPriorityOverrideStrategy,
+                                  })
+                                }
+                              />
+                            </FieldShell>
+                            <Input
+                              label={t(
+                                'config_management.visual.sections.network.priority_overrides_max_retry_credentials'
+                              )}
+                              type="number"
+                              placeholder={t(
+                                'config_management.visual.sections.network.priority_overrides_inherit_global'
+                              )}
+                              value={rule.maxRetryCredentials}
+                              onChange={(event) =>
+                                updateRoutingPriorityOverride(rule.clientId, {
+                                  maxRetryCredentials: event.target.value,
+                                })
+                              }
+                              disabled={disabled}
+                              error={maxRetryCredentialsError}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </SectionSubsection>
 
               <SectionGrid>
                 <ToggleRow

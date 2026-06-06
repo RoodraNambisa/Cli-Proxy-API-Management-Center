@@ -16,6 +16,7 @@ export type VisualConfigFieldPath =
   | 'maxRetryInterval'
   | 'noCooldownStatusCodes'
   | 'fixedErrorCooldowns'
+  | 'routingPriorityOverrides'
   | 'authMaintenance.scanIntervalSeconds'
   | 'authMaintenance.deleteIntervalSeconds'
   | 'authMaintenance.deleteStatusCodes'
@@ -37,6 +38,8 @@ export type VisualConfigValidationErrorCode =
   | 'non_negative_integer'
   | 'positive_integer'
   | 'http_status_code'
+  | 'integer'
+  | 'priority_duplicate'
   | 'integer_list'
   | 'http_status_list'
   | 'codex_custom_model_id_required'
@@ -125,6 +128,15 @@ export interface FixedErrorCooldownVisualEntry {
   scope: FixedErrorCooldownScope;
 }
 
+export type RoutingPriorityOverrideStrategy = '' | 'round-robin' | 'fill-first' | 'random';
+
+export interface RoutingPriorityOverrideVisualEntry {
+  clientId: string;
+  priority: string;
+  strategy: RoutingPriorityOverrideStrategy;
+  maxRetryCredentials: string;
+}
+
 export type CodexCustomModelValidationErrors = Record<
   string,
   {
@@ -179,6 +191,7 @@ export type VisualConfigValues = {
   authMaintenance: AuthMaintenanceVisualConfig;
   images: ImagesVisualConfig;
   routingStrategy: 'round-robin' | 'fill-first' | 'random';
+  routingPriorityOverrides: RoutingPriorityOverrideVisualEntry[];
   routingSessionAffinity: boolean;
   routingSessionAffinityFailover: boolean;
   routingSessionAffinityTTL: string;
@@ -261,6 +274,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     streamFlushMinBytes: '0',
   },
   routingStrategy: 'round-robin',
+  routingPriorityOverrides: [],
   routingSessionAffinity: false,
   routingSessionAffinityFailover: true,
   routingSessionAffinityTTL: '',

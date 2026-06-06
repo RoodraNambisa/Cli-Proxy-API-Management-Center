@@ -3,7 +3,7 @@
  */
 
 import { apiClient } from './client';
-import type { Config } from '@/types';
+import type { Config, RoutingPriorityOverrideConfig } from '@/types';
 import { normalizeConfigResponse } from './transformers';
 
 type NumericConfigKey = 'request-retry' | 'max-retry-credentials' | 'max-retry-interval';
@@ -23,6 +23,8 @@ export type ProxyUrlCheckResult = {
   error: string;
   message: string;
 };
+
+const ROUTING_PRIORITY_OVERRIDE_STRATEGIES = new Set(['round-robin', 'fill-first', 'random']);
 
 const readNumericConfigValue = (data: Record<string, unknown>, key: NumericConfigKey): number => {
   const camelKey = key.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
@@ -67,6 +69,65 @@ const normalizeProxyUrlCheckResult = (data: unknown): ProxyUrlCheckResult => {
     message: readString(source.message),
   };
 };
+
+const normalizeRoutingPriorityOverrides = (value: unknown): RoutingPriorityOverrideConfig[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.reduce<RoutingPriorityOverrideConfig[]>((result, item) => {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) return result;
+    const source = item as Record<string, unknown>;
+    const priority = Number(source.priority);
+    if (!Number.isSafeInteger(priority)) return result;
+
+    const strategyRaw = readString(source.strategy).trim();
+    const maxRetryCredentialsRaw = Object.prototype.hasOwnProperty.call(
+      source,
+      'max-retry-credentials'
+    )
+      ? source['max-retry-credentials']
+      : source.maxRetryCredentials;
+    const entry: RoutingPriorityOverrideConfig = { priority };
+
+    if (strategyRaw && ROUTING_PRIORITY_OVERRIDE_STRATEGIES.has(strategyRaw)) {
+      entry.strategy = strategyRaw;
+    }
+    if (maxRetryCredentialsRaw === null) {
+      entry.maxRetryCredentials = null;
+    } else if (maxRetryCredentialsRaw !== undefined) {
+      const parsed = Number(maxRetryCredentialsRaw);
+      if (Number.isSafeInteger(parsed) && parsed >= 0) {
+        entry.maxRetryCredentials = parsed;
+      }
+    }
+
+    result.push(entry);
+    return result;
+  }, []);
+};
+
+const normalizeRoutingPriorityOverridesResponse = (
+  data: unknown
+): RoutingPriorityOverrideConfig[] => {
+  const source =
+    data && typeof data === 'object' && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : {};
+  return normalizeRoutingPriorityOverrides(
+    source['priority-overrides'] ?? source.priorityOverrides ?? source.value ?? data
+  );
+};
+
+const serializeRoutingPriorityOverrides = (
+  overrides: RoutingPriorityOverrideConfig[]
+): Array<Record<string, unknown>> =>
+  overrides.map((override) => {
+    const entry: Record<string, unknown> = { priority: override.priority };
+    if (override.strategy) entry.strategy = override.strategy;
+    if (override.maxRetryCredentials !== undefined) {
+      entry['max-retry-credentials'] = override.maxRetryCredentials;
+    }
+    return entry;
+  });
 
 export const configApi = {
   /**
@@ -234,4 +295,36 @@ export const configApi = {
    */
   updateRoutingStrategy: (strategy: string) =>
     apiClient.put('/routing/strategy', { value: strategy }),
+
+  /**
+   * 获取优先级覆盖规则
+   */
+  async getRoutingPriorityOverrides(): Promise<RoutingPriorityOverrideConfig[]> {
+    const data = await apiClient.get('/routing/priority-overrides');
+    return normalizeRoutingPriorityOverridesResponse(data);
+  },
+
+  /**
+   * 更新优先级覆盖规则
+   */
+  async updateRoutingPriorityOverrides(
+    overrides: RoutingPriorityOverrideConfig[]
+  ): Promise<RoutingPriorityOverrideConfig[]> {
+    const data = await apiClient.put('/routing/priority-overrides', {
+      value: serializeRoutingPriorityOverrides(overrides),
+    });
+    return normalizeRoutingPriorityOverridesResponse(data);
+  },
+
+  /**
+   * PATCH 更新优先级覆盖规则
+   */
+  async patchRoutingPriorityOverrides(
+    overrides: RoutingPriorityOverrideConfig[]
+  ): Promise<RoutingPriorityOverrideConfig[]> {
+    const data = await apiClient.patch('/routing/priority-overrides', {
+      value: serializeRoutingPriorityOverrides(overrides),
+    });
+    return normalizeRoutingPriorityOverridesResponse(data);
+  },
 };

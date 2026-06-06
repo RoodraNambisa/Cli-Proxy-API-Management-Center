@@ -886,6 +886,13 @@
   gap: 12px;
 }
 
+.priorityOverrideGrid {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(180px, 1fr) minmax(180px, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
 .codexCustomModelGroups {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -964,6 +971,7 @@
 @media (max-width: 900px) {
   .codexCustomModelFieldGrid,
   .fixedCooldownGrid,
+  .priorityOverrideGrid,
   .codexCustomModelGroups,
   .payloadRuleModelRow,
   .payloadRuleModelRowProtocolFirst,

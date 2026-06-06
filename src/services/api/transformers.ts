@@ -96,6 +96,51 @@ const normalizeFixedErrorCooldowns = (
   return normalized.length > 0 ? normalized : [];
 };
 
+const normalizeRoutingPriorityOverrides = (
+  value: unknown
+): Config['routingPriorityOverrides'] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+
+  const normalized = value.reduce<NonNullable<Config['routingPriorityOverrides']>>(
+    (result, item) => {
+      if (!isRecord(item)) return result;
+      const priority = normalizeNumber(item.priority);
+      if (priority === undefined || !Number.isSafeInteger(priority)) return result;
+
+      const strategy = normalizeString(item.strategy);
+      const maxRetryCredentialsRaw = Object.prototype.hasOwnProperty.call(
+        item,
+        'max-retry-credentials'
+      )
+        ? item['max-retry-credentials']
+        : item.maxRetryCredentials;
+      const entry: NonNullable<Config['routingPriorityOverrides']>[number] = { priority };
+
+      if (strategy) {
+        entry.strategy = strategy;
+      }
+      if (maxRetryCredentialsRaw === null) {
+        entry.maxRetryCredentials = null;
+      } else {
+        const maxRetryCredentials = normalizeNumber(maxRetryCredentialsRaw);
+        if (
+          maxRetryCredentials !== undefined &&
+          Number.isSafeInteger(maxRetryCredentials) &&
+          maxRetryCredentials >= 0
+        ) {
+          entry.maxRetryCredentials = maxRetryCredentials;
+        }
+      }
+
+      result.push(entry);
+      return result;
+    },
+    []
+  );
+
+  return normalized.length > 0 ? normalized : [];
+};
+
 const normalizeCodexCustomModelGroups = (value: unknown): CodexCustomModelGroup[] => {
   if (!Array.isArray(value)) return [];
 
@@ -752,6 +797,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     config.routingStrategy = String(strategyRaw);
   }
   if (isRecord(routing)) {
+    config.routingPriorityOverrides = normalizeRoutingPriorityOverrides(
+      routing['priority-overrides'] ?? routing.priorityOverrides
+    );
     config.routingSessionAffinity = normalizeBoolean(
       routing['session-affinity'] ?? routing.sessionAffinity
     );

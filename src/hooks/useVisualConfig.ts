@@ -9,6 +9,8 @@ import type {
   PayloadParamEntry,
   PayloadParamValueType,
   PayloadRule,
+  RoutingPriorityOverrideStrategy,
+  RoutingPriorityOverrideVisualEntry,
   VisualConfigValues,
   VisualConfigValidationErrors,
   PayloadParamValidationErrorCode,
@@ -345,6 +347,88 @@ function serializeFixedErrorCooldownsForYaml(
   }, []);
 }
 
+function normalizeRoutingPriorityOverrideStrategy(value: unknown): RoutingPriorityOverrideStrategy {
+  return value === 'round-robin' || value === 'fill-first' || value === 'random' ? value : '';
+}
+
+function parseRoutingPriorityOverrides(raw: unknown): RoutingPriorityOverrideVisualEntry[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.reduce<RoutingPriorityOverrideVisualEntry[]>((result, item) => {
+    const record = asRecord(item);
+    if (!record) return result;
+
+    const maxRetryCredentialsRaw = Object.prototype.hasOwnProperty.call(
+      record,
+      'max-retry-credentials'
+    )
+      ? record['max-retry-credentials']
+      : record.maxRetryCredentials;
+
+    result.push({
+      clientId: makeClientId(),
+      priority:
+        record.priority === undefined || record.priority === null ? '' : String(record.priority),
+      strategy: normalizeRoutingPriorityOverrideStrategy(record.strategy),
+      maxRetryCredentials:
+        maxRetryCredentialsRaw === undefined || maxRetryCredentialsRaw === null
+          ? ''
+          : String(maxRetryCredentialsRaw),
+    });
+    return result;
+  }, []);
+}
+
+function areRoutingPriorityOverridesEqual(
+  left: RoutingPriorityOverrideVisualEntry[],
+  right: RoutingPriorityOverrideVisualEntry[]
+): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((entry, index) => {
+    const other = right[index];
+    return (
+      Boolean(other) &&
+      entry.priority === other.priority &&
+      entry.strategy === other.strategy &&
+      entry.maxRetryCredentials === other.maxRetryCredentials
+    );
+  });
+}
+
+function parseIntegerString(value: string): number | null {
+  const trimmed = value.trim();
+  if (!/^-?\d+$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+function parseNonNegativeIntegerString(value: string): number | null {
+  const parsed = parseIntegerString(value);
+  return parsed !== null && parsed >= 0 ? parsed : null;
+}
+
+function serializeRoutingPriorityOverridesForYaml(
+  rules: RoutingPriorityOverrideVisualEntry[]
+): Array<Record<string, unknown>> {
+  return rules.reduce<Array<Record<string, unknown>>>((result, rule) => {
+    const priority = parseIntegerString(rule.priority);
+    if (priority === null) return result;
+
+    const entry: Record<string, unknown> = { priority };
+    if (rule.strategy) {
+      entry.strategy = rule.strategy;
+    }
+    if (rule.maxRetryCredentials.trim()) {
+      const maxRetryCredentials = parseNonNegativeIntegerString(rule.maxRetryCredentials);
+      if (maxRetryCredentials === null) return result;
+      entry['max-retry-credentials'] = maxRetryCredentials;
+    }
+
+    result.push(entry);
+    return result;
+  }, []);
+}
+
 function getNonNegativeIntegerError(value: string): 'non_negative_integer' | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
@@ -364,6 +448,13 @@ function getPortError(value: string): 'port_range' | undefined {
   if (!/^\d+$/.test(trimmed)) return 'port_range';
   const parsed = Number(trimmed);
   return parsed >= 1 && parsed <= 65535 ? undefined : 'port_range';
+}
+
+function getIntegerError(value: string): 'integer' | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return 'integer';
+  if (!/^-?\d+$/.test(trimmed)) return 'integer';
+  return Number.isSafeInteger(Number(trimmed)) ? undefined : 'integer';
 }
 
 function getManagementAccessPathError(value: string): 'management_access_path' | undefined {
@@ -408,6 +499,32 @@ function getHttpStatusListError(value: string): 'integer_list' | 'http_status_li
 export function getVisualConfigValidationErrors(
   values: VisualConfigValues
 ): VisualConfigValidationErrors {
+  const priorityCounts = values.routingPriorityOverrides.reduce<Map<number, number>>(
+    (result, rule) => {
+      const priority = parseIntegerString(rule.priority);
+      if (priority !== null) {
+        result.set(priority, (result.get(priority) ?? 0) + 1);
+      }
+      return result;
+    },
+    new Map()
+  );
+  const routingPriorityOverrideErrors =
+    values.routingPriorityOverrides.reduce<VisualConfigValidationErrors>((result, rule) => {
+      const priorityError = getIntegerError(rule.priority);
+      const priority = parseIntegerString(rule.priority);
+      if (priorityError) {
+        result[`routingPriorityOverrides.${rule.clientId}.priority`] = priorityError;
+      } else if (priority !== null && (priorityCounts.get(priority) ?? 0) > 1) {
+        result[`routingPriorityOverrides.${rule.clientId}.priority`] = 'priority_duplicate';
+      }
+      const maxRetryCredentialsError = getNonNegativeIntegerError(rule.maxRetryCredentials);
+      if (maxRetryCredentialsError) {
+        result[`routingPriorityOverrides.${rule.clientId}.maxRetryCredentials`] =
+          maxRetryCredentialsError;
+      }
+      return result;
+    }, {});
   const fixedErrorCooldownErrors = values.fixedErrorCooldowns.reduce<VisualConfigValidationErrors>(
     (result, rule) => {
       const statusCodeError = getHttpStatusCodeError(rule.statusCode);
@@ -434,6 +551,7 @@ export function getVisualConfigValidationErrors(
     maxRetryCredentials: getNonNegativeIntegerError(values.maxRetryCredentials),
     maxRetryInterval: getNonNegativeIntegerError(values.maxRetryInterval),
     noCooldownStatusCodes: getHttpStatusListError(values.noCooldownStatusCodes),
+    ...routingPriorityOverrideErrors,
     ...fixedErrorCooldownErrors,
     'authMaintenance.scanIntervalSeconds': getNonNegativeIntegerError(
       values.authMaintenance.scanIntervalSeconds
@@ -1249,6 +1367,15 @@ function getNextDirtyFields(
   if (Object.prototype.hasOwnProperty.call(patch, 'routingStrategy')) {
     updateDirty('routingStrategy', nextValues.routingStrategy === baselineValues.routingStrategy);
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'routingPriorityOverrides')) {
+    updateDirty(
+      'routingPriorityOverrides',
+      areRoutingPriorityOverridesEqual(
+        nextValues.routingPriorityOverrides,
+        baselineValues.routingPriorityOverrides
+      )
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinity')) {
     updateDirty(
       'routingSessionAffinity',
@@ -1672,6 +1799,9 @@ export function useVisualConfig() {
             : routing?.strategy === 'random'
               ? 'random'
               : 'round-robin',
+        routingPriorityOverrides: parseRoutingPriorityOverrides(
+          routing?.['priority-overrides'] ?? routing?.priorityOverrides
+        ),
         routingSessionAffinity: Boolean(
           routing?.['session-affinity'] ?? routing?.sessionAffinity ?? routing?.['sessionAffinity']
         ),
@@ -2040,6 +2170,7 @@ export function useVisualConfig() {
         if (
           docHas(doc, ['routing']) ||
           values.routingStrategy !== 'round-robin' ||
+          values.routingPriorityOverrides.length > 0 ||
           values.routingSessionAffinity ||
           values.routingSessionAffinityFailover !==
             DEFAULT_VISUAL_VALUES.routingSessionAffinityFailover ||
@@ -2047,6 +2178,14 @@ export function useVisualConfig() {
         ) {
           ensureMapInDoc(doc, ['routing']);
           doc.setIn(['routing', 'strategy'], values.routingStrategy);
+          if (values.routingPriorityOverrides.length > 0) {
+            doc.setIn(
+              ['routing', 'priority-overrides'],
+              serializeRoutingPriorityOverridesForYaml(values.routingPriorityOverrides)
+            );
+          } else if (docHas(doc, ['routing', 'priority-overrides'])) {
+            doc.deleteIn(['routing', 'priority-overrides']);
+          }
           setBooleanInDoc(doc, ['routing', 'session-affinity'], values.routingSessionAffinity);
           if (
             docHas(doc, ['routing', 'session-affinity-failover']) ||

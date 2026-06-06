@@ -21,6 +21,14 @@ export interface FixedErrorCooldownConfig {
   scope?: FixedErrorCooldownScope | string;
 }
 
+export type RoutingStrategy = 'round-robin' | 'fill-first' | 'random';
+
+export interface RoutingPriorityOverrideConfig {
+  priority: number;
+  strategy?: RoutingStrategy | string;
+  maxRetryCredentials?: number | null;
+}
+
 export interface AuthMaintenanceConfig {
   enable?: boolean;
   scanIntervalSeconds?: number;
@@ -131,6 +139,7 @@ export interface Config {
   images?: ImagesConfig;
   streaming?: StreamingConfig;
   routingStrategy?: string;
+  routingPriorityOverrides?: RoutingPriorityOverrideConfig[];
   routingSessionAffinity?: boolean;
   routingSessionAffinityFailover?: boolean;
   routingSessionAffinityTTL?: string;
@@ -172,6 +181,7 @@ export type RawConfigSection =
   | 'images'
   | 'streaming'
   | 'routing/strategy'
+  | 'routing/priority-overrides'
   | 'routing/session-affinity'
   | 'routing/session-affinity-failover'
   | 'routing/session-affinity-ttl'
