@@ -507,6 +507,17 @@
     "last_refresh_label": "Последнее обновление",
     "refresh_not_available": "Н/Д",
     "refresh_just_now": "Только что",
+    "refresh_page_usage_stats": "Обновить статистику страницы",
+    "usage_stats_refresh_success": "Статистика использования для текущей страницы обновлена",
+    "usage_stats_refresh_failed": "Не удалось обновить статистику использования: {{message}}",
+    "usage_stats_title": "Статистика",
+    "usage_stats_loading": "Обновление статистики...",
+    "usage_stats_empty": "Статистика пока отсутствует",
+    "usage_stats_requests": "Запросы",
+    "usage_stats_tokens": "Tokens",
+    "usage_stats_success_rate": "Успех",
+    "usage_stats_recent": "Последний",
+    "usage_stats_recent_none": "--",
     "download_button": "Скачать",
     "delete_button": "Удалить",
     "delete_confirm": "Удалить файл",
@@ -764,7 +775,9 @@
     "plan_team": "Team",
     "plan_free": "Free",
     "plan_pro": "Pro 20x",
-    "plan_prolite": "Pro 5x"
+    "plan_prolite": "Pro 5x",
+    "reset_credits_label": "Сбросы лимита",
+    "reset_credits_available": "Доступно: {{count}}"
   },
   "gemini_cli_quota": {
     "title": "Квота Gemini CLI",

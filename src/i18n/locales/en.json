@@ -507,6 +507,17 @@
     "last_refresh_label": "Last Refresh",
     "refresh_not_available": "N/A",
     "refresh_just_now": "Just now",
+    "refresh_page_usage_stats": "Refresh page usage stats",
+    "usage_stats_refresh_success": "Usage stats refreshed for the current page",
+    "usage_stats_refresh_failed": "Failed to refresh usage stats: {{message}}",
+    "usage_stats_title": "Usage stats",
+    "usage_stats_loading": "Refreshing usage stats...",
+    "usage_stats_empty": "No usage stats yet",
+    "usage_stats_requests": "Requests",
+    "usage_stats_tokens": "Tokens",
+    "usage_stats_success_rate": "Success",
+    "usage_stats_recent": "Recent",
+    "usage_stats_recent_none": "--",
     "download_button": "Download",
     "delete_button": "Delete",
     "delete_confirm": "Are you sure you want to delete file",
@@ -767,7 +778,9 @@
     "plan_team": "Team",
     "plan_free": "Free",
     "plan_pro": "Pro 20x",
-    "plan_prolite": "Pro 5x"
+    "plan_prolite": "Pro 5x",
+    "reset_credits_label": "Reset credits",
+    "reset_credits_available": "{{count}} available"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI Quota",

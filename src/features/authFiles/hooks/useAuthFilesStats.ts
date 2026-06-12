@@ -5,6 +5,7 @@ import type { KeyStats, UsageDetail } from '@/utils/usage';
 export type UseAuthFilesStatsResult = {
   keyStats: KeyStats;
   usageDetails: UsageDetail[];
+  usageLoading: boolean;
   loadKeyStats: () => Promise<void>;
   refreshKeyStats: () => Promise<void>;
 };
@@ -12,6 +13,7 @@ export type UseAuthFilesStatsResult = {
 export function useAuthFilesStats(): UseAuthFilesStatsResult {
   const keyStats = useUsageStatsStore((state) => state.keyStats);
   const usageDetails = useUsageStatsStore((state) => state.usageDetails);
+  const usageLoading = useUsageStatsStore((state) => state.loading);
   const loadUsageStats = useUsageStatsStore((state) => state.loadUsageStats);
 
   const loadKeyStats = useCallback(async () => {
@@ -22,5 +24,5 @@ export function useAuthFilesStats(): UseAuthFilesStatsResult {
     await loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS });
   }, [loadUsageStats]);
 
-  return { keyStats, usageDetails, loadKeyStats, refreshKeyStats };
+  return { keyStats, usageDetails, usageLoading, loadKeyStats, refreshKeyStats };
 }

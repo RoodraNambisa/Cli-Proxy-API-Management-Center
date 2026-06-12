@@ -507,6 +507,17 @@
     "last_refresh_label": "最近刷新",
     "refresh_not_available": "暂无",
     "refresh_just_now": "刚刚",
+    "refresh_page_usage_stats": "刷新本页使用统计",
+    "usage_stats_refresh_success": "已刷新当前页使用统计",
+    "usage_stats_refresh_failed": "刷新使用统计失败：{{message}}",
+    "usage_stats_title": "使用统计",
+    "usage_stats_loading": "正在刷新使用统计...",
+    "usage_stats_empty": "暂无使用统计",
+    "usage_stats_requests": "请求",
+    "usage_stats_tokens": "Tokens",
+    "usage_stats_success_rate": "成功率",
+    "usage_stats_recent": "最近",
+    "usage_stats_recent_none": "--",
     "download_button": "下载",
     "delete_button": "删除",
     "delete_confirm": "确定要删除文件",
@@ -767,7 +778,9 @@
     "plan_team": "Team",
     "plan_free": "Free",
     "plan_pro": "Pro 20x",
-    "plan_prolite": "Pro 5x"
+    "plan_prolite": "Pro 5x",
+    "reset_credits_label": "重置次数",
+    "reset_credits_available": "可用 {{count}} 次"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI 额度",

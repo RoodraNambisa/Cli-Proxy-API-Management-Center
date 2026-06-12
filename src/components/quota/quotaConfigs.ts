@@ -401,7 +401,11 @@ const buildCodexQuotaWindows = (payload: CodexUsagePayload, t: TFunction): Codex
 const fetchCodexQuota = async (
   file: AuthFileItem,
   t: TFunction
-): Promise<{ planType: string | null; windows: CodexQuotaWindow[] }> => {
+): Promise<{
+  planType: string | null;
+  windows: CodexQuotaWindow[];
+  resetCreditsAvailableCount: number | null;
+}> => {
   const rawAuthIndex = file['auth_index'] ?? file.authIndex;
   const authIndex = normalizeAuthIndex(rawAuthIndex);
   if (!authIndex) {
@@ -437,7 +441,15 @@ const fetchCodexQuota = async (
 
   const planTypeFromUsage = normalizePlanType(payload.plan_type ?? payload.planType);
   const windows = buildCodexQuotaWindows(payload, t);
-  return { planType: planTypeFromUsage ?? planTypeFromFile, windows };
+  const resetCredits = payload.rate_limit_reset_credits ?? payload.rateLimitResetCredits ?? null;
+  const resetCreditsAvailableCount = normalizeNumberValue(
+    resetCredits?.available_count ?? resetCredits?.availableCount
+  );
+  return {
+    planType: planTypeFromUsage ?? planTypeFromFile,
+    windows,
+    resetCreditsAvailableCount,
+  };
 };
 
 const GEMINI_CLI_G1_CREDIT_TYPE = 'GOOGLE_ONE_AI';
@@ -744,6 +756,7 @@ const renderCodexItems = (
   const { createElement: h, Fragment } = React;
   const windows = quota.windows ?? [];
   const planType = quota.planType ?? null;
+  const resetCreditsAvailableCount = quota.resetCreditsAvailableCount ?? null;
 
   const getPlanLabel = (pt?: string | null): string | null => {
     const normalized = normalizePlanType(pt);
@@ -770,6 +783,21 @@ const renderCodexItems = (
         { key: 'plan', className: styleMap.codexPlan },
         h('span', { className: styleMap.codexPlanLabel }, t('codex_quota.plan_label')),
         h('span', { className: valueClass }, planLabel)
+      )
+    );
+  }
+
+  if (resetCreditsAvailableCount !== null) {
+    nodes.push(
+      h(
+        'div',
+        { key: 'reset-credits', className: styleMap.codexPlan },
+        h('span', { className: styleMap.codexPlanLabel }, t('codex_quota.reset_credits_label')),
+        h(
+          'span',
+          { className: styleMap.codexPlanValue },
+          t('codex_quota.reset_credits_available', { count: resetCreditsAvailableCount })
+        )
       )
     );
   }
@@ -1171,7 +1199,11 @@ export const ANTIGRAVITY_CONFIG: QuotaConfig<AntigravityQuotaState, AntigravityQ
 
 export const CODEX_CONFIG: QuotaConfig<
   CodexQuotaState,
-  { planType: string | null; windows: CodexQuotaWindow[] }
+  {
+    planType: string | null;
+    windows: CodexQuotaWindow[];
+    resetCreditsAvailableCount: number | null;
+  }
 > = {
   type: 'codex',
   i18nPrefix: 'codex_quota',
@@ -1185,6 +1217,7 @@ export const CODEX_CONFIG: QuotaConfig<
     status: 'success',
     windows: data.windows,
     planType: data.planType,
+    resetCreditsAvailableCount: data.resetCreditsAvailableCount,
   }),
   buildErrorState: (message, status) => ({
     status: 'error',

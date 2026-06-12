@@ -503,6 +503,17 @@
     "last_refresh_label": "最近重新整理",
     "refresh_not_available": "暫無",
     "refresh_just_now": "剛剛",
+    "refresh_page_usage_stats": "重新整理本頁使用統計",
+    "usage_stats_refresh_success": "已重新整理目前頁使用統計",
+    "usage_stats_refresh_failed": "重新整理使用統計失敗：{{message}}",
+    "usage_stats_title": "使用統計",
+    "usage_stats_loading": "正在重新整理使用統計...",
+    "usage_stats_empty": "暫無使用統計",
+    "usage_stats_requests": "請求",
+    "usage_stats_tokens": "Tokens",
+    "usage_stats_success_rate": "成功率",
+    "usage_stats_recent": "最近",
+    "usage_stats_recent_none": "--",
     "download_button": "下載",
     "delete_button": "刪除",
     "delete_confirm": "確定要刪除檔案",
@@ -763,7 +774,9 @@
     "plan_team": "Team",
     "plan_free": "Free",
     "plan_pro": "Pro 20x",
-    "plan_prolite": "Pro 5x"
+    "plan_prolite": "Pro 5x",
+    "reset_credits_label": "重置次數",
+    "reset_credits_available": "可用 {{count}} 次"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI 配額",

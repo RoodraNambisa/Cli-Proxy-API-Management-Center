@@ -29,7 +29,9 @@ import {
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
 import type { AuthFileStatusBarData } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
+import type { AuthFileUsageSummary } from '@/features/authFiles/hooks/useAuthFilesUsageSummary';
 import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
+import { AuthFileUsageStatsPanel } from '@/features/authFiles/components/AuthFileUsageStatsPanel';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
 const HEALTHY_STATUS_MESSAGES = new Set(['ok', 'healthy', 'ready', 'success', 'available']);
@@ -46,6 +48,8 @@ export type AuthFileCardProps = {
   quotaFilterType: QuotaProviderType | null;
   keyStats: KeyStats;
   statusBarCache: Map<string, AuthFileStatusBarData>;
+  usageSummaryCache: Map<string, AuthFileUsageSummary>;
+  usageLoading: boolean;
   onShowModels: (file: AuthFileItem) => void;
   onDownload: (name: string) => void;
   onOpenPrefixProxyEditor: (file: AuthFileItem) => void;
@@ -73,6 +77,8 @@ export function AuthFileCard(props: AuthFileCardProps) {
     quotaFilterType,
     keyStats,
     statusBarCache,
+    usageSummaryCache,
+    usageLoading,
     onShowModels,
     onDownload,
     onOpenPrefixProxyEditor,
@@ -111,6 +117,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const authIndexKey = normalizeAuthIndex(rawAuthIndex);
   const statusData =
     (authIndexKey && statusBarCache.get(authIndexKey)) || calculateStatusBarData([]);
+  const usageSummary = authIndexKey ? usageSummaryCache.get(authIndexKey) : undefined;
   const rawStatusMessage = getAuthFileStatusMessage(file);
   const lastErrorStatusCodeRaw = file.lastErrorStatusCode ?? file['last_error_status_code'];
   const lastErrorStatusCode =
@@ -275,6 +282,12 @@ export function AuthFileCard(props: AuthFileCardProps) {
               </div>
               <ProviderStatusBar statusData={statusData} styles={styles} />
             </div>
+
+            <AuthFileUsageStatsPanel
+              summary={usageSummary}
+              loading={usageLoading}
+              compact={compact}
+            />
 
             {showQuotaLayout && quotaType && (
               <AuthFileQuotaSection

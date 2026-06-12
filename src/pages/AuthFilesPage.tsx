@@ -21,7 +21,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { IconFilterAll } from '@/components/ui/icons';
+import { IconFilterAll, IconRefreshCw } from '@/components/ui/icons';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { copyToClipboard } from '@/utils/clipboard';
@@ -55,6 +55,7 @@ import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth'
 import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
 import { useAuthFilesStats } from '@/features/authFiles/hooks/useAuthFilesStats';
 import { useAuthFilesStatusBarCache } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
+import { useAuthFilesUsageSummary } from '@/features/authFiles/hooks/useAuthFilesUsageSummary';
 import {
   isAuthFilesSortMode,
   readAuthFilesUiState,
@@ -199,7 +200,8 @@ export function AuthFilesPage() {
   const previousSelectionCountRef = useRef(0);
   const selectionCountRef = useRef(0);
 
-  const { keyStats, usageDetails, loadKeyStats, refreshKeyStats } = useAuthFilesStats();
+  const { keyStats, usageDetails, usageLoading, loadKeyStats, refreshKeyStats } =
+    useAuthFilesStats();
   const {
     files,
     selectedFiles,
@@ -244,6 +246,7 @@ export function AuthFilesPage() {
 
   const disableControls = connectionStatus !== 'connected';
   const statusBarCache = useAuthFilesStatusBarCache(files, usageDetails);
+  const usageSummaryCache = useAuthFilesUsageSummary(usageDetails);
 
   const {
     excluded,
@@ -462,6 +465,16 @@ export function AuthFilesPage() {
       loadModelAlias(),
     ]);
   }, [loadFiles, refreshKeyStats, refreshCodexPlanTypeRefreshStatus, loadExcluded, loadModelAlias]);
+
+  const handleRefreshPageUsageStats = useCallback(async () => {
+    try {
+      await refreshKeyStats();
+      showNotification(t('auth_files.usage_stats_refresh_success'), 'success');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t('common.unknown_error');
+      showNotification(t('auth_files.usage_stats_refresh_failed', { message }), 'error');
+    }
+  }, [refreshKeyStats, showNotification, t]);
 
   useHeaderRefresh(handleHeaderRefresh);
 
@@ -902,6 +915,19 @@ export function AuthFilesPage() {
             <Button
               variant="secondary"
               size="sm"
+              onClick={() => void handleRefreshPageUsageStats()}
+              disabled={disableControls || usageLoading}
+              loading={usageLoading}
+              className={styles.usageRefreshButton}
+            >
+              <>
+                <IconRefreshCw size={14} />
+                <span>{t('auth_files.refresh_page_usage_stats')}</span>
+              </>
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => void startCodexPlanTypeRefresh()}
               disabled={
                 disableControls ||
@@ -1224,6 +1250,8 @@ export function AuthFilesPage() {
                     quotaFilterType={quotaFilterType}
                     keyStats={keyStats}
                     statusBarCache={statusBarCache}
+                    usageSummaryCache={usageSummaryCache}
+                    usageLoading={usageLoading}
                     onShowModels={showModels}
                     onDownload={handleDownload}
                     onOpenPrefixProxyEditor={openPrefixProxyEditor}

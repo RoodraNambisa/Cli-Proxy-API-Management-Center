@@ -46,6 +46,17 @@
   }
 }
 
+.usageRefreshButton:global(.btn.btn-sm) > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.usageRefreshButton:global(.btn.btn-sm) svg {
+  flex: 0 0 auto;
+}
+
 .titleWrapper {
   display: flex;
   align-items: center;
@@ -1397,6 +1408,102 @@
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.usageStatsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 58%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 58%, transparent);
+  min-width: 0;
+}
+
+.usageStatsPanelCompact {
+  gap: 6px;
+  padding: 7px;
+  border-radius: 8px;
+}
+
+.usageStatsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.usageStatsLoading {
+  color: var(--primary-color);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.usageStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+
+.usageStatsPanelCompact .usageStatsGrid {
+  gap: 4px;
+}
+
+.usageStatsItem {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 7px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 42%, transparent);
+  background: color-mix(in srgb, var(--bg-primary) 68%, transparent);
+}
+
+.usageStatsPanelCompact .usageStatsItem {
+  padding: 5px 6px;
+}
+
+.usageStatsLabel {
+  min-width: 0;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  @include text-ellipsis;
+}
+
+.usageStatsValue {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  @include text-ellipsis;
+}
+
+.usageStatsPanelCompact .usageStatsValue {
+  font-size: 12px;
+}
+
+.usageStatsEmpty {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 // 状态监测栏
