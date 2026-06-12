@@ -3,7 +3,7 @@
  */
 
 import { apiClient } from './client';
-import type { Config, RoutingPriorityOverrideConfig } from '@/types';
+import type { Config, RequestBodyAuditConfig, RoutingPriorityOverrideConfig } from '@/types';
 import { normalizeConfigResponse } from './transformers';
 
 type NumericConfigKey = 'request-retry' | 'max-retry-credentials' | 'max-retry-interval';
@@ -63,6 +63,11 @@ const patchNumericConfig = (key: NumericConfigKey, value: number) =>
 const readString = (value: unknown): string =>
   value === undefined || value === null ? '' : String(value);
 
+const readNumber = (value: unknown, fallback = 0): number => {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 const readBoolean = (value: unknown): boolean => {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;
@@ -96,6 +101,72 @@ const normalizeProxyUrlCheckResult = (data: unknown): ProxyUrlCheckResult => {
     message: readString(source.message),
   };
 };
+
+const normalizeStringList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => readString(item).trim()).filter(Boolean);
+};
+
+const normalizeRequestBodyAudit = (value: unknown): RequestBodyAuditConfig => {
+  const source =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const error =
+    source.error && typeof source.error === 'object' && !Array.isArray(source.error)
+      ? (source.error as Record<string, unknown>)
+      : {};
+
+  const statusCode = readNumber(error['status-code'] ?? error.statusCode, 400);
+  const maxBodyBytes = readNumber(source['max-body-bytes'] ?? source.maxBodyBytes, 0);
+
+  return {
+    enable: readBoolean(source.enable),
+    keywords: normalizeStringList(source.keywords),
+    keywordsBase64: normalizeStringList(source['keywords-base64'] ?? source.keywordsBase64),
+    caseSensitive: readBoolean(source['case-sensitive'] ?? source.caseSensitive),
+    maxBodyBytes: Number.isFinite(maxBodyBytes) && maxBodyBytes > 0 ? Math.trunc(maxBodyBytes) : 0,
+    rejectOversize: readBoolean(source['reject-oversize'] ?? source.rejectOversize ?? true),
+    error: {
+      statusCode:
+        Number.isFinite(statusCode) && statusCode >= 100 && statusCode <= 599
+          ? Math.trunc(statusCode)
+          : 400,
+      message: readString(error.message),
+      type: readString(error.type),
+      code: readString(error.code),
+    },
+  };
+};
+
+const normalizeRequestBodyAuditResponse = (data: unknown): RequestBodyAuditConfig => {
+  const source =
+    data && typeof data === 'object' && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : {};
+  return normalizeRequestBodyAudit(source['request-body-audit'] ?? source.requestBodyAudit ?? data);
+};
+
+const serializeRequestBodyAudit = (config: RequestBodyAuditConfig): Record<string, unknown> => ({
+  enable: Boolean(config.enable),
+  keywords: normalizeStringList(config.keywords),
+  'keywords-base64': normalizeStringList(config.keywordsBase64),
+  'case-sensitive': Boolean(config.caseSensitive),
+  'max-body-bytes':
+    typeof config.maxBodyBytes === 'number' && Number.isFinite(config.maxBodyBytes)
+      ? Math.max(0, Math.trunc(config.maxBodyBytes))
+      : 0,
+  'reject-oversize': Boolean(config.rejectOversize),
+  error: {
+    'status-code':
+      typeof config.error?.statusCode === 'number' && Number.isFinite(config.error.statusCode)
+        ? Math.trunc(config.error.statusCode)
+        : 400,
+    message: readString(config.error?.message),
+    type: readString(config.error?.type),
+    code: readString(config.error?.code),
+  },
+});
 
 const normalizeControlPanelUpdateStatus = (data: unknown): ControlPanelUpdateStatus => {
   const source =
@@ -309,6 +380,23 @@ export const configApi = {
    * 请求日志开关
    */
   updateRequestLog: (enabled: boolean) => apiClient.put('/request-log', { value: enabled }),
+
+  /**
+   * 获取请求体关键字审核配置
+   */
+  async getRequestBodyAudit(): Promise<RequestBodyAuditConfig> {
+    const data = await apiClient.get('/request-body-audit');
+    return normalizeRequestBodyAuditResponse(data);
+  },
+
+  /**
+   * 更新请求体关键字审核配置
+   */
+  async updateRequestBodyAudit(config: RequestBodyAuditConfig): Promise<RequestBodyAuditConfig> {
+    await apiClient.put('/request-body-audit', { value: serializeRequestBodyAudit(config) });
+    const data = await apiClient.get('/request-body-audit');
+    return normalizeRequestBodyAuditResponse(data);
+  },
 
   /**
    * 写日志到文件开关

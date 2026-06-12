@@ -14,6 +14,7 @@ import {
   IconSearch,
 } from '@/components/ui/icons';
 import { VisualConfigEditor } from '@/components/config/VisualConfigEditor';
+import { RequestBodyAuditCard } from '@/components/config/RequestBodyAuditCard';
 import { DiffModal } from '@/components/config/DiffModal';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
@@ -545,6 +546,8 @@ export function ConfigPage() {
           </div>
         </div>
       </div>
+
+      <RequestBodyAuditCard disabled={disableControls} />
 
       <div className={styles.workspaceShell}>
         <div className={styles.content}>

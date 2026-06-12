@@ -141,6 +141,34 @@ const normalizeRoutingPriorityOverrides = (
   return normalized.length > 0 ? normalized : [];
 };
 
+const normalizeRequestBodyAudit = (value: unknown): Config['requestBodyAudit'] | undefined => {
+  if (!isRecord(value)) return undefined;
+  const error = isRecord(value.error) ? value.error : {};
+  const statusCode = normalizeNumber(error['status-code'] ?? error.statusCode);
+  const maxBodyBytes = normalizeNumber(value['max-body-bytes'] ?? value.maxBodyBytes);
+
+  return {
+    enable: normalizeBoolean(value.enable),
+    keywords: normalizeStringArray(value.keywords) ?? [],
+    keywordsBase64: normalizeStringArray(value['keywords-base64'] ?? value.keywordsBase64) ?? [],
+    caseSensitive: normalizeBoolean(value['case-sensitive'] ?? value.caseSensitive),
+    maxBodyBytes:
+      maxBodyBytes !== undefined && Number.isFinite(maxBodyBytes) && maxBodyBytes > 0
+        ? Math.trunc(maxBodyBytes)
+        : 0,
+    rejectOversize: normalizeBoolean(value['reject-oversize'] ?? value.rejectOversize ?? true),
+    error: {
+      statusCode:
+        statusCode !== undefined && statusCode >= 100 && statusCode <= 599
+          ? Math.trunc(statusCode)
+          : 400,
+      message: normalizeString(error.message) ?? '',
+      type: normalizeString(error.type) ?? '',
+      code: normalizeString(error.code) ?? '',
+    },
+  };
+};
+
 const normalizeCodexCustomModelGroups = (value: unknown): CodexCustomModelGroup[] => {
   if (!Array.isArray(value)) return [];
 
@@ -590,6 +618,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     raw['usage-statistics-persist-interval-seconds'] ?? raw.usageStatisticsPersistIntervalSeconds
   );
   config.requestLog = normalizeBoolean(raw['request-log'] ?? raw.requestLog);
+  config.requestBodyAudit = normalizeRequestBodyAudit(
+    raw['request-body-audit'] ?? raw.requestBodyAudit
+  );
   config.loggingToFile = normalizeBoolean(raw['logging-to-file'] ?? raw.loggingToFile);
   const logsMaxTotalSizeMb = raw['logs-max-total-size-mb'] ?? raw.logsMaxTotalSizeMb;
   config.logsMaxTotalSizeMb = normalizeNumber(logsMaxTotalSizeMb);

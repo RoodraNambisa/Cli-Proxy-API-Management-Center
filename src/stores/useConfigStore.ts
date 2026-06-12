@@ -45,6 +45,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'usage-statistics-enabled',
   'usage-statistics-persist-interval-seconds',
   'request-log',
+  'request-body-audit',
   'logging-to-file',
   'logs-max-total-size-mb',
   'ws-auth',
@@ -98,6 +99,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.usageStatisticsPersistIntervalSeconds;
     case 'request-log':
       return config.requestLog;
+    case 'request-body-audit':
+      return config.requestBodyAudit;
     case 'logging-to-file':
       return config.loggingToFile;
     case 'logs-max-total-size-mb':
@@ -281,6 +284,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'request-log':
           nextConfig.requestLog = value as Config['requestLog'];
+          break;
+        case 'request-body-audit':
+          nextConfig.requestBodyAudit = value as Config['requestBodyAudit'];
           break;
         case 'logging-to-file':
           nextConfig.loggingToFile = value as Config['loggingToFile'];

@@ -29,6 +29,23 @@ export interface RoutingPriorityOverrideConfig {
   maxRetryCredentials?: number | null;
 }
 
+export interface RequestBodyAuditErrorConfig {
+  statusCode?: number;
+  message?: string;
+  type?: string;
+  code?: string;
+}
+
+export interface RequestBodyAuditConfig {
+  enable?: boolean;
+  keywords?: string[];
+  keywordsBase64?: string[];
+  caseSensitive?: boolean;
+  maxBodyBytes?: number;
+  rejectOversize?: boolean;
+  error?: RequestBodyAuditErrorConfig;
+}
+
 export interface AuthMaintenanceConfig {
   enable?: boolean;
   scanIntervalSeconds?: number;
@@ -125,6 +142,7 @@ export interface Config {
   usageStatisticsEnabled?: boolean;
   usageStatisticsPersistIntervalSeconds?: number;
   requestLog?: boolean;
+  requestBodyAudit?: RequestBodyAuditConfig;
   loggingToFile?: boolean;
   logsMaxTotalSizeMb?: number;
   wsAuth?: boolean;
@@ -167,6 +185,7 @@ export type RawConfigSection =
   | 'usage-statistics-enabled'
   | 'usage-statistics-persist-interval-seconds'
   | 'request-log'
+  | 'request-body-audit'
   | 'logging-to-file'
   | 'logs-max-total-size-mb'
   | 'ws-auth'
