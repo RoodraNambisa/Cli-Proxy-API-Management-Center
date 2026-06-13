@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { IconFilterAll, IconRefreshCw } from '@/components/ui/icons';
+import { CODEX_CONFIG } from '@/components/quota';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { copyToClipboard } from '@/utils/clipboard';
@@ -64,8 +65,9 @@ import {
   writePersistedAuthFilesCompactMode,
   type AuthFilesSortMode,
 } from '@/features/authFiles/uiState';
-import { useAuthStore, useNotificationStore, useThemeStore } from '@/stores';
+import { useAuthStore, useNotificationStore, useQuotaStore, useThemeStore } from '@/stores';
 import type { CodexPlanTypeRefreshTask } from '@/types';
+import { getStatusFromError } from '@/utils/quota';
 import styles from './AuthFilesPage.module.scss';
 
 const easePower3Out = (progress: number) => 1 - (1 - progress) ** 4;
@@ -174,6 +176,7 @@ export function AuthFilesPage() {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
+  const setCodexQuota = useQuotaStore((state) => state.setCodexQuota);
   const resolvedTheme: ResolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const pageTransitionLayer = usePageTransitionLayer();
   const isCurrentLayer = pageTransitionLayer ? pageTransitionLayer.status === 'current' : true;
@@ -193,6 +196,7 @@ export function AuthFilesPage() {
   const [pageSizeInput, setPageSizeInput] = useState('9');
   const [viewMode, setViewMode] = useState<'diagram' | 'list'>('list');
   const [sortMode, setSortMode] = useState<AuthFilesSortMode>('default');
+  const [codexUsageRefreshing, setCodexUsageRefreshing] = useState(false);
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
   const [uiStateHydrated, setUiStateHydrated] = useState(false);
   const floatingBatchActionsRef = useRef<HTMLDivElement>(null);
@@ -466,16 +470,6 @@ export function AuthFilesPage() {
     ]);
   }, [loadFiles, refreshKeyStats, refreshCodexPlanTypeRefreshStatus, loadExcluded, loadModelAlias]);
 
-  const handleRefreshPageUsageStats = useCallback(async () => {
-    try {
-      await refreshKeyStats();
-      showNotification(t('auth_files.usage_stats_refresh_success'), 'success');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t('common.unknown_error');
-      showNotification(t('auth_files.usage_stats_refresh_failed', { message }), 'error');
-    }
-  }, [refreshKeyStats, showNotification, t]);
-
   useHeaderRefresh(handleHeaderRefresh);
 
   useEffect(() => {
@@ -621,6 +615,10 @@ export function AuthFilesPage() {
     () => sorted.filter((file) => !isRuntimeOnlyAuthFile(file)),
     [sorted]
   );
+  const currentPageCodexUsageTargets = useMemo(
+    () => pageItems.filter((file) => CODEX_CONFIG.filterFn(file) && !isRuntimeOnlyAuthFile(file)),
+    [pageItems]
+  );
   const selectedNames = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
   const selectedHasStatusUpdating = useMemo(
     () => selectedNames.some((name) => statusUpdating[name] === true),
@@ -691,6 +689,85 @@ export function AuthFilesPage() {
     selectedNames.length === 0 ||
     batchStatusUpdating ||
     selectedHasStatusUpdating;
+  const usageRefreshLoading = usageLoading || codexUsageRefreshing;
+
+  const refreshCurrentPageCodexUsage = useCallback(async () => {
+    const targets = currentPageCodexUsageTargets;
+    if (targets.length === 0) {
+      return { success: 0, failed: 0 };
+    }
+
+    setCodexQuota((prev) => {
+      const next = { ...prev };
+      targets.forEach((file) => {
+        next[file.name] = CODEX_CONFIG.buildLoadingState();
+      });
+      return next;
+    });
+
+    const results = await Promise.all(
+      targets.map(async (file) => {
+        try {
+          const data = await CODEX_CONFIG.fetchQuota(file, t);
+          return { file, status: 'success' as const, data };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : t('common.unknown_error');
+          return {
+            file,
+            status: 'error' as const,
+            error: message,
+            errorStatus: getStatusFromError(err),
+          };
+        }
+      })
+    );
+
+    setCodexQuota((prev) => {
+      const next = { ...prev };
+      results.forEach((result) => {
+        next[result.file.name] =
+          result.status === 'success'
+            ? CODEX_CONFIG.buildSuccessState(result.data)
+            : CODEX_CONFIG.buildErrorState(result.error, result.errorStatus);
+      });
+      return next;
+    });
+
+    return {
+      success: results.filter((result) => result.status === 'success').length,
+      failed: results.filter((result) => result.status === 'error').length,
+    };
+  }, [currentPageCodexUsageTargets, setCodexQuota, t]);
+
+  const handleRefreshPageUsageStats = useCallback(async () => {
+    if (usageRefreshLoading) return;
+    setCodexUsageRefreshing(true);
+    try {
+      const [, codexResult] = await Promise.all([
+        refreshKeyStats(),
+        refreshCurrentPageCodexUsage(),
+      ]);
+      if (codexResult.failed > 0) {
+        showNotification(
+          t('auth_files.usage_stats_refresh_partial', {
+            success: codexResult.success,
+            failed: codexResult.failed,
+          }),
+          'warning'
+        );
+        return;
+      }
+      showNotification(
+        t('auth_files.usage_stats_refresh_success', { count: codexResult.success }),
+        'success'
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t('common.unknown_error');
+      showNotification(t('auth_files.usage_stats_refresh_failed', { message }), 'error');
+    } finally {
+      setCodexUsageRefreshing(false);
+    }
+  }, [refreshCurrentPageCodexUsage, refreshKeyStats, showNotification, t, usageRefreshLoading]);
 
   const copyTextWithNotification = useCallback(
     async (text: string) => {
@@ -916,8 +993,8 @@ export function AuthFilesPage() {
               variant="secondary"
               size="sm"
               onClick={() => void handleRefreshPageUsageStats()}
-              disabled={disableControls || usageLoading}
-              loading={usageLoading}
+              disabled={disableControls || usageRefreshLoading}
+              loading={usageRefreshLoading}
               className={styles.usageRefreshButton}
             >
               <>
