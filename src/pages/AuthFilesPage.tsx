@@ -217,6 +217,8 @@ export function AuthFilesPage() {
     deletingAll,
     archiveDownloadingSelected,
     archiveDownloadingAll,
+    clearingAllCooldowns,
+    clearingSelectedCooldowns,
     codexPlanRefreshTask,
     codexPlanRefreshLoading,
     codexPlanRefreshStarting,
@@ -238,6 +240,8 @@ export function AuthFilesPage() {
     batchDownload,
     batchArchiveDownload,
     downloadAllArchive,
+    clearAllCooldowns,
+    clearSelectedCooldowns,
     refreshCodexPlanTypeRefreshStatus,
     startCodexPlanTypeRefresh,
     clearCodexPlanTypeRefresh,
@@ -689,6 +693,8 @@ export function AuthFilesPage() {
     selectedNames.length === 0 ||
     batchStatusUpdating ||
     selectedHasStatusUpdating;
+  const clearSelectedCooldownsDisabled =
+    disableControls || selectedNames.length === 0 || clearingSelectedCooldowns;
   const usageRefreshLoading = usageLoading || codexUsageRefreshing;
 
   const refreshCurrentPageCodexUsage = useCallback(async () => {
@@ -1032,6 +1038,15 @@ export function AuthFilesPage() {
               loading={archiveDownloadingAll}
             >
               {t('auth_files.archive_download_all')}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={clearAllCooldowns}
+              disabled={disableControls || loading || clearingAllCooldowns}
+              loading={clearingAllCooldowns}
+            >
+              {t('auth_files.clear_cooldowns_all_button')}
             </Button>
             <Button
               variant="danger"
@@ -1492,6 +1507,15 @@ export function AuthFilesPage() {
                     disabled={disableControls || selectedNames.length === 0 || batchSettings.saving}
                   >
                     {t('auth_files.batch_settings_button')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => clearSelectedCooldowns(selectedNames)}
+                    disabled={clearSelectedCooldownsDisabled}
+                    loading={clearingSelectedCooldowns}
+                  >
+                    {t('auth_files.clear_cooldowns_selected_button')}
                   </Button>
                   <Button
                     size="sm"

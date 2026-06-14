@@ -24,6 +24,25 @@ type AuthFileArchiveResult = {
   blob: Blob;
   filename: string;
 };
+export type AuthCooldownClearAllResult = {
+  status: string;
+  total: number;
+  updated: number;
+};
+export type AuthCooldownClearSelectedItem = {
+  name?: string;
+  id?: string;
+  models?: string[];
+};
+export type AuthCooldownClearSelectedRequest =
+  | { names: string[] }
+  | { items: AuthCooldownClearSelectedItem[] };
+export type AuthCooldownClearSelectedResult = {
+  status: string;
+  matched: number;
+  updated: number;
+  missing: string[];
+};
 type AuthFileBatchUploadResponse = {
   status?: string;
   uploaded?: number;
@@ -35,6 +54,17 @@ type AuthFileBatchDeleteResponse = {
   deleted?: number;
   files?: unknown;
   failed?: unknown;
+};
+type AuthCooldownClearAllResponse = {
+  status?: string;
+  total?: unknown;
+  updated?: unknown;
+};
+type AuthCooldownClearSelectedResponse = {
+  status?: string;
+  matched?: unknown;
+  updated?: unknown;
+  missing?: unknown;
 };
 type AuthFileBatchUploadResult = {
   status: string;
@@ -258,6 +288,23 @@ const normalizeBatchDeleteResponse = (
     failed,
   };
 };
+
+const normalizeAuthCooldownClearAllResponse = (
+  payload: AuthCooldownClearAllResponse | undefined
+): AuthCooldownClearAllResult => ({
+  status: typeof payload?.status === 'string' ? payload.status : 'ok',
+  total: readNumberValue(payload?.total) ?? 0,
+  updated: readNumberValue(payload?.updated) ?? 0,
+});
+
+const normalizeAuthCooldownClearSelectedResponse = (
+  payload: AuthCooldownClearSelectedResponse | undefined
+): AuthCooldownClearSelectedResult => ({
+  status: typeof payload?.status === 'string' ? payload.status : 'ok',
+  matched: readNumberValue(payload?.matched) ?? 0,
+  updated: readNumberValue(payload?.updated) ?? 0,
+  missing: normalizeBatchFileNames(payload?.missing),
+});
 
 const readTextField = (entry: AuthFileEntry, key: string): string => {
   const value = entry[key];
@@ -653,6 +700,36 @@ export const authFilesApi = {
 
   downloadArchiveAll: async (): Promise<AuthFileArchiveResult> =>
     downloadAuthFilesArchive({ all: true }),
+
+  clearAllCooldowns: async (): Promise<AuthCooldownClearAllResult> =>
+    normalizeAuthCooldownClearAllResponse(
+      await apiClient.post<AuthCooldownClearAllResponse>('/auth-files/cooldowns/clear')
+    ),
+
+  clearSelectedCooldowns: async (
+    payload: AuthCooldownClearSelectedRequest
+  ): Promise<AuthCooldownClearSelectedResult> => {
+    const requestPayload =
+      'names' in payload
+        ? { names: normalizeRequestedAuthFileNames(payload.names) }
+        : {
+            items: payload.items
+              .map((item) => ({
+                name: readStringValue(item.name),
+                id: readStringValue(item.id),
+                models: Array.isArray(item.models)
+                  ? normalizeRequestedAuthFileNames(item.models)
+                  : undefined,
+              }))
+              .filter((item) => item.name || item.id),
+          };
+
+    const response = await apiClient.post<AuthCooldownClearSelectedResponse>(
+      '/auth-files/cooldowns/clear-selected',
+      requestPayload
+    );
+    return normalizeAuthCooldownClearSelectedResponse(response);
+  },
 
   getCodexPlanTypeRefreshStatus: async (): Promise<CodexPlanTypeRefreshTask> =>
     normalizeCodexPlanTypeRefreshTask(

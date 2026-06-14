@@ -14,6 +14,7 @@ import {
 } from '@/features/authFiles/constants';
 
 const CODEX_PLAN_TYPE_REFRESH_POLL_INTERVAL_MS = 3000;
+const COOLDOWN_MISSING_PREVIEW_LIMIT = 5;
 
 const getArchiveDownloadErrorMeta = (
   err: unknown
@@ -67,6 +68,14 @@ const isCodexPlanRefreshTerminal = (task: CodexPlanTypeRefreshTask | null): bool
       task.state === 'failed')
   );
 
+const formatMissingCooldownTargets = (missing: string[]): string => {
+  const normalized = Array.from(new Set(missing.map((item) => item.trim()).filter(Boolean)));
+  if (normalized.length <= COOLDOWN_MISSING_PREVIEW_LIMIT) {
+    return normalized.join(', ');
+  }
+  return `${normalized.slice(0, COOLDOWN_MISSING_PREVIEW_LIMIT).join(', ')}...`;
+};
+
 type DeleteAllOptions = {
   filter: string;
   problemOnly: boolean;
@@ -87,6 +96,8 @@ export type UseAuthFilesDataResult = {
   deletingAll: boolean;
   archiveDownloadingSelected: boolean;
   archiveDownloadingAll: boolean;
+  clearingAllCooldowns: boolean;
+  clearingSelectedCooldowns: boolean;
   codexPlanRefreshTask: CodexPlanTypeRefreshTask | null;
   codexPlanRefreshLoading: boolean;
   codexPlanRefreshStarting: boolean;
@@ -108,6 +119,8 @@ export type UseAuthFilesDataResult = {
   batchDownload: (names: string[]) => Promise<void>;
   batchArchiveDownload: (names: string[]) => Promise<void>;
   downloadAllArchive: () => Promise<void>;
+  clearAllCooldowns: () => void;
+  clearSelectedCooldowns: (names: string[]) => void;
   refreshCodexPlanTypeRefreshStatus: () => Promise<void>;
   startCodexPlanTypeRefresh: () => Promise<void>;
   clearCodexPlanTypeRefresh: () => Promise<void>;
@@ -136,6 +149,8 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const [deletingAll, setDeletingAll] = useState(false);
   const [archiveDownloadingSelected, setArchiveDownloadingSelected] = useState(false);
   const [archiveDownloadingAll, setArchiveDownloadingAll] = useState(false);
+  const [clearingAllCooldowns, setClearingAllCooldowns] = useState(false);
+  const [clearingSelectedCooldowns, setClearingSelectedCooldowns] = useState(false);
   const [codexPlanRefreshTask, setCodexPlanRefreshTask] = useState<CodexPlanTypeRefreshTask | null>(
     null
   );
@@ -948,6 +963,95 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     }
   }, [archiveDownloadingAll, showNotification, t]);
 
+  const clearAllCooldowns = useCallback(() => {
+    if (clearingAllCooldowns) return;
+
+    showConfirmation({
+      title: t('auth_files.clear_cooldowns_all_title'),
+      message: t('auth_files.clear_cooldowns_all_confirm'),
+      variant: 'primary',
+      confirmText: t('auth_files.clear_cooldowns_all_button'),
+      onConfirm: async () => {
+        setClearingAllCooldowns(true);
+        try {
+          const result = await authFilesApi.clearAllCooldowns();
+          await Promise.allSettled([loadFiles(), refreshKeyStats()]);
+          showNotification(
+            t('auth_files.clear_cooldowns_all_success', {
+              total: result.total,
+              updated: result.updated,
+            }),
+            'success'
+          );
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : '';
+          showNotification(t('auth_files.clear_cooldowns_failed', { message }), 'error');
+        } finally {
+          setClearingAllCooldowns(false);
+        }
+      },
+    });
+  }, [clearingAllCooldowns, loadFiles, refreshKeyStats, showConfirmation, showNotification, t]);
+
+  const clearSelectedCooldowns = useCallback(
+    (names: string[]) => {
+      if (clearingSelectedCooldowns) return;
+
+      const uniqueNames = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
+      if (uniqueNames.length === 0) {
+        showNotification(t('auth_files.clear_cooldowns_selected_empty'), 'info');
+        return;
+      }
+
+      showConfirmation({
+        title: t('auth_files.clear_cooldowns_selected_title'),
+        message: t('auth_files.clear_cooldowns_selected_confirm', { count: uniqueNames.length }),
+        variant: 'primary',
+        confirmText: t('auth_files.clear_cooldowns_selected_button'),
+        onConfirm: async () => {
+          setClearingSelectedCooldowns(true);
+          try {
+            const result = await authFilesApi.clearSelectedCooldowns({ names: uniqueNames });
+            await Promise.allSettled([loadFiles(), refreshKeyStats()]);
+            if (result.missing.length > 0) {
+              showNotification(
+                t('auth_files.clear_cooldowns_selected_success_with_missing', {
+                  matched: result.matched,
+                  updated: result.updated,
+                  missing: formatMissingCooldownTargets(result.missing),
+                }),
+                'warning'
+              );
+            } else {
+              showNotification(
+                t('auth_files.clear_cooldowns_selected_success', {
+                  matched: result.matched,
+                  updated: result.updated,
+                }),
+                'success'
+              );
+            }
+            deselectAll();
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : '';
+            showNotification(t('auth_files.clear_cooldowns_failed', { message }), 'error');
+          } finally {
+            setClearingSelectedCooldowns(false);
+          }
+        },
+      });
+    },
+    [
+      clearingSelectedCooldowns,
+      deselectAll,
+      loadFiles,
+      refreshKeyStats,
+      showConfirmation,
+      showNotification,
+      t,
+    ]
+  );
+
   const batchDelete = useCallback(
     (names: string[]) => {
       const uniqueNames = Array.from(new Set(names));
@@ -999,6 +1103,8 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     deletingAll,
     archiveDownloadingSelected,
     archiveDownloadingAll,
+    clearingAllCooldowns,
+    clearingSelectedCooldowns,
     codexPlanRefreshTask,
     codexPlanRefreshLoading,
     codexPlanRefreshStarting,
@@ -1020,6 +1126,8 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     batchDownload,
     batchArchiveDownload,
     downloadAllArchive,
+    clearAllCooldowns,
+    clearSelectedCooldowns,
     refreshCodexPlanTypeRefreshStatus,
     startCodexPlanTypeRefresh,
     clearCodexPlanTypeRefresh,
