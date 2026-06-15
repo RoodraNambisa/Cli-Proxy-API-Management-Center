@@ -14,7 +14,10 @@ import {
   IconSearch,
 } from '@/components/ui/icons';
 import { VisualConfigEditor } from '@/components/config/VisualConfigEditor';
-import { RequestBodyAuditCard } from '@/components/config/RequestBodyAuditCard';
+import {
+  RequestBodyAuditCard,
+  type RequestBodyAuditCardHandle,
+} from '@/components/config/RequestBodyAuditCard';
 import { DiffModal } from '@/components/config/DiffModal';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
@@ -71,6 +74,7 @@ export function ConfigPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [requestBodyAuditDirty, setRequestBodyAuditDirty] = useState(false);
   const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [serverYaml, setServerYaml] = useState('');
   const [mergedYaml, setMergedYaml] = useState('');
@@ -84,9 +88,11 @@ export function ConfigPage() {
   const [lastSearchedQuery, setLastSearchedQuery] = useState('');
   const editorRef = useRef<ReactCodeMirrorRef | null>(null);
   const floatingActionsRef = useRef<HTMLDivElement>(null);
+  const requestBodyAuditRef = useRef<RequestBodyAuditCardHandle | null>(null);
 
   const disableControls = connectionStatus !== 'connected';
-  const isDirty = dirty || visualDirty;
+  const yamlDirty = dirty || visualDirty;
+  const isDirty = yamlDirty || requestBodyAuditDirty;
   const shouldRenderFloatingActions = isCurrentLayer;
   const hasVisualModeError = !!visualParseError;
   const hasVisualValidationErrors =
@@ -166,6 +172,10 @@ export function ConfigPage() {
       if (commercialModeChanged) {
         showNotification(t('notification.commercial_mode_restart_required'), 'warning');
       }
+
+      if (requestBodyAuditDirty) {
+        await requestBodyAuditRef.current?.save();
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';
       showNotification(`${t('notification.save_failed')}: ${message}`, 'error');
@@ -175,7 +185,17 @@ export function ConfigPage() {
   };
 
   const handleSave = async () => {
-    if (activeTab === 'visual' && visualParseError) {
+    if (!yamlDirty && requestBodyAuditDirty) {
+      setSaving(true);
+      try {
+        await requestBodyAuditRef.current?.save();
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    if (yamlDirty && activeTab === 'visual' && visualParseError) {
       showNotification(t('config_management.visual_mode_save_blocked'), 'error');
       return;
     }
@@ -184,7 +204,7 @@ export function ConfigPage() {
     try {
       const latestServerYaml = await configFileApi.fetchConfigYaml();
 
-      if (activeTab !== 'source') {
+      if (yamlDirty && activeTab !== 'source') {
         const latestDocument = parseDocument(latestServerYaml);
         if (latestDocument.errors.length > 0) {
           showNotification(
@@ -222,6 +242,10 @@ export function ConfigPage() {
         setServerYaml(latestServerYaml);
         setMergedYaml(nextMergedYaml);
         loadVisualValuesFromYaml(latestServerYaml);
+        if (requestBodyAuditDirty) {
+          await requestBodyAuditRef.current?.save();
+          return;
+        }
         showNotification(t('config_management.diff.no_changes'), 'info');
         return;
       }
@@ -447,7 +471,7 @@ export function ConfigPage() {
 
   const handleReload = useCallback(() => {
     if (!isDirty) {
-      void loadConfig();
+      void Promise.all([loadConfig(), requestBodyAuditRef.current?.reload()]);
       return;
     }
 
@@ -458,7 +482,7 @@ export function ConfigPage() {
       cancelText: t('common.cancel'),
       variant: 'danger',
       onConfirm: async () => {
-        await loadConfig();
+        await Promise.all([loadConfig(), requestBodyAuditRef.current?.reload()]);
       },
     });
   }, [isDirty, loadConfig, showConfirmation, t]);
@@ -493,8 +517,7 @@ export function ConfigPage() {
             saving ||
             !isDirty ||
             diffModalOpen ||
-            hasVisualModeError ||
-            hasVisualValidationErrors
+            (yamlDirty && (hasVisualModeError || hasVisualValidationErrors))
           }
           title={t('config_management.save')}
           aria-label={t('config_management.save')}
@@ -547,7 +570,12 @@ export function ConfigPage() {
         </div>
       </div>
 
-      <RequestBodyAuditCard disabled={disableControls} />
+      <RequestBodyAuditCard
+        ref={requestBodyAuditRef}
+        disabled={disableControls}
+        externalSaving={saving}
+        onDirtyChange={setRequestBodyAuditDirty}
+      />
 
       <div className={styles.workspaceShell}>
         <div className={styles.content}>

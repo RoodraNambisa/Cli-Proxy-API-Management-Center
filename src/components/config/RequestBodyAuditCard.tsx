@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -24,6 +24,18 @@ type RequestBodyAuditDraft = {
 };
 
 type DraftErrors = Partial<Record<'maxBodyBytes' | 'errorStatusCode', string>>;
+
+export type RequestBodyAuditCardHandle = {
+  save: () => Promise<boolean>;
+  reload: () => Promise<void>;
+  reset: () => void;
+};
+
+type RequestBodyAuditCardProps = {
+  disabled?: boolean;
+  externalSaving?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
+};
 
 type KeywordListProps = {
   title: string;
@@ -176,7 +188,10 @@ function KeywordList({
   );
 }
 
-export function RequestBodyAuditCard({ disabled = false }: { disabled?: boolean }) {
+export const RequestBodyAuditCard = forwardRef<
+  RequestBodyAuditCardHandle,
+  RequestBodyAuditCardProps
+>(function RequestBodyAuditCard({ disabled = false, externalSaving = false, onDirtyChange }, ref) {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
   const clearConfigCache = useConfigStore((state) => state.clearCache);
@@ -190,11 +205,16 @@ export function RequestBodyAuditCard({ disabled = false }: { disabled?: boolean 
   const [loadError, setLoadError] = useState('');
 
   const isBusy = loading || saving;
-  const controlsDisabled = disabled || isBusy;
+  const controlsDisabled = disabled || isBusy || externalSaving;
   const dirty = useMemo(
     () => stableConfigString(draft) !== stableConfigString(baseline),
     [baseline, draft]
   );
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+    return () => onDirtyChange?.(false);
+  }, [dirty, onDirtyChange]);
 
   const loadAuditConfig = useCallback(
     async ({ manual = false }: { manual?: boolean } = {}) => {
@@ -240,10 +260,10 @@ export function RequestBodyAuditCard({ disabled = false }: { disabled?: boolean 
     return nextErrors;
   }, [draft.errorStatusCode, draft.maxBodyBytes, t]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (): Promise<boolean> => {
     const nextErrors = validateDraft();
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (Object.keys(nextErrors).length > 0) return false;
 
     setSaving(true);
     try {
@@ -259,6 +279,7 @@ export function RequestBodyAuditCard({ disabled = false }: { disabled?: boolean 
         // The local card has already saved and reloaded its own endpoint.
       }
       showNotification(t('config_management.request_body_audit.save_success'), 'success');
+      return true;
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : typeof error === 'string' ? error : '';
@@ -266,6 +287,7 @@ export function RequestBodyAuditCard({ disabled = false }: { disabled?: boolean 
         `${t('config_management.request_body_audit.save_failed')}${message ? `: ${message}` : ''}`,
         'error'
       );
+      return false;
     } finally {
       setSaving(false);
     }
@@ -275,6 +297,16 @@ export function RequestBodyAuditCard({ disabled = false }: { disabled?: boolean 
     setDraft(baseline);
     setErrors({});
   }, [baseline]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      save: handleSave,
+      reload: () => loadAuditConfig(),
+      reset: handleReset,
+    }),
+    [handleSave, handleReset, loadAuditConfig]
+  );
 
   return (
     <Card>
@@ -294,7 +326,7 @@ export function RequestBodyAuditCard({ disabled = false }: { disabled?: boolean 
               variant="secondary"
               size="sm"
               loading={loading}
-              disabled={disabled || saving}
+              disabled={disabled || saving || externalSaving}
               onClick={() => void loadAuditConfig({ manual: true })}
             >
               <IconRefreshCw size={14} />
@@ -450,7 +482,7 @@ export function RequestBodyAuditCard({ disabled = false }: { disabled?: boolean 
           <Button
             type="button"
             loading={saving}
-            disabled={disabled || loading || !dirty}
+            disabled={disabled || loading || externalSaving || !dirty}
             onClick={() => void handleSave()}
           >
             {t('common.save')}
@@ -459,4 +491,4 @@ export function RequestBodyAuditCard({ disabled = false }: { disabled?: boolean 
       </div>
     </Card>
   );
-}
+});
