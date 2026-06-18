@@ -6,12 +6,16 @@ import { apiClient } from './client';
 import { computeKeyStats, KeyStats, normalizeAuthIndex } from '@/utils/usage';
 import type {
   UsageAuthModelsResponse,
+  UsageAuthsQuery,
   UsageAuthsResponse,
   UsageAuthSummary,
   UsageDetailsQuery,
   UsageDetailsResponse,
   UsageEnvelope,
   UsageMeta,
+  UsageRangeQuery,
+  UsageSeriesQuery,
+  UsageSeriesResponse,
 } from '@/types';
 
 const USAGE_TIMEOUT_MS = 60 * 1000;
@@ -46,8 +50,38 @@ const normalizeDetailsQuery = (query: UsageDetailsQuery = {}) => {
     ...query,
     offset,
     limit,
+    sort_by: query.sort_by || 'created_at',
+    sort_order: query.sort_order || 'desc',
   };
 };
+
+const normalizeRangeQuery = <T extends UsageRangeQuery>(query: T = {} as T): T => {
+  const params = { ...query };
+  if (!params.from) delete params.from;
+  if (!params.to) delete params.to;
+  return params;
+};
+
+const normalizeAuthsQuery = (query: UsageAuthsQuery = {}) => {
+  const params = normalizeRangeQuery(query);
+  const authIndex = params.auth_index;
+  if (Array.isArray(authIndex)) {
+    params.auth_index = authIndex
+      .map((item) => String(item).trim())
+      .filter(Boolean)
+      .join(',');
+  }
+  if (params.auth_index === '') {
+    delete params.auth_index;
+  }
+  return params;
+};
+
+const normalizeSeriesQuery = (query: UsageSeriesQuery = {}) => ({
+  ...normalizeRangeQuery(query),
+  bucket: query.bucket || 'hour',
+  group_by: query.group_by || 'model',
+});
 
 export const usageApi = {
   /**
@@ -64,9 +98,10 @@ export const usageApi = {
   /**
    * 获取不包含 details 的全局/API/model 汇总
    */
-  getUsageSummary: () =>
+  getUsageSummary: (query?: UsageRangeQuery) =>
     apiClient.get<UsageEnvelope<Record<string, unknown>>>('/usage/summary', {
       timeout: USAGE_TIMEOUT_MS,
+      params: normalizeRangeQuery(query),
     }),
 
   /**
@@ -81,8 +116,20 @@ export const usageApi = {
   /**
    * 获取凭证维度汇总，包含当前零使用量凭证
    */
-  getUsageAuths: () =>
-    apiClient.get<UsageAuthsResponse>('/usage/auths', { timeout: USAGE_TIMEOUT_MS }),
+  getUsageAuths: (query?: UsageAuthsQuery) =>
+    apiClient.get<UsageAuthsResponse>('/usage/auths', {
+      timeout: USAGE_TIMEOUT_MS,
+      params: normalizeAuthsQuery(query),
+    }),
+
+  /**
+   * 获取时间序列汇总
+   */
+  getUsageSeries: (query?: UsageSeriesQuery) =>
+    apiClient.get<UsageSeriesResponse>('/usage/series', {
+      timeout: USAGE_TIMEOUT_MS,
+      params: normalizeSeriesQuery(query),
+    }),
 
   /**
    * 获取单个凭证汇总

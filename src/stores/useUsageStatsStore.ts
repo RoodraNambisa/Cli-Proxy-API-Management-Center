@@ -1,9 +1,16 @@
 import { create } from 'zustand';
 import { usageApi } from '@/services/api';
 import { useAuthStore } from '@/stores/useAuthStore';
-import type { UsageAuthSummary, UsageDetailsQuery, UsageDetailsResponse, UsageMeta } from '@/types';
+import type {
+  UsageAuthSummary,
+  UsageDetailsQuery,
+  UsageDetailsResponse,
+  UsageMeta,
+  UsageRangeQuery,
+} from '@/types';
 import { parseTimestampMs } from '@/utils/timestamp';
 import {
+  buildUsageRangeKey,
   collectUsageDetails,
   computeKeyStatsFromDetails,
   extractLatencyMs,
@@ -19,12 +26,20 @@ export const USAGE_STATS_STALE_TIME_MS = 240_000;
 export type LoadUsageStatsOptions = {
   force?: boolean;
   staleTimeMs?: number;
+  range?: UsageRangeQuery;
 };
 
 export type LoadUsageDetailsOptions = {
   force?: boolean;
   query?: UsageDetailsQuery;
   append?: boolean;
+};
+
+export type LoadUsageAuthsOptions = {
+  force?: boolean;
+  staleTimeMs?: number;
+  authIndexes?: Array<string | number>;
+  range?: UsageRangeQuery;
 };
 
 type UsageStatsSnapshot = Record<string, unknown>;
@@ -45,15 +60,22 @@ type UsageStatsState = {
   keyStats: KeyStats;
   usageDetails: UsageDetail[];
   loading: boolean;
+  authsLoading: boolean;
   detailsLoading: boolean;
   error: string | null;
+  authsError: string | null;
   detailsError: string | null;
   lastRefreshedAt: number | null;
+  authsRefreshedAt: number | null;
   detailsRefreshedAt: number | null;
   detailsPage: UsageDetailsPage | null;
   scopeKey: string;
+  usageRangeKey: string;
+  authsRangeKey: string;
+  authsIndexKey: string;
   loadUsageStats: (options?: LoadUsageStatsOptions) => Promise<void>;
   loadUsageDetails: (options?: LoadUsageDetailsOptions) => Promise<UsageDetailsPage>;
+  loadUsageAuths: (options?: LoadUsageAuthsOptions) => Promise<UsageAuthSummary[]>;
   clearUsageStats: () => void;
 };
 
@@ -61,7 +83,13 @@ const createEmptyKeyStats = (): KeyStats => ({ bySource: {}, byAuthIndex: {} });
 
 let usageRequestToken = 0;
 let detailsRequestToken = 0;
-let inFlightUsageRequest: { id: number; scopeKey: string; promise: Promise<void> } | null = null;
+let authsRequestToken = 0;
+let inFlightUsageRequest: {
+  id: number;
+  scopeKey: string;
+  rangeKey: string;
+  promise: Promise<void>;
+} | null = null;
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error
@@ -117,6 +145,30 @@ const computeKeyStatsFromAuths = (auths: UsageAuthSummary[]): KeyStats => {
 
   return { bySource: {}, byAuthIndex };
 };
+
+const buildAuthsIndexKey = (authIndexes: Array<string | number> | undefined): string => {
+  if (authIndexes === undefined) return '*';
+  return Array.from(
+    new Set(
+      authIndexes
+        .map((item) => normalizeAuthIndex(item))
+        .filter((item): item is string => Boolean(item))
+    )
+  )
+    .sort((a, b) => a.localeCompare(b))
+    .join(',');
+};
+
+const normalizeAuthIndexes = (authIndexes: Array<string | number> | undefined): string[] =>
+  authIndexes === undefined
+    ? []
+    : Array.from(
+        new Set(
+          authIndexes
+            .map((item) => normalizeAuthIndex(item))
+            .filter((item): item is string => Boolean(item))
+        )
+      );
 
 const normalizeTokenNumber = (value: unknown): number => {
   const parsed = Number(value);
@@ -212,9 +264,10 @@ const buildDetailsPage = (
       : Math.max(toNumber(response.next_offset), 0),
   hasMore: response.has_more === true,
   totalMatched:
-    response.total_matched === undefined || response.total_matched === null
+    (response.total ?? response.total_matched) === undefined ||
+    (response.total ?? response.total_matched) === null
       ? null
-      : Math.max(toNumber(response.total_matched), 0),
+      : Math.max(toNumber(response.total ?? response.total_matched), 0),
 });
 
 export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
@@ -224,23 +277,35 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
   keyStats: createEmptyKeyStats(),
   usageDetails: [],
   loading: false,
+  authsLoading: false,
   detailsLoading: false,
   error: null,
+  authsError: null,
   detailsError: null,
   lastRefreshedAt: null,
+  authsRefreshedAt: null,
   detailsRefreshedAt: null,
   detailsPage: null,
   scopeKey: '',
+  usageRangeKey: '',
+  authsRangeKey: '',
+  authsIndexKey: '',
 
   loadUsageStats: async (options = {}) => {
     const force = options.force === true;
     const staleTimeMs = options.staleTimeMs ?? USAGE_STATS_STALE_TIME_MS;
+    const range = options.range;
+    const rangeKey = buildUsageRangeKey(range);
     const { apiBase = '', managementAccessPath = '', managementKey = '' } = useAuthStore.getState();
     const scopeKey = `${apiBase}::${managementAccessPath}::${managementKey}`;
     const state = get();
     const scopeChanged = state.scopeKey !== scopeKey;
 
-    if (inFlightUsageRequest && inFlightUsageRequest.scopeKey === scopeKey) {
+    if (
+      inFlightUsageRequest &&
+      inFlightUsageRequest.scopeKey === scopeKey &&
+      inFlightUsageRequest.rangeKey === rangeKey
+    ) {
       await inFlightUsageRequest.promise;
       return;
     }
@@ -252,6 +317,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
 
     const fresh =
       !scopeChanged &&
+      state.usageRangeKey === rangeKey &&
       state.lastRefreshedAt !== null &&
       Date.now() - state.lastRefreshedAt < staleTimeMs;
 
@@ -267,16 +333,21 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
         keyStats: createEmptyKeyStats(),
         usageDetails: [],
         error: null,
+        authsError: null,
         detailsError: null,
         lastRefreshedAt: null,
+        authsRefreshedAt: null,
         detailsRefreshedAt: null,
         detailsPage: null,
         scopeKey,
+        usageRangeKey: '',
+        authsRangeKey: '',
+        authsIndexKey: '',
       });
     }
 
     const requestId = (usageRequestToken += 1);
-    set({ loading: true, error: null, scopeKey });
+    set({ loading: true, error: null, scopeKey, usageRangeKey: rangeKey });
 
     const requestPromise = (async () => {
       const loadLegacyUsage = async () => {
@@ -298,6 +369,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
           error: null,
           lastRefreshedAt: Date.now(),
           scopeKey,
+          usageRangeKey: rangeKey,
         });
       };
 
@@ -323,7 +395,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
           !force &&
           !scopeChanged &&
           current.usage !== null &&
-          current.usageAuths.length > 0 &&
+          current.usageRangeKey === rangeKey &&
           metaVersion !== null &&
           cachedVersion === metaVersion;
 
@@ -335,17 +407,14 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
             error: null,
             lastRefreshedAt: Date.now(),
             scopeKey,
+            usageRangeKey: rangeKey,
           });
           return;
         }
 
         let summaryResponse: unknown;
-        let authsResponse: unknown;
         try {
-          [summaryResponse, authsResponse] = await Promise.all([
-            usageApi.getUsageSummary(),
-            usageApi.getUsageAuths(),
-          ]);
+          summaryResponse = await usageApi.getUsageSummary(range);
         } catch (error: unknown) {
           if (isNotFoundError(error)) {
             await loadLegacyUsage();
@@ -357,10 +426,6 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
         if (requestId !== usageRequestToken) return;
 
         const summaryUsage = getUsageEnvelopeData(summaryResponse) ?? {};
-        const authsRecord = isRecord(authsResponse) ? authsResponse : null;
-        const usageAuths = Array.isArray(authsRecord?.auths)
-          ? (authsRecord.auths as UsageAuthSummary[])
-          : [];
         const usage: UsageStatsSnapshot = {
           ...metaUsage,
           ...summaryUsage,
@@ -369,13 +434,12 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
         set({
           usage,
           usageMeta: metaUsage as UsageMeta,
-          usageAuths,
-          keyStats: computeKeyStatsFromAuths(usageAuths),
           usageDetails: [],
           loading: false,
           error: null,
           lastRefreshedAt: Date.now(),
           scopeKey,
+          usageRangeKey: rangeKey,
         });
       } catch (error: unknown) {
         if (requestId !== usageRequestToken) return;
@@ -384,6 +448,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
           loading: false,
           error: message,
           scopeKey,
+          usageRangeKey: rangeKey,
         });
         throw new Error(message);
       } finally {
@@ -393,7 +458,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
       }
     })();
 
-    inFlightUsageRequest = { id: requestId, scopeKey, promise: requestPromise };
+    inFlightUsageRequest = { id: requestId, scopeKey, rangeKey, promise: requestPromise };
     await requestPromise;
   },
 
@@ -422,7 +487,11 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
       let page: UsageDetailsPage;
       try {
         const response = await usageApi.getUsageDetails(query);
-        const detailsRaw = Array.isArray(response.details) ? response.details : [];
+        const detailsRaw = Array.isArray(response.items)
+          ? response.items
+          : Array.isArray(response.details)
+            ? response.details
+            : [];
         const details = detailsRaw.map((detail, index) => normalizeUsageDetail(detail, index));
         page = buildDetailsPage(response, details);
       } catch (error: unknown) {
@@ -488,9 +557,131 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
     }
   },
 
+  loadUsageAuths: async (options = {}) => {
+    const force = options.force === true;
+    const staleTimeMs = options.staleTimeMs ?? USAGE_STATS_STALE_TIME_MS;
+    const range = options.range;
+    const rangeKey = buildUsageRangeKey(range);
+    const indexKey = buildAuthsIndexKey(options.authIndexes);
+    const hasAuthIndexFilter = options.authIndexes !== undefined;
+    const normalizedAuthIndexes = normalizeAuthIndexes(options.authIndexes);
+    const { apiBase = '', managementAccessPath = '', managementKey = '' } = useAuthStore.getState();
+    const scopeKey = `${apiBase}::${managementAccessPath}::${managementKey}`;
+    const state = get();
+    const scopeChanged = state.scopeKey !== scopeKey;
+
+    const fresh =
+      !scopeChanged &&
+      state.authsRangeKey === rangeKey &&
+      state.authsIndexKey === indexKey &&
+      state.authsRefreshedAt !== null &&
+      Date.now() - state.authsRefreshedAt < staleTimeMs;
+
+    if (!force && fresh) {
+      return state.usageAuths;
+    }
+
+    if (scopeChanged) {
+      set({
+        usageAuths: [],
+        keyStats: createEmptyKeyStats(),
+        authsError: null,
+        authsRefreshedAt: null,
+        authsRangeKey: '',
+        authsIndexKey: '',
+        scopeKey,
+      });
+    }
+
+    const requestId = (authsRequestToken += 1);
+    set({
+      authsLoading: true,
+      authsError: null,
+      scopeKey,
+      authsRangeKey: rangeKey,
+      authsIndexKey: indexKey,
+    });
+
+    if (hasAuthIndexFilter && normalizedAuthIndexes.length === 0) {
+      set({
+        usageAuths: [],
+        keyStats: createEmptyKeyStats(),
+        authsLoading: false,
+        authsError: null,
+        authsRefreshedAt: Date.now(),
+        scopeKey,
+        authsRangeKey: rangeKey,
+        authsIndexKey: indexKey,
+      });
+      return [];
+    }
+
+    try {
+      let usageAuths: UsageAuthSummary[] = [];
+      try {
+        const response = await usageApi.getUsageAuths({
+          ...range,
+          auth_index: hasAuthIndexFilter ? normalizedAuthIndexes : undefined,
+        });
+        usageAuths = Array.isArray(response.auths) ? response.auths : [];
+      } catch (error: unknown) {
+        if (!isNotFoundError(error)) {
+          throw error;
+        }
+        const usageResponse = await usageApi.getUsage();
+        const rawUsage = usageResponse?.usage ?? usageResponse;
+        const legacyDetails = collectUsageDetails(rawUsage);
+        const keyStats = computeKeyStatsFromDetails(legacyDetails);
+        if (requestId === authsRequestToken) {
+          set({
+            usageAuths: [],
+            keyStats,
+            authsLoading: false,
+            authsError: null,
+            authsRefreshedAt: Date.now(),
+            scopeKey,
+            authsRangeKey: rangeKey,
+            authsIndexKey: indexKey,
+          });
+        }
+        return [];
+      }
+
+      if (requestId !== authsRequestToken) {
+        return get().usageAuths;
+      }
+
+      set({
+        usageAuths,
+        keyStats: computeKeyStatsFromAuths(usageAuths),
+        authsLoading: false,
+        authsError: null,
+        authsRefreshedAt: Date.now(),
+        scopeKey,
+        authsRangeKey: rangeKey,
+        authsIndexKey: indexKey,
+      });
+      return usageAuths;
+    } catch (error: unknown) {
+      if (requestId !== authsRequestToken) {
+        return get().usageAuths;
+      }
+      const message = getErrorMessage(error);
+      set({
+        authsLoading: false,
+        authsError: message,
+        scopeKey,
+        authsRangeKey: rangeKey,
+        authsIndexKey: indexKey,
+      });
+      throw new Error(message);
+    }
+  },
+
   clearUsageStats: () => {
     usageRequestToken += 1;
     detailsRequestToken += 1;
+    authsRequestToken += 1;
     inFlightUsageRequest = null;
     set({
       usage: null,
@@ -499,13 +690,19 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
       keyStats: createEmptyKeyStats(),
       usageDetails: [],
       loading: false,
+      authsLoading: false,
       detailsLoading: false,
       error: null,
+      authsError: null,
       detailsError: null,
       lastRefreshedAt: null,
+      authsRefreshedAt: null,
       detailsRefreshedAt: null,
       detailsPage: null,
       scopeKey: '',
+      usageRangeKey: '',
+      authsRangeKey: '',
+      authsIndexKey: '',
     });
   },
 }));

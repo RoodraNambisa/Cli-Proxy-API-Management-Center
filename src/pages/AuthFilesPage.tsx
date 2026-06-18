@@ -68,6 +68,7 @@ import {
 import { useAuthStore, useNotificationStore, useQuotaStore, useThemeStore } from '@/stores';
 import type { CodexPlanTypeRefreshTask } from '@/types';
 import { getStatusFromError } from '@/utils/quota';
+import { normalizeAuthIndex } from '@/utils/usage';
 import styles from './AuthFilesPage.module.scss';
 
 const easePower3Out = (progress: number) => 1 - (1 - progress) ** 4;
@@ -206,9 +207,13 @@ export function AuthFilesPage() {
   const batchActionAnimationRef = useRef<AnimationPlaybackControlsWithThen | null>(null);
   const previousSelectionCountRef = useRef(0);
   const selectionCountRef = useRef(0);
+  const pageAuthIndexesRef = useRef<string[]>([]);
 
   const { keyStats, usageAuths, usageDetails, usageLoading, loadKeyStats, refreshKeyStats } =
     useAuthFilesStats();
+  const refreshVisibleKeyStats = useCallback(async () => {
+    await refreshKeyStats(pageAuthIndexesRef.current);
+  }, [refreshKeyStats]);
   const {
     files,
     selectedFiles,
@@ -253,7 +258,7 @@ export function AuthFilesPage() {
     retryFailedCodexPlanTypeRefresh,
     batchSetStatus,
     batchDelete,
-  } = useAuthFilesData({ refreshKeyStats, active: isCurrentLayer });
+  } = useAuthFilesData({ refreshKeyStats: refreshVisibleKeyStats, active: isCurrentLayer });
 
   const disableControls = connectionStatus !== 'connected';
   const statusBarCache = useAuthFilesStatusBarCache(files, usageDetails);
@@ -298,7 +303,7 @@ export function AuthFilesPage() {
   } = useAuthFilesPrefixProxyEditor({
     disableControls,
     loadFiles,
-    loadKeyStats: refreshKeyStats,
+    loadKeyStats: refreshVisibleKeyStats,
   });
 
   const {
@@ -312,7 +317,7 @@ export function AuthFilesPage() {
     files,
     disableControls,
     loadFiles,
-    loadKeyStats: refreshKeyStats,
+    loadKeyStats: refreshVisibleKeyStats,
     deselectAll,
   });
 
@@ -475,26 +480,31 @@ export function AuthFilesPage() {
   const handleHeaderRefresh = useCallback(async () => {
     await Promise.all([
       loadFiles(),
-      refreshKeyStats(),
+      refreshVisibleKeyStats(),
       refreshCodexPlanTypeRefreshStatus(),
       loadExcluded(),
       loadModelAlias(),
     ]);
-  }, [loadFiles, refreshKeyStats, refreshCodexPlanTypeRefreshStatus, loadExcluded, loadModelAlias]);
+  }, [
+    loadFiles,
+    refreshVisibleKeyStats,
+    refreshCodexPlanTypeRefreshStatus,
+    loadExcluded,
+    loadModelAlias,
+  ]);
 
   useHeaderRefresh(handleHeaderRefresh);
 
   useEffect(() => {
     if (!isCurrentLayer) return;
     loadFiles();
-    void loadKeyStats().catch(() => {});
     loadExcluded();
     loadModelAlias();
-  }, [isCurrentLayer, loadFiles, loadKeyStats, loadExcluded, loadModelAlias]);
+  }, [isCurrentLayer, loadFiles, loadExcluded, loadModelAlias]);
 
   useInterval(
     () => {
-      void refreshKeyStats().catch(() => {});
+      void refreshVisibleKeyStats().catch(() => {});
     },
     isCurrentLayer ? 240_000 : null
   );
@@ -662,7 +672,30 @@ export function AuthFilesPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const start = (currentPage - 1) * pageSize;
-  const pageItems = sorted.slice(start, start + pageSize);
+  const pageItems = useMemo(() => sorted.slice(start, start + pageSize), [pageSize, sorted, start]);
+  const currentPageAuthIndexes = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          pageItems
+            .filter((file) => !isRuntimeOnlyAuthFile(file))
+            .map((file) => normalizeAuthIndex(file['auth_index'] ?? file.authIndex))
+            .filter((value): value is string => Boolean(value))
+        )
+      ),
+    [pageItems]
+  );
+  const currentPageAuthIndexesKey = currentPageAuthIndexes.join(',');
+
+  useEffect(() => {
+    pageAuthIndexesRef.current = currentPageAuthIndexes;
+  }, [currentPageAuthIndexes]);
+
+  useEffect(() => {
+    if (!isCurrentLayer) return;
+    void loadKeyStats(currentPageAuthIndexes).catch(() => {});
+  }, [currentPageAuthIndexes, currentPageAuthIndexesKey, isCurrentLayer, loadKeyStats]);
+
   const selectablePageItems = useMemo(
     () => pageItems.filter((file) => !isRuntimeOnlyAuthFile(file)),
     [pageItems]
@@ -802,7 +835,7 @@ export function AuthFilesPage() {
     setCodexUsageRefreshing(true);
     try {
       const [, codexResult] = await Promise.all([
-        refreshKeyStats(),
+        refreshVisibleKeyStats(),
         refreshCurrentPageCodexUsage(),
       ]);
       if (codexResult.failed > 0) {
@@ -825,7 +858,13 @@ export function AuthFilesPage() {
     } finally {
       setCodexUsageRefreshing(false);
     }
-  }, [refreshCurrentPageCodexUsage, refreshKeyStats, showNotification, t, usageRefreshLoading]);
+  }, [
+    refreshCurrentPageCodexUsage,
+    refreshVisibleKeyStats,
+    showNotification,
+    t,
+    usageRefreshLoading,
+  ]);
 
   const copyTextWithNotification = useCallback(
     async (text: string) => {

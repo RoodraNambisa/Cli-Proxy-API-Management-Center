@@ -104,6 +104,10 @@ export interface ModelStatsSummary {
 }
 
 export type UsageTimeRange = '7h' | '24h' | '7d' | 'all';
+export interface UsageRangeQuery {
+  from: string;
+  to: string;
+}
 
 const TOKENS_PER_PRICE_UNIT = 1_000_000;
 const MODEL_PRICE_STORAGE_KEY = 'cli-proxy-model-prices-v2';
@@ -113,6 +117,26 @@ const USAGE_TIME_RANGE_MS: Record<Exclude<UsageTimeRange, 'all'>, number> = {
   '24h': 24 * 60 * 60 * 1000,
   '7d': 7 * 24 * 60 * 60 * 1000,
 };
+
+export function buildUsageRangeForTimeRange(
+  range: UsageTimeRange,
+  nowMs: number = Date.now()
+): UsageRangeQuery {
+  const safeNow = Number.isFinite(nowMs) && nowMs > 0 ? nowMs : Date.now();
+  const to = new Date(safeNow).toISOString();
+  if (range === 'all') {
+    return { from: new Date(0).toISOString(), to };
+  }
+
+  const rangeMs = USAGE_TIME_RANGE_MS[range] ?? USAGE_TIME_RANGE_MS['24h'];
+  return {
+    from: new Date(Math.max(0, safeNow - rangeMs)).toISOString(),
+    to,
+  };
+}
+
+export const buildUsageRangeKey = (range: Partial<UsageRangeQuery> | undefined): string =>
+  range ? `${range.from || ''}::${range.to || ''}` : '';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -1355,6 +1379,166 @@ export function buildChartData(
   // Determine which models to show
   const modelsToShow = selectedModels.length > 0 ? selectedModels : ['all'];
 
+  const datasets: ChartDataset[] = modelsToShow.map((model, index) => {
+    const isAll = model === 'all';
+    const data = isAll
+      ? getAllSeries()
+      : dataByModel.get(model) || new Array(labels.length).fill(0);
+    const colorIndex = index % CHART_COLORS.length;
+    const style = CHART_COLORS[colorIndex];
+    const shouldFill = modelsToShow.length === 1 || (isAll && modelsToShow.length > 1);
+
+    return {
+      label: isAll ? 'All Models' : model,
+      data,
+      borderColor: style.borderColor,
+      backgroundColor: shouldFill
+        ? (ctx) => buildAreaGradient(ctx, style.borderColor, style.backgroundColor)
+        : style.backgroundColor,
+      pointBackgroundColor: style.borderColor,
+      pointBorderColor: style.borderColor,
+      fill: shouldFill,
+      tension: 0.35,
+    };
+  });
+
+  return { labels, datasets };
+}
+
+const getSeriesItems = (seriesResponse: unknown): Array<Record<string, unknown>> => {
+  const record = isRecord(seriesResponse) ? seriesResponse : {};
+  const directItems = Array.isArray(record.items)
+    ? record.items
+    : Array.isArray(record.buckets)
+      ? record.buckets
+      : [];
+
+  const items: Array<Record<string, unknown>> = [];
+
+  directItems.forEach((item) => {
+    if (isRecord(item)) {
+      items.push(item);
+    }
+  });
+
+  if (Array.isArray(record.series)) {
+    record.series.forEach((seriesItem) => {
+      if (!isRecord(seriesItem)) return;
+      const group =
+        seriesItem.group ??
+        seriesItem.key ??
+        seriesItem.name ??
+        seriesItem.model ??
+        seriesItem.value ??
+        seriesItem.label;
+      const nestedItems = Array.isArray(seriesItem.items)
+        ? seriesItem.items
+        : Array.isArray(seriesItem.data)
+          ? seriesItem.data
+          : Array.isArray(seriesItem.buckets)
+            ? seriesItem.buckets
+            : [];
+      nestedItems.forEach((nestedItem) => {
+        if (isRecord(nestedItem)) {
+          items.push({ group, ...nestedItem });
+        }
+      });
+    });
+  }
+
+  return items;
+};
+
+const getSeriesTimestamp = (item: Record<string, unknown>): string => {
+  const value =
+    item.bucket ??
+    item.timestamp ??
+    item.time ??
+    item.from ??
+    item.start ??
+    item.created_at ??
+    item.date;
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+};
+
+const getSeriesGroup = (item: Record<string, unknown>): string => {
+  const value =
+    item.model ??
+    item.group ??
+    item.key ??
+    item.name ??
+    item.value ??
+    item.label ??
+    item.auth_index ??
+    item.api ??
+    item.source ??
+    'all';
+  const text = String(value ?? '').trim();
+  return text || 'all';
+};
+
+const getSeriesMetricValue = (
+  item: Record<string, unknown>,
+  metric: 'requests' | 'tokens'
+): number => {
+  const value =
+    metric === 'tokens'
+      ? (item.total_tokens ?? item.tokens ?? item.token_count ?? item.totalTokens)
+      : (item.total_requests ?? item.requests ?? item.request_count ?? item.count ?? item.total);
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+export function buildChartDataFromSeries(
+  seriesResponse: unknown,
+  period: 'hour' | 'day' = 'day',
+  metric: 'requests' | 'tokens' = 'requests',
+  selectedModels: string[] = []
+): ChartData {
+  const valuesByGroup = new Map<string, Map<string, number>>();
+  const labelsSet = new Set<string>();
+
+  getSeriesItems(seriesResponse).forEach((item) => {
+    const timestamp = getSeriesTimestamp(item);
+    const timestampMs = timestamp ? parseTimestampMs(timestamp) : Number.NaN;
+    if (!Number.isFinite(timestampMs) || timestampMs <= 0) return;
+
+    const label =
+      period === 'hour'
+        ? formatHourLabel(new Date(timestampMs))
+        : formatDayLabel(new Date(timestampMs));
+    if (!label) return;
+
+    const group = getSeriesGroup(item);
+    const value = getSeriesMetricValue(item, metric);
+    if (!valuesByGroup.has(group)) {
+      valuesByGroup.set(group, new Map());
+    }
+    const values = valuesByGroup.get(group)!;
+    values.set(label, (values.get(label) || 0) + value);
+    labelsSet.add(label);
+  });
+
+  const labels = Array.from(labelsSet).sort();
+  const dataByModel = new Map<string, number[]>();
+  valuesByGroup.forEach((values, group) => {
+    dataByModel.set(
+      group,
+      labels.map((label) => values.get(label) || 0)
+    );
+  });
+
+  const getAllSeries = (): number[] => {
+    const summed = new Array(labels.length).fill(0);
+    dataByModel.forEach((values) => {
+      values.forEach((value, idx) => {
+        summed[idx] = (summed[idx] || 0) + value;
+      });
+    });
+    return summed;
+  };
+
+  const modelsToShow = selectedModels.length > 0 ? selectedModels : ['all'];
   const datasets: ChartDataset[] = modelsToShow.map((model, index) => {
     const isAll = model === 'all';
     const data = isAll

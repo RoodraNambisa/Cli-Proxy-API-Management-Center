@@ -4,7 +4,13 @@ import { USAGE_STATS_STALE_TIME_MS, useNotificationStore, useUsageStatsStore } f
 import { usageApi } from '@/services/api/usage';
 import type { UsageAuthSummary } from '@/types';
 import { downloadBlob } from '@/utils/download';
-import { loadModelPrices, saveModelPrices, type ModelPrice } from '@/utils/usage';
+import {
+  buildUsageRangeForTimeRange,
+  loadModelPrices,
+  saveModelPrices,
+  type ModelPrice,
+  type UsageTimeRange,
+} from '@/utils/usage';
 
 export interface UsagePayload {
   total_requests?: number;
@@ -19,6 +25,7 @@ export interface UseUsageDataReturn {
   usage: UsagePayload | null;
   authUsage: UsageAuthSummary[];
   loading: boolean;
+  authUsageLoading: boolean;
   error: string;
   lastRefreshedAt: Date | null;
   modelPrices: Record<string, ModelPrice>;
@@ -32,15 +39,21 @@ export interface UseUsageDataReturn {
   importing: boolean;
 }
 
-export function useUsageData(): UseUsageDataReturn {
+export interface UseUsageDataOptions {
+  timeRange: UsageTimeRange;
+}
+
+export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataReturn {
   const { t } = useTranslation();
   const { showNotification } = useNotificationStore();
   const usageSnapshot = useUsageStatsStore((state) => state.usage);
   const authUsage = useUsageStatsStore((state) => state.usageAuths);
   const loading = useUsageStatsStore((state) => state.loading);
+  const authUsageLoading = useUsageStatsStore((state) => state.authsLoading);
   const storeError = useUsageStatsStore((state) => state.error);
   const lastRefreshedAtTs = useUsageStatsStore((state) => state.lastRefreshedAt);
   const loadUsageStats = useUsageStatsStore((state) => state.loadUsageStats);
+  const loadUsageAuths = useUsageStatsStore((state) => state.loadUsageAuths);
 
   const [modelPrices, setModelPrices] = useState<Record<string, ModelPrice>>({});
   const [exporting, setExporting] = useState(false);
@@ -48,13 +61,21 @@ export function useUsageData(): UseUsageDataReturn {
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadUsage = useCallback(async () => {
-    await loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS });
-  }, [loadUsageStats]);
+    const range = buildUsageRangeForTimeRange(timeRange);
+    await Promise.all([
+      loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
+      loadUsageAuths({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
+    ]);
+  }, [loadUsageAuths, loadUsageStats, timeRange]);
 
   useEffect(() => {
-    void loadUsageStats({ staleTimeMs: USAGE_STATS_STALE_TIME_MS }).catch(() => {});
+    const range = buildUsageRangeForTimeRange(timeRange);
+    void Promise.all([
+      loadUsageStats({ staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
+      loadUsageAuths({ staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
+    ]).catch(() => {});
     setModelPrices(loadModelPrices());
-  }, [loadUsageStats]);
+  }, [loadUsageAuths, loadUsageStats, timeRange]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -113,7 +134,11 @@ export function useUsageData(): UseUsageDataReturn {
         'success'
       );
       try {
-        await loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS });
+        const range = buildUsageRangeForTimeRange(timeRange);
+        await Promise.all([
+          loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
+          loadUsageAuths({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
+        ]);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : '';
         showNotification(
@@ -145,6 +170,7 @@ export function useUsageData(): UseUsageDataReturn {
     usage,
     authUsage,
     loading,
+    authUsageLoading,
     error,
     lastRefreshedAt,
     modelPrices,

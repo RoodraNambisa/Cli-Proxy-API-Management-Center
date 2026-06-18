@@ -36,10 +36,10 @@ import {
   useChartData,
 } from '@/components/usage';
 import {
+  buildUsageRangeForTimeRange,
   getModelNamesFromUsage,
   getApiStats,
   getModelStats,
-  filterUsageByTimeRange,
   type UsageTimeRange,
 } from '@/utils/usage';
 import styles from './UsagePage.module.scss';
@@ -129,11 +129,17 @@ export function UsagePage() {
     providers: OpenAIProviderConfig[];
   } | null>(null);
 
+  // Chart lines and time range state
+  const [chartLines, setChartLines] = useState<string[]>(loadChartLines);
+  const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadTimeRange);
+  const [initialRangeTime] = useState(() => Date.now());
+
   // Data hook
   const {
     usage,
     authUsage,
     loading,
+    authUsageLoading,
     error,
     lastRefreshedAt,
     modelPrices,
@@ -145,13 +151,9 @@ export function UsagePage() {
     importInputRef,
     exporting,
     importing,
-  } = useUsageData();
+  } = useUsageData({ timeRange });
 
   useHeaderRefresh(loadUsage);
-
-  // Chart lines state
-  const [chartLines, setChartLines] = useState<string[]>(loadChartLines);
-  const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadTimeRange);
 
   useEffect(() => {
     let cancelled = false;
@@ -188,11 +190,13 @@ export function UsagePage() {
     [t]
   );
 
-  const filteredUsage = useMemo(
-    () => (usage ? filterUsageByTimeRange(usage, timeRange) : null),
-    [usage, timeRange]
-  );
+  const filteredUsage = usage;
   const hourWindowHours = timeRange === 'all' ? undefined : HOUR_WINDOW_BY_TIME_RANGE[timeRange];
+  const rangeRefreshTime = lastRefreshedAt?.getTime() ?? 0;
+  const usageRange = useMemo(
+    () => buildUsageRangeForTimeRange(timeRange, rangeRefreshTime || initialRangeTime),
+    [initialRangeTime, rangeRefreshTime, timeRange]
+  );
 
   const handleChartLinesChange = useCallback((lines: string[]) => {
     setChartLines(normalizeChartLines(lines));
@@ -236,7 +240,15 @@ export function UsagePage() {
     tokensChartData,
     requestsChartOptions,
     tokensChartOptions,
-  } = useChartData({ usage: filteredUsage, chartLines, isDark, isMobile, hourWindowHours });
+    loading: chartLoading,
+  } = useChartData({
+    usage: filteredUsage,
+    chartLines,
+    isDark,
+    isMobile,
+    range: usageRange,
+    hourWindowHours,
+  });
 
   // Derived data
   const modelNames = useMemo(() => getModelNamesFromUsage(usage), [usage]);
@@ -352,7 +364,7 @@ export function UsagePage() {
           onPeriodChange={setRequestsPeriod}
           chartData={requestsChartData}
           chartOptions={requestsChartOptions}
-          loading={loading}
+          loading={loading || chartLoading}
           isMobile={isMobile}
           emptyText={t('usage_stats.no_data')}
         />
@@ -362,7 +374,7 @@ export function UsagePage() {
           onPeriodChange={setTokensPeriod}
           chartData={tokensChartData}
           chartOptions={tokensChartOptions}
-          loading={loading}
+          loading={loading || chartLoading}
           isMobile={isMobile}
           emptyText={t('usage_stats.no_data')}
         />
@@ -400,10 +412,11 @@ export function UsagePage() {
         codexConfigs={config?.codexApiKeys || []}
         vertexConfigs={config?.vertexApiKeys || []}
         openaiProviders={openaiProvidersForUsage}
+        range={usageRange}
       />
 
       {/* Credential Stats */}
-      <CredentialStatsCard authUsage={authUsage} loading={loading} />
+      <CredentialStatsCard authUsage={authUsage} loading={authUsageLoading} />
 
       {/* Price Settings */}
       <PriceSettingsCard

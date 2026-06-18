@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ChartOptions } from 'chart.js';
-import { buildChartData, type ChartData } from '@/utils/usage';
+import { usageApi } from '@/services/api/usage';
+import { buildChartData, buildChartDataFromSeries, type ChartData } from '@/utils/usage';
 import { buildChartOptions } from '@/utils/usage/chartConfig';
+import type { UsageRangeQuery } from '@/types';
 import type { UsagePayload } from './useUsageData';
 
 export interface UseChartDataOptions {
@@ -9,6 +11,7 @@ export interface UseChartDataOptions {
   chartLines: string[];
   isDark: boolean;
   isMobile: boolean;
+  range: UsageRangeQuery;
   hourWindowHours?: number;
 }
 
@@ -21,6 +24,7 @@ export interface UseChartDataReturn {
   tokensChartData: ChartData;
   requestsChartOptions: ChartOptions<'line'>;
   tokensChartOptions: ChartOptions<'line'>;
+  loading: boolean;
 }
 
 export function useChartData({
@@ -28,20 +32,69 @@ export function useChartData({
   chartLines,
   isDark,
   isMobile,
-  hourWindowHours
+  range,
+  hourWindowHours,
 }: UseChartDataOptions): UseChartDataReturn {
   const [requestsPeriod, setRequestsPeriod] = useState<'hour' | 'day'>('day');
   const [tokensPeriod, setTokensPeriod] = useState<'hour' | 'day'>('day');
+  const [seriesByPeriod, setSeriesByPeriod] = useState<Partial<Record<'hour' | 'day', unknown>>>(
+    {}
+  );
+  const [seriesLoading, setSeriesLoading] = useState(false);
+  const rangeKey = `${range.from || ''}::${range.to || ''}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    const periods = Array.from(new Set([requestsPeriod, tokensPeriod]));
+    Promise.resolve()
+      .then(() => {
+        setSeriesLoading(true);
+        return Promise.all(
+          periods.map((period) =>
+            usageApi
+              .getUsageSeries({
+                ...range,
+                bucket: period,
+                group_by: 'model',
+              })
+              .then((response) => [period, response] as const)
+          )
+        );
+      })
+      .then((entries) => {
+        if (cancelled) return;
+        setSeriesByPeriod(Object.fromEntries(entries) as Partial<Record<'hour' | 'day', unknown>>);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSeriesByPeriod({});
+      })
+      .finally(() => {
+        if (!cancelled) setSeriesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [range, rangeKey, requestsPeriod, tokensPeriod]);
 
   const requestsChartData = useMemo(() => {
+    const series = seriesByPeriod[requestsPeriod];
+    if (series) {
+      return buildChartDataFromSeries(series, requestsPeriod, 'requests', chartLines);
+    }
     if (!usage) return { labels: [], datasets: [] };
     return buildChartData(usage, requestsPeriod, 'requests', chartLines, { hourWindowHours });
-  }, [usage, requestsPeriod, chartLines, hourWindowHours]);
+  }, [chartLines, hourWindowHours, requestsPeriod, seriesByPeriod, usage]);
 
   const tokensChartData = useMemo(() => {
+    const series = seriesByPeriod[tokensPeriod];
+    if (series) {
+      return buildChartDataFromSeries(series, tokensPeriod, 'tokens', chartLines);
+    }
     if (!usage) return { labels: [], datasets: [] };
     return buildChartData(usage, tokensPeriod, 'tokens', chartLines, { hourWindowHours });
-  }, [usage, tokensPeriod, chartLines, hourWindowHours]);
+  }, [chartLines, hourWindowHours, seriesByPeriod, tokensPeriod, usage]);
 
   const requestsChartOptions = useMemo(
     () =>
@@ -49,7 +102,7 @@ export function useChartData({
         period: requestsPeriod,
         labels: requestsChartData.labels,
         isDark,
-        isMobile
+        isMobile,
       }),
     [requestsPeriod, requestsChartData.labels, isDark, isMobile]
   );
@@ -60,7 +113,7 @@ export function useChartData({
         period: tokensPeriod,
         labels: tokensChartData.labels,
         isDark,
-        isMobile
+        isMobile,
       }),
     [tokensPeriod, tokensChartData.labels, isDark, isMobile]
   );
@@ -73,6 +126,7 @@ export function useChartData({
     requestsChartData,
     tokensChartData,
     requestsChartOptions,
-    tokensChartOptions
+    tokensChartOptions,
+    loading: seriesLoading,
   };
 }

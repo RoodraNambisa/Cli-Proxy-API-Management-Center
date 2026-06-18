@@ -6,7 +6,12 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Select } from '@/components/ui/Select';
 import { authFilesApi } from '@/services/api/authFiles';
 import { useUsageStatsStore, type UsageDetailsPage } from '@/stores';
-import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from '@/types';
+import type {
+  GeminiKeyConfig,
+  ProviderKeyConfig,
+  OpenAIProviderConfig,
+  UsageRangeQuery,
+} from '@/types';
 import type { AuthFileItem } from '@/types/authFile';
 import type { CredentialInfo } from '@/types/sourceInfo';
 import { buildSourceInfoMap, resolveSourceDisplay } from '@/utils/sourceResolver';
@@ -63,6 +68,7 @@ export interface RequestEventsDetailsCardProps {
   codexConfigs: ProviderKeyConfig[];
   vertexConfigs: ProviderKeyConfig[];
   openaiProviders: OpenAIProviderConfig[];
+  range: UsageRangeQuery;
 }
 
 const toNumber = (value: unknown): number => {
@@ -78,12 +84,15 @@ const encodeCsv = (value: string | number): string => {
   return `"${safeText.replace(/"/g, '""')}"`;
 };
 
-const buildDetailsQuery = (filters: DetailFilters) => ({
+const buildDetailsQuery = (filters: DetailFilters, range: UsageRangeQuery) => ({
+  ...range,
   ...(filters.model !== ALL_FILTER ? { model: filters.model } : {}),
   ...(filters.source !== ALL_FILTER ? { source: filters.source } : {}),
   ...(filters.authIndex !== ALL_FILTER ? { auth_index: filters.authIndex } : {}),
   ...(filters.result !== ALL_FILTER ? { failed: filters.result === FAILED_FILTER } : {}),
   limit: DETAILS_LIMIT,
+  sort_by: 'created_at',
+  sort_order: 'desc',
 });
 
 export function RequestEventsDetailsCard({
@@ -93,6 +102,7 @@ export function RequestEventsDetailsCard({
   codexConfigs,
   vertexConfigs,
   openaiProviders,
+  range,
 }: RequestEventsDetailsCardProps) {
   const { t, i18n } = useTranslation();
   const loadUsageDetails = useUsageStatsStore((state) => state.loadUsageDetails);
@@ -210,18 +220,16 @@ export function RequestEventsDetailsCard({
       sourceLabelKeyMap.set(row.source, keys);
     });
 
-    return baseRows
-      .map((row) => {
-        const labelKeyCount = sourceLabelKeyMap.get(row.source)?.size ?? 0;
-        if (labelKeyCount <= 1) return row;
-        if (row.authIndex !== '-') return { ...row, source: `${row.source} · ${row.authIndex}` };
-        if (row.sourceRaw !== '-' && row.sourceRaw !== row.source) {
-          return { ...row, source: `${row.source} · ${row.sourceRaw}` };
-        }
-        if (row.sourceType) return { ...row, source: `${row.source} · ${row.sourceType}` };
-        return { ...row, source: `${row.source} · ${row.sourceKey}` };
-      })
-      .sort((a, b) => b.timestampMs - a.timestampMs);
+    return baseRows.map((row) => {
+      const labelKeyCount = sourceLabelKeyMap.get(row.source)?.size ?? 0;
+      if (labelKeyCount <= 1) return row;
+      if (row.authIndex !== '-') return { ...row, source: `${row.source} · ${row.authIndex}` };
+      if (row.sourceRaw !== '-' && row.sourceRaw !== row.source) {
+        return { ...row, source: `${row.source} · ${row.sourceRaw}` };
+      }
+      if (row.sourceType) return { ...row, source: `${row.source} · ${row.sourceType}` };
+      return { ...row, source: `${row.source} · ${row.sourceKey}` };
+    });
   }, [authFileMap, details, i18n.language, sourceInfoMap]);
 
   const hasLatencyData = useMemo(() => rows.some((row) => row.latencyMs !== null), [rows]);
@@ -285,44 +293,41 @@ export function RequestEventsDetailsCard({
   );
 
   const loadDetailsPage = useCallback(
-    async (filters: DetailFilters, append = false) => {
-      const offset = append ? (detailsPage?.nextOffset ?? 0) : 0;
+    async (filters: DetailFilters, offset = 0, append = false) => {
       const page = await loadUsageDetails({
-        query: { ...buildDetailsQuery(filters), offset },
+        query: { ...buildDetailsQuery(filters, range), offset },
         append,
       });
       setDetailsPage(page);
     },
-    [detailsPage?.nextOffset, loadUsageDetails]
+    [loadUsageDetails, range]
   );
+
+  useEffect(() => {
+    if (!detailsOpened) return;
+    void Promise.resolve()
+      .then(() => loadDetailsPage(currentFilters, 0, false))
+      .catch(() => {});
+  }, [currentFilters, detailsOpened, loadDetailsPage]);
 
   const handleOpenDetails = () => {
     setDetailsOpened(true);
-    void loadDetailsPage(currentFilters, false).catch(() => {});
   };
 
   const handleModelFilterChange = (value: string) => {
-    const nextFilters = { ...currentFilters, model: value };
     setModelFilter(value);
-    if (detailsOpened) void loadDetailsPage(nextFilters, false).catch(() => {});
   };
 
   const handleSourceFilterChange = (value: string) => {
-    const nextFilters = { ...currentFilters, source: value };
     setSourceFilter(value);
-    if (detailsOpened) void loadDetailsPage(nextFilters, false).catch(() => {});
   };
 
   const handleAuthIndexFilterChange = (value: string) => {
-    const nextFilters = { ...currentFilters, authIndex: value };
     setAuthIndexFilter(value);
-    if (detailsOpened) void loadDetailsPage(nextFilters, false).catch(() => {});
   };
 
   const handleResultFilterChange = (value: string) => {
-    const nextFilters = { ...currentFilters, result: value };
     setResultFilter(value);
-    if (detailsOpened) void loadDetailsPage(nextFilters, false).catch(() => {});
   };
 
   const renderedRows = useMemo(() => rows.slice(0, MAX_RENDERED_EVENTS), [rows]);
@@ -334,17 +339,10 @@ export function RequestEventsDetailsCard({
     resultFilter !== ALL_FILTER;
 
   const handleClearFilters = () => {
-    const nextFilters = {
-      model: ALL_FILTER,
-      source: ALL_FILTER,
-      authIndex: ALL_FILTER,
-      result: ALL_FILTER,
-    };
     setModelFilter(ALL_FILTER);
     setSourceFilter(ALL_FILTER);
     setAuthIndexFilter(ALL_FILTER);
     setResultFilter(ALL_FILTER);
-    if (detailsOpened) void loadDetailsPage(nextFilters, false).catch(() => {});
   };
 
   const handleExportCsv = () => {
@@ -445,7 +443,7 @@ export function RequestEventsDetailsCard({
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => void loadDetailsPage(currentFilters, false).catch(() => {})}
+                onClick={() => void loadDetailsPage(currentFilters, 0, false).catch(() => {})}
                 disabled={detailsLoading}
               >
                 {detailsLoading ? t('common.loading') : t('usage_stats.refresh')}
@@ -627,7 +625,13 @@ export function RequestEventsDetailsCard({
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => void loadDetailsPage(currentFilters, true).catch(() => {})}
+                    onClick={() =>
+                      void loadDetailsPage(
+                        currentFilters,
+                        detailsPage?.nextOffset ?? 0,
+                        true
+                      ).catch(() => {})
+                    }
                     disabled={detailsLoading}
                   >
                     {detailsLoading

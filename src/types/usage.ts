@@ -76,7 +76,12 @@ export interface UsageEnvelope<T = Record<string, unknown>> {
   [key: string]: unknown;
 }
 
-export interface UsageDetailsQuery {
+export interface UsageRangeQuery {
+  from?: string;
+  to?: string;
+}
+
+export interface UsageDetailsQuery extends UsageRangeQuery {
   api?: string;
   model?: string;
   auth_index?: string | number;
@@ -85,9 +90,13 @@ export interface UsageDetailsQuery {
   failed?: boolean;
   offset?: number;
   limit?: number;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc' | string;
 }
 
 export interface UsageDetailsResponse {
+  items?: unknown[];
+  total?: number;
   details?: unknown[];
   offset?: number;
   limit?: number;
@@ -95,6 +104,10 @@ export interface UsageDetailsResponse {
   has_more?: boolean;
   total_matched?: number;
   [key: string]: unknown;
+}
+
+export interface UsageAuthsQuery extends UsageRangeQuery {
+  auth_index?: string | number | Array<string | number>;
 }
 
 export interface UsageAuthSummary {
@@ -127,5 +140,20 @@ export interface UsageAuthsResponse {
 
 export interface UsageAuthModelsResponse {
   models?: UsageAuthSummary[];
+  [key: string]: unknown;
+}
+
+export type UsageSeriesBucket = 'minute' | 'hour' | 'day';
+export type UsageSeriesGroupBy = 'api' | 'model' | 'auth_index' | 'source' | 'failed';
+
+export interface UsageSeriesQuery extends UsageRangeQuery {
+  bucket?: UsageSeriesBucket;
+  group_by?: UsageSeriesGroupBy;
+}
+
+export interface UsageSeriesResponse {
+  items?: unknown[];
+  series?: unknown[];
+  buckets?: unknown[];
   [key: string]: unknown;
 }
