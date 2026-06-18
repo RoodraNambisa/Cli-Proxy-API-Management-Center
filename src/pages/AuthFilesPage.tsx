@@ -77,6 +77,8 @@ const BATCH_BAR_HIDDEN_TRANSFORM = 'translateX(-50%) translateY(56px)';
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
 const DEFAULT_COMPACT_PAGE_SIZE = 12;
 const ALL_PLAN_FILTER = 'all';
+const ALL_PRIORITY_FILTER = 'all';
+const UNSET_PRIORITY_FILTER = '__unset__';
 
 const escapeWildcardSearchSegment = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -184,6 +186,7 @@ export function AuthFilesPage() {
 
   const [filter, setFilter] = useState<'all' | string>('all');
   const [planFilter, setPlanFilter] = useState(ALL_PLAN_FILTER);
+  const [priorityFilter, setPriorityFilter] = useState(ALL_PRIORITY_FILTER);
   const [problemOnly, setProblemOnly] = useState(false);
   const [disabledOnly, setDisabledOnly] = useState(false);
   const [compactMode, setCompactMode] = useState(false);
@@ -335,6 +338,9 @@ export function AuthFilesPage() {
       if (typeof persisted.planFilter === 'string' && persisted.planFilter.trim()) {
         setPlanFilter(persisted.planFilter);
       }
+      if (typeof persisted.priorityFilter === 'string' && persisted.priorityFilter.trim()) {
+        setPriorityFilter(persisted.priorityFilter);
+      }
       if (typeof persisted.problemOnly === 'boolean') {
         setProblemOnly(persisted.problemOnly);
       }
@@ -380,6 +386,7 @@ export function AuthFilesPage() {
     writeAuthFilesUiState({
       filter,
       planFilter,
+      priorityFilter,
       problemOnly,
       disabledOnly,
       compactMode,
@@ -400,6 +407,7 @@ export function AuthFilesPage() {
     pageSizeByMode,
     planFilter,
     problemOnly,
+    priorityFilter,
     search,
     sortMode,
     uiStateHydrated,
@@ -533,6 +541,38 @@ export function AuthFilesPage() {
     ];
   }, [filesMatchingStatusFilters, t]);
 
+  const priorityFilterOptions = useMemo(() => {
+    const priorities = new Set<number>();
+    let hasUnsetPriority = false;
+
+    filesMatchingStatusFilters.forEach((file) => {
+      const priority = parsePriorityValue(file.priority ?? file['priority']);
+      if (priority === undefined) {
+        hasUnsetPriority = true;
+        return;
+      }
+      priorities.add(priority);
+    });
+
+    return [
+      { value: ALL_PRIORITY_FILTER, label: t('auth_files.priority_filter_all') },
+      ...Array.from(priorities)
+        .sort((a, b) => b - a)
+        .map((priority) => ({
+          value: String(priority),
+          label: t('auth_files.priority_filter_value', { priority }),
+        })),
+      ...(hasUnsetPriority
+        ? [
+            {
+              value: UNSET_PRIORITY_FILTER,
+              label: t('auth_files.priority_filter_unset'),
+            },
+          ]
+        : []),
+    ];
+  }, [filesMatchingStatusFilters, t]);
+
   const sortOptions = useMemo(
     () => [
       { value: 'default', label: t('auth_files.sort_default') },
@@ -561,6 +601,11 @@ export function AuthFilesPage() {
       const matchType = filter === 'all' || item.type === filter;
       const itemPlanType = resolveCodexPlanType(item);
       const matchPlan = planFilter === ALL_PLAN_FILTER || itemPlanType === planFilter;
+      const itemPriority = parsePriorityValue(item.priority ?? item['priority']);
+      const matchPriority =
+        priorityFilter === ALL_PRIORITY_FILTER ||
+        (priorityFilter === UNSET_PRIORITY_FILTER && itemPriority === undefined) ||
+        (itemPriority !== undefined && String(itemPriority) === priorityFilter);
       const matchSearch =
         !normalizedSearch ||
         [
@@ -581,9 +626,16 @@ export function AuthFilesPage() {
             ? wildcardSearch.test(content)
             : content.toLowerCase().includes(normalizedTerm);
         });
-      return matchType && matchPlan && matchSearch;
+      return matchType && matchPlan && matchPriority && matchSearch;
     });
-  }, [filesMatchingStatusFilters, filter, normalizedSearch, planFilter, wildcardSearch]);
+  }, [
+    filesMatchingStatusFilters,
+    filter,
+    normalizedSearch,
+    planFilter,
+    priorityFilter,
+    wildcardSearch,
+  ]);
 
   const sorted = useMemo(() => {
     const copy = [...filtered];
@@ -1236,6 +1288,20 @@ export function AuthFilesPage() {
                       setPage(1);
                     }}
                     ariaLabel={t('auth_files.plan_filter_label')}
+                    fullWidth
+                  />
+                </div>
+                <div className={styles.filterItem}>
+                  <label>{t('auth_files.priority_filter_label')}</label>
+                  <Select
+                    className={styles.sortSelect}
+                    value={priorityFilter}
+                    options={priorityFilterOptions}
+                    onChange={(value) => {
+                      setPriorityFilter(value || ALL_PRIORITY_FILTER);
+                      setPage(1);
+                    }}
+                    ariaLabel={t('auth_files.priority_filter_label')}
                     fullWidth
                   />
                 </div>
