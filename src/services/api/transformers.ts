@@ -14,6 +14,7 @@ import {
   type CodexCustomModelConfig,
   type CodexCustomModelGroup,
   type Config,
+  type NativeImageEndpointConfig,
 } from '@/types/config';
 import { buildHeaderObject } from '@/utils/headers';
 
@@ -139,6 +140,22 @@ const normalizeRoutingPriorityOverrides = (
   );
 
   return normalized.length > 0 ? normalized : [];
+};
+
+const normalizeNativeImageEndpoint = (value: unknown): NativeImageEndpointConfig | undefined => {
+  if (!isRecord(value)) return undefined;
+
+  return {
+    enabled: normalizeBoolean(value.enabled),
+    models: normalizeStringArray(value.models),
+    paramRules: normalizeStringArray(value['param-rules'] ?? value.paramRules),
+    unsupportedModelStatusCode: normalizeNumber(
+      value['unsupported-model-status-code'] ?? value.unsupportedModelStatusCode
+    ),
+    unsupportedModelMessage: normalizeString(
+      value['unsupported-model-message'] ?? value.unsupportedModelMessage
+    ),
+  };
 };
 
 const normalizeRequestBodyAudit = (value: unknown): Config['requestBodyAudit'] | undefined => {
@@ -766,6 +783,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   if (isRecord(images)) {
     const codexModel = images['codex-model'] ?? images.codexModel;
     const imageModel = images['image-model'] ?? images.imageModel;
+    const native = isRecord(images.native) ? images.native : undefined;
+    const nativeGenerations = normalizeNativeImageEndpoint(native?.generations);
+    const nativeEdits = normalizeNativeImageEndpoint(native?.edits);
     config.images = {
       codexModel:
         typeof codexModel === 'string'
@@ -818,6 +838,13 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       streamFlushMinBytes: normalizeNumber(
         images['stream-flush-min-bytes'] ?? images.streamFlushMinBytes
       ),
+      native:
+        nativeGenerations || nativeEdits
+          ? {
+              generations: nativeGenerations,
+              edits: nativeEdits,
+            }
+          : undefined,
     };
   }
   const routing = raw.routing;

@@ -25,6 +25,8 @@ export type VisualConfigFieldPath =
   | 'images.unsupportedStatusCode'
   | 'images.streamFlushIntervalMs'
   | 'images.streamFlushMinBytes'
+  | 'images.native.generations.unsupportedModelStatusCode'
+  | 'images.native.edits.unsupportedModelStatusCode'
   | 'streaming.keepaliveSeconds'
   | 'streaming.bootstrapRetries'
   | 'streaming.streamFlushIntervalMs'
@@ -97,6 +99,19 @@ export interface AuthMaintenanceVisualConfig {
   disableQuotaStrikeThreshold: string;
 }
 
+export interface NativeImageEndpointVisualConfig {
+  enabled: boolean;
+  models: string[];
+  paramRules: string[];
+  unsupportedModelStatusCode: string;
+  unsupportedModelMessage: string;
+}
+
+export interface NativeImagesVisualConfig {
+  generations: NativeImageEndpointVisualConfig;
+  edits: NativeImageEndpointVisualConfig;
+}
+
 export interface ImagesVisualConfig {
   codexModel: string;
   imageModel: string;
@@ -110,6 +125,7 @@ export interface ImagesVisualConfig {
   unsupportedStatusCode: string;
   streamFlushIntervalMs: string;
   streamFlushMinBytes: string;
+  native: NativeImagesVisualConfig;
 }
 
 export interface CodexCustomModelVisualEntry {
@@ -273,6 +289,22 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     unsupportedStatusCode: '400',
     streamFlushIntervalMs: '0',
     streamFlushMinBytes: '0',
+    native: {
+      generations: {
+        enabled: false,
+        models: ['gpt-image-2', 'gpt-image-1.5'],
+        paramRules: [],
+        unsupportedModelStatusCode: '400',
+        unsupportedModelMessage: 'Native image generation is not enabled for model {model}',
+      },
+      edits: {
+        enabled: false,
+        models: ['gpt-image-2', 'gpt-image-1.5'],
+        paramRules: [],
+        unsupportedModelStatusCode: '400',
+        unsupportedModelMessage: 'Native image edit is not enabled for model {model}',
+      },
+    },
   },
   routingStrategy: 'round-robin',
   routingPriorityOverrides: [],

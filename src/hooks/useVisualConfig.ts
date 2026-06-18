@@ -5,6 +5,8 @@ import type {
   CodexCustomModelVisualEntry,
   FixedErrorCooldownScope,
   FixedErrorCooldownVisualEntry,
+  NativeImageEndpointVisualConfig,
+  NativeImagesVisualConfig,
   PayloadFilterRule,
   PayloadParamEntry,
   PayloadParamValueType,
@@ -211,6 +213,102 @@ function setIntListFromTextInDoc(
   doc.setIn(path, values);
 }
 
+function parseStringList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.map((item) => String(item ?? '').trim()).filter(Boolean);
+}
+
+function normalizeStringListItems(items: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of items) {
+    const trimmed = item.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(trimmed);
+  }
+  return result;
+}
+
+function setStringListInDoc(
+  doc: YamlDocument,
+  path: YamlPath,
+  value: unknown,
+  options: { preserveEmpty?: boolean } = {}
+): void {
+  const items = Array.isArray(value)
+    ? normalizeStringListItems(value.map((item) => String(item ?? '')))
+    : [];
+  if (items.length > 0) {
+    doc.setIn(path, items);
+    return;
+  }
+  if (options.preserveEmpty || docHas(doc, path)) {
+    doc.setIn(path, []);
+  }
+}
+
+function parseNativeImageEndpoint(
+  raw: unknown,
+  defaults: NativeImageEndpointVisualConfig
+): NativeImageEndpointVisualConfig {
+  const record = asRecord(raw);
+  if (!record) return { ...defaults, models: [...defaults.models], paramRules: [] };
+
+  const statusCodeRaw =
+    record['unsupported-model-status-code'] ?? record.unsupportedModelStatusCode;
+  const messageRaw = record['unsupported-model-message'] ?? record.unsupportedModelMessage;
+
+  return {
+    enabled: Boolean(record.enabled),
+    models:
+      record.models === undefined
+        ? [...defaults.models]
+        : normalizeStringListItems(parseStringList(record.models)),
+    paramRules: normalizeStringListItems(parseStringList(record['param-rules'] ?? record.paramRules)),
+    unsupportedModelStatusCode:
+      statusCodeRaw === undefined ? defaults.unsupportedModelStatusCode : String(statusCodeRaw ?? ''),
+    unsupportedModelMessage:
+      typeof messageRaw === 'string' ? messageRaw : defaults.unsupportedModelMessage,
+  };
+}
+
+function parseNativeImagesConfig(raw: unknown): NativeImagesVisualConfig {
+  const record = asRecord(raw);
+  return {
+    generations: parseNativeImageEndpoint(
+      record?.generations,
+      DEFAULT_VISUAL_VALUES.images.native.generations
+    ),
+    edits: parseNativeImageEndpoint(record?.edits, DEFAULT_VISUAL_VALUES.images.native.edits),
+  };
+}
+
+function writeNativeImageEndpointInDoc(
+  doc: YamlDocument,
+  path: YamlPath,
+  values: NativeImageEndpointVisualConfig,
+  defaults: NativeImageEndpointVisualConfig
+): void {
+  const endpointDefined = docHas(doc, path) || !areNativeImageEndpointsEqual(values, defaults);
+  if (!endpointDefined) return;
+
+  ensureMapInDoc(doc, path);
+  setBooleanInDoc(doc, [...path, 'enabled'], values.enabled);
+  setStringListInDoc(doc, [...path, 'models'], values.models, { preserveEmpty: true });
+  setStringListInDoc(doc, [...path, 'param-rules'], values.paramRules, { preserveEmpty: true });
+  setIntFromStringInDoc(
+    doc,
+    [...path, 'unsupported-model-status-code'],
+    values.unsupportedModelStatusCode
+  );
+  setStringInDoc(doc, [...path, 'unsupported-model-message'], values.unsupportedModelMessage);
+  deleteIfMapEmpty(doc, path);
+}
+
 function normalizeCodexCustomModelGroups(value: unknown): CodexCustomModelGroup[] {
   if (!Array.isArray(value)) return [];
 
@@ -407,6 +505,31 @@ function areRoutingPriorityOverridesEqual(
   });
 }
 
+function areStringArraysEqual(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((item, index) => item === right[index]);
+}
+
+function areNativeImageEndpointsEqual(
+  left: NativeImageEndpointVisualConfig,
+  right: NativeImageEndpointVisualConfig
+): boolean {
+  return (
+    left.enabled === right.enabled &&
+    areStringArraysEqual(left.models, right.models) &&
+    areStringArraysEqual(left.paramRules, right.paramRules) &&
+    left.unsupportedModelStatusCode === right.unsupportedModelStatusCode &&
+    left.unsupportedModelMessage === right.unsupportedModelMessage
+  );
+}
+
+function areNativeImagesEqual(left: NativeImagesVisualConfig, right: NativeImagesVisualConfig) {
+  return (
+    areNativeImageEndpointsEqual(left.generations, right.generations) &&
+    areNativeImageEndpointsEqual(left.edits, right.edits)
+  );
+}
+
 function parseIntegerString(value: string): number | null {
   const trimmed = value.trim();
   if (!/^-?\d+$/.test(trimmed)) return null;
@@ -589,6 +712,12 @@ export function getVisualConfigValidationErrors(
     'images.unsupportedStatusCode': getHttpStatusRangeError(values.images.unsupportedStatusCode),
     'images.streamFlushIntervalMs': getNonNegativeIntegerError(values.images.streamFlushIntervalMs),
     'images.streamFlushMinBytes': getNonNegativeIntegerError(values.images.streamFlushMinBytes),
+    'images.native.generations.unsupportedModelStatusCode': getHttpStatusRangeError(
+      values.images.native.generations.unsupportedModelStatusCode
+    ),
+    'images.native.edits.unsupportedModelStatusCode': getHttpStatusRangeError(
+      values.images.native.edits.unsupportedModelStatusCode
+    ),
     'streaming.keepaliveSeconds': getNonNegativeIntegerError(values.streaming.keepaliveSeconds),
     'streaming.bootstrapRetries': getNonNegativeIntegerError(values.streaming.bootstrapRetries),
     'streaming.streamFlushIntervalMs': getNonNegativeIntegerError(
@@ -1035,6 +1164,18 @@ function mergeVisualConfigValues(
   }
   if (patch.images) {
     nextValues.images = { ...currentValues.images, ...patch.images };
+    if (patch.images.native) {
+      nextValues.images.native = {
+        ...currentValues.images.native,
+        ...patch.images.native,
+        generations: patch.images.native.generations
+          ? { ...currentValues.images.native.generations, ...patch.images.native.generations }
+          : currentValues.images.native.generations,
+        edits: patch.images.native.edits
+          ? { ...currentValues.images.native.edits, ...patch.images.native.edits }
+          : currentValues.images.native.edits,
+      };
+    }
   }
   if (patch.streaming) {
     nextValues.streaming = { ...currentValues.streaming, ...patch.streaming };
@@ -1379,6 +1520,12 @@ function getNextDirtyFields(
       updateDirty(
         'images.streamFlushMinBytes',
         nextValues.images.streamFlushMinBytes === baselineValues.images.streamFlushMinBytes
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'native')) {
+      updateDirty(
+        'images.native',
+        areNativeImagesEqual(nextValues.images.native, baselineValues.images.native)
       );
     }
   }
@@ -1809,6 +1956,7 @@ export function useVisualConfig() {
             images?.streamFlushMinBytes === undefined
               ? DEFAULT_VISUAL_VALUES.images.streamFlushMinBytes
               : String(images?.['stream-flush-min-bytes'] ?? images?.streamFlushMinBytes ?? ''),
+          native: parseNativeImagesConfig(images?.native),
         },
 
         routingStrategy:
@@ -2143,7 +2291,9 @@ export function useVisualConfig() {
           values.images.overrideInputFidelity !== imagesDefaults.overrideInputFidelity ||
           values.images.unsupportedStatusCode !== imagesDefaults.unsupportedStatusCode ||
           values.images.streamFlushIntervalMs !== imagesDefaults.streamFlushIntervalMs ||
-          values.images.streamFlushMinBytes !== imagesDefaults.streamFlushMinBytes;
+          values.images.streamFlushMinBytes !== imagesDefaults.streamFlushMinBytes ||
+          docHas(doc, ['images', 'native']) ||
+          !areNativeImagesEqual(values.images.native, imagesDefaults.native);
         if (imagesDefined) {
           ensureMapInDoc(doc, ['images']);
           setStringInDoc(doc, ['images', 'codex-model'], values.images.codexModel);
@@ -2182,6 +2332,25 @@ export function useVisualConfig() {
             ['images', 'stream-flush-min-bytes'],
             values.images.streamFlushMinBytes
           );
+          if (
+            docHas(doc, ['images', 'native']) ||
+            !areNativeImagesEqual(values.images.native, imagesDefaults.native)
+          ) {
+            ensureMapInDoc(doc, ['images', 'native']);
+            writeNativeImageEndpointInDoc(
+              doc,
+              ['images', 'native', 'generations'],
+              values.images.native.generations,
+              imagesDefaults.native.generations
+            );
+            writeNativeImageEndpointInDoc(
+              doc,
+              ['images', 'native', 'edits'],
+              values.images.native.edits,
+              imagesDefaults.native.edits
+            );
+            deleteIfMapEmpty(doc, ['images', 'native']);
+          }
           deleteIfMapEmpty(doc, ['images']);
         }
 

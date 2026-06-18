@@ -33,6 +33,7 @@ import type {
   CodexCustomModelValidationErrors,
   FixedErrorCooldownScope,
   FixedErrorCooldownVisualEntry,
+  NativeImageEndpointVisualConfig,
   PayloadFilterRule,
   PayloadParamValidationErrorCode,
   PayloadRule,
@@ -50,6 +51,7 @@ import {
   CodexCustomModelsEditor,
   PayloadFilterRulesEditor,
   PayloadRulesEditor,
+  StringListEditor,
 } from './VisualConfigEditorBlocks';
 import styles from './VisualConfigEditor.module.scss';
 
@@ -183,6 +185,328 @@ function FieldShell({
   );
 }
 
+function NativeImageEndpointEditor({
+  title,
+  description,
+  value,
+  disabled,
+  statusCodeError,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  value: NativeImageEndpointVisualConfig;
+  disabled?: boolean;
+  statusCodeError?: string;
+  onChange: (value: NativeImageEndpointVisualConfig) => void;
+}) {
+  const { t } = useTranslation();
+  const updateValue = (patch: Partial<NativeImageEndpointVisualConfig>) =>
+    onChange({ ...value, ...patch });
+
+  return (
+    <div className={styles.ruleCard}>
+      <div className={styles.ruleCardHeader}>
+        <div>
+          <div className={styles.ruleCardTitle}>{title}</div>
+          <p className={styles.subsectionDescription}>{description}</p>
+        </div>
+      </div>
+      <ToggleRow
+        title={t('config_management.visual.sections.images.native_enabled')}
+        description={t('config_management.visual.sections.images.native_enabled_desc')}
+        checked={value.enabled}
+        disabled={disabled}
+        onChange={(enabled) => updateValue({ enabled })}
+      />
+      <FieldShell
+        label={t('config_management.visual.sections.images.native_models')}
+        hint={t('config_management.visual.sections.images.native_models_hint')}
+      >
+        <StringListEditor
+          value={value.models}
+          disabled={disabled}
+          placeholder={t('config_management.visual.sections.images.native_models_placeholder')}
+          inputAriaLabel={t('config_management.visual.sections.images.native_models')}
+          onChange={(models) => updateValue({ models })}
+        />
+      </FieldShell>
+      <FieldShell
+        label={t('config_management.visual.sections.images.native_param_rules')}
+        hint={t('config_management.visual.sections.images.native_param_rules_hint')}
+      >
+        <StringListEditor
+          value={value.paramRules}
+          disabled={disabled}
+          placeholder={t('config_management.visual.sections.images.native_param_rules_placeholder')}
+          inputAriaLabel={t('config_management.visual.sections.images.native_param_rules')}
+          onChange={(paramRules) => updateValue({ paramRules })}
+        />
+      </FieldShell>
+      <SectionGrid>
+        <Input
+          label={t(
+            'config_management.visual.sections.images.native_unsupported_model_status_code'
+          )}
+          type="number"
+          placeholder="400"
+          value={value.unsupportedModelStatusCode}
+          onChange={(event) => updateValue({ unsupportedModelStatusCode: event.target.value })}
+          disabled={disabled}
+          hint={t(
+            'config_management.visual.sections.images.native_unsupported_model_status_code_hint'
+          )}
+          error={statusCodeError}
+        />
+        <Input
+          label={t('config_management.visual.sections.images.native_unsupported_model_message')}
+          value={value.unsupportedModelMessage}
+          onChange={(event) => updateValue({ unsupportedModelMessage: event.target.value })}
+          disabled={disabled}
+          hint={t(
+            'config_management.visual.sections.images.native_unsupported_model_message_hint'
+          )}
+        />
+      </SectionGrid>
+    </div>
+  );
+}
+
+function ImagesStreamFlushSettings({
+  values,
+  disabled,
+  intervalError,
+  minBytesError,
+  onChange,
+}: {
+  values: VisualConfigValues;
+  disabled?: boolean;
+  intervalError?: string;
+  minBytesError?: string;
+  onChange: VisualConfigEditorProps['onChange'];
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <SectionGrid>
+        <Input
+          label={t('config_management.visual.sections.images.stream_flush_interval_ms')}
+          type="number"
+          placeholder="0"
+          value={values.images.streamFlushIntervalMs}
+          onChange={(event) =>
+            onChange({
+              images: {
+                ...values.images,
+                streamFlushIntervalMs: event.target.value,
+              },
+            })
+          }
+          disabled={disabled}
+          hint={t('config_management.visual.sections.images.stream_flush_interval_ms_hint')}
+          error={intervalError}
+        />
+        <Input
+          label={t('config_management.visual.sections.images.stream_flush_min_bytes')}
+          type="number"
+          placeholder="0"
+          value={values.images.streamFlushMinBytes}
+          onChange={(event) =>
+            onChange({
+              images: {
+                ...values.images,
+                streamFlushMinBytes: event.target.value,
+              },
+            })
+          }
+          disabled={disabled}
+          hint={t('config_management.visual.sections.images.stream_flush_min_bytes_hint')}
+          error={minBytesError}
+        />
+      </SectionGrid>
+      <SectionGrid>
+        <ToggleRow
+          title={t('config_management.visual.sections.images.enable_stream_flush')}
+          description={t('config_management.visual.sections.images.enable_stream_flush_desc')}
+          checked={values.images.enableStreamFlush}
+          disabled={disabled}
+          onChange={(enableStreamFlush) =>
+            onChange({
+              images: {
+                ...values.images,
+                enableStreamFlush,
+              },
+            })
+          }
+        />
+      </SectionGrid>
+    </>
+  );
+}
+
+function LegacyImagesSettings({
+  values,
+  disabled,
+  unsupportedStatusCodeError,
+  onChange,
+}: {
+  values: VisualConfigValues;
+  disabled?: boolean;
+  unsupportedStatusCodeError?: string;
+  onChange: VisualConfigEditorProps['onChange'];
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <SectionGrid>
+        <Input
+          label={t('config_management.visual.sections.images.codex_model')}
+          placeholder="gpt-5.4"
+          value={values.images.codexModel}
+          onChange={(event) =>
+            onChange({
+              images: {
+                ...values.images,
+                codexModel: event.target.value,
+              },
+            })
+          }
+          disabled={disabled}
+          hint={t('config_management.visual.sections.images.codex_model_hint')}
+        />
+        <Input
+          label={t('config_management.visual.sections.images.image_model')}
+          placeholder="gpt-image-2"
+          value={values.images.imageModel}
+          onChange={(event) =>
+            onChange({
+              images: {
+                ...values.images,
+                imageModel: event.target.value,
+              },
+            })
+          }
+          disabled={disabled}
+          hint={t('config_management.visual.sections.images.image_model_hint')}
+        />
+        <Input
+          label={t('config_management.visual.sections.images.unsupported_status_code')}
+          type="number"
+          placeholder="400"
+          value={values.images.unsupportedStatusCode}
+          onChange={(event) =>
+            onChange({
+              images: {
+                ...values.images,
+                unsupportedStatusCode: event.target.value,
+              },
+            })
+          }
+          disabled={disabled}
+          hint={t('config_management.visual.sections.images.unsupported_status_code_hint')}
+          error={unsupportedStatusCodeError}
+        />
+      </SectionGrid>
+      <SectionGrid>
+        <ToggleRow
+          title={t('config_management.visual.sections.images.enable_free_plan_image_model')}
+          description={t(
+            'config_management.visual.sections.images.enable_free_plan_image_model_desc'
+          )}
+          checked={values.images.enableFreePlanImageModel}
+          disabled={disabled}
+          onChange={(enableFreePlanImageModel) =>
+            onChange({
+              images: {
+                ...values.images,
+                enableFreePlanImageModel,
+              },
+            })
+          }
+        />
+        <ToggleRow
+          title={t('config_management.visual.sections.images.enable_n_aggregation')}
+          description={t('config_management.visual.sections.images.enable_n_aggregation_desc')}
+          checked={values.images.enableNAggregation}
+          disabled={disabled}
+          onChange={(enableNAggregation) =>
+            onChange({
+              images: {
+                ...values.images,
+                enableNAggregation,
+              },
+            })
+          }
+        />
+        <ToggleRow
+          title={t('config_management.visual.sections.images.override_response_format_url')}
+          description={t(
+            'config_management.visual.sections.images.override_response_format_url_desc'
+          )}
+          checked={values.images.overrideResponseFormatUrl}
+          disabled={disabled}
+          onChange={(overrideResponseFormatUrl) =>
+            onChange({
+              images: {
+                ...values.images,
+                overrideResponseFormatUrl,
+              },
+            })
+          }
+        />
+        <ToggleRow
+          title={t('config_management.visual.sections.images.response_format_url_data_url')}
+          description={t(
+            'config_management.visual.sections.images.response_format_url_data_url_desc'
+          )}
+          checked={values.images.responseFormatUrlDataUrl}
+          disabled={disabled}
+          onChange={(responseFormatUrlDataUrl) =>
+            onChange({
+              images: {
+                ...values.images,
+                responseFormatUrlDataUrl,
+              },
+            })
+          }
+        />
+        <ToggleRow
+          title={t('config_management.visual.sections.images.override_transparent_background')}
+          description={t(
+            'config_management.visual.sections.images.override_transparent_background_desc'
+          )}
+          checked={values.images.overrideTransparentBackground}
+          disabled={disabled}
+          onChange={(overrideTransparentBackground) =>
+            onChange({
+              images: {
+                ...values.images,
+                overrideTransparentBackground,
+              },
+            })
+          }
+        />
+        <ToggleRow
+          title={t('config_management.visual.sections.images.override_input_fidelity')}
+          description={t('config_management.visual.sections.images.override_input_fidelity_desc')}
+          checked={values.images.overrideInputFidelity}
+          disabled={disabled}
+          onChange={(overrideInputFidelity) =>
+            onChange({
+              images: {
+                ...values.images,
+                overrideInputFidelity,
+              },
+            })
+          }
+        />
+      </SectionGrid>
+    </>
+  );
+}
+
 export function VisualConfigEditor({
   values,
   baselineValues,
@@ -231,6 +555,8 @@ export function VisualConfigEditor({
   const [proxyCheckResult, setProxyCheckResult] = useState<ProxyUrlCheckResult | null>(null);
   const [proxyCheckError, setProxyCheckError] = useState('');
   const proxyUrlDirty = values.proxyUrl !== baselineValues.proxyUrl;
+  const collapseLegacyImagesSettings =
+    values.images.native.generations.enabled && values.images.native.edits.enabled;
   const fixedErrorCooldownScopeOptions = useMemo(
     () => [
       {
@@ -304,6 +630,14 @@ export function VisualConfigEditor({
   const imagesStreamFlushMinBytesError = getValidationMessage(
     t,
     validationErrors?.['images.streamFlushMinBytes']
+  );
+  const imagesNativeGenerationsStatusCodeError = getValidationMessage(
+    t,
+    validationErrors?.['images.native.generations.unsupportedModelStatusCode']
+  );
+  const imagesNativeEditsStatusCodeError = getValidationMessage(
+    t,
+    validationErrors?.['images.native.edits.unsupportedModelStatusCode']
   );
   const authMaintenanceScanIntervalError = getValidationMessage(
     t,
@@ -544,6 +878,8 @@ export function VisualConfigEditor({
           'images.unsupportedStatusCode',
           'images.streamFlushIntervalMs',
           'images.streamFlushMinBytes',
+          'images.native.generations.unsupportedModelStatusCode',
+          'images.native.edits.unsupportedModelStatusCode',
         ]),
       },
       {
@@ -1557,206 +1893,103 @@ export function VisualConfigEditor({
             description={t('config_management.visual.sections.images.description')}
           >
             <SectionStack>
-              <SectionGrid>
-                <Input
-                  label={t('config_management.visual.sections.images.codex_model')}
-                  placeholder="gpt-5.4"
-                  value={values.images.codexModel}
-                  onChange={(e) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        codexModel: e.target.value,
-                      },
-                    })
-                  }
-                  disabled={disabled}
-                  hint={t('config_management.visual.sections.images.codex_model_hint')}
-                />
-                <Input
-                  label={t('config_management.visual.sections.images.image_model')}
-                  placeholder="gpt-image-2"
-                  value={values.images.imageModel}
-                  onChange={(e) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        imageModel: e.target.value,
-                      },
-                    })
-                  }
-                  disabled={disabled}
-                  hint={t('config_management.visual.sections.images.image_model_hint')}
-                />
-                <Input
-                  label={t('config_management.visual.sections.images.unsupported_status_code')}
-                  type="number"
-                  placeholder="400"
-                  value={values.images.unsupportedStatusCode}
-                  onChange={(e) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        unsupportedStatusCode: e.target.value,
-                      },
-                    })
-                  }
-                  disabled={disabled}
-                  hint={t('config_management.visual.sections.images.unsupported_status_code_hint')}
-                  error={imagesUnsupportedStatusCodeError}
-                />
-                <Input
-                  label={t('config_management.visual.sections.images.stream_flush_interval_ms')}
-                  type="number"
-                  placeholder="0"
-                  value={values.images.streamFlushIntervalMs}
-                  onChange={(e) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        streamFlushIntervalMs: e.target.value,
-                      },
-                    })
-                  }
-                  disabled={disabled}
-                  hint={t('config_management.visual.sections.images.stream_flush_interval_ms_hint')}
-                  error={imagesStreamFlushIntervalError}
-                />
-                <Input
-                  label={t('config_management.visual.sections.images.stream_flush_min_bytes')}
-                  type="number"
-                  placeholder="0"
-                  value={values.images.streamFlushMinBytes}
-                  onChange={(e) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        streamFlushMinBytes: e.target.value,
-                      },
-                    })
-                  }
-                  disabled={disabled}
-                  hint={t('config_management.visual.sections.images.stream_flush_min_bytes_hint')}
-                  error={imagesStreamFlushMinBytesError}
-                />
-              </SectionGrid>
+              <SectionSubsection
+                title={t('config_management.visual.sections.images.native_title')}
+                description={t('config_management.visual.sections.images.native_description')}
+              >
+                <div className={styles.blockStack}>
+                  <NativeImageEndpointEditor
+                    title={t('config_management.visual.sections.images.native_generations_title')}
+                    description={t(
+                      'config_management.visual.sections.images.native_generations_description'
+                    )}
+                    value={values.images.native.generations}
+                    disabled={disabled}
+                    statusCodeError={imagesNativeGenerationsStatusCodeError}
+                    onChange={(generations) =>
+                      onChange({
+                        images: {
+                          ...values.images,
+                          native: {
+                            ...values.images.native,
+                            generations,
+                          },
+                        },
+                      })
+                    }
+                  />
+                  <NativeImageEndpointEditor
+                    title={t('config_management.visual.sections.images.native_edits_title')}
+                    description={t(
+                      'config_management.visual.sections.images.native_edits_description'
+                    )}
+                    value={values.images.native.edits}
+                    disabled={disabled}
+                    statusCodeError={imagesNativeEditsStatusCodeError}
+                    onChange={(edits) =>
+                      onChange({
+                        images: {
+                          ...values.images,
+                          native: {
+                            ...values.images.native,
+                            edits,
+                          },
+                        },
+                      })
+                    }
+                  />
+                </div>
+              </SectionSubsection>
 
-              <SectionGrid>
-                <ToggleRow
-                  title={t('config_management.visual.sections.images.enable_free_plan_image_model')}
-                  description={t(
-                    'config_management.visual.sections.images.enable_free_plan_image_model_desc'
-                  )}
-                  checked={values.images.enableFreePlanImageModel}
+              <SectionSubsection
+                title={t('config_management.visual.sections.images.stream_flush_settings')}
+                description={t(
+                  'config_management.visual.sections.images.stream_flush_settings_desc'
+                )}
+              >
+                <ImagesStreamFlushSettings
+                  values={values}
                   disabled={disabled}
-                  onChange={(enableFreePlanImageModel) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        enableFreePlanImageModel,
-                      },
-                    })
-                  }
+                  intervalError={imagesStreamFlushIntervalError}
+                  minBytesError={imagesStreamFlushMinBytesError}
+                  onChange={onChange}
                 />
-                <ToggleRow
-                  title={t('config_management.visual.sections.images.enable_n_aggregation')}
-                  description={t(
-                    'config_management.visual.sections.images.enable_n_aggregation_desc'
-                  )}
-                  checked={values.images.enableNAggregation}
-                  disabled={disabled}
-                  onChange={(enableNAggregation) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        enableNAggregation,
-                      },
-                    })
-                  }
-                />
-                <ToggleRow
-                  title={t('config_management.visual.sections.images.enable_stream_flush')}
-                  description={t(
-                    'config_management.visual.sections.images.enable_stream_flush_desc'
-                  )}
-                  checked={values.images.enableStreamFlush}
-                  disabled={disabled}
-                  onChange={(enableStreamFlush) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        enableStreamFlush,
-                      },
-                    })
-                  }
-                />
-                <ToggleRow
-                  title={t('config_management.visual.sections.images.override_response_format_url')}
-                  description={t(
-                    'config_management.visual.sections.images.override_response_format_url_desc'
-                  )}
-                  checked={values.images.overrideResponseFormatUrl}
-                  disabled={disabled}
-                  onChange={(overrideResponseFormatUrl) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        overrideResponseFormatUrl,
-                      },
-                    })
-                  }
-                />
-                <ToggleRow
-                  title={t('config_management.visual.sections.images.response_format_url_data_url')}
-                  description={t(
-                    'config_management.visual.sections.images.response_format_url_data_url_desc'
-                  )}
-                  checked={values.images.responseFormatUrlDataUrl}
-                  disabled={disabled}
-                  onChange={(responseFormatUrlDataUrl) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        responseFormatUrlDataUrl,
-                      },
-                    })
-                  }
-                />
-                <ToggleRow
+              </SectionSubsection>
+
+              {collapseLegacyImagesSettings ? (
+                <details className={styles.ruleCard}>
+                  <summary className={styles.ruleCardTitle}>
+                    {t('config_management.visual.sections.images.legacy_responses_tool_settings')}
+                  </summary>
+                  <p className={styles.subsectionDescription}>
+                    {t(
+                      'config_management.visual.sections.images.legacy_responses_tool_settings_desc'
+                    )}
+                  </p>
+                  <LegacyImagesSettings
+                    values={values}
+                    disabled={disabled}
+                    unsupportedStatusCodeError={imagesUnsupportedStatusCodeError}
+                    onChange={onChange}
+                  />
+                </details>
+              ) : (
+                <SectionSubsection
                   title={t(
-                    'config_management.visual.sections.images.override_transparent_background'
+                    'config_management.visual.sections.images.legacy_responses_tool_settings'
                   )}
                   description={t(
-                    'config_management.visual.sections.images.override_transparent_background_desc'
+                    'config_management.visual.sections.images.legacy_responses_tool_settings_desc'
                   )}
-                  checked={values.images.overrideTransparentBackground}
-                  disabled={disabled}
-                  onChange={(overrideTransparentBackground) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        overrideTransparentBackground,
-                      },
-                    })
-                  }
-                />
-                <ToggleRow
-                  title={t('config_management.visual.sections.images.override_input_fidelity')}
-                  description={t(
-                    'config_management.visual.sections.images.override_input_fidelity_desc'
-                  )}
-                  checked={values.images.overrideInputFidelity}
-                  disabled={disabled}
-                  onChange={(overrideInputFidelity) =>
-                    onChange({
-                      images: {
-                        ...values.images,
-                        overrideInputFidelity,
-                      },
-                    })
-                  }
-                />
-              </SectionGrid>
+                >
+                  <LegacyImagesSettings
+                    values={values}
+                    disabled={disabled}
+                    unsupportedStatusCodeError={imagesUnsupportedStatusCodeError}
+                    onChange={onChange}
+                  />
+                </SectionSubsection>
+              )}
             </SectionStack>
           </ConfigSection>
 

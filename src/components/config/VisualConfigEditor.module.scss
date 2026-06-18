@@ -839,6 +839,15 @@
   line-height: 1.2;
 }
 
+.ruleCard > summary.ruleCardTitle {
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.ruleCard > summary.ruleCardTitle::marker {
+  color: var(--text-secondary);
+}
+
 .blockLabel {
   color: var(--text-secondary);
   font-size: 12px;

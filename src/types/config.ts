@@ -57,6 +57,19 @@ export interface AuthMaintenanceConfig {
   disableQuotaStrikeThreshold?: number;
 }
 
+export interface NativeImageEndpointConfig {
+  enabled?: boolean;
+  models?: string[];
+  paramRules?: string[];
+  unsupportedModelStatusCode?: number;
+  unsupportedModelMessage?: string;
+}
+
+export interface NativeImagesConfig {
+  generations?: NativeImageEndpointConfig;
+  edits?: NativeImageEndpointConfig;
+}
+
 export interface ImagesConfig {
   codexModel?: string;
   imageModel?: string;
@@ -71,6 +84,7 @@ export interface ImagesConfig {
   overrideInputFidelity?: boolean;
   streamFlushIntervalMs?: number;
   streamFlushMinBytes?: number;
+  native?: NativeImagesConfig;
 }
 
 export interface StreamingConfig {
