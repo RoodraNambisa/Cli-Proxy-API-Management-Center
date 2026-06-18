@@ -209,8 +209,7 @@ export function AuthFilesPage() {
   const selectionCountRef = useRef(0);
   const pageAuthIndexesRef = useRef<string[]>([]);
 
-  const { keyStats, usageAuths, usageDetails, usageLoading, loadKeyStats, refreshKeyStats } =
-    useAuthFilesStats();
+  const { keyStats, usageAuths, usageLoading, loadKeyStats, refreshKeyStats } = useAuthFilesStats();
   const refreshVisibleKeyStats = useCallback(async () => {
     await refreshKeyStats(pageAuthIndexesRef.current);
   }, [refreshKeyStats]);
@@ -261,7 +260,7 @@ export function AuthFilesPage() {
   } = useAuthFilesData({ refreshKeyStats: refreshVisibleKeyStats, active: isCurrentLayer });
 
   const disableControls = connectionStatus !== 'connected';
-  const statusBarCache = useAuthFilesStatusBarCache(files, usageDetails);
+  const statusBarCache = useAuthFilesStatusBarCache(files, []);
   const usageSummaryCache = useAuthFilesUsageSummary(usageAuths);
 
   const {
@@ -678,7 +677,6 @@ export function AuthFilesPage() {
       Array.from(
         new Set(
           pageItems
-            .filter((file) => !isRuntimeOnlyAuthFile(file))
             .map((file) => normalizeAuthIndex(file['auth_index'] ?? file.authIndex))
             .filter((value): value is string => Boolean(value))
         )

@@ -83,11 +83,18 @@ export interface ApiStats {
   totalRequests: number;
   successCount: number;
   failureCount: number;
+  hasOutcomeCounts: boolean;
   totalTokens: number;
   totalCost: number;
   models: Record<
     string,
-    { requests: number; successCount: number; failureCount: number; tokens: number }
+    {
+      requests: number;
+      successCount: number;
+      failureCount: number;
+      hasOutcomeCounts: boolean;
+      tokens: number;
+    }
   >;
 }
 
@@ -96,6 +103,7 @@ export interface ModelStatsSummary {
   requests: number;
   successCount: number;
   failureCount: number;
+  hasOutcomeCounts: boolean;
   tokens: number;
   cost: number;
   averageLatencyMs: number | null;
@@ -944,7 +952,13 @@ export function getApiStats(
     if (!isRecord(apiData)) return;
     const models: Record<
       string,
-      { requests: number; successCount: number; failureCount: number; tokens: number }
+      {
+        requests: number;
+        successCount: number;
+        failureCount: number;
+        hasOutcomeCounts: boolean;
+        tokens: number;
+      }
     > = {};
     let derivedSuccessCount = 0;
     let derivedFailureCount = 0;
@@ -956,6 +970,7 @@ export function getApiStats(
       const details = Array.isArray(modelData.details) ? modelData.details : [];
       const hasExplicitCounts =
         typeof modelData.success_count === 'number' || typeof modelData.failure_count === 'number';
+      const hasOutcomeCounts = hasExplicitCounts || details.length > 0;
 
       let successCount = 0;
       let failureCount = 0;
@@ -989,6 +1004,7 @@ export function getApiStats(
         requests: Number(modelData.total_requests) || 0,
         successCount,
         failureCount,
+        hasOutcomeCounts,
         tokens: Number(modelData.total_tokens) || 0,
       };
       derivedSuccessCount += successCount;
@@ -1003,12 +1019,15 @@ export function getApiStats(
     const failureCount = hasApiExplicitCounts
       ? Number(apiData.failure_count) || 0
       : derivedFailureCount;
+    const hasOutcomeCounts =
+      hasApiExplicitCounts || Object.values(models).some((model) => model.hasOutcomeCounts);
 
     result.push({
       endpoint: maskUsageSensitiveValue(endpoint) || endpoint,
       totalRequests: Number(apiData.total_requests) || 0,
       successCount,
       failureCount,
+      hasOutcomeCounts,
       totalTokens: Number(apiData.total_tokens) || 0,
       totalCost,
       models,
@@ -1034,6 +1053,7 @@ export function getModelStats(
       requests: number;
       successCount: number;
       failureCount: number;
+      hasOutcomeCounts: boolean;
       tokens: number;
       cost: number;
       latency: LatencyAccumulator;
@@ -1052,6 +1072,7 @@ export function getModelStats(
         requests: 0,
         successCount: 0,
         failureCount: 0,
+        hasOutcomeCounts: true,
         tokens: 0,
         cost: 0,
         latency: createLatencyAccumulator(),
@@ -1068,6 +1089,13 @@ export function getModelStats(
       if (hasExplicitCounts) {
         existing.successCount += Number(modelData.success_count) || 0;
         existing.failureCount += Number(modelData.failure_count) || 0;
+      }
+      if (
+        !hasExplicitCounts &&
+        details.length === 0 &&
+        (Number(modelData.total_requests) || 0) > 0
+      ) {
+        existing.hasOutcomeCounts = false;
       }
 
       if (details.length > 0) {
@@ -1104,6 +1132,7 @@ export function getModelStats(
         requests: stats.requests,
         successCount: stats.successCount,
         failureCount: stats.failureCount,
+        hasOutcomeCounts: stats.hasOutcomeCounts,
         tokens: stats.tokens,
         cost: stats.cost,
         averageLatencyMs: latencyStats.averageMs,

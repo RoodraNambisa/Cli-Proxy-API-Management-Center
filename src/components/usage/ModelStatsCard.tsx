@@ -53,7 +53,8 @@ export function ModelStatsCard({ modelStats, loading, hasPrices }: ModelStatsCar
   const sorted = useMemo((): ModelStatWithRate[] => {
     const list: ModelStatWithRate[] = modelStats.map((s) => ({
       ...s,
-      successRate: s.requests > 0 ? (s.successCount / s.requests) * 100 : 100,
+      successRate:
+        s.hasOutcomeCounts && s.requests > 0 ? (s.successCount / s.requests) * 100 : Number.NaN,
     }));
     const dir = sortDir === 'asc' ? 1 : -1;
     list.sort((a, b) => {
@@ -75,6 +76,17 @@ export function ModelStatsCard({ modelStats, loading, hasPrices }: ModelStatsCar
   const ariaSort = (key: SortKey): 'none' | 'ascending' | 'descending' =>
     sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
   const hasLatencyData = sorted.some((stat) => stat.latencySampleCount > 0);
+  const renderOutcomeBreakdown = (stat: ModelStatWithRate) => {
+    if (!stat.hasOutcomeCounts) {
+      return <span className={styles.requestBreakdown}>(--)</span>;
+    }
+    return (
+      <span className={styles.requestBreakdown}>
+        (<span className={styles.statSuccess}>{stat.successCount.toLocaleString()}</span>{' '}
+        <span className={styles.statFailure}>{stat.failureCount.toLocaleString()}</span>)
+      </span>
+    );
+  };
 
   return (
     <Card title={t('usage_stats.models')} className={styles.detailsFixedCard}>
@@ -171,16 +183,7 @@ export function ModelStatsCard({ modelStats, loading, hasPrices }: ModelStatsCar
                       <td>
                         <span className={styles.requestCountCell}>
                           <span>{stat.requests.toLocaleString()}</span>
-                          <span className={styles.requestBreakdown}>
-                            (
-                            <span className={styles.statSuccess}>
-                              {stat.successCount.toLocaleString()}
-                            </span>{' '}
-                            <span className={styles.statFailure}>
-                              {stat.failureCount.toLocaleString()}
-                            </span>
-                            )
-                          </span>
+                          {renderOutcomeBreakdown(stat)}
                         </span>
                       </td>
                       <td>{formatCompactNumber(stat.tokens)}</td>
@@ -191,17 +194,21 @@ export function ModelStatsCard({ modelStats, loading, hasPrices }: ModelStatsCar
                         {formatDurationMs(stat.totalLatencyMs)}
                       </td>
                       <td>
-                        <span
-                          className={
-                            stat.successRate >= 95
-                              ? styles.statSuccess
-                              : stat.successRate >= 80
-                                ? styles.statNeutral
-                                : styles.statFailure
-                          }
-                        >
-                          {stat.successRate.toFixed(1)}%
-                        </span>
+                        {stat.hasOutcomeCounts ? (
+                          <span
+                            className={
+                              stat.successRate >= 95
+                                ? styles.statSuccess
+                                : stat.successRate >= 80
+                                  ? styles.statNeutral
+                                  : styles.statFailure
+                            }
+                          >
+                            {stat.successRate.toFixed(1)}%
+                          </span>
+                        ) : (
+                          '--'
+                        )}
                       </td>
                       {hasPrices && <td>{stat.cost > 0 ? formatUsd(stat.cost) : '--'}</td>}
                     </tr>
