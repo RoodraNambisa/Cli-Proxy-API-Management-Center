@@ -1,127 +1,127 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { authFilesApi } from '@/services/api/authFiles';
-import type { GeminiKeyConfig, OpenAIProviderConfig, ProviderKeyConfig } from '@/types';
-import type { AuthFileItem } from '@/types/authFile';
-import type { CredentialInfo } from '@/types/sourceInfo';
-import { buildSourceInfoMap, resolveSourceDisplay } from '@/utils/sourceResolver';
-import { collectUsageDetails, formatCompactNumber, normalizeAuthIndex } from '@/utils/usage';
-import type { UsagePayload } from './hooks/useUsageData';
+import { usageApi } from '@/services/api/usage';
+import type { UsageAuthSummary } from '@/types';
+import { formatCompactNumber, normalizeAuthIndex } from '@/utils/usage';
 import styles from '@/pages/UsagePage.module.scss';
 
 export interface CredentialStatsCardProps {
-  usage: UsagePayload | null;
+  authUsage: UsageAuthSummary[];
   loading: boolean;
-  geminiKeys: GeminiKeyConfig[];
-  claudeConfigs: ProviderKeyConfig[];
-  codexConfigs: ProviderKeyConfig[];
-  vertexConfigs: ProviderKeyConfig[];
-  openaiProviders: OpenAIProviderConfig[];
 }
 
-interface CredentialRow {
-  key: string;
-  displayName: string;
-  type: string;
-  success: number;
-  failure: number;
-  total: number;
-  successRate: number;
-}
+type AuthModelState = {
+  loading: boolean;
+  error: string;
+  models: UsageAuthSummary[];
+};
 
-export function CredentialStatsCard({
-  usage,
-  loading,
-  geminiKeys,
-  claudeConfigs,
-  codexConfigs,
-  vertexConfigs,
-  openaiProviders,
-}: CredentialStatsCardProps) {
-  const { t } = useTranslation();
-  const [authFileMap, setAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
+const toNumber = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
-  useEffect(() => {
-    let cancelled = false;
+const isNotFoundError = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  'status' in error &&
+  Number((error as { status?: unknown }).status) === 404;
 
-    authFilesApi
-      .list()
-      .then((res) => {
-        if (cancelled) return;
+const getAuthIndex = (auth: UsageAuthSummary): string | null =>
+  normalizeAuthIndex(auth.auth_index ?? auth.authIndex);
 
-        const files = Array.isArray(res) ? res : (res as { files?: AuthFileItem[] })?.files;
-        if (!Array.isArray(files)) return;
+const getAuthKey = (auth: UsageAuthSummary, index: number): string =>
+  getAuthIndex(auth) ?? auth.id ?? auth.name ?? `auth-${index}`;
 
-        const map = new Map<string, CredentialInfo>();
-        files.forEach((file) => {
-          const key = normalizeAuthIndex(file['auth_index'] ?? file.authIndex);
-          if (!key) return;
-
-          map.set(key, {
-            name: file.name || key,
-            type: (file.type || file.provider || '').toString(),
-          });
-        });
-        setAuthFileMap(map);
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const sourceInfoMap = useMemo(
-    () =>
-      buildSourceInfoMap({
-        geminiApiKeys: geminiKeys,
-        claudeApiKeys: claudeConfigs,
-        codexApiKeys: codexConfigs,
-        vertexApiKeys: vertexConfigs,
-        openaiCompatibility: openaiProviders,
-      }),
-    [claudeConfigs, codexConfigs, geminiKeys, openaiProviders, vertexConfigs]
+const getAuthLabel = (auth: UsageAuthSummary): string =>
+  String(
+    auth.label ?? auth.name ?? auth.email ?? auth.account ?? getAuthIndex(auth) ?? auth.id ?? '-'
   );
 
-  const rows = useMemo((): CredentialRow[] => {
-    if (!usage) return [];
+const getAuthType = (auth: UsageAuthSummary): string =>
+  [auth.provider, auth.type, auth.account_type ?? auth.accountType, auth.stale ? 'stale' : '']
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean)
+    .join(' · ');
 
-    const rowMap = new Map<string, CredentialRow>();
+const getTotalTokens = (auth: UsageAuthSummary): number =>
+  Math.max(toNumber(auth.total_tokens), toNumber(auth.tokens?.total_tokens));
 
-    collectUsageDetails(usage).forEach((detail) => {
-      const sourceInfo = resolveSourceDisplay(
-        detail.source ?? '',
-        detail.auth_index,
-        sourceInfoMap,
-        authFileMap
-      );
-      const key = sourceInfo.identityKey ?? sourceInfo.displayName;
-      const row =
-        rowMap.get(key) ??
-        ({
-          key,
-          displayName: sourceInfo.displayName,
-          type: sourceInfo.type,
-          success: 0,
-          failure: 0,
-          total: 0,
-          successRate: 100,
-        } satisfies CredentialRow);
+const getTokenBreakdownLabel = (auth: UsageAuthSummary, t: (key: string) => string): string => {
+  const tokens = auth.tokens ?? {};
+  const input = Math.max(toNumber(tokens.input_tokens), 0);
+  const output = Math.max(toNumber(tokens.output_tokens), 0);
+  const cached = Math.max(toNumber(tokens.cached_tokens), toNumber(tokens.cache_tokens), 0);
+  const reasoning = Math.max(toNumber(tokens.reasoning_tokens), 0);
 
-      if (detail.failed === true) {
-        row.failure += 1;
-      } else {
-        row.success += 1;
-      }
+  if (input + output + cached + reasoning <= 0) {
+    return '';
+  }
 
-      row.total = row.success + row.failure;
-      row.successRate = row.total > 0 ? (row.success / row.total) * 100 : 100;
-      rowMap.set(key, row);
-    });
+  return [
+    `${t('usage_stats.input_tokens')}: ${formatCompactNumber(input)}`,
+    `${t('usage_stats.output_tokens')}: ${formatCompactNumber(output)}`,
+    `${t('usage_stats.cached_tokens')}: ${formatCompactNumber(cached)}`,
+    `${t('usage_stats.reasoning_tokens')}: ${formatCompactNumber(reasoning)}`,
+  ].join(' · ');
+};
 
-    return Array.from(rowMap.values()).sort((a, b) => b.total - a.total);
-  }, [authFileMap, sourceInfoMap, usage]);
+export function CredentialStatsCard({ authUsage, loading }: CredentialStatsCardProps) {
+  const { t } = useTranslation();
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [modelStateByKey, setModelStateByKey] = useState<Record<string, AuthModelState>>({});
+
+  const rows = useMemo(
+    () =>
+      [...authUsage].sort((a, b) => {
+        const totalDelta = toNumber(b.total_requests) - toNumber(a.total_requests);
+        if (totalDelta !== 0) return totalDelta;
+        return getAuthLabel(a).localeCompare(getAuthLabel(b));
+      }),
+    [authUsage]
+  );
+
+  const loadModels = async (auth: UsageAuthSummary, key: string) => {
+    const authIndex = getAuthIndex(auth);
+    if (!authIndex) return;
+
+    if (expandedKey === key) {
+      setExpandedKey(null);
+      return;
+    }
+
+    setExpandedKey(key);
+    if (modelStateByKey[key]?.models.length || modelStateByKey[key]?.loading) {
+      return;
+    }
+
+    setModelStateByKey((prev) => ({
+      ...prev,
+      [key]: { loading: true, error: '', models: [] },
+    }));
+
+    try {
+      await usageApi.getUsageAuth(authIndex);
+      const response = await usageApi.getUsageAuthModels(authIndex);
+      const models = Array.isArray(response.models) ? response.models : [];
+      setModelStateByKey((prev) => ({
+        ...prev,
+        [key]: { loading: false, error: '', models },
+      }));
+    } catch (error: unknown) {
+      const message = isNotFoundError(error)
+        ? t('usage_stats.credential_not_found')
+        : error instanceof Error
+          ? error.message
+          : t('usage_stats.loading_error');
+      setModelStateByKey((prev) => ({
+        ...prev,
+        [key]: { loading: false, error: message, models: [] },
+      }));
+    }
+  };
 
   return (
     <Card title={t('usage_stats.credential_stats')} className={styles.detailsFixedCard}>
@@ -135,46 +135,132 @@ export function CredentialStatsCard({
                 <tr>
                   <th>{t('usage_stats.credential_name')}</th>
                   <th>{t('usage_stats.requests_count')}</th>
+                  <th>{t('usage_stats.tokens_count')}</th>
                   <th>{t('usage_stats.success_rate')}</th>
+                  <th>{t('usage_stats.credential_models')}</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.key}>
-                    <td className={styles.modelCell}>
-                      <span>{row.displayName}</span>
-                      {row.type && <span className={styles.credentialType}>{row.type}</span>}
-                    </td>
-                    <td>
-                      <span className={styles.requestCountCell}>
-                        <span>{formatCompactNumber(row.total)}</span>
-                        <span className={styles.requestBreakdown}>
-                          (
-                          <span className={styles.statSuccess}>
-                            {row.success.toLocaleString()}
-                          </span>{' '}
-                          <span className={styles.statFailure}>
-                            {row.failure.toLocaleString()}
+                {rows.map((row, index) => {
+                  const key = getAuthKey(row, index);
+                  const success = Math.max(toNumber(row.success_count), 0);
+                  const failure = Math.max(toNumber(row.failure_count), 0);
+                  const total = Math.max(toNumber(row.total_requests), success + failure);
+                  const successRate = total > 0 ? (success / total) * 100 : 100;
+                  const totalTokens = getTotalTokens(row);
+                  const tokenBreakdown = getTokenBreakdownLabel(row, t);
+                  const isExpanded = expandedKey === key;
+                  const modelState = modelStateByKey[key];
+
+                  return (
+                    <Fragment key={key}>
+                      <tr>
+                        <td className={styles.modelCell}>
+                          <span>{getAuthLabel(row)}</span>
+                          {getAuthType(row) && (
+                            <span className={styles.credentialType}>{getAuthType(row)}</span>
+                          )}
+                          {row.stale && (
+                            <span className={styles.credentialStale}>
+                              {t('usage_stats.credential_stale')}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <span className={styles.requestCountCell}>
+                            <span>{formatCompactNumber(total)}</span>
+                            <span className={styles.requestBreakdown}>
+                              (
+                              <span className={styles.statSuccess}>{success.toLocaleString()}</span>{' '}
+                              <span className={styles.statFailure}>{failure.toLocaleString()}</span>
+                              )
+                            </span>
                           </span>
-                          )
-                        </span>
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={
-                          row.successRate >= 95
-                            ? styles.statSuccess
-                            : row.successRate >= 80
-                              ? styles.statNeutral
-                              : styles.statFailure
-                        }
-                      >
-                        {row.successRate.toFixed(1)}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                        </td>
+                        <td title={tokenBreakdown || undefined}>
+                          {formatCompactNumber(totalTokens)}
+                          {tokenBreakdown && (
+                            <span className={styles.tokenBreakdownInline}>{tokenBreakdown}</span>
+                          )}
+                        </td>
+                        <td>
+                          <span
+                            className={
+                              successRate >= 95
+                                ? styles.statSuccess
+                                : successRate >= 80
+                                  ? styles.statNeutral
+                                  : styles.statFailure
+                            }
+                          >
+                            {successRate.toFixed(1)}%
+                          </span>
+                        </td>
+                        <td>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void loadModels(row, key)}
+                            disabled={!getAuthIndex(row) || modelState?.loading}
+                          >
+                            {modelState?.loading
+                              ? t('common.loading')
+                              : isExpanded
+                                ? t('usage_stats.credential_models_hide')
+                                : t('usage_stats.credential_models_show')}
+                          </Button>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${key}-models`}>
+                          <td colSpan={5} className={styles.credentialModelsCell}>
+                            {modelState?.loading ? (
+                              <div className={styles.hint}>{t('common.loading')}</div>
+                            ) : modelState?.error ? (
+                              <div className={styles.errorBox}>{modelState.error}</div>
+                            ) : modelState?.models.length ? (
+                              <div className={styles.credentialModelsList}>
+                                {modelState.models.map((model, modelIndex) => {
+                                  const modelName = String(
+                                    model.model ?? model.name ?? model.label ?? '-'
+                                  );
+                                  const modelSuccess = Math.max(toNumber(model.success_count), 0);
+                                  const modelFailure = Math.max(toNumber(model.failure_count), 0);
+                                  const modelTotal = Math.max(
+                                    toNumber(model.total_requests),
+                                    modelSuccess + modelFailure
+                                  );
+                                  return (
+                                    <div
+                                      key={`${key}-${modelName}-${modelIndex}`}
+                                      className={styles.credentialModelRow}
+                                    >
+                                      <span className={styles.modelName}>{modelName}</span>
+                                      <span>
+                                        {formatCompactNumber(modelTotal)} ·{' '}
+                                        <span className={styles.statSuccess}>
+                                          {modelSuccess.toLocaleString()}
+                                        </span>{' '}
+                                        <span className={styles.statFailure}>
+                                          {modelFailure.toLocaleString()}
+                                        </span>
+                                      </span>
+                                      <span>{formatCompactNumber(getTotalTokens(model))}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className={styles.hint}>
+                                {t('usage_stats.credential_models_empty')}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

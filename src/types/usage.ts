@@ -50,3 +50,82 @@ export interface ModelPrice {
   inputPricePer1M: number;
   outputPricePer1M: number;
 }
+
+export interface UsageTokens {
+  input_tokens?: number;
+  output_tokens?: number;
+  reasoning_tokens?: number;
+  cached_tokens?: number;
+  cache_tokens?: number;
+  total_tokens?: number;
+  [key: string]: unknown;
+}
+
+export interface UsageMeta {
+  version?: string | number;
+  total_requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  [key: string]: unknown;
+}
+
+export interface UsageEnvelope<T = Record<string, unknown>> {
+  usage?: T;
+  failed_requests?: number;
+  [key: string]: unknown;
+}
+
+export interface UsageDetailsQuery {
+  api?: string;
+  model?: string;
+  auth_index?: string | number;
+  source?: string;
+  client_ip?: string;
+  failed?: boolean;
+  offset?: number;
+  limit?: number;
+}
+
+export interface UsageDetailsResponse {
+  details?: unknown[];
+  offset?: number;
+  limit?: number;
+  next_offset?: number | null;
+  has_more?: boolean;
+  total_matched?: number;
+  [key: string]: unknown;
+}
+
+export interface UsageAuthSummary {
+  auth_index?: string | number | null;
+  authIndex?: string | number | null;
+  id?: string;
+  name?: string;
+  provider?: string;
+  type?: string;
+  label?: string;
+  status?: string;
+  disabled?: boolean;
+  account_type?: string;
+  accountType?: string;
+  account?: string;
+  email?: string;
+  stale?: boolean;
+  total_requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  tokens?: UsageTokens;
+  [key: string]: unknown;
+}
+
+export interface UsageAuthsResponse {
+  auths?: UsageAuthSummary[];
+  [key: string]: unknown;
+}
+
+export interface UsageAuthModelsResponse {
+  models?: UsageAuthSummary[];
+  [key: string]: unknown;
+}

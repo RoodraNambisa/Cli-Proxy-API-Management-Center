@@ -207,7 +207,7 @@ export function AuthFilesPage() {
   const previousSelectionCountRef = useRef(0);
   const selectionCountRef = useRef(0);
 
-  const { keyStats, usageDetails, usageLoading, loadKeyStats, refreshKeyStats } =
+  const { keyStats, usageAuths, usageDetails, usageLoading, loadKeyStats, refreshKeyStats } =
     useAuthFilesStats();
   const {
     files,
@@ -257,7 +257,7 @@ export function AuthFilesPage() {
 
   const disableControls = connectionStatus !== 'connected';
   const statusBarCache = useAuthFilesStatusBarCache(files, usageDetails);
-  const usageSummaryCache = useAuthFilesUsageSummary(usageDetails);
+  const usageSummaryCache = useAuthFilesUsageSummary(usageAuths);
 
   const {
     excluded,

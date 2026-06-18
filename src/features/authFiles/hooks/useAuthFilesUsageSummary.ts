@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
-import { extractTotalTokens, normalizeAuthIndex, type UsageDetail } from '@/utils/usage';
+import type { UsageAuthSummary } from '@/types';
+import { normalizeAuthIndex } from '@/utils/usage';
+import { parseTimestampMs } from '@/utils/timestamp';
 
 export interface AuthFileUsageSummary {
   requestCount: number;
@@ -19,44 +21,46 @@ const createSummary = (): AuthFileUsageSummary => ({
   latestTimestampMs: null,
 });
 
-export function useAuthFilesUsageSummary(usageDetails: UsageDetail[]) {
+const toNumber = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getLatestTimestampMs = (auth: UsageAuthSummary): number | null => {
+  const raw =
+    typeof auth.last_used_at === 'string'
+      ? auth.last_used_at
+      : typeof auth.lastUsedAt === 'string'
+        ? auth.lastUsedAt
+        : '';
+  if (!raw) return null;
+  const parsed = parseTimestampMs(raw);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+export function useAuthFilesUsageSummary(usageAuths: UsageAuthSummary[]) {
   return useMemo(() => {
     const cache = new Map<string, AuthFileUsageSummary>();
-    const modelsByAuthIndex = new Map<string, Set<string>>();
 
-    usageDetails.forEach((detail) => {
-      const authIndexKey = normalizeAuthIndex(detail.auth_index);
+    usageAuths.forEach((auth) => {
+      const authIndexKey = normalizeAuthIndex(auth.auth_index ?? auth.authIndex);
       if (!authIndexKey) return;
 
-      const current = cache.get(authIndexKey) ?? createSummary();
-      current.requestCount += 1;
-      if (detail.failed === true) {
-        current.failureCount += 1;
-      } else {
-        current.successCount += 1;
-      }
-      current.totalTokens += extractTotalTokens(detail);
+      const summary = createSummary();
+      summary.requestCount = Math.max(toNumber(auth.total_requests), 0);
+      summary.successCount = Math.max(toNumber(auth.success_count), 0);
+      summary.failureCount = Math.max(toNumber(auth.failure_count), 0);
+      summary.totalTokens = Math.max(
+        toNumber(auth.total_tokens),
+        toNumber(auth.tokens?.total_tokens),
+        0
+      );
+      summary.modelCount = Math.max(toNumber(auth.model_count ?? auth.modelCount), 0);
+      summary.latestTimestampMs = getLatestTimestampMs(auth);
 
-      const timestamp = typeof detail.__timestampMs === 'number' ? detail.__timestampMs : 0;
-      if (
-        Number.isFinite(timestamp) &&
-        timestamp > 0 &&
-        (current.latestTimestampMs === null || timestamp > current.latestTimestampMs)
-      ) {
-        current.latestTimestampMs = timestamp;
-      }
-
-      const modelName = typeof detail.__modelName === 'string' ? detail.__modelName.trim() : '';
-      if (modelName) {
-        const models = modelsByAuthIndex.get(authIndexKey) ?? new Set<string>();
-        models.add(modelName);
-        modelsByAuthIndex.set(authIndexKey, models);
-        current.modelCount = models.size;
-      }
-
-      cache.set(authIndexKey, current);
+      cache.set(authIndexKey, summary);
     });
 
     return cache;
-  }, [usageDetails]);
+  }, [usageAuths]);
 }

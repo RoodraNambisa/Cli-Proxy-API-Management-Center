@@ -1,16 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api/authFiles';
-import { USAGE_STATS_STALE_TIME_MS, useUsageStatsStore } from '@/stores';
+import { useUsageStatsStore } from '@/stores';
 import type { AuthFileItem, Config } from '@/types';
 import type { CredentialInfo, SourceInfo } from '@/types/sourceInfo';
 import { buildSourceInfoMap, resolveSourceDisplay } from '@/utils/sourceResolver';
 import { parseTimestampMs } from '@/utils/timestamp';
-import {
-  collectUsageDetailsWithEndpoint,
-  normalizeAuthIndex,
-  type UsageDetailWithEndpoint
-} from '@/utils/usage';
+import { normalizeAuthIndex, type UsageDetailWithEndpoint } from '@/utils/usage';
 import type { ParsedLogLine } from './logTypes';
 
 export type TraceCandidate = {
@@ -89,9 +85,9 @@ interface UseTraceResolverReturn {
 export function useTraceResolver(options: UseTraceResolverOptions): UseTraceResolverReturn {
   const { traceScopeKey, connectionStatus, config, requestLogDownloading } = options;
   const { t } = useTranslation();
-  const usageSnapshot = useUsageStatsStore((state) => state.usage);
+  const usageDetails = useUsageStatsStore((state) => state.usageDetails);
   const usageScopeKey = useUsageStatsStore((state) => state.scopeKey);
-  const loadUsageStats = useUsageStatsStore((state) => state.loadUsageStats);
+  const loadUsageDetails = useUsageStatsStore((state) => state.loadUsageDetails);
 
   const [traceLogLine, setTraceLogLine] = useState<ParsedLogLine | null>(null);
   const [traceAuthFileMap, setTraceAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
@@ -101,63 +97,66 @@ export function useTraceResolver(options: UseTraceResolverOptions): UseTraceReso
   const traceAuthLoadedAtRef = useRef(0);
   const traceScopeKeyRef = useRef('');
 
-  const scopedUsageSnapshot = usageScopeKey === traceScopeKey ? usageSnapshot : null;
   const traceUsageDetails = useMemo<UsageDetailWithEndpoint[]>(
-    () => collectUsageDetailsWithEndpoint(scopedUsageSnapshot),
-    [scopedUsageSnapshot]
+    () => (usageScopeKey === traceScopeKey ? (usageDetails as UsageDetailWithEndpoint[]) : []),
+    [traceScopeKey, usageDetails, usageScopeKey]
   );
 
   const traceSourceInfoMap = useMemo(() => buildSourceInfoMap(config ?? {}), [config]);
 
-  const loadTraceUsageDetailsInternal = useCallback(async (forceUsage: boolean) => {
-    if (traceScopeKeyRef.current !== traceScopeKey) {
-      traceScopeKeyRef.current = traceScopeKey;
-      traceAuthLoadedAtRef.current = 0;
-      setTraceAuthFileMap(new Map());
-      setTraceError('');
-    }
-
-    if (traceLoading) return;
-
-    const now = Date.now();
-    const authFresh =
-      traceAuthLoadedAtRef.current > 0 && now - traceAuthLoadedAtRef.current < TRACE_AUTH_CACHE_MS;
-
-    setTraceLoading(true);
-    setTraceError('');
-    try {
-      const [, authFilesResponse] = await Promise.all([
-        loadUsageStats({
-          force: forceUsage,
-          staleTimeMs: USAGE_STATS_STALE_TIME_MS
-        }),
-        authFresh ? Promise.resolve(null) : authFilesApi.list().catch(() => null)
-      ]);
-
-      if (authFilesResponse !== null) {
-        const files = Array.isArray(authFilesResponse)
-          ? authFilesResponse
-          : (authFilesResponse as { files?: AuthFileItem[] })?.files;
-        if (Array.isArray(files)) {
-          const map = new Map<string, CredentialInfo>();
-          files.forEach((file) => {
-            const key = normalizeAuthIndex(file['auth_index'] ?? file.authIndex);
-            if (!key) return;
-            map.set(key, {
-              name: file.name || key,
-              type: (file.type || file.provider || '').toString()
-            });
-          });
-          setTraceAuthFileMap(map);
-          traceAuthLoadedAtRef.current = Date.now();
-        }
+  const loadTraceUsageDetailsInternal = useCallback(
+    async (forceUsage: boolean) => {
+      if (traceScopeKeyRef.current !== traceScopeKey) {
+        traceScopeKeyRef.current = traceScopeKey;
+        traceAuthLoadedAtRef.current = 0;
+        setTraceAuthFileMap(new Map());
+        setTraceError('');
       }
-    } catch (err: unknown) {
-      setTraceError(getErrorMessage(err) || t('logs.trace_usage_load_error'));
-    } finally {
-      setTraceLoading(false);
-    }
-  }, [loadUsageStats, t, traceLoading, traceScopeKey]);
+
+      if (traceLoading) return;
+
+      const now = Date.now();
+      const authFresh =
+        traceAuthLoadedAtRef.current > 0 &&
+        now - traceAuthLoadedAtRef.current < TRACE_AUTH_CACHE_MS;
+
+      setTraceLoading(true);
+      setTraceError('');
+      try {
+        const [, authFilesResponse] = await Promise.all([
+          loadUsageDetails({
+            force: forceUsage,
+            query: { limit: 1000 },
+          }),
+          authFresh ? Promise.resolve(null) : authFilesApi.list().catch(() => null),
+        ]);
+
+        if (authFilesResponse !== null) {
+          const files = Array.isArray(authFilesResponse)
+            ? authFilesResponse
+            : (authFilesResponse as { files?: AuthFileItem[] })?.files;
+          if (Array.isArray(files)) {
+            const map = new Map<string, CredentialInfo>();
+            files.forEach((file) => {
+              const key = normalizeAuthIndex(file['auth_index'] ?? file.authIndex);
+              if (!key) return;
+              map.set(key, {
+                name: file.name || key,
+                type: (file.type || file.provider || '').toString(),
+              });
+            });
+            setTraceAuthFileMap(map);
+            traceAuthLoadedAtRef.current = Date.now();
+          }
+        }
+      } catch (err: unknown) {
+        setTraceError(getErrorMessage(err) || t('logs.trace_usage_load_error'));
+      } finally {
+        setTraceLoading(false);
+      }
+    },
+    [loadUsageDetails, t, traceLoading, traceScopeKey]
+  );
 
   const loadTraceUsageDetails = useCallback(async () => {
     await loadTraceUsageDetailsInternal(false);
@@ -196,9 +195,7 @@ export function useTraceResolver(options: UseTraceResolverOptions): UseTraceReso
     // Step 2: try to extract model from log message, then filter by model
     const logModel = extractModelFromMessage(traceLogLine.message);
     const modelMatched = logModel
-      ? pathMatched.filter(
-          (d) => d.__modelName?.toLowerCase() === logModel.toLowerCase()
-        )
+      ? pathMatched.filter((d) => d.__modelName?.toLowerCase() === logModel.toLowerCase())
       : [];
 
     // Step 3: prefer model-matched set; fall back to path-matched
@@ -247,6 +244,6 @@ export function useTraceResolver(options: UseTraceResolverOptions): UseTraceReso
     loadTraceUsageDetails,
     refreshTraceUsageDetails,
     openTraceModal,
-    closeTraceModal
+    closeTraceModal,
   };
 }

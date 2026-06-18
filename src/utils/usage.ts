@@ -164,6 +164,27 @@ export function filterUsageByTimeRange<T>(
     return usageData;
   }
 
+  let hasAnyDetails = false;
+  Object.values(apis).some((apiEntry) => {
+    if (!isRecord(apiEntry) || !isRecord(apiEntry.models)) {
+      return false;
+    }
+    return Object.values(apiEntry.models).some((modelEntry) => {
+      if (!isRecord(modelEntry)) {
+        return false;
+      }
+      const hasDetails = Array.isArray(modelEntry.details) && modelEntry.details.length > 0;
+      if (hasDetails) {
+        hasAnyDetails = true;
+      }
+      return hasDetails;
+    });
+  });
+
+  if (!hasAnyDetails) {
+    return usageData;
+  }
+
   const windowStart = nowMs - rangeMs;
   const filteredApis: Record<string, unknown> = {};
   const totalSummary = createUsageSummary();
@@ -552,11 +573,10 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
         details.push({
           timestamp,
           source: normalizeSource(detailRaw.source),
-          auth_index:
-            (detailRaw?.auth_index ??
-              detailRaw?.authIndex ??
-              detailRaw?.AuthIndex ??
-              null) as UsageDetail['auth_index'],
+          auth_index: (detailRaw?.auth_index ??
+            detailRaw?.authIndex ??
+            detailRaw?.AuthIndex ??
+            null) as UsageDetail['auth_index'],
           latency_ms: latencyMs ?? undefined,
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
@@ -629,11 +649,10 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
         details.push({
           timestamp,
           source: normalizeSource(detailRaw.source),
-          auth_index:
-            (detailRaw?.auth_index ??
-              detailRaw?.authIndex ??
-              detailRaw?.AuthIndex ??
-              null) as UsageDetail['auth_index'],
+          auth_index: (detailRaw?.auth_index ??
+            detailRaw?.authIndex ??
+            detailRaw?.AuthIndex ??
+            null) as UsageDetail['auth_index'],
           latency_ms: latencyMs ?? undefined,
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,

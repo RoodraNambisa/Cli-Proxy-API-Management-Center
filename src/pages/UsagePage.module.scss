@@ -596,6 +596,55 @@
   vertical-align: middle;
 }
 
+.credentialStale {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: $radius-full;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--warning-color);
+  background: rgba($warning-color, 0.1);
+  border: 1px solid rgba($warning-color, 0.25);
+  vertical-align: middle;
+}
+
+.tokenBreakdownInline {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.credentialModelsCell {
+  background: var(--bg-secondary);
+  padding: 10px 12px !important;
+}
+
+.credentialModelsList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.credentialModelRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: $radius-md;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  font-size: 12px;
+
+  @include mobile {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
 .requestCountCell {
   display: inline-flex;
   align-items: baseline;
@@ -929,6 +978,12 @@
   max-height: 460px;
   border: 1px solid var(--border-color);
   border-radius: $radius-md;
+}
+
+.requestEventsLoadMore {
+  display: flex;
+  justify-content: center;
+  padding-top: $spacing-sm;
 }
 
 .requestEventsTimestamp {
