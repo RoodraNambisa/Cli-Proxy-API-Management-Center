@@ -148,9 +148,11 @@ export function UsagePage() {
     handleExport,
     handleImport,
     handleImportChange,
+    handleClearUsage,
     importInputRef,
     exporting,
     importing,
+    clearing,
   } = useUsageData({ timeRange });
 
   useHeaderRefresh(loadUsage);
@@ -292,7 +294,7 @@ export function UsagePage() {
             size="sm"
             onClick={handleExport}
             loading={exporting}
-            disabled={loading || importing}
+            disabled={loading || importing || clearing}
           >
             {t('usage_stats.export')}
           </Button>
@@ -301,15 +303,24 @@ export function UsagePage() {
             size="sm"
             onClick={handleImport}
             loading={importing}
-            disabled={loading || exporting}
+            disabled={loading || exporting || clearing}
           >
             {t('usage_stats.import')}
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleClearUsage}
+            loading={clearing}
+            disabled={loading || exporting || importing || clearing}
+          >
+            {t('usage_stats.clear_usage')}
           </Button>
           <Button
             variant="secondary"
             size="sm"
             onClick={() => void loadUsage().catch(() => {})}
-            disabled={loading || exporting || importing}
+            disabled={loading || exporting || importing || clearing}
           >
             {loading ? t('common.loading') : t('usage_stats.refresh')}
           </Button>

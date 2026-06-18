@@ -34,9 +34,11 @@ export interface UseUsageDataReturn {
   handleExport: () => Promise<void>;
   handleImport: () => void;
   handleImportChange: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  handleClearUsage: () => void;
   importInputRef: React.RefObject<HTMLInputElement | null>;
   exporting: boolean;
   importing: boolean;
+  clearing: boolean;
 }
 
 export interface UseUsageDataOptions {
@@ -45,7 +47,7 @@ export interface UseUsageDataOptions {
 
 export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataReturn {
   const { t } = useTranslation();
-  const { showNotification } = useNotificationStore();
+  const { showNotification, showConfirmation } = useNotificationStore();
   const usageSnapshot = useUsageStatsStore((state) => state.usage);
   const authUsage = useUsageStatsStore((state) => state.usageAuths);
   const loading = useUsageStatsStore((state) => state.loading);
@@ -54,10 +56,12 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
   const lastRefreshedAtTs = useUsageStatsStore((state) => state.lastRefreshedAt);
   const loadUsageStats = useUsageStatsStore((state) => state.loadUsageStats);
   const loadUsageAuths = useUsageStatsStore((state) => state.loadUsageAuths);
+  const clearUsageStats = useUsageStatsStore((state) => state.clearUsageStats);
 
   const [modelPrices, setModelPrices] = useState<Record<string, ModelPrice>>({});
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadUsage = useCallback(async () => {
@@ -157,6 +161,51 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
     }
   };
 
+  const handleClearUsage = useCallback(() => {
+    showConfirmation({
+      title: t('usage_stats.clear_confirm_title'),
+      message: t('usage_stats.clear_confirm_message'),
+      variant: 'danger',
+      confirmText: t('usage_stats.clear_confirm_button'),
+      onConfirm: async () => {
+        setClearing(true);
+        try {
+          const result = await usageApi.clearUsage();
+          clearUsageStats();
+          const range = buildUsageRangeForTimeRange(timeRange);
+          await Promise.all([
+            loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
+            loadUsageAuths({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
+          ]);
+          showNotification(
+            t('usage_stats.clear_success', {
+              total: result?.total_requests_before ?? 0,
+              failed: result?.failed_requests_before ?? result?.failure_count_before ?? 0,
+              tokens: result?.total_tokens_before ?? 0,
+            }),
+            'success'
+          );
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : '';
+          showNotification(
+            `${t('usage_stats.clear_failed')}${message ? `: ${message}` : ''}`,
+            'error'
+          );
+        } finally {
+          setClearing(false);
+        }
+      },
+    });
+  }, [
+    clearUsageStats,
+    loadUsageAuths,
+    loadUsageStats,
+    showConfirmation,
+    showNotification,
+    t,
+    timeRange,
+  ]);
+
   const handleSetModelPrices = useCallback((prices: Record<string, ModelPrice>) => {
     setModelPrices(prices);
     saveModelPrices(prices);
@@ -179,8 +228,10 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
     handleExport,
     handleImport,
     handleImportChange,
+    handleClearUsage,
     importInputRef,
     exporting,
     importing,
+    clearing,
   };
 }

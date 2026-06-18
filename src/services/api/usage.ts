@@ -37,6 +37,22 @@ export interface UsageImportResponse {
   [key: string]: unknown;
 }
 
+export interface UsageClearResponse {
+  cleared?: boolean;
+  version?: number;
+  total_requests_before?: number;
+  success_count_before?: number;
+  failure_count_before?: number;
+  total_tokens_before?: number;
+  total_requests_after?: number;
+  success_count_after?: number;
+  failure_count_after?: number;
+  total_tokens_after?: number;
+  failed_requests_before?: number;
+  failed_requests_after?: number;
+  [key: string]: unknown;
+}
+
 const normalizeDetailsQuery = (query: UsageDetailsQuery = {}) => {
   const limitRaw = Number(query.limit ?? USAGE_DETAILS_DEFAULT_LIMIT);
   const limit =
@@ -160,6 +176,11 @@ export const usageApi = {
    */
   importUsage: (payload: unknown) =>
     apiClient.post<UsageImportResponse>('/usage/import', payload, { timeout: USAGE_TIMEOUT_MS }),
+
+  /**
+   * 清空后端内存使用统计。
+   */
+  clearUsage: () => apiClient.delete<UsageClearResponse>('/usage', { timeout: USAGE_TIMEOUT_MS }),
 
   /**
    * 计算密钥成功/失败统计，优先使用轻量 auths 汇总。
