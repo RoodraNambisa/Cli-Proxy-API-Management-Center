@@ -30,10 +30,12 @@ import {
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import type {
+  AuthModelExclusionVisualEntry,
   CodexCustomModelValidationErrors,
   FixedErrorCooldownScope,
   FixedErrorCooldownVisualEntry,
   NativeImageEndpointVisualConfig,
+  NonRetryableErrorVisualEntry,
   PayloadFilterRule,
   PayloadParamValidationErrorCode,
   PayloadRule,
@@ -245,9 +247,7 @@ function NativeImageEndpointEditor({
       </FieldShell>
       <SectionGrid>
         <Input
-          label={t(
-            'config_management.visual.sections.images.native_unsupported_model_status_code'
-          )}
+          label={t('config_management.visual.sections.images.native_unsupported_model_status_code')}
           type="number"
           placeholder="400"
           value={value.unsupportedModelStatusCode}
@@ -263,9 +263,7 @@ function NativeImageEndpointEditor({
           value={value.unsupportedModelMessage}
           onChange={(event) => updateValue({ unsupportedModelMessage: event.target.value })}
           disabled={disabled}
-          hint={t(
-            'config_management.visual.sections.images.native_unsupported_model_message_hint'
-          )}
+          hint={t('config_management.visual.sections.images.native_unsupported_model_message_hint')}
         />
       </SectionGrid>
     </div>
@@ -612,6 +610,18 @@ export function VisualConfigEditor({
         .length,
     [validationErrors]
   );
+  const nonRetryableErrorsErrorCount = useMemo(
+    () =>
+      Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('nonRetryableErrors.'))
+        .length,
+    [validationErrors]
+  );
+  const authModelExclusionsErrorCount = useMemo(
+    () =>
+      Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('authModelExclusions.'))
+        .length,
+    [validationErrors]
+  );
   const routingPriorityOverridesErrorCount = useMemo(
     () =>
       Object.keys(validationErrors ?? {}).filter((key) =>
@@ -709,6 +719,14 @@ export function VisualConfigEditor({
     (fixedErrorCooldowns: FixedErrorCooldownVisualEntry[]) => onChange({ fixedErrorCooldowns }),
     [onChange]
   );
+  const handleNonRetryableErrorsChange = useCallback(
+    (nonRetryableErrors: NonRetryableErrorVisualEntry[]) => onChange({ nonRetryableErrors }),
+    [onChange]
+  );
+  const handleAuthModelExclusionsChange = useCallback(
+    (authModelExclusions: AuthModelExclusionVisualEntry[]) => onChange({ authModelExclusions }),
+    [onChange]
+  );
   const handleRoutingPriorityOverridesChange = useCallback(
     (routingPriorityOverrides: RoutingPriorityOverrideVisualEntry[]) =>
       onChange({ routingPriorityOverrides }),
@@ -783,6 +801,75 @@ export function VisualConfigEditor({
       getValidationMessage(t, validationErrors?.[`fixedErrorCooldowns.${clientId}.${field}`]),
     [t, validationErrors]
   );
+  const addNonRetryableError = useCallback(() => {
+    handleNonRetryableErrorsChange([
+      ...values.nonRetryableErrors,
+      {
+        clientId: makeClientId(),
+        statusCode: '',
+        type: '',
+        code: '',
+        messageContains: '',
+      },
+    ]);
+  }, [handleNonRetryableErrorsChange, values.nonRetryableErrors]);
+  const updateNonRetryableError = useCallback(
+    (clientId: string, patch: Partial<NonRetryableErrorVisualEntry>) => {
+      handleNonRetryableErrorsChange(
+        values.nonRetryableErrors.map((rule) =>
+          rule.clientId === clientId ? { ...rule, ...patch } : rule
+        )
+      );
+    },
+    [handleNonRetryableErrorsChange, values.nonRetryableErrors]
+  );
+  const removeNonRetryableError = useCallback(
+    (clientId: string) => {
+      handleNonRetryableErrorsChange(
+        values.nonRetryableErrors.filter((rule) => rule.clientId !== clientId)
+      );
+    },
+    [handleNonRetryableErrorsChange, values.nonRetryableErrors]
+  );
+  const getNonRetryableError = useCallback(
+    (clientId: string, field: 'statusCode' | 'match') =>
+      getValidationMessage(t, validationErrors?.[`nonRetryableErrors.${clientId}.${field}`]),
+    [t, validationErrors]
+  );
+  const addAuthModelExclusion = useCallback(() => {
+    handleAuthModelExclusionsChange([
+      ...values.authModelExclusions,
+      {
+        clientId: makeClientId(),
+        models: [''],
+        priorities: [],
+        keywordContains: [],
+      },
+    ]);
+  }, [handleAuthModelExclusionsChange, values.authModelExclusions]);
+  const updateAuthModelExclusion = useCallback(
+    (clientId: string, patch: Partial<AuthModelExclusionVisualEntry>) => {
+      handleAuthModelExclusionsChange(
+        values.authModelExclusions.map((rule) =>
+          rule.clientId === clientId ? { ...rule, ...patch } : rule
+        )
+      );
+    },
+    [handleAuthModelExclusionsChange, values.authModelExclusions]
+  );
+  const removeAuthModelExclusion = useCallback(
+    (clientId: string) => {
+      handleAuthModelExclusionsChange(
+        values.authModelExclusions.filter((rule) => rule.clientId !== clientId)
+      );
+    },
+    [handleAuthModelExclusionsChange, values.authModelExclusions]
+  );
+  const getAuthModelExclusionError = useCallback(
+    (clientId: string, field: 'models' | 'priorities' | 'match') =>
+      getValidationMessage(t, validationErrors?.[`authModelExclusions.${clientId}.${field}`]),
+    [t, validationErrors]
+  );
   const handleProxyCheck = useCallback(async () => {
     if (disabled || proxyCheckLoading) return;
     setProxyCheckLoading(true);
@@ -851,7 +938,7 @@ export function VisualConfigEditor({
         title: t('config_management.visual.sections.auth.title'),
         description: t('config_management.visual.sections.auth.description'),
         icon: IconKey,
-        errorCount: authSectionErrorCount,
+        errorCount: authSectionErrorCount + authModelExclusionsErrorCount,
       },
       {
         id: 'system',
@@ -867,7 +954,8 @@ export function VisualConfigEditor({
         icon: IconTrendingUp,
         errorCount:
           countErrors(['requestRetry', 'maxRetryCredentials', 'maxRetryInterval']) +
-          routingPriorityOverridesErrorCount,
+          routingPriorityOverridesErrorCount +
+          nonRetryableErrorsErrorCount,
       },
       {
         id: 'images',
@@ -925,9 +1013,11 @@ export function VisualConfigEditor({
     ],
     [
       authSectionErrorCount,
+      authModelExclusionsErrorCount,
       countErrors,
       fixedErrorCooldownsErrorCount,
       hasPayloadValidationErrors,
+      nonRetryableErrorsErrorCount,
       routingPriorityOverridesErrorCount,
       t,
     ]
@@ -1386,6 +1476,127 @@ export function VisualConfigEditor({
                   onChange={handleCodexCustomModelsChange}
                 />
               </SectionSubsection>
+              <SectionSubsection
+                title={t('config_management.visual.sections.auth.auth_model_exclusions')}
+                description={t('config_management.visual.sections.auth.auth_model_exclusions_desc')}
+              >
+                <div className={styles.blockHeaderRow}>
+                  <div className={styles.fieldHint}>
+                    {t('config_management.visual.sections.auth.auth_model_exclusions_hint')}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={addAuthModelExclusion}
+                    disabled={disabled}
+                  >
+                    {t('config_management.visual.sections.auth.auth_model_exclusions_add')}
+                  </Button>
+                </div>
+                {values.authModelExclusions.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    {t('config_management.visual.sections.auth.auth_model_exclusions_empty')}
+                  </div>
+                ) : (
+                  <div className={styles.blockStack}>
+                    {values.authModelExclusions.map((rule, index) => {
+                      const modelsError = getAuthModelExclusionError(rule.clientId, 'models');
+                      const prioritiesError = getAuthModelExclusionError(
+                        rule.clientId,
+                        'priorities'
+                      );
+                      const matchError = getAuthModelExclusionError(rule.clientId, 'match');
+
+                      return (
+                        <div key={rule.clientId} className={styles.ruleCard}>
+                          <div className={styles.ruleCardHeader}>
+                            <div className={styles.ruleCardTitle}>
+                              {t(
+                                'config_management.visual.sections.auth.auth_model_exclusions_rule',
+                                {
+                                  index: index + 1,
+                                }
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeAuthModelExclusion(rule.clientId)}
+                              disabled={disabled}
+                            >
+                              {t('config_management.visual.common.delete')}
+                            </Button>
+                          </div>
+                          <FieldShell
+                            label={t(
+                              'config_management.visual.sections.auth.auth_model_exclusions_models'
+                            )}
+                            hint={t(
+                              'config_management.visual.sections.auth.auth_model_exclusions_models_hint'
+                            )}
+                            error={modelsError}
+                          >
+                            <StringListEditor
+                              value={rule.models}
+                              disabled={disabled}
+                              placeholder={t(
+                                'config_management.visual.sections.auth.auth_model_exclusions_models_placeholder'
+                              )}
+                              onChange={(models) =>
+                                updateAuthModelExclusion(rule.clientId, { models })
+                              }
+                            />
+                          </FieldShell>
+                          <div className={styles.authModelExclusionGrid}>
+                            <FieldShell
+                              label={t(
+                                'config_management.visual.sections.auth.auth_model_exclusions_priorities'
+                              )}
+                              hint={t(
+                                'config_management.visual.sections.auth.auth_model_exclusions_priorities_hint'
+                              )}
+                              error={prioritiesError}
+                            >
+                              <StringListEditor
+                                value={rule.priorities}
+                                disabled={disabled}
+                                placeholder={t(
+                                  'config_management.visual.sections.auth.auth_model_exclusions_priorities_placeholder'
+                                )}
+                                onChange={(priorities) =>
+                                  updateAuthModelExclusion(rule.clientId, { priorities })
+                                }
+                              />
+                            </FieldShell>
+                            <FieldShell
+                              label={t(
+                                'config_management.visual.sections.auth.auth_model_exclusions_keyword_contains'
+                              )}
+                              hint={t(
+                                'config_management.visual.sections.auth.auth_model_exclusions_keyword_contains_hint'
+                              )}
+                              error={matchError}
+                            >
+                              <StringListEditor
+                                value={rule.keywordContains}
+                                disabled={disabled}
+                                placeholder={t(
+                                  'config_management.visual.sections.auth.auth_model_exclusions_keyword_contains_placeholder'
+                                )}
+                                onChange={(keywordContains) =>
+                                  updateAuthModelExclusion(rule.clientId, { keywordContains })
+                                }
+                              />
+                            </FieldShell>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </SectionSubsection>
             </SectionStack>
           </ConfigSection>
 
@@ -1738,6 +1949,129 @@ export function VisualConfigEditor({
                               error={maxRetryCredentialsError}
                             />
                           </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </SectionSubsection>
+
+              <SectionSubsection
+                title={t('config_management.visual.sections.network.non_retryable_errors')}
+                description={t(
+                  'config_management.visual.sections.network.non_retryable_errors_desc'
+                )}
+              >
+                <div className={styles.blockHeaderRow}>
+                  <div className={styles.fieldHint}>
+                    {t('config_management.visual.sections.network.non_retryable_errors_hint')}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={addNonRetryableError}
+                    disabled={disabled}
+                  >
+                    {t('config_management.visual.sections.network.non_retryable_errors_add')}
+                  </Button>
+                </div>
+                {values.nonRetryableErrors.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    {t('config_management.visual.sections.network.non_retryable_errors_empty')}
+                  </div>
+                ) : (
+                  <div className={styles.blockStack}>
+                    {values.nonRetryableErrors.map((rule, index) => {
+                      const statusCodeError = getNonRetryableError(rule.clientId, 'statusCode');
+                      const matchError = getNonRetryableError(rule.clientId, 'match');
+
+                      return (
+                        <div key={rule.clientId} className={styles.ruleCard}>
+                          <div className={styles.ruleCardHeader}>
+                            <div className={styles.ruleCardTitle}>
+                              {t(
+                                'config_management.visual.sections.network.non_retryable_errors_rule',
+                                {
+                                  index: index + 1,
+                                }
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeNonRetryableError(rule.clientId)}
+                              disabled={disabled}
+                            >
+                              {t('config_management.visual.common.delete')}
+                            </Button>
+                          </div>
+                          <div className={styles.nonRetryableErrorGrid}>
+                            <Input
+                              label={t(
+                                'config_management.visual.sections.network.non_retryable_errors_status_code'
+                              )}
+                              type="number"
+                              placeholder="400"
+                              value={rule.statusCode}
+                              onChange={(event) =>
+                                updateNonRetryableError(rule.clientId, {
+                                  statusCode: event.target.value,
+                                })
+                              }
+                              disabled={disabled}
+                              hint={t(
+                                'config_management.visual.sections.network.non_retryable_errors_status_code_hint'
+                              )}
+                              error={statusCodeError}
+                            />
+                            <Input
+                              label={t(
+                                'config_management.visual.sections.network.non_retryable_errors_type'
+                              )}
+                              placeholder="image_generation_user_error"
+                              value={rule.type}
+                              onChange={(event) =>
+                                updateNonRetryableError(rule.clientId, {
+                                  type: event.target.value,
+                                })
+                              }
+                              disabled={disabled}
+                            />
+                            <Input
+                              label={t(
+                                'config_management.visual.sections.network.non_retryable_errors_code'
+                              )}
+                              placeholder="invalid_value"
+                              value={rule.code}
+                              onChange={(event) =>
+                                updateNonRetryableError(rule.clientId, {
+                                  code: event.target.value,
+                                })
+                              }
+                              disabled={disabled}
+                            />
+                          </div>
+                          <Input
+                            label={t(
+                              'config_management.visual.sections.network.non_retryable_errors_message_contains'
+                            )}
+                            placeholder={t(
+                              'config_management.visual.sections.network.non_retryable_errors_message_placeholder'
+                            )}
+                            value={rule.messageContains}
+                            onChange={(event) =>
+                              updateNonRetryableError(rule.clientId, {
+                                messageContains: event.target.value,
+                              })
+                            }
+                            disabled={disabled}
+                            hint={t(
+                              'config_management.visual.sections.network.non_retryable_errors_message_hint'
+                            )}
+                            error={matchError}
+                          />
                         </div>
                       );
                     })}

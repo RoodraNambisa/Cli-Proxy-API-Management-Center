@@ -16,6 +16,8 @@ export type VisualConfigFieldPath =
   | 'maxRetryInterval'
   | 'noCooldownStatusCodes'
   | 'fixedErrorCooldowns'
+  | 'nonRetryableErrors'
+  | 'authModelExclusions'
   | 'routingPriorityOverrides'
   | 'authMaintenance.scanIntervalSeconds'
   | 'authMaintenance.deleteIntervalSeconds'
@@ -43,6 +45,9 @@ export type VisualConfigValidationErrorCode =
   | 'integer'
   | 'priority_duplicate'
   | 'fixed_error_cooldown_match_required'
+  | 'non_retryable_error_match_required'
+  | 'auth_model_exclusion_models_required'
+  | 'auth_model_exclusion_match_required'
   | 'integer_list'
   | 'http_status_list'
   | 'codex_custom_model_id_required'
@@ -145,6 +150,21 @@ export interface FixedErrorCooldownVisualEntry {
   scope: FixedErrorCooldownScope;
 }
 
+export interface NonRetryableErrorVisualEntry {
+  clientId: string;
+  statusCode: string;
+  type: string;
+  code: string;
+  messageContains: string;
+}
+
+export interface AuthModelExclusionVisualEntry {
+  clientId: string;
+  models: string[];
+  priorities: string[];
+  keywordContains: string[];
+}
+
 export type RoutingPriorityOverrideStrategy = '' | 'round-robin' | 'fill-first' | 'random';
 
 export interface RoutingPriorityOverrideVisualEntry {
@@ -202,6 +222,8 @@ export type VisualConfigValues = {
   maxRetryInterval: string;
   noCooldownStatusCodes: string;
   fixedErrorCooldowns: FixedErrorCooldownVisualEntry[];
+  nonRetryableErrors: NonRetryableErrorVisualEntry[];
+  authModelExclusions: AuthModelExclusionVisualEntry[];
   quotaSwitchProject: boolean;
   quotaSwitchPreviewModel: boolean;
   quotaAntigravityCredits: boolean;
@@ -263,6 +285,23 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   maxRetryInterval: '',
   noCooldownStatusCodes: '',
   fixedErrorCooldowns: [],
+  nonRetryableErrors: [
+    {
+      clientId: 'default-non-retryable-invalid-value',
+      statusCode: '400',
+      type: 'image_generation_user_error',
+      code: 'invalid_value',
+      messageContains: '',
+    },
+    {
+      clientId: 'default-non-retryable-moderation-blocked',
+      statusCode: '400',
+      type: 'image_generation_user_error',
+      code: 'moderation_blocked',
+      messageContains: '',
+    },
+  ],
+  authModelExclusions: [],
   quotaSwitchProject: true,
   quotaSwitchPreviewModel: true,
   quotaAntigravityCredits: true,

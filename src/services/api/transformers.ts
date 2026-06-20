@@ -97,6 +97,41 @@ const normalizeFixedErrorCooldowns = (
   return normalized.length > 0 ? normalized : [];
 };
 
+const normalizeNonRetryableErrors = (value: unknown): Config['nonRetryableErrors'] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+
+  const normalized = value.reduce<NonNullable<Config['nonRetryableErrors']>>((result, item) => {
+    if (!isRecord(item)) return result;
+    result.push({
+      statusCode: normalizeNumber(item['status-code'] ?? item.statusCode),
+      type: normalizeString(item.type),
+      code: normalizeString(item.code),
+      messageContains: normalizeString(item['message-contains'] ?? item.messageContains),
+    });
+    return result;
+  }, []);
+
+  return normalized.length > 0 ? normalized : [];
+};
+
+const normalizeAuthModelExclusions = (
+  value: unknown
+): Config['authModelExclusions'] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+
+  const normalized = value.reduce<NonNullable<Config['authModelExclusions']>>((result, item) => {
+    if (!isRecord(item)) return result;
+    result.push({
+      models: normalizeStringArray(item.models),
+      priorities: normalizeIntegerArray(item.priorities),
+      keywordContains: normalizeStringArray(item['keyword-contains'] ?? item.keywordContains),
+    });
+    return result;
+  }, []);
+
+  return normalized.length > 0 ? normalized : [];
+};
+
 const normalizeRoutingPriorityOverrides = (
   value: unknown
 ): Config['routingPriorityOverrides'] | undefined => {
@@ -651,6 +686,12 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   );
   config.fixedErrorCooldowns = normalizeFixedErrorCooldowns(
     raw['fixed-error-cooldowns'] ?? raw.fixedErrorCooldowns
+  );
+  config.nonRetryableErrors = normalizeNonRetryableErrors(
+    raw['non-retryable-errors'] ?? raw.nonRetryableErrors
+  );
+  config.authModelExclusions = normalizeAuthModelExclusions(
+    raw['auth-model-exclusions'] ?? raw.authModelExclusions
   );
   const remoteManagement = raw['remote-management'] ?? raw.remoteManagement;
   if (isRecord(remoteManagement)) {

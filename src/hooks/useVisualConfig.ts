@@ -3,10 +3,12 @@ import { isMap, parse as parseYaml, parseDocument } from 'yaml';
 import type {
   CodexCustomModelValidationErrors,
   CodexCustomModelVisualEntry,
+  AuthModelExclusionVisualEntry,
   FixedErrorCooldownScope,
   FixedErrorCooldownVisualEntry,
   NativeImageEndpointVisualConfig,
   NativeImagesVisualConfig,
+  NonRetryableErrorVisualEntry,
   PayloadFilterRule,
   PayloadParamEntry,
   PayloadParamValueType,
@@ -268,9 +270,13 @@ function parseNativeImageEndpoint(
       record.models === undefined
         ? [...defaults.models]
         : normalizeStringListItems(parseStringList(record.models)),
-    paramRules: normalizeStringListItems(parseStringList(record['param-rules'] ?? record.paramRules)),
+    paramRules: normalizeStringListItems(
+      parseStringList(record['param-rules'] ?? record.paramRules)
+    ),
     unsupportedModelStatusCode:
-      statusCodeRaw === undefined ? defaults.unsupportedModelStatusCode : String(statusCodeRaw ?? ''),
+      statusCodeRaw === undefined
+        ? defaults.unsupportedModelStatusCode
+        : String(statusCodeRaw ?? ''),
     unsupportedModelMessage:
       typeof messageRaw === 'string' ? messageRaw : defaults.unsupportedModelMessage,
   };
@@ -457,6 +463,84 @@ function serializeFixedErrorCooldownsForYaml(
   }, []);
 }
 
+function formatOptionalStatusCode(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  return String(value);
+}
+
+function parseNonRetryableErrors(raw: unknown): NonRetryableErrorVisualEntry[] {
+  if (!Array.isArray(raw)) {
+    return DEFAULT_VISUAL_VALUES.nonRetryableErrors.map((rule) => ({ ...rule }));
+  }
+
+  return raw.reduce<NonRetryableErrorVisualEntry[]>((result, item) => {
+    const record = asRecord(item);
+    if (!record) return result;
+    const statusCodeRaw = record['status-code'] ?? record.statusCode;
+    const messageContainsRaw = record['message-contains'] ?? record.messageContains;
+
+    result.push({
+      clientId: makeClientId(),
+      statusCode: formatOptionalStatusCode(statusCodeRaw),
+      type: typeof record.type === 'string' ? record.type : String(record.type ?? ''),
+      code: typeof record.code === 'string' ? record.code : String(record.code ?? ''),
+      messageContains:
+        typeof messageContainsRaw === 'string'
+          ? messageContainsRaw
+          : String(messageContainsRaw ?? ''),
+    });
+    return result;
+  }, []);
+}
+
+function parseOptionalNonRetryableStatusCode(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed === '0') return 0;
+  return parseHttpStatusCodeString(trimmed);
+}
+
+function serializeNonRetryableErrorsForYaml(
+  rules: NonRetryableErrorVisualEntry[]
+): Array<Record<string, unknown>> {
+  return rules.reduce<Array<Record<string, unknown>>>((result, rule) => {
+    const statusCode = parseOptionalNonRetryableStatusCode(rule.statusCode);
+    if (rule.statusCode.trim() && statusCode === null) return result;
+
+    const type = rule.type.trim();
+    const code = rule.code.trim();
+    const messageContains = rule.messageContains.trim();
+    if ((statusCode === null || statusCode === 0) && !type && !code && !messageContains) {
+      return result;
+    }
+
+    const entry: Record<string, unknown> = {};
+    if (statusCode !== null && statusCode !== 0) entry['status-code'] = statusCode;
+    if (type) entry.type = type;
+    if (code) entry.code = code;
+    if (messageContains) entry['message-contains'] = messageContains;
+    result.push(entry);
+    return result;
+  }, []);
+}
+
+function areNonRetryableErrorsEqual(
+  left: NonRetryableErrorVisualEntry[],
+  right: NonRetryableErrorVisualEntry[]
+): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((entry, index) => {
+    const other = right[index];
+    return (
+      Boolean(other) &&
+      entry.statusCode === other.statusCode &&
+      entry.type === other.type &&
+      entry.code === other.code &&
+      entry.messageContains === other.messageContains
+    );
+  });
+}
+
 function normalizeRoutingPriorityOverrideStrategy(value: unknown): RoutingPriorityOverrideStrategy {
   return value === 'round-robin' || value === 'fill-first' || value === 'random' ? value : '';
 }
@@ -508,6 +592,63 @@ function areRoutingPriorityOverridesEqual(
 function areStringArraysEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) return false;
   return left.every((item, index) => item === right[index]);
+}
+
+function parseAuthModelExclusions(raw: unknown): AuthModelExclusionVisualEntry[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.reduce<AuthModelExclusionVisualEntry[]>((result, item) => {
+    const record = asRecord(item);
+    if (!record) return result;
+    result.push({
+      clientId: makeClientId(),
+      models: normalizeStringListItems(parseStringList(record.models)),
+      priorities: parseStringList(record.priorities),
+      keywordContains: normalizeStringListItems(
+        parseStringList(record['keyword-contains'] ?? record.keywordContains)
+      ),
+    });
+    return result;
+  }, []);
+}
+
+function serializeAuthModelExclusionsForYaml(
+  rules: AuthModelExclusionVisualEntry[]
+): Array<Record<string, unknown>> {
+  return rules.reduce<Array<Record<string, unknown>>>((result, rule) => {
+    const models = normalizeStringListItems(rule.models);
+    if (models.length === 0) return result;
+
+    const priorities = rule.priorities.reduce<number[]>((list, item) => {
+      const parsed = parseIntegerString(item);
+      if (parsed !== null) list.push(parsed);
+      return list;
+    }, []);
+    const keywordContains = normalizeStringListItems(rule.keywordContains);
+    if (priorities.length === 0 && keywordContains.length === 0) return result;
+
+    const entry: Record<string, unknown> = { models };
+    if (priorities.length > 0) entry.priorities = Array.from(new Set(priorities));
+    if (keywordContains.length > 0) entry['keyword-contains'] = keywordContains;
+    result.push(entry);
+    return result;
+  }, []);
+}
+
+function areAuthModelExclusionsEqual(
+  left: AuthModelExclusionVisualEntry[],
+  right: AuthModelExclusionVisualEntry[]
+): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((entry, index) => {
+    const other = right[index];
+    return (
+      Boolean(other) &&
+      areStringArraysEqual(entry.models, other.models) &&
+      areStringArraysEqual(entry.priorities, other.priorities) &&
+      areStringArraysEqual(entry.keywordContains, other.keywordContains)
+    );
+  });
 }
 
 function areNativeImageEndpointsEqual(
@@ -616,6 +757,21 @@ function getOptionalHttpStatusCodeError(value: string): 'http_status_code' | und
   return parsed >= 100 && parsed <= 599 ? undefined : 'http_status_code';
 }
 
+function getOptionalNonRetryableStatusCodeError(value: string): 'http_status_code' | undefined {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '0') return undefined;
+  return getOptionalHttpStatusCodeError(value);
+}
+
+function getIntegerStringListError(values: string[]): 'integer_list' | undefined {
+  return values.every((value) => {
+    const trimmed = value.trim();
+    return !trimmed || /^-?\d+$/.test(trimmed);
+  })
+    ? undefined
+    : 'integer_list';
+}
+
 function getPositiveIntegerError(value: string): 'positive_integer' | undefined {
   const trimmed = value.trim();
   if (!trimmed) return 'positive_integer';
@@ -680,6 +836,46 @@ export function getVisualConfigValidationErrors(
     },
     {}
   );
+  const nonRetryableErrorErrors = values.nonRetryableErrors.reduce<VisualConfigValidationErrors>(
+    (result, rule) => {
+      const statusCodeError = getOptionalNonRetryableStatusCodeError(rule.statusCode);
+      if (statusCodeError) {
+        result[`nonRetryableErrors.${rule.clientId}.statusCode`] = statusCodeError;
+      }
+      const hasStatusMatcher = Boolean(rule.statusCode.trim() && rule.statusCode.trim() !== '0');
+      if (
+        !hasStatusMatcher &&
+        !rule.type.trim() &&
+        !rule.code.trim() &&
+        !rule.messageContains.trim()
+      ) {
+        result[`nonRetryableErrors.${rule.clientId}.match`] = 'non_retryable_error_match_required';
+      }
+      return result;
+    },
+    {}
+  );
+  const authModelExclusionErrors = values.authModelExclusions.reduce<VisualConfigValidationErrors>(
+    (result, rule) => {
+      if (normalizeStringListItems(rule.models).length === 0) {
+        result[`authModelExclusions.${rule.clientId}.models`] =
+          'auth_model_exclusion_models_required';
+      }
+      const prioritiesError = getIntegerStringListError(rule.priorities);
+      if (prioritiesError) {
+        result[`authModelExclusions.${rule.clientId}.priorities`] = prioritiesError;
+      }
+      if (
+        normalizeStringListItems(rule.priorities).length === 0 &&
+        normalizeStringListItems(rule.keywordContains).length === 0
+      ) {
+        result[`authModelExclusions.${rule.clientId}.match`] =
+          'auth_model_exclusion_match_required';
+      }
+      return result;
+    },
+    {}
+  );
 
   return {
     port: getPortError(values.port),
@@ -694,6 +890,8 @@ export function getVisualConfigValidationErrors(
     noCooldownStatusCodes: getHttpStatusListError(values.noCooldownStatusCodes),
     ...routingPriorityOverrideErrors,
     ...fixedErrorCooldownErrors,
+    ...nonRetryableErrorErrors,
+    ...authModelExclusionErrors,
     'authMaintenance.scanIntervalSeconds': getNonNegativeIntegerError(
       values.authMaintenance.scanIntervalSeconds
     ),
@@ -1365,6 +1563,21 @@ function getNextDirtyFields(
       )
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'nonRetryableErrors')) {
+    updateDirty(
+      'nonRetryableErrors',
+      areNonRetryableErrorsEqual(nextValues.nonRetryableErrors, baselineValues.nonRetryableErrors)
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'authModelExclusions')) {
+    updateDirty(
+      'authModelExclusions',
+      areAuthModelExclusionsEqual(
+        nextValues.authModelExclusions,
+        baselineValues.authModelExclusions
+      )
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'wsAuth')) {
     updateDirty('wsAuth', nextValues.wsAuth === baselineValues.wsAuth);
   }
@@ -1879,6 +2092,14 @@ export function useVisualConfig() {
         fixedErrorCooldowns: parseFixedErrorCooldowns(
           parsed['fixed-error-cooldowns'] ?? parsed.fixedErrorCooldowns
         ),
+        nonRetryableErrors: Object.prototype.hasOwnProperty.call(parsed, 'non-retryable-errors')
+          ? parseNonRetryableErrors(parsed['non-retryable-errors'])
+          : Object.prototype.hasOwnProperty.call(parsed, 'nonRetryableErrors')
+            ? parseNonRetryableErrors(parsed.nonRetryableErrors)
+            : DEFAULT_VISUAL_VALUES.nonRetryableErrors.map((rule) => ({ ...rule })),
+        authModelExclusions: parseAuthModelExclusions(
+          parsed['auth-model-exclusions'] ?? parsed.authModelExclusions
+        ),
         wsAuth: Boolean(parsed['ws-auth']),
 
         quotaSwitchProject: Boolean(quotaExceeded?.['switch-project'] ?? true),
@@ -2204,6 +2425,24 @@ export function useVisualConfig() {
           );
         } else if (docHas(doc, ['fixed-error-cooldowns'])) {
           doc.deleteIn(['fixed-error-cooldowns']);
+        }
+        if (
+          docHas(doc, ['non-retryable-errors']) ||
+          !areNonRetryableErrorsEqual(
+            values.nonRetryableErrors,
+            DEFAULT_VISUAL_VALUES.nonRetryableErrors
+          )
+        ) {
+          doc.setIn(
+            ['non-retryable-errors'],
+            serializeNonRetryableErrorsForYaml(values.nonRetryableErrors)
+          );
+        }
+        if (docHas(doc, ['auth-model-exclusions']) || values.authModelExclusions.length > 0) {
+          doc.setIn(
+            ['auth-model-exclusions'],
+            serializeAuthModelExclusionsForYaml(values.authModelExclusions)
+          );
         }
         setBooleanInDoc(doc, ['ws-auth'], values.wsAuth);
 

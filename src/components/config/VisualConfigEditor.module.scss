@@ -895,6 +895,19 @@
   gap: 12px;
 }
 
+.nonRetryableErrorGrid {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) repeat(2, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.authModelExclusionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
 .priorityOverrideGrid {
   display: grid;
   grid-template-columns: minmax(120px, 0.7fr) minmax(180px, 1fr) minmax(180px, 1fr);
@@ -980,6 +993,8 @@
 @media (max-width: 900px) {
   .codexCustomModelFieldGrid,
   .fixedCooldownGrid,
+  .nonRetryableErrorGrid,
+  .authModelExclusionGrid,
   .priorityOverrideGrid,
   .codexCustomModelGroups,
   .payloadRuleModelRow,

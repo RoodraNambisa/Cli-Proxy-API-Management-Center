@@ -21,6 +21,19 @@ export interface FixedErrorCooldownConfig {
   scope?: FixedErrorCooldownScope | string;
 }
 
+export interface NonRetryableErrorConfig {
+  statusCode?: number;
+  type?: string;
+  code?: string;
+  messageContains?: string;
+}
+
+export interface AuthModelExclusionConfig {
+  models?: string[];
+  priorities?: number[];
+  keywordContains?: string[];
+}
+
 export type RoutingStrategy = 'round-robin' | 'fill-first' | 'random';
 
 export interface RoutingPriorityOverrideConfig {
@@ -152,6 +165,8 @@ export interface Config {
   maxRetryInterval?: number;
   noCooldownStatusCodes?: number[];
   fixedErrorCooldowns?: FixedErrorCooldownConfig[];
+  nonRetryableErrors?: NonRetryableErrorConfig[];
+  authModelExclusions?: AuthModelExclusionConfig[];
   quotaExceeded?: QuotaExceededConfig;
   usageStatisticsEnabled?: boolean;
   usageStatisticsPersistIntervalSeconds?: number;
