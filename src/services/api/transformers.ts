@@ -221,6 +221,24 @@ const normalizeRequestBodyAudit = (value: unknown): Config['requestBodyAudit'] |
   };
 };
 
+const normalizeRequestBodyRelease = (value: unknown): Config['requestBodyRelease'] | undefined => {
+  if (!isRecord(value)) return undefined;
+  const afterSeconds = normalizeNumber(value['after-seconds'] ?? value.afterSeconds);
+  const minBodyBytes = normalizeNumber(value['min-body-bytes'] ?? value.minBodyBytes);
+
+  return {
+    enable: normalizeBoolean(value.enable) ?? false,
+    afterSeconds:
+      afterSeconds !== undefined && Number.isFinite(afterSeconds) && afterSeconds > 0
+        ? Math.trunc(afterSeconds)
+        : 0,
+    minBodyBytes:
+      minBodyBytes !== undefined && Number.isFinite(minBodyBytes) && minBodyBytes > 0
+        ? Math.trunc(minBodyBytes)
+        : 0,
+  };
+};
+
 const normalizeCodexCustomModelGroups = (value: unknown): CodexCustomModelGroup[] => {
   if (!Array.isArray(value)) return [];
 
@@ -670,6 +688,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     raw['usage-statistics-persist-interval-seconds'] ?? raw.usageStatisticsPersistIntervalSeconds
   );
   config.requestLog = normalizeBoolean(raw['request-log'] ?? raw.requestLog);
+  config.requestBodyRelease = normalizeRequestBodyRelease(
+    raw['request-body-release'] ?? raw.requestBodyRelease
+  );
   config.requestBodyAudit = normalizeRequestBodyAudit(
     raw['request-body-audit'] ?? raw.requestBodyAudit
   );

@@ -1317,6 +1317,24 @@
       "visual": "Visual Editor",
       "source": "Source File Editor"
     },
+    "request_body_release": {
+      "title": "Request Body Residency Release",
+      "description": "When enabled, the backend releases locally retained request body references after a request has been running longer than the configured time, including log copies and replayable business payloads. It does not interrupt the current upstream request that has already been sent. Once released, that request will no longer switch credentials, fall back to another model, or enter request-retry, avoiding replay with a released body. Logs use placeholder text instead of the original request body.",
+      "enable": "Enable request body release",
+      "enable_desc": "Release local request body references after the time threshold. Disabled by default.",
+      "thresholds": "Release conditions",
+      "thresholds_hint": "Recommended example: after-seconds=30, min-body-bytes=1048576. 0 or empty disables that limit.",
+      "after_seconds": "Release wait seconds (after-seconds)",
+      "after_seconds_hint": "0 or empty means timed release is disabled.",
+      "min_body_bytes": "Minimum body bytes (min-body-bytes)",
+      "min_body_bytes_hint": "0 or empty means no size limit.",
+      "error_non_negative": "Enter a non-negative whole number",
+      "refresh_success": "Request body release configuration refreshed",
+      "refresh_failed": "Failed to load request body release configuration",
+      "save_success": "Request body release configuration saved",
+      "save_failed": "Failed to save request body release configuration",
+      "reset": "Reset"
+    },
     "request_body_audit": {
       "title": "Request Body Audit",
       "description": "Audit API requests by request body keywords. Matching runs on raw request body bytes before provider routing; request body logging behavior after a hit remains controlled by the backend.",

@@ -3,7 +3,12 @@
  */
 
 import { apiClient } from './client';
-import type { Config, RequestBodyAuditConfig, RoutingPriorityOverrideConfig } from '@/types';
+import type {
+  Config,
+  RequestBodyAuditConfig,
+  RequestBodyReleaseConfig,
+  RoutingPriorityOverrideConfig,
+} from '@/types';
 import { normalizeConfigResponse } from './transformers';
 
 type NumericConfigKey = 'request-retry' | 'max-retry-credentials' | 'max-retry-interval';
@@ -147,6 +152,31 @@ const normalizeRequestBodyAuditResponse = (data: unknown): RequestBodyAuditConfi
   return normalizeRequestBodyAudit(source['request-body-audit'] ?? source.requestBodyAudit ?? data);
 };
 
+const normalizeRequestBodyRelease = (value: unknown): RequestBodyReleaseConfig => {
+  const source =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const afterSeconds = readNumber(source['after-seconds'] ?? source.afterSeconds, 0);
+  const minBodyBytes = readNumber(source['min-body-bytes'] ?? source.minBodyBytes, 0);
+
+  return {
+    enable: readBoolean(source.enable),
+    afterSeconds: Number.isFinite(afterSeconds) && afterSeconds > 0 ? Math.trunc(afterSeconds) : 0,
+    minBodyBytes: Number.isFinite(minBodyBytes) && minBodyBytes > 0 ? Math.trunc(minBodyBytes) : 0,
+  };
+};
+
+const normalizeRequestBodyReleaseResponse = (data: unknown): RequestBodyReleaseConfig => {
+  const source =
+    data && typeof data === 'object' && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : {};
+  return normalizeRequestBodyRelease(
+    source['request-body-release'] ?? source.requestBodyRelease ?? data
+  );
+};
+
 const serializeRequestBodyAudit = (config: RequestBodyAuditConfig): Record<string, unknown> => ({
   enable: Boolean(config.enable),
   keywords: normalizeStringList(config.keywords),
@@ -166,6 +196,20 @@ const serializeRequestBodyAudit = (config: RequestBodyAuditConfig): Record<strin
     type: readString(config.error?.type),
     code: readString(config.error?.code),
   },
+});
+
+const serializeRequestBodyRelease = (
+  config: RequestBodyReleaseConfig
+): Record<string, unknown> => ({
+  enable: Boolean(config.enable),
+  'after-seconds':
+    typeof config.afterSeconds === 'number' && Number.isFinite(config.afterSeconds)
+      ? Math.max(0, Math.trunc(config.afterSeconds))
+      : 0,
+  'min-body-bytes':
+    typeof config.minBodyBytes === 'number' && Number.isFinite(config.minBodyBytes)
+      ? Math.max(0, Math.trunc(config.minBodyBytes))
+      : 0,
 });
 
 const normalizeControlPanelUpdateStatus = (data: unknown): ControlPanelUpdateStatus => {
@@ -380,6 +424,25 @@ export const configApi = {
    * 请求日志开关
    */
   updateRequestLog: (enabled: boolean) => apiClient.put('/request-log', { value: enabled }),
+
+  /**
+   * 获取请求体驻留释放配置
+   */
+  async getRequestBodyRelease(): Promise<RequestBodyReleaseConfig> {
+    const data = await apiClient.get('/request-body-release');
+    return normalizeRequestBodyReleaseResponse(data);
+  },
+
+  /**
+   * 更新请求体驻留释放配置
+   */
+  async updateRequestBodyRelease(
+    config: RequestBodyReleaseConfig
+  ): Promise<RequestBodyReleaseConfig> {
+    await apiClient.put('/request-body-release', { value: serializeRequestBodyRelease(config) });
+    const data = await apiClient.get('/request-body-release');
+    return normalizeRequestBodyReleaseResponse(data);
+  },
 
   /**
    * 获取请求体关键字审核配置

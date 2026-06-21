@@ -1339,6 +1339,24 @@
       "visual": "視覺化編輯",
       "source": "原始檔編輯"
     },
+    "request_body_release": {
+      "title": "請求體駐留釋放",
+      "description": "開啟後，後端會在請求開始超過指定時間後釋放本地保留的請求體引用，包括記錄副本和可重放業務 payload。不會主動中斷已經發出的目前上游請求；但一旦釋放，該請求將不再進行換帳號、模型 fallback 或 request-retry，避免使用已釋放 body 重放請求。記錄中會用佔位文字替代原始請求體。",
+      "enable": "啟用請求體駐留釋放",
+      "enable_desc": "超過時間閾值後釋放本地請求體引用，預設關閉。",
+      "thresholds": "釋放條件",
+      "thresholds_hint": "推薦範例：after-seconds=30，min-body-bytes=1048576。0 或留空表示不啟用對應限制。",
+      "after_seconds": "釋放等待秒數 (after-seconds)",
+      "after_seconds_hint": "0 或空表示不啟用計時釋放。",
+      "min_body_bytes": "最小請求體位元組數 (min-body-bytes)",
+      "min_body_bytes_hint": "0 或空表示不限制大小。",
+      "error_non_negative": "請輸入非負整數",
+      "refresh_success": "請求體駐留釋放設定已重新整理",
+      "refresh_failed": "載入請求體駐留釋放設定失敗",
+      "save_success": "請求體駐留釋放設定已儲存",
+      "save_failed": "儲存請求體駐留釋放設定失敗",
+      "reset": "還原"
+    },
     "request_body_audit": {
       "title": "請求體審核",
       "description": "按請求體關鍵字審核 API 請求。匹配發生在供應商路由前的原始請求體位元組上；命中後的請求體日誌策略由後端保持現狀。",

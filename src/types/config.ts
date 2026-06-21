@@ -34,6 +34,12 @@ export interface AuthModelExclusionConfig {
   keywordContains?: string[];
 }
 
+export interface RequestBodyReleaseConfig {
+  enable: boolean;
+  afterSeconds: number;
+  minBodyBytes: number;
+}
+
 export type RoutingStrategy = 'round-robin' | 'fill-first' | 'random';
 
 export interface RoutingPriorityOverrideConfig {
@@ -171,6 +177,7 @@ export interface Config {
   usageStatisticsEnabled?: boolean;
   usageStatisticsPersistIntervalSeconds?: number;
   requestLog?: boolean;
+  requestBodyRelease?: RequestBodyReleaseConfig;
   requestBodyAudit?: RequestBodyAuditConfig;
   loggingToFile?: boolean;
   logsMaxTotalSizeMb?: number;
@@ -214,6 +221,7 @@ export type RawConfigSection =
   | 'usage-statistics-enabled'
   | 'usage-statistics-persist-interval-seconds'
   | 'request-log'
+  | 'request-body-release'
   | 'request-body-audit'
   | 'logging-to-file'
   | 'logs-max-total-size-mb'

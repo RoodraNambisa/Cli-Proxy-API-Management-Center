@@ -1317,6 +1317,24 @@
       "visual": "可视化编辑",
       "source": "源文件编辑"
     },
+    "request_body_release": {
+      "title": "请求体驻留释放",
+      "description": "开启后，后端会在请求开始超过指定时间后释放本地保留的请求体引用，包括日志副本和可重放业务 payload。不会主动中断已经发出的当前上游请求；但一旦释放，该请求将不再进行换账号、模型 fallback 或 request-retry，避免用已释放 body 重放请求。日志中会用占位文本替代原始请求体。",
+      "enable": "启用请求体驻留释放",
+      "enable_desc": "超过时间阈值后释放本地请求体引用，默认关闭。",
+      "thresholds": "释放条件",
+      "thresholds_hint": "推荐示例：after-seconds=30，min-body-bytes=1048576。0 或留空表示不启用对应限制。",
+      "after_seconds": "释放等待秒数 (after-seconds)",
+      "after_seconds_hint": "0 或空表示不启用计时释放。",
+      "min_body_bytes": "最小请求体字节数 (min-body-bytes)",
+      "min_body_bytes_hint": "0 或空表示不限制大小。",
+      "error_non_negative": "请输入非负整数",
+      "refresh_success": "请求体驻留释放配置已刷新",
+      "refresh_failed": "加载请求体驻留释放配置失败",
+      "save_success": "请求体驻留释放配置已保存",
+      "save_failed": "保存请求体驻留释放配置失败",
+      "reset": "还原"
+    },
     "request_body_audit": {
       "title": "请求体审核",
       "description": "按请求体关键字审核 API 请求。匹配发生在供应商路由前的原始请求体字节上；命中后的请求体日志策略由后端保持现状。",

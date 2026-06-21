@@ -18,6 +18,10 @@ import {
   RequestBodyAuditCard,
   type RequestBodyAuditCardHandle,
 } from '@/components/config/RequestBodyAuditCard';
+import {
+  RequestBodyReleaseCard,
+  type RequestBodyReleaseCardHandle,
+} from '@/components/config/RequestBodyReleaseCard';
 import { DiffModal } from '@/components/config/DiffModal';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
@@ -74,6 +78,7 @@ export function ConfigPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [requestBodyReleaseDirty, setRequestBodyReleaseDirty] = useState(false);
   const [requestBodyAuditDirty, setRequestBodyAuditDirty] = useState(false);
   const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [serverYaml, setServerYaml] = useState('');
@@ -88,11 +93,12 @@ export function ConfigPage() {
   const [lastSearchedQuery, setLastSearchedQuery] = useState('');
   const editorRef = useRef<ReactCodeMirrorRef | null>(null);
   const floatingActionsRef = useRef<HTMLDivElement>(null);
+  const requestBodyReleaseRef = useRef<RequestBodyReleaseCardHandle | null>(null);
   const requestBodyAuditRef = useRef<RequestBodyAuditCardHandle | null>(null);
 
   const disableControls = connectionStatus !== 'connected';
   const yamlDirty = dirty || visualDirty;
-  const isDirty = yamlDirty || requestBodyAuditDirty;
+  const isDirty = yamlDirty || requestBodyReleaseDirty || requestBodyAuditDirty;
   const shouldRenderFloatingActions = isCurrentLayer;
   const hasVisualModeError = !!visualParseError;
   const hasVisualValidationErrors =
@@ -173,6 +179,9 @@ export function ConfigPage() {
         showNotification(t('notification.commercial_mode_restart_required'), 'warning');
       }
 
+      if (requestBodyReleaseDirty) {
+        await requestBodyReleaseRef.current?.save();
+      }
       if (requestBodyAuditDirty) {
         await requestBodyAuditRef.current?.save();
       }
@@ -185,10 +194,15 @@ export function ConfigPage() {
   };
 
   const handleSave = async () => {
-    if (!yamlDirty && requestBodyAuditDirty) {
+    if (!yamlDirty && (requestBodyReleaseDirty || requestBodyAuditDirty)) {
       setSaving(true);
       try {
-        await requestBodyAuditRef.current?.save();
+        if (requestBodyReleaseDirty) {
+          await requestBodyReleaseRef.current?.save();
+        }
+        if (requestBodyAuditDirty) {
+          await requestBodyAuditRef.current?.save();
+        }
       } finally {
         setSaving(false);
       }
@@ -242,8 +256,16 @@ export function ConfigPage() {
         setServerYaml(latestServerYaml);
         setMergedYaml(nextMergedYaml);
         loadVisualValuesFromYaml(latestServerYaml);
+        let savedSidecarConfig = false;
+        if (requestBodyReleaseDirty) {
+          await requestBodyReleaseRef.current?.save();
+          savedSidecarConfig = true;
+        }
         if (requestBodyAuditDirty) {
           await requestBodyAuditRef.current?.save();
+          savedSidecarConfig = true;
+        }
+        if (savedSidecarConfig) {
           return;
         }
         showNotification(t('config_management.diff.no_changes'), 'info');
@@ -471,7 +493,11 @@ export function ConfigPage() {
 
   const handleReload = useCallback(() => {
     if (!isDirty) {
-      void Promise.all([loadConfig(), requestBodyAuditRef.current?.reload()]);
+      void Promise.all([
+        loadConfig(),
+        requestBodyReleaseRef.current?.reload(),
+        requestBodyAuditRef.current?.reload(),
+      ]);
       return;
     }
 
@@ -482,7 +508,11 @@ export function ConfigPage() {
       cancelText: t('common.cancel'),
       variant: 'danger',
       onConfirm: async () => {
-        await Promise.all([loadConfig(), requestBodyAuditRef.current?.reload()]);
+        await Promise.all([
+          loadConfig(),
+          requestBodyReleaseRef.current?.reload(),
+          requestBodyAuditRef.current?.reload(),
+        ]);
       },
     });
   }, [isDirty, loadConfig, showConfirmation, t]);
@@ -569,6 +599,13 @@ export function ConfigPage() {
           </div>
         </div>
       </div>
+
+      <RequestBodyReleaseCard
+        ref={requestBodyReleaseRef}
+        disabled={disableControls}
+        externalSaving={saving}
+        onDirtyChange={setRequestBodyReleaseDirty}
+      />
 
       <RequestBodyAuditCard
         ref={requestBodyAuditRef}
