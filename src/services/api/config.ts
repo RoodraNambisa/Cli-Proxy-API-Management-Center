@@ -162,6 +162,7 @@ const normalizeRequestBodyRelease = (value: unknown): RequestBodyReleaseConfig =
 
   return {
     enable: readBoolean(source.enable),
+    logOnly: readBoolean(source['log-only'] ?? source.logOnly),
     afterSeconds: Number.isFinite(afterSeconds) && afterSeconds > 0 ? Math.trunc(afterSeconds) : 0,
     minBodyBytes: Number.isFinite(minBodyBytes) && minBodyBytes > 0 ? Math.trunc(minBodyBytes) : 0,
   };
@@ -202,6 +203,7 @@ const serializeRequestBodyRelease = (
   config: RequestBodyReleaseConfig
 ): Record<string, unknown> => ({
   enable: Boolean(config.enable),
+  'log-only': Boolean(config.logOnly),
   'after-seconds':
     typeof config.afterSeconds === 'number' && Number.isFinite(config.afterSeconds)
       ? Math.max(0, Math.trunc(config.afterSeconds))

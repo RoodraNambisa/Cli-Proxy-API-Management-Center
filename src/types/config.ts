@@ -36,6 +36,7 @@ export interface AuthModelExclusionConfig {
 
 export interface RequestBodyReleaseConfig {
   enable: boolean;
+  logOnly: boolean;
   afterSeconds: number;
   minBodyBytes: number;
 }

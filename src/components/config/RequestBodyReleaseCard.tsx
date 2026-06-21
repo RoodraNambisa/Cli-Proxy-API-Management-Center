@@ -12,6 +12,7 @@ import styles from './RequestBodyAuditCard.module.scss';
 
 type RequestBodyReleaseDraft = {
   enable: boolean;
+  logOnly: boolean;
   afterSeconds: string;
   minBodyBytes: string;
 };
@@ -32,6 +33,7 @@ type RequestBodyReleaseCardProps = {
 
 const defaultDraft = (): RequestBodyReleaseDraft => ({
   enable: false,
+  logOnly: false,
   afterSeconds: '0',
   minBodyBytes: '0',
 });
@@ -40,6 +42,7 @@ const toDraft = (config?: RequestBodyReleaseConfig | null): RequestBodyReleaseDr
   if (!config) return defaultDraft();
   return {
     enable: Boolean(config.enable),
+    logOnly: Boolean(config.logOnly),
     afterSeconds: String(config.afterSeconds ?? 0),
     minBodyBytes: String(config.minBodyBytes ?? 0),
   };
@@ -55,6 +58,7 @@ const parseNonNegativeInteger = (value: string): number | null => {
 
 const toConfig = (draft: RequestBodyReleaseDraft): RequestBodyReleaseConfig => ({
   enable: draft.enable,
+  logOnly: draft.logOnly,
   afterSeconds: parseNonNegativeInteger(draft.afterSeconds) ?? 0,
   minBodyBytes: parseNonNegativeInteger(draft.minBodyBytes) ?? 0,
 });
@@ -235,6 +239,17 @@ export const RequestBodyReleaseCard = forwardRef<
               />
               <span className={styles.toggleDescription}>
                 {t('config_management.request_body_release.enable_desc')}
+              </span>
+            </div>
+            <div className={styles.toggleItem}>
+              <ToggleSwitch
+                label={t('config_management.request_body_release.log_only')}
+                checked={draft.logOnly}
+                disabled={controlsDisabled || !draft.enable}
+                onChange={(value) => setDraft((current) => ({ ...current, logOnly: value }))}
+              />
+              <span className={styles.toggleDescription}>
+                {t('config_management.request_body_release.log_only_desc')}
               </span>
             </div>
           </div>

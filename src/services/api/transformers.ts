@@ -228,6 +228,7 @@ const normalizeRequestBodyRelease = (value: unknown): Config['requestBodyRelease
 
   return {
     enable: normalizeBoolean(value.enable) ?? false,
+    logOnly: normalizeBoolean(value['log-only'] ?? value.logOnly) ?? false,
     afterSeconds:
       afterSeconds !== undefined && Number.isFinite(afterSeconds) && afterSeconds > 0
         ? Math.trunc(afterSeconds)
