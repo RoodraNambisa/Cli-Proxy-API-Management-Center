@@ -8,6 +8,7 @@ export * from './providers';
 export * from './authFiles';
 export * from './oauth';
 export * from './usage';
+export * from './codexAnalytics';
 export * from './logs';
 export * from './pprof';
 export * from './version';
