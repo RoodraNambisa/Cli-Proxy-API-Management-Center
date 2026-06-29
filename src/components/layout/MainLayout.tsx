@@ -23,6 +23,7 @@ import {
   IconSidebarQuota,
   IconSidebarSystem,
   IconSidebarUsage,
+  IconChartLine,
 } from '@/components/ui/icons';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
 import {
@@ -43,6 +44,7 @@ const sidebarIcons: Record<string, ReactNode> = {
   authFiles: <IconSidebarAuthFiles size={18} />,
   oauth: <IconSidebarOauth size={18} />,
   quota: <IconSidebarQuota size={18} />,
+  codexAnalytics: <IconChartLine size={18} />,
   usage: <IconSidebarUsage size={18} />,
   config: <IconSidebarConfig size={18} />,
   logs: <IconSidebarLogs size={18} />,
@@ -383,12 +385,17 @@ export function MainLayout() {
   }, [fetchConfig]);
 
   const navItems = [
-    { path: '/', label: t('nav.dashboard'), icon: sidebarIcons.dashboard },
+    { path: '/', label: t('nav.dashboard'), icon: sidebarIcons.dashboard, end: true },
     { path: '/config', label: t('nav.config_management'), icon: sidebarIcons.config },
     { path: '/ai-providers', label: t('nav.ai_providers'), icon: sidebarIcons.aiProviders },
     { path: '/auth-files', label: t('nav.auth_files'), icon: sidebarIcons.authFiles },
     { path: '/oauth', label: t('nav.oauth', { defaultValue: 'OAuth' }), icon: sidebarIcons.oauth },
-    { path: '/quota', label: t('nav.quota_management'), icon: sidebarIcons.quota },
+    { path: '/quota', label: t('nav.quota_management'), icon: sidebarIcons.quota, end: true },
+    {
+      path: '/quota/codex-analytics',
+      label: t('quota_management.codex_analytics'),
+      icon: sidebarIcons.codexAnalytics,
+    },
     { path: '/usage', label: t('nav.usage_stats'), icon: sidebarIcons.usage },
     ...(config?.loggingToFile
       ? [{ path: '/logs', label: t('nav.logs'), icon: sidebarIcons.logs }]
@@ -652,6 +659,7 @@ export function MainLayout() {
               <NavLink
                 key={item.path}
                 to={item.path}
+                end={item.end}
                 className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 onClick={() => setSidebarOpen(false)}
                 title={showSidebarLabels ? undefined : item.label}
