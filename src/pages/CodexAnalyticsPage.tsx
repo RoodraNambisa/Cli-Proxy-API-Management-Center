@@ -45,10 +45,16 @@ ChartJS.register(
 );
 
 type RangePreset = '7d' | '30d' | 'custom';
+type SurfaceMetric = 'credits' | 'tokens' | 'turns' | 'threads' | 'percent';
+type ModelMetric = 'percent' | 'credits' | 'turns' | 'threads';
 
 const SELECTED_AUTH_STORAGE_KEY = 'cli-proxy-codex-analytics-auth-v1';
+const SURFACE_METRIC_STORAGE_KEY = 'cli-proxy-codex-analytics-surface-metric-v1';
+const MODEL_METRIC_STORAGE_KEY = 'cli-proxy-codex-analytics-model-metric-v1';
 const DEFAULT_RANGE_PRESET: RangePreset = '30d';
-const CREDITS_PER_USD = 0.04;
+const USD_PER_CREDIT = 0.04;
+const SURFACE_METRICS: SurfaceMetric[] = ['credits', 'tokens', 'turns', 'threads', 'percent'];
+const MODEL_METRICS: ModelMetric[] = ['percent', 'credits', 'turns', 'threads'];
 
 const padDatePart = (value: number): string => String(value).padStart(2, '0');
 
@@ -80,6 +86,27 @@ const storeSelectedAuth = (value: string) => {
     } else {
       localStorage.removeItem(SELECTED_AUTH_STORAGE_KEY);
     }
+  } catch {
+    // Ignore unavailable localStorage.
+  }
+};
+
+const getStoredChoice = <T extends string>(
+  key: string,
+  allowedValues: readonly T[],
+  fallback: T
+): T => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw && allowedValues.includes(raw as T) ? (raw as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const storeChoice = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
   } catch {
     // Ignore unavailable localStorage.
   }
@@ -127,7 +154,11 @@ const formatChartLabel = (
   context: TooltipItem<'line'> | TooltipItem<'bar'>,
   valueSuffix: string
 ): string => {
-  const label = context.dataset.label ? `${context.dataset.label}: ` : '';
+  const dataset = context.dataset as { label?: string; description?: string };
+  const name = dataset.description
+    ? `${dataset.label ?? ''} (${dataset.description})`
+    : dataset.label;
+  const label = name ? `${name}: ` : '';
   return `${label}${formatChartNumber(context.parsed.y)}${valueSuffix}`;
 };
 
@@ -275,6 +306,7 @@ function SeriesLegend({
       {series.map((item) => {
         const isActive = activeKey === item.key;
         const isMuted = Boolean(activeKey) && !isActive;
+        const title = item.description ? `${item.label} (${item.description})` : item.label;
         return (
           <button
             type="button"
@@ -286,7 +318,7 @@ function SeriesLegend({
               .filter(Boolean)
               .join(' ')}
             key={item.key}
-            title={item.label}
+            title={title}
             aria-pressed={isActive}
             onClick={() => onToggle(item.key)}
           >
@@ -299,18 +331,53 @@ function SeriesLegend({
   );
 }
 
+function MetricSegmentedControl<T extends string>({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+}: {
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (value: T) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <div className={styles.metricToggle} role="group" aria-label={ariaLabel}>
+      {options.map((option) => (
+        <button
+          type="button"
+          key={option.value}
+          className={[
+            styles.metricToggleButton,
+            value === option.value ? styles.metricToggleButtonActive : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          aria-pressed={value === option.value}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ChartFrame({
   title,
   children,
   legend,
   wide = false,
   description,
+  action,
 }: {
   title: string;
   children: ReactNode;
   legend?: ReactNode;
   wide?: boolean;
   description?: string;
+  action?: ReactNode;
 }) {
   return (
     <Card className={[styles.chartCard, wide ? styles.chartCardWide : ''].filter(Boolean).join(' ')}>
@@ -319,6 +386,7 @@ function ChartFrame({
           <h2>{title}</h2>
           {description ? <p>{description}</p> : null}
         </div>
+        {action ? <div className={styles.chartActions}>{action}</div> : null}
       </div>
       {children}
       {legend}
@@ -349,8 +417,15 @@ export function CodexAnalyticsPage() {
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [surfaceFilterKey, setSurfaceFilterKey] = useState<string | null>(null);
   const [modelFilterKey, setModelFilterKey] = useState<string | null>(null);
+  const [tokenFilterKey, setTokenFilterKey] = useState<string | null>(null);
   const [skillFilterKey, setSkillFilterKey] = useState<string | null>(null);
   const [pluginFilterKey, setPluginFilterKey] = useState<string | null>(null);
+  const [surfaceMetric, setSurfaceMetric] = useState<SurfaceMetric>(() =>
+    getStoredChoice(SURFACE_METRIC_STORAGE_KEY, SURFACE_METRICS, 'credits')
+  );
+  const [modelMetric, setModelMetric] = useState<ModelMetric>(() =>
+    getStoredChoice(MODEL_METRIC_STORAGE_KEY, MODEL_METRICS, 'turns')
+  );
 
   const selectedFile = useMemo(
     () => authFiles.find((file) => getAuthFileKey(file) === selectedAuthKey) ?? null,
@@ -465,6 +540,14 @@ export function CodexAnalyticsPage() {
   }, [selectedAuthKey]);
 
   useEffect(() => {
+    storeChoice(SURFACE_METRIC_STORAGE_KEY, surfaceMetric);
+  }, [surfaceMetric]);
+
+  useEffect(() => {
+    storeChoice(MODEL_METRIC_STORAGE_KEY, modelMetric);
+  }, [modelMetric]);
+
+  useEffect(() => {
     if (filesLoading || !canRequestAnalytics) return;
     loadAnalytics();
   }, [
@@ -477,13 +560,56 @@ export function CodexAnalyticsPage() {
   ]);
 
   const chartMinWidth = buildChartMinWidth(data?.labels.length ?? 0, isMobile);
+  const surfaceMetricOptions = useMemo(
+    () =>
+      SURFACE_METRICS.map((value) => ({
+        value,
+        label: t(`codex_analytics.metric_${value}`),
+      })),
+    [t]
+  );
+  const modelMetricOptions = useMemo(
+    () =>
+      MODEL_METRICS.map((value) => ({
+        value,
+        label: t(`codex_analytics.metric_${value}`),
+      })),
+    [t]
+  );
+  const surfaceAllSeries = useMemo(() => {
+    if (!data) return [];
+    if (surfaceMetric === 'credits') return data.clientCreditSeries;
+    if (surfaceMetric === 'tokens') return data.clientTokenSeries;
+    if (surfaceMetric === 'turns') return data.clientTurnSeries;
+    if (surfaceMetric === 'threads') return data.clientThreadSeries;
+    return data.surfacePercentSeries;
+  }, [data, surfaceMetric]);
+  const modelAllSeries = useMemo(() => {
+    if (!data) return [];
+    if (modelMetric === 'credits') return data.modelActualCreditSeries;
+    if (modelMetric === 'turns') return data.modelTurnSeries;
+    if (modelMetric === 'threads') return data.modelThreadSeries;
+    return data.modelPercentSeries;
+  }, [data, modelMetric]);
+  const tokenBreakdownSeries = useMemo(
+    () =>
+      (data?.tokenBreakdownSeries ?? []).map((series) => ({
+        ...series,
+        label: t(`codex_analytics.${series.key}`),
+      })),
+    [data?.tokenBreakdownSeries, t]
+  );
   const visibleSurfaceSeries = useMemo(
-    () => filterSeries(data?.surfaceSeries, surfaceFilterKey),
-    [data?.surfaceSeries, surfaceFilterKey]
+    () => filterSeries(surfaceAllSeries, surfaceFilterKey),
+    [surfaceAllSeries, surfaceFilterKey]
   );
   const visibleModelSeries = useMemo(
-    () => filterSeries(data?.modelCreditSeries, modelFilterKey),
-    [data?.modelCreditSeries, modelFilterKey]
+    () => filterSeries(modelAllSeries, modelFilterKey),
+    [modelAllSeries, modelFilterKey]
+  );
+  const visibleTokenSeries = useMemo(
+    () => filterSeries(tokenBreakdownSeries, tokenFilterKey),
+    [tokenBreakdownSeries, tokenFilterKey]
   );
   const visibleSkillSeries = useMemo(
     () => filterSeries(data?.skillInvocationSeries, skillFilterKey),
@@ -495,11 +621,14 @@ export function CodexAnalyticsPage() {
   );
 
   useEffect(() => {
-    if (!data?.surfaceSeries.some((item) => item.key === surfaceFilterKey)) {
+    if (!surfaceAllSeries.some((item) => item.key === surfaceFilterKey)) {
       setSurfaceFilterKey(null);
     }
-    if (!data?.modelCreditSeries.some((item) => item.key === modelFilterKey)) {
+    if (!modelAllSeries.some((item) => item.key === modelFilterKey)) {
       setModelFilterKey(null);
+    }
+    if (!tokenBreakdownSeries.some((item) => item.key === tokenFilterKey)) {
+      setTokenFilterKey(null);
     }
     if (!data?.skillInvocationSeries.some((item) => item.key === skillFilterKey)) {
       setSkillFilterKey(null);
@@ -507,7 +636,17 @@ export function CodexAnalyticsPage() {
     if (!data?.pluginInvocationSeries.some((item) => item.key === pluginFilterKey)) {
       setPluginFilterKey(null);
     }
-  }, [data, modelFilterKey, pluginFilterKey, skillFilterKey, surfaceFilterKey]);
+  }, [
+    data,
+    modelAllSeries,
+    modelFilterKey,
+    pluginFilterKey,
+    skillFilterKey,
+    surfaceAllSeries,
+    surfaceFilterKey,
+    tokenBreakdownSeries,
+    tokenFilterKey,
+  ]);
 
   const toggleSurfaceFilter = useCallback(
     (key: string) => setSurfaceFilterKey((current) => (current === key ? null : key)),
@@ -515,6 +654,10 @@ export function CodexAnalyticsPage() {
   );
   const toggleModelFilter = useCallback(
     (key: string) => setModelFilterKey((current) => (current === key ? null : key)),
+    []
+  );
+  const toggleTokenFilter = useCallback(
+    (key: string) => setTokenFilterKey((current) => (current === key ? null : key)),
     []
   );
   const toggleSkillFilter = useCallback(
@@ -532,6 +675,7 @@ export function CodexAnalyticsPage() {
       datasets:
         visibleSurfaceSeries.map((series) => ({
           label: series.label,
+          description: series.description,
           data: series.values,
           stack: 'surface',
           backgroundColor: hexToRgba(series.color, 0.82),
@@ -550,6 +694,7 @@ export function CodexAnalyticsPage() {
       datasets:
         visibleModelSeries.map((series) => ({
           label: series.label,
+          description: series.description,
           data: series.values,
           borderColor: series.color,
           backgroundColor: hexToRgba(series.color, 0.18),
@@ -561,12 +706,32 @@ export function CodexAnalyticsPage() {
     [data?.labels, isMobile, visibleModelSeries]
   );
 
+  const tokenChartData = useMemo(
+    () => ({
+      labels: data?.labels ?? [],
+      datasets:
+        visibleTokenSeries.map((series) => ({
+          label: series.label,
+          description: series.description,
+          data: series.values,
+          stack: 'tokens',
+          backgroundColor: hexToRgba(series.color, 0.76),
+          borderColor: series.color,
+          borderWidth: 1,
+          borderRadius: 3,
+          maxBarThickness: 32,
+        })) ?? [],
+    }),
+    [data?.labels, visibleTokenSeries]
+  );
+
   const skillChartData = useMemo(
     () => ({
       labels: data?.labels ?? [],
       datasets:
         visibleSkillSeries.map((series) => ({
           label: series.label,
+          description: series.description,
           data: series.values,
           borderColor: series.color,
           backgroundColor: hexToRgba(series.color, 0.16),
@@ -584,6 +749,7 @@ export function CodexAnalyticsPage() {
       datasets:
         visiblePluginSeries.map((series) => ({
           label: series.label,
+          description: series.description,
           data: series.values,
           borderColor: series.color,
           backgroundColor: hexToRgba(series.color, 0.16),
@@ -600,9 +766,53 @@ export function CodexAnalyticsPage() {
     [data?.labels, isDark, isMobile]
   );
 
+  const creditsBarOptions = useMemo(
+    () =>
+      buildStackedBarOptions({
+        labels: data?.labels ?? [],
+        isDark,
+        isMobile,
+        valueSuffix: t('codex_analytics.credits_suffix'),
+      }),
+    [data?.labels, isDark, isMobile, t]
+  );
+
+  const tokenBarOptions = useMemo(
+    () =>
+      buildStackedBarOptions({
+        labels: data?.labels ?? [],
+        isDark,
+        isMobile,
+        valueSuffix: t('codex_analytics.tokens_suffix'),
+      }),
+    [data?.labels, isDark, isMobile, t]
+  );
+
+  const countBarOptions = useMemo(
+    () =>
+      buildStackedBarOptions({
+        labels: data?.labels ?? [],
+        isDark,
+        isMobile,
+        valueSuffix: t('codex_analytics.count_suffix'),
+      }),
+    [data?.labels, isDark, isMobile, t]
+  );
+
   const percentLineOptions = useMemo(
     () => buildStackedLineOptions({ labels: data?.labels ?? [], isDark, isMobile, valueSuffix: '%' }),
     [data?.labels, isDark, isMobile]
+  );
+
+  const creditsLineOptions = useMemo(
+    () =>
+      buildStackedLineOptions({
+        labels: data?.labels ?? [],
+        isDark,
+        isMobile,
+        valueSuffix: t('codex_analytics.credits_suffix'),
+      }),
+    [data?.labels, isDark, isMobile, t]
   );
 
   const countLineOptions = useMemo(
@@ -616,6 +826,27 @@ export function CodexAnalyticsPage() {
     [data?.labels, isDark, isMobile, t]
   );
 
+  const surfaceChartOptions =
+    surfaceMetric === 'percent'
+      ? percentBarOptions
+      : surfaceMetric === 'credits'
+        ? creditsBarOptions
+        : surfaceMetric === 'tokens'
+          ? tokenBarOptions
+          : countBarOptions;
+  const modelChartOptions =
+    modelMetric === 'percent'
+      ? percentLineOptions
+      : modelMetric === 'credits'
+        ? creditsLineOptions
+        : countLineOptions;
+  const surfaceDescription = t(`codex_analytics.surface_metric_${surfaceMetric}_unit`);
+  const modelDescription = t(`codex_analytics.model_metric_${modelMetric}_unit`);
+  const modelActualCreditsEmpty =
+    modelMetric === 'credits' && data && modelAllSeries.length === 0
+      ? t('codex_analytics.model_actual_credits_empty')
+      : undefined;
+
   const summaryCards = [
     {
       key: 'credits',
@@ -623,7 +854,7 @@ export function CodexAnalyticsPage() {
       value: data ? formatCredits(data.totals.credits) : '-',
       detail: data
         ? t('codex_analytics.summary_credits_usd', {
-            amount: formatUsd(data.totals.credits / CREDITS_PER_USD),
+            amount: formatUsd(data.totals.credits * USD_PER_CREDIT),
           })
         : '',
       footnote: t('codex_analytics.summary_credits_rate'),
@@ -775,16 +1006,24 @@ export function CodexAnalyticsPage() {
             <div className={styles.chartGrid} aria-busy={loading}>
               <ChartFrame
                 title={t('codex_analytics.surface_usage')}
-                description={t('codex_analytics.surface_usage_unit')}
+                description={surfaceDescription}
+                action={
+                  <MetricSegmentedControl
+                    value={surfaceMetric}
+                    options={surfaceMetricOptions}
+                    onChange={setSurfaceMetric}
+                    ariaLabel={t('codex_analytics.surface_metric_label')}
+                  />
+                }
                 wide
               >
                 {renderChartContent(
                   Boolean(visibleSurfaceSeries.length),
-                  <Bar data={surfaceChartData} options={percentBarOptions} />
+                  <Bar data={surfaceChartData} options={surfaceChartOptions} />
                 )}
-                {data?.surfaceSeries.length ? (
+                {surfaceAllSeries.length ? (
                   <SeriesLegend
-                    series={data.surfaceSeries}
+                    series={surfaceAllSeries}
                     activeKey={surfaceFilterKey}
                     onToggle={toggleSurfaceFilter}
                   />
@@ -792,19 +1031,46 @@ export function CodexAnalyticsPage() {
               </ChartFrame>
 
               <ChartFrame
-                title={t('codex_analytics.model_credits')}
-                description={t('codex_analytics.model_credits_unit')}
+                title={t('codex_analytics.model_usage')}
+                description={modelDescription}
+                action={
+                  <MetricSegmentedControl
+                    value={modelMetric}
+                    options={modelMetricOptions}
+                    onChange={setModelMetric}
+                    ariaLabel={t('codex_analytics.model_metric_label')}
+                  />
+                }
                 wide
               >
                 {renderChartContent(
                   Boolean(visibleModelSeries.length),
-                  <Line data={modelChartData} options={percentLineOptions} />
+                  <Line data={modelChartData} options={modelChartOptions} />,
+                  modelActualCreditsEmpty
                 )}
-                {data?.modelCreditSeries.length ? (
+                {modelAllSeries.length ? (
                   <SeriesLegend
-                    series={data.modelCreditSeries}
+                    series={modelAllSeries}
                     activeKey={modelFilterKey}
                     onToggle={toggleModelFilter}
+                  />
+                ) : null}
+              </ChartFrame>
+
+              <ChartFrame
+                title={t('codex_analytics.token_breakdown')}
+                description={t('codex_analytics.token_breakdown_unit')}
+                wide
+              >
+                {renderChartContent(
+                  Boolean(visibleTokenSeries.length),
+                  <Bar data={tokenChartData} options={tokenBarOptions} />
+                )}
+                {tokenBreakdownSeries.length ? (
+                  <SeriesLegend
+                    series={tokenBreakdownSeries}
+                    activeKey={tokenFilterKey}
+                    onToggle={toggleTokenFilter}
                   />
                 ) : null}
               </ChartFrame>

@@ -187,20 +187,37 @@ const collectLabels = (
 
 const createSeriesMap = (labels: string[]) => {
   const dateIndex = new Map(labels.map((label, index) => [label, index] as const));
-  const series = new Map<string, { label: string; values: number[]; total: number }>();
+  const series = new Map<
+    string,
+    { label: string; description?: string; rawName?: string; values: number[]; total: number }
+  >();
 
-  const addValue = (date: string | null, key: string, label: string, value: number) => {
+  const addValue = (
+    date: string | null,
+    key: string,
+    label: string,
+    value: number,
+    metadata?: { description?: string; rawName?: string }
+  ) => {
     const index = date ? dateIndex.get(date) : undefined;
     if (index === undefined || !key || value === 0) return;
     const entry =
       series.get(key) ??
       {
         label,
+        description: metadata?.description,
+        rawName: metadata?.rawName,
         values: Array.from({ length: labels.length }, () => 0),
         total: 0,
       };
     entry.values[index] += value;
     entry.total += value;
+    if (!entry.description && metadata?.description) {
+      entry.description = metadata.description;
+    }
+    if (!entry.rawName && metadata?.rawName) {
+      entry.rawName = metadata.rawName;
+    }
     series.set(key, entry);
   };
 
@@ -208,13 +225,18 @@ const createSeriesMap = (labels: string[]) => {
 };
 
 const finalizeSeries = (
-  series: Map<string, { label: string; values: number[]; total: number }>,
+  series: Map<
+    string,
+    { label: string; description?: string; rawName?: string; values: number[]; total: number }
+  >,
   limit?: number
 ): CodexAnalyticsSeriesDataset[] =>
   Array.from(series.entries())
     .map(([key, entry], index) => ({
       key,
       label: entry.label,
+      description: entry.description,
+      rawName: entry.rawName,
       total: entry.total,
       values: entry.values,
       color: SERIES_COLORS[index % SERIES_COLORS.length],
@@ -227,9 +249,17 @@ const finalizeSeries = (
       color: SERIES_COLORS[index % SERIES_COLORS.length],
     }));
 
-const normalizeClientSeries = (
+const normalizeClientMetricSeries = (
   records: CodexAnalyticsDailyWorkspaceUsageCount[],
-  labels: string[]
+  labels: string[],
+  metricKey:
+    | 'credits'
+    | 'text_total_tokens'
+    | 'turns'
+    | 'threads'
+    | 'cached_text_input_tokens'
+    | 'uncached_text_input_tokens'
+    | 'text_output_tokens'
 ): CodexAnalyticsSeriesDataset[] => {
   const { series, addValue } = createSeriesMap(labels);
   records.forEach((record) => {
@@ -238,13 +268,13 @@ const normalizeClientSeries = (
     clients.forEach((client) => {
       const key = toStringValue(client.client_id ?? client.clientId);
       const label = key ? SURFACE_LABELS[key] ?? key : '';
-      addValue(date, key, label, toNumber(client.credits));
+      addValue(date, key, label, toNumber(client[metricKey]));
     });
   });
   return finalizeSeries(series);
 };
 
-const normalizeSurfaceSeries = (
+const normalizeSurfacePercentSeries = (
   records: CodexAnalyticsDailyTokenUsageBreakdown[],
   labels: string[]
 ): CodexAnalyticsSeriesDataset[] => {
@@ -269,9 +299,8 @@ const modelKey = (model: unknown, speed: unknown): { key: string; label: string 
   return { key: `${modelName}:${speedName}`, label: `${modelName} (${speedName})` };
 };
 
-const normalizeModelSeries = (
+const normalizeModelPercentSeries = (
   tokenRecords: CodexAnalyticsDailyTokenUsageBreakdown[],
-  workspaceRecords: CodexAnalyticsDailyWorkspaceUsageCount[],
   labels: string[]
 ): CodexAnalyticsSeriesDataset[] => {
   const { series, addValue } = createSeriesMap(labels);
@@ -284,18 +313,44 @@ const normalizeModelSeries = (
     });
   });
 
-  if (series.size === 0) {
-    workspaceRecords.forEach((record) => {
-      const date = readDate(record.date);
-      const models = Array.isArray(record.models) ? record.models : [];
-      models.forEach((model) => {
-        const identity = modelKey(model.model, '');
-        addValue(date, identity.key, identity.label, toNumber(model.credits));
-      });
-    });
-  }
-
   return finalizeSeries(series, 10);
+};
+
+const normalizeModelMetricSeries = (
+  records: CodexAnalyticsDailyWorkspaceUsageCount[],
+  labels: string[],
+  metricKey: 'credits' | 'turns' | 'threads'
+): CodexAnalyticsSeriesDataset[] => {
+  const { series, addValue } = createSeriesMap(labels);
+  records.forEach((record) => {
+    const date = readDate(record.date);
+    const models = Array.isArray(record.models) ? record.models : [];
+    models.forEach((model) => {
+      const identity = modelKey(model.model, '');
+      addValue(date, identity.key, identity.label, toNumber(model[metricKey]));
+    });
+  });
+  return finalizeSeries(series, 10);
+};
+
+const normalizeTokenBreakdownSeries = (
+  records: CodexAnalyticsDailyWorkspaceUsageCount[],
+  labels: string[]
+): CodexAnalyticsSeriesDataset[] => {
+  const { series, addValue } = createSeriesMap(labels);
+  records.forEach((record) => {
+    const date = readDate(record.date);
+    const totals = isRecord(record.totals) ? record.totals : undefined;
+    addValue(date, 'cached_text_input_tokens', 'Cached input', toNumber(totals?.cached_text_input_tokens));
+    addValue(
+      date,
+      'uncached_text_input_tokens',
+      'Uncached input',
+      toNumber(totals?.uncached_text_input_tokens)
+    );
+    addValue(date, 'text_output_tokens', 'Output', toNumber(totals?.text_output_tokens));
+  });
+  return finalizeSeries(series);
 };
 
 const readCount = (record: Record<string, unknown>, keys: string[]): number => {
@@ -335,7 +390,10 @@ const normalizeNamedUsageSeries = (
         const key = readFirstString(rawItem, keyFields);
         const label = readFirstString(rawItem, labelFields) || key;
         const count = readCount(rawItem, countFields);
-        addValue(date, key, label, count);
+        addValue(date, key, label, count, {
+          description: key && key !== label ? key : undefined,
+          rawName: key,
+        });
       });
     }
   });
@@ -378,14 +436,39 @@ const buildViewModel = (
     tokenRecords
   );
 
+  const surfacePercentSeries = normalizeSurfacePercentSeries(tokenRecords, labels);
+  const clientCreditSeries = normalizeClientMetricSeries(workspaceRecords, labels, 'credits');
+  const clientTokenSeries = normalizeClientMetricSeries(
+    workspaceRecords,
+    labels,
+    'text_total_tokens'
+  );
+  const clientTurnSeries = normalizeClientMetricSeries(workspaceRecords, labels, 'turns');
+  const clientThreadSeries = normalizeClientMetricSeries(workspaceRecords, labels, 'threads');
+  const modelPercentSeries = normalizeModelPercentSeries(tokenRecords, labels);
+  const modelActualCreditSeries = normalizeModelMetricSeries(workspaceRecords, labels, 'credits');
+  const modelTurnSeries = normalizeModelMetricSeries(workspaceRecords, labels, 'turns');
+  const modelThreadSeries = normalizeModelMetricSeries(workspaceRecords, labels, 'threads');
+  const tokenBreakdownSeries = normalizeTokenBreakdownSeries(workspaceRecords, labels);
+
   return {
     startDate: params.startDate,
     endDate: params.endDate,
     labels,
     totals: normalizeWorkspaceTotals(workspaceRecords),
-    clientSeries: normalizeClientSeries(workspaceRecords, labels),
-    surfaceSeries: normalizeSurfaceSeries(tokenRecords, labels),
-    modelCreditSeries: normalizeModelSeries(tokenRecords, workspaceRecords, labels),
+    surfacePercentSeries,
+    clientCreditSeries,
+    clientTokenSeries,
+    clientTurnSeries,
+    clientThreadSeries,
+    modelPercentSeries,
+    modelActualCreditSeries,
+    modelTurnSeries,
+    modelThreadSeries,
+    tokenBreakdownSeries,
+    clientSeries: clientCreditSeries,
+    surfaceSeries: surfacePercentSeries,
+    modelCreditSeries: modelPercentSeries,
     skillInvocationSeries: normalizeNamedUsageSeries(
       skillRecords,
       labels,

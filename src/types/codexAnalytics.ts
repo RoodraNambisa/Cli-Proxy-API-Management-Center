@@ -123,6 +123,8 @@ export interface CodexAnalyticsMetricTotals {
 export interface CodexAnalyticsSeriesDataset {
   key: string;
   label: string;
+  description?: string;
+  rawName?: string;
   total: number;
   values: number[];
   color: string;
@@ -133,6 +135,16 @@ export interface CodexAnalyticsViewModel {
   endDate: string;
   labels: string[];
   totals: CodexAnalyticsMetricTotals;
+  surfacePercentSeries: CodexAnalyticsSeriesDataset[];
+  clientCreditSeries: CodexAnalyticsSeriesDataset[];
+  clientTokenSeries: CodexAnalyticsSeriesDataset[];
+  clientTurnSeries: CodexAnalyticsSeriesDataset[];
+  clientThreadSeries: CodexAnalyticsSeriesDataset[];
+  modelPercentSeries: CodexAnalyticsSeriesDataset[];
+  modelActualCreditSeries: CodexAnalyticsSeriesDataset[];
+  modelTurnSeries: CodexAnalyticsSeriesDataset[];
+  modelThreadSeries: CodexAnalyticsSeriesDataset[];
+  tokenBreakdownSeries: CodexAnalyticsSeriesDataset[];
   clientSeries: CodexAnalyticsSeriesDataset[];
   surfaceSeries: CodexAnalyticsSeriesDataset[];
   modelCreditSeries: CodexAnalyticsSeriesDataset[];

@@ -206,6 +206,7 @@
   justify-content: space-between;
   gap: $spacing-md;
   margin-bottom: $spacing-md;
+  flex-wrap: wrap;
 }
 
 .chartTitleGroup {
@@ -226,6 +227,77 @@
     color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.45;
+  }
+}
+
+.chartActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+
+  @include mobile {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+.metricToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
+  border-radius: $radius-md;
+  background: color-mix(in srgb, var(--bg-secondary) 86%, transparent);
+  min-width: 0;
+
+  @include mobile {
+    flex-wrap: wrap;
+  }
+}
+
+.metricToggleButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    background: color-mix(in srgb, var(--bg-hover) 74%, transparent);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba($primary-color, 0.16);
+  }
+}
+
+.metricToggleButtonActive {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--primary-contrast, #fff);
+
+  &:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    color: var(--primary-contrast, #fff);
   }
 }
 
