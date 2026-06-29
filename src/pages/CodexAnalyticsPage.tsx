@@ -12,6 +12,7 @@ import {
   PointElement,
   Tooltip,
   type ChartOptions,
+  type TooltipItem,
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
 import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
@@ -47,6 +48,7 @@ type RangePreset = '7d' | '30d' | 'custom';
 
 const SELECTED_AUTH_STORAGE_KEY = 'cli-proxy-codex-analytics-auth-v1';
 const DEFAULT_RANGE_PRESET: RangePreset = '30d';
+const CREDITS_PER_USD = 0.04;
 
 const padDatePart = (value: number): string => String(value).padStart(2, '0');
 
@@ -106,6 +108,29 @@ const formatNumber = (value: number, options?: Intl.NumberFormatOptions): string
 const formatCredits = (value: number): string =>
   formatNumber(value, { maximumFractionDigits: value >= 100 ? 0 : 2 });
 
+const formatUsd = (value: number): string =>
+  new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: value >= 100 ? 0 : 2,
+  }).format(value);
+
+const formatChartNumber = (value: unknown): string => {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric)) return String(value ?? '');
+  return formatNumber(numeric, {
+    maximumFractionDigits: Math.abs(numeric) >= 10 ? 0 : 2,
+  });
+};
+
+const formatChartLabel = (
+  context: TooltipItem<'line'> | TooltipItem<'bar'>,
+  valueSuffix: string
+): string => {
+  const label = context.dataset.label ? `${context.dataset.label}: ` : '';
+  return `${label}${formatChartNumber(context.parsed.y)}${valueSuffix}`;
+};
+
 const buildChartMinWidth = (labelCount: number, isMobile: boolean): string | undefined => {
   if (labelCount <= 14) return undefined;
   return `${Math.min(labelCount * (isMobile ? 40 : 32), 3200)}px`;
@@ -115,20 +140,38 @@ const buildStackedLineOptions = ({
   labels,
   isDark,
   isMobile,
+  valueSuffix = '',
 }: {
   labels: string[];
   isDark: boolean;
   isMobile: boolean;
+  valueSuffix?: string;
 }): ChartOptions<'line'> => {
   const base = buildChartOptions({ period: 'day', labels, isDark, isMobile });
+  const baseTooltip = typeof base.plugins?.tooltip === 'object' ? base.plugins.tooltip : {};
+  const baseYScale = base.scales?.y ?? {};
   return {
     ...base,
+    plugins: {
+      ...base.plugins,
+      tooltip: {
+        ...baseTooltip,
+        callbacks: {
+          ...baseTooltip.callbacks,
+          label: (context) => formatChartLabel(context, valueSuffix),
+        },
+      },
+    },
     scales: {
       ...base.scales,
       y: {
-        ...base.scales?.y,
+        ...baseYScale,
         stacked: true,
         beginAtZero: true,
+        ticks: {
+          ...baseYScale.ticks,
+          callback: (value) => `${formatChartNumber(value)}${valueSuffix}`,
+        },
       },
     },
   };
@@ -138,10 +181,12 @@ const buildStackedBarOptions = ({
   labels,
   isDark,
   isMobile,
+  valueSuffix = '',
 }: {
   labels: string[];
   isDark: boolean;
   isMobile: boolean;
+  valueSuffix?: string;
 }): ChartOptions<'bar'> => {
   const tickFontSize = isMobile ? 10 : 12;
   const maxTickLabelCount = isMobile ? 6 : 10;
@@ -167,6 +212,9 @@ const buildStackedBarOptions = ({
         borderWidth: 1,
         padding: 10,
         displayColors: true,
+        callbacks: {
+          label: (context) => formatChartLabel(context, valueSuffix),
+        },
       },
     },
     scales: {
@@ -194,21 +242,59 @@ const buildStackedBarOptions = ({
         beginAtZero: true,
         grid: { color: gridColor },
         border: { color: axisBorderColor },
-        ticks: { color: tickColor, font: { size: tickFontSize } },
+        ticks: {
+          color: tickColor,
+          font: { size: tickFontSize },
+          callback: (value) => `${formatChartNumber(value)}${valueSuffix}`,
+        },
       },
     },
   };
 };
 
-function SeriesLegend({ series }: { series: CodexAnalyticsSeriesDataset[] }) {
+const filterSeries = (
+  series: CodexAnalyticsSeriesDataset[] | undefined,
+  activeKey: string | null
+): CodexAnalyticsSeriesDataset[] => {
+  const resolvedSeries = series ?? [];
+  if (!activeKey) return resolvedSeries;
+  return resolvedSeries.filter((item) => item.key === activeKey);
+};
+
+function SeriesLegend({
+  series,
+  activeKey,
+  onToggle,
+}: {
+  series: CodexAnalyticsSeriesDataset[];
+  activeKey: string | null;
+  onToggle: (key: string) => void;
+}) {
   return (
     <div className={styles.chartLegend}>
-      {series.map((item) => (
-        <div className={styles.legendItem} key={item.key} title={item.label}>
-          <span className={styles.legendDot} style={{ backgroundColor: item.color }} />
-          <span className={styles.legendLabel}>{item.label}</span>
-        </div>
-      ))}
+      {series.map((item) => {
+        const isActive = activeKey === item.key;
+        const isMuted = Boolean(activeKey) && !isActive;
+        return (
+          <button
+            type="button"
+            className={[
+              styles.legendItem,
+              isActive ? styles.legendItemActive : '',
+              isMuted ? styles.legendItemMuted : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            key={item.key}
+            title={item.label}
+            aria-pressed={isActive}
+            onClick={() => onToggle(item.key)}
+          >
+            <span className={styles.legendDot} style={{ backgroundColor: item.color }} />
+            <span className={styles.legendLabel}>{item.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -218,16 +304,21 @@ function ChartFrame({
   children,
   legend,
   wide = false,
+  description,
 }: {
   title: string;
   children: ReactNode;
   legend?: ReactNode;
   wide?: boolean;
+  description?: string;
 }) {
   return (
     <Card className={[styles.chartCard, wide ? styles.chartCardWide : ''].filter(Boolean).join(' ')}>
       <div className={styles.chartHeader}>
-        <h2>{title}</h2>
+        <div className={styles.chartTitleGroup}>
+          <h2>{title}</h2>
+          {description ? <p>{description}</p> : null}
+        </div>
       </div>
       {children}
       {legend}
@@ -256,6 +347,10 @@ export function CodexAnalyticsPage() {
   const [filesLoading, setFilesLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
+  const [surfaceFilterKey, setSurfaceFilterKey] = useState<string | null>(null);
+  const [modelFilterKey, setModelFilterKey] = useState<string | null>(null);
+  const [skillFilterKey, setSkillFilterKey] = useState<string | null>(null);
+  const [pluginFilterKey, setPluginFilterKey] = useState<string | null>(null);
 
   const selectedFile = useMemo(
     () => authFiles.find((file) => getAuthFileKey(file) === selectedAuthKey) ?? null,
@@ -382,12 +477,60 @@ export function CodexAnalyticsPage() {
   ]);
 
   const chartMinWidth = buildChartMinWidth(data?.labels.length ?? 0, isMobile);
+  const visibleSurfaceSeries = useMemo(
+    () => filterSeries(data?.surfaceSeries, surfaceFilterKey),
+    [data?.surfaceSeries, surfaceFilterKey]
+  );
+  const visibleModelSeries = useMemo(
+    () => filterSeries(data?.modelCreditSeries, modelFilterKey),
+    [data?.modelCreditSeries, modelFilterKey]
+  );
+  const visibleSkillSeries = useMemo(
+    () => filterSeries(data?.skillInvocationSeries, skillFilterKey),
+    [data?.skillInvocationSeries, skillFilterKey]
+  );
+  const visiblePluginSeries = useMemo(
+    () => filterSeries(data?.pluginInvocationSeries, pluginFilterKey),
+    [data?.pluginInvocationSeries, pluginFilterKey]
+  );
+
+  useEffect(() => {
+    if (!data?.surfaceSeries.some((item) => item.key === surfaceFilterKey)) {
+      setSurfaceFilterKey(null);
+    }
+    if (!data?.modelCreditSeries.some((item) => item.key === modelFilterKey)) {
+      setModelFilterKey(null);
+    }
+    if (!data?.skillInvocationSeries.some((item) => item.key === skillFilterKey)) {
+      setSkillFilterKey(null);
+    }
+    if (!data?.pluginInvocationSeries.some((item) => item.key === pluginFilterKey)) {
+      setPluginFilterKey(null);
+    }
+  }, [data, modelFilterKey, pluginFilterKey, skillFilterKey, surfaceFilterKey]);
+
+  const toggleSurfaceFilter = useCallback(
+    (key: string) => setSurfaceFilterKey((current) => (current === key ? null : key)),
+    []
+  );
+  const toggleModelFilter = useCallback(
+    (key: string) => setModelFilterKey((current) => (current === key ? null : key)),
+    []
+  );
+  const toggleSkillFilter = useCallback(
+    (key: string) => setSkillFilterKey((current) => (current === key ? null : key)),
+    []
+  );
+  const togglePluginFilter = useCallback(
+    (key: string) => setPluginFilterKey((current) => (current === key ? null : key)),
+    []
+  );
 
   const surfaceChartData = useMemo(
     () => ({
       labels: data?.labels ?? [],
       datasets:
-        data?.surfaceSeries.map((series) => ({
+        visibleSurfaceSeries.map((series) => ({
           label: series.label,
           data: series.values,
           stack: 'surface',
@@ -398,14 +541,14 @@ export function CodexAnalyticsPage() {
           maxBarThickness: 32,
         })) ?? [],
     }),
-    [data]
+    [data?.labels, visibleSurfaceSeries]
   );
 
   const modelChartData = useMemo(
     () => ({
       labels: data?.labels ?? [],
       datasets:
-        data?.modelCreditSeries.map((series) => ({
+        visibleModelSeries.map((series) => ({
           label: series.label,
           data: series.values,
           borderColor: series.color,
@@ -415,14 +558,14 @@ export function CodexAnalyticsPage() {
           pointRadius: isMobile ? 0 : 2,
         })) ?? [],
     }),
-    [data, isMobile]
+    [data?.labels, isMobile, visibleModelSeries]
   );
 
   const skillChartData = useMemo(
     () => ({
       labels: data?.labels ?? [],
       datasets:
-        data?.skillInvocationSeries.map((series) => ({
+        visibleSkillSeries.map((series) => ({
           label: series.label,
           data: series.values,
           borderColor: series.color,
@@ -432,14 +575,14 @@ export function CodexAnalyticsPage() {
           pointRadius: isMobile ? 0 : 2,
         })) ?? [],
     }),
-    [data, isMobile]
+    [data?.labels, isMobile, visibleSkillSeries]
   );
 
   const pluginChartData = useMemo(
     () => ({
       labels: data?.labels ?? [],
       datasets:
-        data?.pluginInvocationSeries.map((series) => ({
+        visiblePluginSeries.map((series) => ({
           label: series.label,
           data: series.values,
           borderColor: series.color,
@@ -449,17 +592,28 @@ export function CodexAnalyticsPage() {
           pointRadius: isMobile ? 0 : 2,
         })) ?? [],
     }),
-    [data, isMobile]
+    [data?.labels, isMobile, visiblePluginSeries]
   );
 
-  const barOptions = useMemo(
-    () => buildStackedBarOptions({ labels: data?.labels ?? [], isDark, isMobile }),
+  const percentBarOptions = useMemo(
+    () => buildStackedBarOptions({ labels: data?.labels ?? [], isDark, isMobile, valueSuffix: '%' }),
     [data?.labels, isDark, isMobile]
   );
 
-  const lineOptions = useMemo(
-    () => buildStackedLineOptions({ labels: data?.labels ?? [], isDark, isMobile }),
+  const percentLineOptions = useMemo(
+    () => buildStackedLineOptions({ labels: data?.labels ?? [], isDark, isMobile, valueSuffix: '%' }),
     [data?.labels, isDark, isMobile]
+  );
+
+  const countLineOptions = useMemo(
+    () =>
+      buildStackedLineOptions({
+        labels: data?.labels ?? [],
+        isDark,
+        isMobile,
+        valueSuffix: t('codex_analytics.count_suffix'),
+      }),
+    [data?.labels, isDark, isMobile, t]
   );
 
   const summaryCards = [
@@ -467,6 +621,12 @@ export function CodexAnalyticsPage() {
       key: 'credits',
       label: t('codex_analytics.summary_credits'),
       value: data ? formatCredits(data.totals.credits) : '-',
+      detail: data
+        ? t('codex_analytics.summary_credits_usd', {
+            amount: formatUsd(data.totals.credits / CREDITS_PER_USD),
+          })
+        : '',
+      footnote: t('codex_analytics.summary_credits_rate'),
     },
     {
       key: 'turns',
@@ -602,47 +762,87 @@ export function CodexAnalyticsPage() {
                 <div className={styles.summaryCard} key={card.key}>
                   <span className={styles.summaryLabel}>{card.label}</span>
                   <span className={styles.summaryValue}>{card.value}</span>
+                  {'detail' in card && card.detail ? (
+                    <span className={styles.summaryDetail}>{card.detail}</span>
+                  ) : null}
+                  {'footnote' in card && card.footnote ? (
+                    <span className={styles.summaryFootnote}>{card.footnote}</span>
+                  ) : null}
                 </div>
               ))}
             </div>
 
             <div className={styles.chartGrid} aria-busy={loading}>
-              <ChartFrame title={t('codex_analytics.surface_usage')} wide>
+              <ChartFrame
+                title={t('codex_analytics.surface_usage')}
+                description={t('codex_analytics.surface_usage_unit')}
+                wide
+              >
                 {renderChartContent(
-                  Boolean(data?.surfaceSeries.length),
-                  <Bar data={surfaceChartData} options={barOptions} />
+                  Boolean(visibleSurfaceSeries.length),
+                  <Bar data={surfaceChartData} options={percentBarOptions} />
                 )}
-                {data?.surfaceSeries.length ? <SeriesLegend series={data.surfaceSeries} /> : null}
+                {data?.surfaceSeries.length ? (
+                  <SeriesLegend
+                    series={data.surfaceSeries}
+                    activeKey={surfaceFilterKey}
+                    onToggle={toggleSurfaceFilter}
+                  />
+                ) : null}
               </ChartFrame>
 
-              <ChartFrame title={t('codex_analytics.model_credits')} wide>
+              <ChartFrame
+                title={t('codex_analytics.model_credits')}
+                description={t('codex_analytics.model_credits_unit')}
+                wide
+              >
                 {renderChartContent(
-                  Boolean(data?.modelCreditSeries.length),
-                  <Line data={modelChartData} options={lineOptions} />
+                  Boolean(visibleModelSeries.length),
+                  <Line data={modelChartData} options={percentLineOptions} />
                 )}
                 {data?.modelCreditSeries.length ? (
-                  <SeriesLegend series={data.modelCreditSeries} />
+                  <SeriesLegend
+                    series={data.modelCreditSeries}
+                    activeKey={modelFilterKey}
+                    onToggle={toggleModelFilter}
+                  />
                 ) : null}
               </ChartFrame>
 
-              <ChartFrame title={t('codex_analytics.skills_used')} wide>
+              <ChartFrame
+                title={t('codex_analytics.skills_used')}
+                description={t('codex_analytics.skills_used_unit')}
+                wide
+              >
                 {renderChartContent(
-                  Boolean(data?.skillInvocationSeries.length),
-                  <Line data={skillChartData} options={lineOptions} />
+                  Boolean(visibleSkillSeries.length),
+                  <Line data={skillChartData} options={countLineOptions} />
                 )}
                 {data?.skillInvocationSeries.length ? (
-                  <SeriesLegend series={data.skillInvocationSeries} />
+                  <SeriesLegend
+                    series={data.skillInvocationSeries}
+                    activeKey={skillFilterKey}
+                    onToggle={toggleSkillFilter}
+                  />
                 ) : null}
               </ChartFrame>
 
-              <ChartFrame title={t('codex_analytics.plugins_calls')} wide>
+              <ChartFrame
+                title={t('codex_analytics.plugins_calls')}
+                description={t('codex_analytics.plugins_calls_unit')}
+                wide
+              >
                 {renderChartContent(
-                  Boolean(data?.pluginInvocationSeries.length),
-                  <Line data={pluginChartData} options={lineOptions} />,
+                  Boolean(visiblePluginSeries.length),
+                  <Line data={pluginChartData} options={countLineOptions} />,
                   t('codex_analytics.no_plugin_data')
                 )}
                 {data?.pluginInvocationSeries.length ? (
-                  <SeriesLegend series={data.pluginInvocationSeries} />
+                  <SeriesLegend
+                    series={data.pluginInvocationSeries}
+                    activeKey={pluginFilterKey}
+                    onToggle={togglePluginFilter}
+                  />
                 ) : null}
               </ChartFrame>
             </div>

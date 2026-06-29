@@ -9,20 +9,8 @@
 
 .pageHeader {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: $spacing-sm;
-
-  @include mobile {
-    flex-direction: column;
-  }
-}
-
-.pageHeaderText {
-  display: flex;
   flex-direction: column;
   gap: $spacing-sm;
-  min-width: 0;
 }
 
 .pageTitle {
@@ -36,26 +24,6 @@
   font-size: 14px;
   color: var(--text-secondary);
   margin: 0;
-}
-
-.analyticsButton:global(.btn.btn-sm) {
-  flex: 0 0 auto;
-
-  > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    white-space: nowrap;
-  }
-
-  svg {
-    display: block;
-  }
-
-  @include mobile {
-    width: 100%;
-    justify-content: center;
-  }
 }
 
 .headerActions {

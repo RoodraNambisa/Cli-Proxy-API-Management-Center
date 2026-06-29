@@ -4,13 +4,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useAuthStore } from '@/stores';
 import { authFilesApi, configFileApi } from '@/services/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { IconChartLine } from '@/components/ui/icons';
 import {
   QuotaSection,
   ANTIGRAVITY_CONFIG,
@@ -24,7 +21,6 @@ import styles from './QuotaPage.module.scss';
 
 export function QuotaPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
 
   const [files, setFiles] = useState<AuthFileItem[]>([]);
@@ -71,19 +67,8 @@ export function QuotaPage() {
   return (
     <div className={styles.container}>
       <div className={styles.pageHeader}>
-        <div className={styles.pageHeaderText}>
-          <h1 className={styles.pageTitle}>{t('quota_management.title')}</h1>
-          <p className={styles.description}>{t('quota_management.description')}</p>
-        </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => navigate('/quota/codex-analytics')}
-          className={styles.analyticsButton}
-        >
-          <IconChartLine size={15} />
-          {t('quota_management.codex_analytics')}
-        </Button>
+        <h1 className={styles.pageTitle}>{t('quota_management.title')}</h1>
+        <p className={styles.description}>{t('quota_management.description')}</p>
       </div>
 
       <div className={styles.searchPanel}>
