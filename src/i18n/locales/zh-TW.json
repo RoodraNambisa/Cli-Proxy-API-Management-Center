@@ -794,8 +794,12 @@
     "plan_free": "Free",
     "plan_pro": "Pro 20x",
     "plan_prolite": "Pro 5x",
-    "reset_credits_label": "重置次數",
-    "reset_credits_available": "可用 {{count}} 次"
+    "reset_credits_label": "主動重置次數",
+    "reset_credits_available": "可用 {{count}} 次",
+    "reset_credits_expiry_label": "主動重置過期時間（GMT+8）",
+    "reset_credit_number": "第 {{index}} 次",
+    "reset_credits_expiry_failed": "主動重置過期時間取得失敗：{{message}}",
+    "reset_credits_invalid_payload": "主動重置過期時間回傳資料格式不正確"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI 配額",

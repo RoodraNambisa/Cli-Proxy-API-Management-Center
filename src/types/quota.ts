@@ -124,6 +124,13 @@ export interface CodexRateLimitResetCredits {
   availableCount?: number | string;
 }
 
+export interface CodexRateLimitResetCredit {
+  id: string;
+  status: string;
+  grantedAt: string;
+  expiresAt: string;
+}
+
 export interface CodexUsagePayload {
   plan_type?: string;
   planType?: string;
@@ -250,6 +257,8 @@ export interface CodexQuotaState {
   windows: CodexQuotaWindow[];
   planType?: string | null;
   resetCreditsAvailableCount?: number | null;
+  resetCredits?: CodexRateLimitResetCredit[];
+  resetCreditsError?: string;
   error?: string;
   errorStatus?: number;
 }

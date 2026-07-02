@@ -795,8 +795,12 @@
     "plan_free": "Free",
     "plan_pro": "Pro 20x",
     "plan_prolite": "Pro 5x",
-    "reset_credits_label": "Сбросы лимита",
-    "reset_credits_available": "Доступно: {{count}}"
+    "reset_credits_label": "Ручные сбросы",
+    "reset_credits_available": "Доступно: {{count}}",
+    "reset_credits_expiry_label": "Срок действия ручных сбросов (GMT+8)",
+    "reset_credit_number": "Сброс {{index}}",
+    "reset_credits_expiry_failed": "Не удалось загрузить срок действия ручных сбросов: {{message}}",
+    "reset_credits_invalid_payload": "Ответ со сроками действия ручных сбросов имеет неверный формат"
   },
   "gemini_cli_quota": {
     "title": "Квота Gemini CLI",

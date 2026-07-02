@@ -798,8 +798,12 @@
     "plan_free": "Free",
     "plan_pro": "Pro 20x",
     "plan_prolite": "Pro 5x",
-    "reset_credits_label": "Reset credits",
-    "reset_credits_available": "{{count}} available"
+    "reset_credits_label": "Manual resets",
+    "reset_credits_available": "{{count}} available",
+    "reset_credits_expiry_label": "Manual reset expiry (GMT+8)",
+    "reset_credit_number": "Reset {{index}}",
+    "reset_credits_expiry_failed": "Failed to load manual reset expiry: {{message}}",
+    "reset_credits_invalid_payload": "Manual reset expiry response has an invalid format"
   },
   "gemini_cli_quota": {
     "title": "Gemini CLI Quota",
