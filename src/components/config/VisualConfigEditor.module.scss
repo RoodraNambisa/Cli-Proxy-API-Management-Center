@@ -883,6 +883,99 @@
   flex-wrap: wrap;
 }
 
+.tagListEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tagListChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-primary) 78%, transparent);
+}
+
+.tagListEmpty {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.tagChip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 28px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-color) 10%, var(--bg-primary));
+  color: var(--text-primary);
+}
+
+.tagChipText {
+  min-width: 0;
+  max-width: min(320px, 58vw);
+  overflow: hidden;
+  padding: 4px 8px 4px 10px;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagChipActions {
+  display: inline-flex;
+  align-items: stretch;
+  align-self: stretch;
+  border-left: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+}
+
+.tagChipAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  border: 0;
+  border-right: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+
+  &:last-child {
+    border-right: 0;
+  }
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+    color: var(--text-primary);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.34;
+  }
+}
+
+.tagChipDelete:hover:not(:disabled) {
+  color: var(--danger-color);
+}
+
+.tagListInputRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
 .codexCustomModelFieldGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1068,6 +1161,15 @@
 
   .stringListRow {
     align-items: stretch;
+  }
+
+  .tagListInputRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tagListInputRow :global(.btn) {
+    width: 100%;
+    justify-content: center;
   }
 }
 

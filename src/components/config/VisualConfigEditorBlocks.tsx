@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
+import { IconChevronDown, IconChevronUp, IconPlus, IconTrash2 } from '@/components/ui/icons';
 import { useNotificationStore } from '@/stores';
 import styles from './VisualConfigEditor.module.scss';
 import { copyToClipboard } from '@/utils/clipboard';
@@ -455,6 +456,130 @@ export const StringListEditor = memo(function StringListEditor({
   );
 });
 
+export const TagListEditor = memo(function TagListEditor({
+  value,
+  disabled,
+  placeholder,
+  inputAriaLabel,
+  emptyLabel,
+  onChange,
+}: {
+  value: string[];
+  disabled?: boolean;
+  placeholder?: string;
+  inputAriaLabel?: string;
+  emptyLabel?: string;
+  onChange: (next: string[]) => void;
+}) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState('');
+  const items = useMemo(() => value.map((item) => item.trim()).filter(Boolean), [value]);
+
+  const emitChange = (next: string[]) => {
+    const seen = new Set<string>();
+    onChange(
+      next.reduce<string[]>((result, item) => {
+        const trimmed = item.trim();
+        if (!trimmed) return result;
+        const key = trimmed.toLowerCase();
+        if (seen.has(key)) return result;
+        seen.add(key);
+        result.push(trimmed);
+        return result;
+      }, [])
+    );
+  };
+  const addDraft = () => {
+    const nextItems = draft
+      .split(/[,，\n\r]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (nextItems.length === 0) return;
+    emitChange([...items, ...nextItems]);
+    setDraft('');
+  };
+  const removeItem = (index: number) => {
+    emitChange(items.filter((_, itemIndex) => itemIndex !== index));
+  };
+  const moveItem = (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= items.length) return;
+    const next = [...items];
+    const [item] = next.splice(index, 1);
+    next.splice(nextIndex, 0, item);
+    emitChange(next);
+  };
+
+  return (
+    <div className={styles.tagListEditor}>
+      <div className={styles.tagListChips}>
+        {items.length === 0 ? (
+          <div className={styles.tagListEmpty}>{emptyLabel ?? '-'}</div>
+        ) : (
+          items.map((item, index) => (
+            <span key={`${item}-${index}`} className={styles.tagChip}>
+              <span className={styles.tagChipText}>{item}</span>
+              <span className={styles.tagChipActions}>
+                <button
+                  type="button"
+                  className={styles.tagChipAction}
+                  disabled={disabled || index === 0}
+                  onClick={() => moveItem(index, -1)}
+                  title={t('common.move_up')}
+                  aria-label={t('common.move_up')}
+                >
+                  <IconChevronUp size={13} />
+                </button>
+                <button
+                  type="button"
+                  className={styles.tagChipAction}
+                  disabled={disabled || index === items.length - 1}
+                  onClick={() => moveItem(index, 1)}
+                  title={t('common.move_down')}
+                  aria-label={t('common.move_down')}
+                >
+                  <IconChevronDown size={13} />
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.tagChipAction} ${styles.tagChipDelete}`}
+                  disabled={disabled}
+                  onClick={() => removeItem(index)}
+                  title={t('common.delete')}
+                  aria-label={t('common.delete')}
+                >
+                  <IconTrash2 size={13} />
+                </button>
+              </span>
+            </span>
+          ))
+        )}
+      </div>
+      <div className={styles.tagListInputRow}>
+        <input
+          className="input"
+          value={draft}
+          placeholder={placeholder}
+          aria-label={inputAriaLabel ?? placeholder}
+          disabled={disabled}
+          onChange={(event) => setDraft(event.target.value.replace(/[\r\n]/g, ','))}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ',') {
+              event.preventDefault();
+              addDraft();
+            }
+          }}
+          onBlur={addDraft}
+        />
+        <Button type="button" variant="secondary" size="sm" onClick={addDraft} disabled={disabled}>
+          <IconPlus size={14} />
+          {t('common.add')}
+        </Button>
+      </div>
+    </div>
+  );
+});
+
 export const CodexCustomModelsEditor = memo(function CodexCustomModelsEditor({
   value,
   validationErrors,
@@ -498,11 +623,7 @@ export const CodexCustomModelsEditor = memo(function CodexCustomModelsEditor({
   const updateModel = (clientId: string, patch: Partial<CodexCustomModelVisualEntry>) =>
     onChange(models.map((model) => (model.clientId === clientId ? { ...model, ...patch } : model)));
 
-  const toggleGroup = (
-    clientId: string,
-    group: CodexCustomModelGroup,
-    checked: boolean
-  ) => {
+  const toggleGroup = (clientId: string, group: CodexCustomModelGroup, checked: boolean) => {
     const current = models.find((model) => model.clientId === clientId);
     if (!current) return;
 
@@ -829,7 +950,9 @@ export const PayloadRulesEditor = memo(function PayloadRulesEditor({
                       placeholder={t('config_management.visual.payload_rules.model_name')}
                       ariaLabel={t('config_management.visual.payload_rules.model_name')}
                       value={model.name}
-                      onChange={(nextValue) => updateModel(ruleIndex, modelIndex, { name: nextValue })}
+                      onChange={(nextValue) =>
+                        updateModel(ruleIndex, modelIndex, { name: nextValue })
+                      }
                       disabled={disabled}
                     />
                   </>
@@ -839,7 +962,9 @@ export const PayloadRulesEditor = memo(function PayloadRulesEditor({
                       placeholder={t('config_management.visual.payload_rules.model_name')}
                       ariaLabel={t('config_management.visual.payload_rules.model_name')}
                       value={model.name}
-                      onChange={(nextValue) => updateModel(ruleIndex, modelIndex, { name: nextValue })}
+                      onChange={(nextValue) =>
+                        updateModel(ruleIndex, modelIndex, { name: nextValue })
+                      }
                       disabled={disabled}
                     />
                     <Select
@@ -892,7 +1017,9 @@ export const PayloadRulesEditor = memo(function PayloadRulesEditor({
                       placeholder={t('config_management.visual.payload_rules.json_path')}
                       ariaLabel={t('config_management.visual.payload_rules.json_path')}
                       value={param.path}
-                      onChange={(nextValue) => updateParam(ruleIndex, paramIndex, { path: nextValue })}
+                      onChange={(nextValue) =>
+                        updateParam(ruleIndex, paramIndex, { path: nextValue })
+                      }
                       disabled={disabled}
                     />
                     {rawJsonValues ? null : (

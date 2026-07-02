@@ -21,6 +21,7 @@ import type {
 } from '@/types/visualConfig';
 import { DEFAULT_VISUAL_VALUES, makeClientId } from '@/types/visualConfig';
 import { CODEX_CUSTOM_MODEL_GROUPS, type CodexCustomModelGroup } from '@/types/config';
+import { normalizeAuthModelExclusionModels } from '@/utils/authModelExclusions';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -602,7 +603,7 @@ function parseAuthModelExclusions(raw: unknown): AuthModelExclusionVisualEntry[]
     if (!record) return result;
     result.push({
       clientId: makeClientId(),
-      models: normalizeStringListItems(parseStringList(record.models)),
+      models: normalizeAuthModelExclusionModels(parseStringList(record.models)),
       priorities: parseStringList(record.priorities),
       keywordContains: normalizeStringListItems(
         parseStringList(record['keyword-contains'] ?? record.keywordContains)
@@ -616,7 +617,7 @@ function serializeAuthModelExclusionsForYaml(
   rules: AuthModelExclusionVisualEntry[]
 ): Array<Record<string, unknown>> {
   return rules.reduce<Array<Record<string, unknown>>>((result, rule) => {
-    const models = normalizeStringListItems(rule.models);
+    const models = normalizeAuthModelExclusionModels(rule.models);
     if (models.length === 0) return result;
 
     const priorities = rule.priorities.reduce<number[]>((list, item) => {

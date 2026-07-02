@@ -49,11 +49,16 @@ import type {
 import { makeClientId } from '@/types/visualConfig';
 import { configApi, type ProxyUrlCheckResult } from '@/services/api/config';
 import {
+  isAuthModelExclusionAllMode,
+  normalizeAuthModelExclusionModels,
+} from '@/utils/authModelExclusions';
+import {
   ApiKeysCardEditor,
   CodexCustomModelsEditor,
   PayloadFilterRulesEditor,
   PayloadRulesEditor,
   StringListEditor,
+  TagListEditor,
 } from './VisualConfigEditorBlocks';
 import styles from './VisualConfigEditor.module.scss';
 
@@ -1507,6 +1512,8 @@ export function VisualConfigEditor({
                         'priorities'
                       );
                       const matchError = getAuthModelExclusionError(rule.clientId, 'match');
+                      const modelTags = normalizeAuthModelExclusionModels(rule.models);
+                      const allModelMode = isAuthModelExclusionAllMode(modelTags);
 
                       return (
                         <div key={rule.clientId} className={styles.ruleCard}>
@@ -1538,16 +1545,28 @@ export function VisualConfigEditor({
                             )}
                             error={modelsError}
                           >
-                            <StringListEditor
-                              value={rule.models}
+                            <TagListEditor
+                              value={modelTags}
                               disabled={disabled}
                               placeholder={t(
                                 'config_management.visual.sections.auth.auth_model_exclusions_models_placeholder'
                               )}
+                              emptyLabel={t(
+                                'config_management.visual.sections.auth.auth_model_exclusions_models_empty'
+                              )}
                               onChange={(models) =>
-                                updateAuthModelExclusion(rule.clientId, { models })
+                                updateAuthModelExclusion(rule.clientId, {
+                                  models: normalizeAuthModelExclusionModels(models),
+                                })
                               }
                             />
+                            {allModelMode ? (
+                              <div className={styles.fieldHint}>
+                                {t(
+                                  'config_management.visual.sections.auth.auth_model_exclusions_models_all_mode_hint'
+                                )}
+                              </div>
+                            ) : null}
                           </FieldShell>
                           <div className={styles.authModelExclusionGrid}>
                             <FieldShell
@@ -1559,11 +1578,14 @@ export function VisualConfigEditor({
                               )}
                               error={prioritiesError}
                             >
-                              <StringListEditor
+                              <TagListEditor
                                 value={rule.priorities}
                                 disabled={disabled}
                                 placeholder={t(
                                   'config_management.visual.sections.auth.auth_model_exclusions_priorities_placeholder'
+                                )}
+                                emptyLabel={t(
+                                  'config_management.visual.sections.auth.auth_model_exclusions_priorities_empty'
                                 )}
                                 onChange={(priorities) =>
                                   updateAuthModelExclusion(rule.clientId, { priorities })
@@ -1579,11 +1601,14 @@ export function VisualConfigEditor({
                               )}
                               error={matchError}
                             >
-                              <StringListEditor
+                              <TagListEditor
                                 value={rule.keywordContains}
                                 disabled={disabled}
                                 placeholder={t(
                                   'config_management.visual.sections.auth.auth_model_exclusions_keyword_contains_placeholder'
+                                )}
+                                emptyLabel={t(
+                                  'config_management.visual.sections.auth.auth_model_exclusions_keyword_contains_empty'
                                 )}
                                 onChange={(keywordContains) =>
                                   updateAuthModelExclusion(rule.clientId, { keywordContains })
