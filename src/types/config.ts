@@ -32,6 +32,16 @@ export interface AuthModelExclusionConfig {
   models?: string[];
   priorities?: number[];
   keywordContains?: string[];
+  disableImageGeneration?: boolean;
+}
+
+export type DisabledImageGenerationToolAction = 'remove' | 'error';
+
+export interface DisabledImageGenerationToolErrorConfig {
+  statusCode?: number;
+  message?: string;
+  type?: string;
+  code?: string;
 }
 
 export interface RequestBodyReleaseConfig {
@@ -174,6 +184,8 @@ export interface Config {
   fixedErrorCooldowns?: FixedErrorCooldownConfig[];
   nonRetryableErrors?: NonRetryableErrorConfig[];
   authModelExclusions?: AuthModelExclusionConfig[];
+  disabledImageGenerationToolAction?: DisabledImageGenerationToolAction | string;
+  disabledImageGenerationToolError?: DisabledImageGenerationToolErrorConfig;
   quotaExceeded?: QuotaExceededConfig;
   usageStatisticsEnabled?: boolean;
   usageStatisticsPersistIntervalSeconds?: number;

@@ -125,6 +125,9 @@ const normalizeAuthModelExclusions = (
       models: normalizeStringArray(item.models),
       priorities: normalizeIntegerArray(item.priorities),
       keywordContains: normalizeStringArray(item['keyword-contains'] ?? item.keywordContains),
+      disableImageGeneration: normalizeBoolean(
+        item['disable-image-generation'] ?? item.disableImageGeneration
+      ),
     });
     return result;
   }, []);
@@ -715,6 +718,22 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   config.authModelExclusions = normalizeAuthModelExclusions(
     raw['auth-model-exclusions'] ?? raw.authModelExclusions
   );
+  config.disabledImageGenerationToolAction = normalizeString(
+    raw['disabled-image-generation-tool-action'] ?? raw.disabledImageGenerationToolAction
+  );
+  const disabledImageGenerationToolError =
+    raw['disabled-image-generation-tool-error'] ?? raw.disabledImageGenerationToolError;
+  if (isRecord(disabledImageGenerationToolError)) {
+    config.disabledImageGenerationToolError = {
+      statusCode: normalizeNumber(
+        disabledImageGenerationToolError['status-code'] ??
+          disabledImageGenerationToolError.statusCode
+      ),
+      message: normalizeString(disabledImageGenerationToolError.message),
+      type: normalizeString(disabledImageGenerationToolError.type),
+      code: normalizeString(disabledImageGenerationToolError.code),
+    };
+  }
   const remoteManagement = raw['remote-management'] ?? raw.remoteManagement;
   if (isRecord(remoteManagement)) {
     config.remoteManagement = {

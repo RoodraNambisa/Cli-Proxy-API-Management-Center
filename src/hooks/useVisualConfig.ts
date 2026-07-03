@@ -4,6 +4,8 @@ import type {
   CodexCustomModelValidationErrors,
   CodexCustomModelVisualEntry,
   AuthModelExclusionVisualEntry,
+  DisabledImageGenerationToolAction,
+  DisabledImageGenerationToolErrorVisualConfig,
   FixedErrorCooldownScope,
   FixedErrorCooldownVisualEntry,
   NativeImageEndpointVisualConfig,
@@ -116,6 +118,17 @@ function setStringInDoc(doc: YamlDocument, path: YamlPath, value: unknown): void
   if (docHas(doc, path)) {
     doc.setIn(path, '');
   }
+}
+
+function parseBooleanValue(raw: unknown): boolean {
+  if (typeof raw === 'boolean') return raw;
+  if (typeof raw === 'number') return raw !== 0;
+  if (typeof raw === 'string') {
+    const normalized = raw.trim().toLowerCase();
+    if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'n', 'off'].includes(normalized)) return false;
+  }
+  return false;
 }
 
 function setIntFromStringInDoc(doc: YamlDocument, path: YamlPath, value: unknown): void {
@@ -608,9 +621,39 @@ function parseAuthModelExclusions(raw: unknown): AuthModelExclusionVisualEntry[]
       keywordContains: normalizeStringListItems(
         parseStringList(record['keyword-contains'] ?? record.keywordContains)
       ),
+      disableImageGeneration: parseBooleanValue(
+        record['disable-image-generation'] ?? record.disableImageGeneration
+      ),
     });
     return result;
   }, []);
+}
+
+function parseDisabledImageGenerationToolAction(raw: unknown): DisabledImageGenerationToolAction {
+  if (typeof raw !== 'string') return DEFAULT_VISUAL_VALUES.disabledImageGenerationToolAction;
+  const normalized = raw.trim().toLowerCase();
+  return normalized === 'error' || normalized === 'remove'
+    ? normalized
+    : DEFAULT_VISUAL_VALUES.disabledImageGenerationToolAction;
+}
+
+function parseDisabledImageGenerationToolError(
+  raw: unknown
+): DisabledImageGenerationToolErrorVisualConfig {
+  const record = asRecord(raw);
+  const defaults = DEFAULT_VISUAL_VALUES.disabledImageGenerationToolError;
+  return {
+    statusCode:
+      record?.['status-code'] === undefined && record?.statusCode === undefined
+        ? defaults.statusCode
+        : String(record?.['status-code'] ?? record?.statusCode ?? ''),
+    message:
+      typeof record?.message === 'string'
+        ? record.message
+        : String(record?.message ?? defaults.message),
+    type: typeof record?.type === 'string' ? record.type : String(record?.type ?? defaults.type),
+    code: typeof record?.code === 'string' ? record.code : String(record?.code ?? defaults.code),
+  };
 }
 
 function serializeAuthModelExclusionsForYaml(
@@ -618,7 +661,7 @@ function serializeAuthModelExclusionsForYaml(
 ): Array<Record<string, unknown>> {
   return rules.reduce<Array<Record<string, unknown>>>((result, rule) => {
     const models = normalizeAuthModelExclusionModels(rule.models);
-    if (models.length === 0) return result;
+    if (models.length === 0 && !rule.disableImageGeneration) return result;
 
     const priorities = rule.priorities.reduce<number[]>((list, item) => {
       const parsed = parseIntegerString(item);
@@ -628,9 +671,11 @@ function serializeAuthModelExclusionsForYaml(
     const keywordContains = normalizeStringListItems(rule.keywordContains);
     if (priorities.length === 0 && keywordContains.length === 0) return result;
 
-    const entry: Record<string, unknown> = { models };
+    const entry: Record<string, unknown> = {};
+    if (models.length > 0) entry.models = models;
     if (priorities.length > 0) entry.priorities = Array.from(new Set(priorities));
     if (keywordContains.length > 0) entry['keyword-contains'] = keywordContains;
+    if (rule.disableImageGeneration) entry['disable-image-generation'] = true;
     result.push(entry);
     return result;
   }, []);
@@ -647,9 +692,22 @@ function areAuthModelExclusionsEqual(
       Boolean(other) &&
       areStringArraysEqual(entry.models, other.models) &&
       areStringArraysEqual(entry.priorities, other.priorities) &&
-      areStringArraysEqual(entry.keywordContains, other.keywordContains)
+      areStringArraysEqual(entry.keywordContains, other.keywordContains) &&
+      entry.disableImageGeneration === other.disableImageGeneration
     );
   });
+}
+
+function areDisabledImageGenerationToolErrorsEqual(
+  left: DisabledImageGenerationToolErrorVisualConfig,
+  right: DisabledImageGenerationToolErrorVisualConfig
+): boolean {
+  return (
+    left.statusCode === right.statusCode &&
+    left.message === right.message &&
+    left.type === right.type &&
+    left.code === right.code
+  );
 }
 
 function areNativeImageEndpointsEqual(
@@ -858,7 +916,7 @@ export function getVisualConfigValidationErrors(
   );
   const authModelExclusionErrors = values.authModelExclusions.reduce<VisualConfigValidationErrors>(
     (result, rule) => {
-      if (normalizeStringListItems(rule.models).length === 0) {
+      if (normalizeStringListItems(rule.models).length === 0 && !rule.disableImageGeneration) {
         result[`authModelExclusions.${rule.clientId}.models`] =
           'auth_model_exclusion_models_required';
       }
@@ -877,6 +935,10 @@ export function getVisualConfigValidationErrors(
     },
     {}
   );
+  const disabledImageGenerationToolStatusCodeError =
+    values.disabledImageGenerationToolAction === 'error'
+      ? getOptionalHttpStatusCodeError(values.disabledImageGenerationToolError.statusCode)
+      : undefined;
 
   return {
     port: getPortError(values.port),
@@ -893,6 +955,7 @@ export function getVisualConfigValidationErrors(
     ...fixedErrorCooldownErrors,
     ...nonRetryableErrorErrors,
     ...authModelExclusionErrors,
+    'disabledImageGenerationToolError.statusCode': disabledImageGenerationToolStatusCodeError,
     'authMaintenance.scanIntervalSeconds': getNonNegativeIntegerError(
       values.authMaintenance.scanIntervalSeconds
     ),
@@ -1379,6 +1442,12 @@ function mergeVisualConfigValues(
   if (patch.streaming) {
     nextValues.streaming = { ...currentValues.streaming, ...patch.streaming };
   }
+  if (patch.disabledImageGenerationToolError) {
+    nextValues.disabledImageGenerationToolError = {
+      ...currentValues.disabledImageGenerationToolError,
+      ...patch.disabledImageGenerationToolError,
+    };
+  }
   return nextValues;
 }
 
@@ -1576,6 +1645,22 @@ function getNextDirtyFields(
       areAuthModelExclusionsEqual(
         nextValues.authModelExclusions,
         baselineValues.authModelExclusions
+      )
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'disabledImageGenerationToolAction')) {
+    updateDirty(
+      'disabledImageGenerationToolAction',
+      nextValues.disabledImageGenerationToolAction ===
+        baselineValues.disabledImageGenerationToolAction
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'disabledImageGenerationToolError')) {
+    updateDirty(
+      'disabledImageGenerationToolError',
+      areDisabledImageGenerationToolErrorsEqual(
+        nextValues.disabledImageGenerationToolError,
+        baselineValues.disabledImageGenerationToolError
       )
     );
   }
@@ -2101,6 +2186,13 @@ export function useVisualConfig() {
         authModelExclusions: parseAuthModelExclusions(
           parsed['auth-model-exclusions'] ?? parsed.authModelExclusions
         ),
+        disabledImageGenerationToolAction: parseDisabledImageGenerationToolAction(
+          parsed['disabled-image-generation-tool-action'] ??
+            parsed.disabledImageGenerationToolAction
+        ),
+        disabledImageGenerationToolError: parseDisabledImageGenerationToolError(
+          parsed['disabled-image-generation-tool-error'] ?? parsed.disabledImageGenerationToolError
+        ),
         wsAuth: Boolean(parsed['ws-auth']),
 
         quotaSwitchProject: Boolean(quotaExceeded?.['switch-project'] ?? true),
@@ -2444,6 +2536,48 @@ export function useVisualConfig() {
             ['auth-model-exclusions'],
             serializeAuthModelExclusionsForYaml(values.authModelExclusions)
           );
+        }
+        const disabledImageGenerationToolDefaults = DEFAULT_VISUAL_VALUES;
+        if (
+          docHas(doc, ['disabled-image-generation-tool-action']) ||
+          values.disabledImageGenerationToolAction !==
+            disabledImageGenerationToolDefaults.disabledImageGenerationToolAction
+        ) {
+          doc.setIn(
+            ['disabled-image-generation-tool-action'],
+            values.disabledImageGenerationToolAction
+          );
+        }
+        if (
+          docHas(doc, ['disabled-image-generation-tool-error']) ||
+          values.disabledImageGenerationToolAction === 'error' ||
+          !areDisabledImageGenerationToolErrorsEqual(
+            values.disabledImageGenerationToolError,
+            disabledImageGenerationToolDefaults.disabledImageGenerationToolError
+          )
+        ) {
+          ensureMapInDoc(doc, ['disabled-image-generation-tool-error']);
+          setIntFromStringInDoc(
+            doc,
+            ['disabled-image-generation-tool-error', 'status-code'],
+            values.disabledImageGenerationToolError.statusCode
+          );
+          setStringInDoc(
+            doc,
+            ['disabled-image-generation-tool-error', 'message'],
+            values.disabledImageGenerationToolError.message
+          );
+          setStringInDoc(
+            doc,
+            ['disabled-image-generation-tool-error', 'type'],
+            values.disabledImageGenerationToolError.type
+          );
+          setStringInDoc(
+            doc,
+            ['disabled-image-generation-tool-error', 'code'],
+            values.disabledImageGenerationToolError.code
+          );
+          deleteIfMapEmpty(doc, ['disabled-image-generation-tool-error']);
         }
         setBooleanInDoc(doc, ['ws-auth'], values.wsAuth);
 

@@ -18,6 +18,7 @@ export type VisualConfigFieldPath =
   | 'fixedErrorCooldowns'
   | 'nonRetryableErrors'
   | 'authModelExclusions'
+  | 'disabledImageGenerationToolError.statusCode'
   | 'routingPriorityOverrides'
   | 'authMaintenance.scanIntervalSeconds'
   | 'authMaintenance.deleteIntervalSeconds'
@@ -163,6 +164,16 @@ export interface AuthModelExclusionVisualEntry {
   models: string[];
   priorities: string[];
   keywordContains: string[];
+  disableImageGeneration: boolean;
+}
+
+export type DisabledImageGenerationToolAction = 'remove' | 'error';
+
+export interface DisabledImageGenerationToolErrorVisualConfig {
+  statusCode: string;
+  message: string;
+  type: string;
+  code: string;
 }
 
 export type RoutingPriorityOverrideStrategy = '' | 'round-robin' | 'fill-first' | 'random';
@@ -224,6 +235,8 @@ export type VisualConfigValues = {
   fixedErrorCooldowns: FixedErrorCooldownVisualEntry[];
   nonRetryableErrors: NonRetryableErrorVisualEntry[];
   authModelExclusions: AuthModelExclusionVisualEntry[];
+  disabledImageGenerationToolAction: DisabledImageGenerationToolAction;
+  disabledImageGenerationToolError: DisabledImageGenerationToolErrorVisualConfig;
   quotaSwitchProject: boolean;
   quotaSwitchPreviewModel: boolean;
   quotaAntigravityCredits: boolean;
@@ -302,6 +315,13 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     },
   ],
   authModelExclusions: [],
+  disabledImageGenerationToolAction: 'remove',
+  disabledImageGenerationToolError: {
+    statusCode: '400',
+    message: 'image_generation tool is disabled for this credential',
+    type: 'image_generation_disabled',
+    code: 'image_generation_disabled',
+  },
   quotaSwitchProject: true,
   quotaSwitchPreviewModel: true,
   quotaAntigravityCredits: true,

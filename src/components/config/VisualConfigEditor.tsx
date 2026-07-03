@@ -594,6 +594,19 @@ export function VisualConfigEditor({
     ],
     [t]
   );
+  const disabledImageGenerationToolActionOptions = useMemo(
+    () => [
+      {
+        value: 'remove',
+        label: t('config_management.visual.sections.auth.disabled_image_tool_action_remove'),
+      },
+      {
+        value: 'error',
+        label: t('config_management.visual.sections.auth.disabled_image_tool_action_error'),
+      },
+    ],
+    [t]
+  );
 
   const portError = getValidationMessage(t, validationErrors?.port);
   const rmAccessPathError = getValidationMessage(t, validationErrors?.rmAccessPath);
@@ -626,6 +639,10 @@ export function VisualConfigEditor({
       Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('authModelExclusions.'))
         .length,
     [validationErrors]
+  );
+  const disabledImageGenerationToolStatusCodeError = getValidationMessage(
+    t,
+    validationErrors?.['disabledImageGenerationToolError.statusCode']
   );
   const routingPriorityOverridesErrorCount = useMemo(
     () =>
@@ -849,6 +866,7 @@ export function VisualConfigEditor({
         models: [''],
         priorities: [],
         keywordContains: [],
+        disableImageGeneration: false,
       },
     ]);
   }, [handleAuthModelExclusionsChange, values.authModelExclusions]);
@@ -943,7 +961,10 @@ export function VisualConfigEditor({
         title: t('config_management.visual.sections.auth.title'),
         description: t('config_management.visual.sections.auth.description'),
         icon: IconKey,
-        errorCount: authSectionErrorCount + authModelExclusionsErrorCount,
+        errorCount:
+          authSectionErrorCount +
+          authModelExclusionsErrorCount +
+          countErrors(['disabledImageGenerationToolError.statusCode']),
       },
       {
         id: 'system',
@@ -1536,12 +1557,27 @@ export function VisualConfigEditor({
                               {t('config_management.visual.common.delete')}
                             </Button>
                           </div>
+                          <ToggleRow
+                            title={t(
+                              'config_management.visual.sections.auth.auth_model_exclusions_disable_image_generation'
+                            )}
+                            description={t(
+                              'config_management.visual.sections.auth.auth_model_exclusions_disable_image_generation_desc'
+                            )}
+                            checked={rule.disableImageGeneration}
+                            disabled={disabled}
+                            onChange={(disableImageGeneration) =>
+                              updateAuthModelExclusion(rule.clientId, { disableImageGeneration })
+                            }
+                          />
                           <FieldShell
                             label={t(
                               'config_management.visual.sections.auth.auth_model_exclusions_models'
                             )}
                             hint={t(
-                              'config_management.visual.sections.auth.auth_model_exclusions_models_hint'
+                              rule.disableImageGeneration
+                                ? 'config_management.visual.sections.auth.auth_model_exclusions_models_hint_disable_image'
+                                : 'config_management.visual.sections.auth.auth_model_exclusions_models_hint'
                             )}
                             error={modelsError}
                           >
@@ -1621,6 +1657,106 @@ export function VisualConfigEditor({
                     })}
                   </div>
                 )}
+              </SectionSubsection>
+              <SectionSubsection
+                title={t('config_management.visual.sections.auth.disabled_image_tool_policy')}
+                description={t(
+                  'config_management.visual.sections.auth.disabled_image_tool_policy_desc'
+                )}
+              >
+                <SectionGrid>
+                  <FieldShell
+                    label={t('config_management.visual.sections.auth.disabled_image_tool_action')}
+                    hint={t(
+                      'config_management.visual.sections.auth.disabled_image_tool_action_hint'
+                    )}
+                  >
+                    <Select
+                      value={values.disabledImageGenerationToolAction}
+                      options={disabledImageGenerationToolActionOptions}
+                      disabled={disabled}
+                      ariaLabel={t(
+                        'config_management.visual.sections.auth.disabled_image_tool_action'
+                      )}
+                      onChange={(disabledImageGenerationToolAction) =>
+                        onChange({
+                          disabledImageGenerationToolAction:
+                            disabledImageGenerationToolAction as VisualConfigValues['disabledImageGenerationToolAction'],
+                        })
+                      }
+                    />
+                  </FieldShell>
+                </SectionGrid>
+                {values.disabledImageGenerationToolAction === 'error' ? (
+                  <SectionGrid>
+                    <Input
+                      label={t(
+                        'config_management.visual.sections.auth.disabled_image_tool_error_status_code'
+                      )}
+                      type="number"
+                      placeholder="400"
+                      value={values.disabledImageGenerationToolError.statusCode}
+                      onChange={(event) =>
+                        onChange({
+                          disabledImageGenerationToolError: {
+                            ...values.disabledImageGenerationToolError,
+                            statusCode: event.target.value,
+                          },
+                        })
+                      }
+                      disabled={disabled}
+                      error={disabledImageGenerationToolStatusCodeError}
+                    />
+                    <Input
+                      label={t(
+                        'config_management.visual.sections.auth.disabled_image_tool_error_type'
+                      )}
+                      placeholder="image_generation_disabled"
+                      value={values.disabledImageGenerationToolError.type}
+                      onChange={(event) =>
+                        onChange({
+                          disabledImageGenerationToolError: {
+                            ...values.disabledImageGenerationToolError,
+                            type: event.target.value,
+                          },
+                        })
+                      }
+                      disabled={disabled}
+                    />
+                    <Input
+                      label={t(
+                        'config_management.visual.sections.auth.disabled_image_tool_error_code'
+                      )}
+                      placeholder="image_generation_disabled"
+                      value={values.disabledImageGenerationToolError.code}
+                      onChange={(event) =>
+                        onChange({
+                          disabledImageGenerationToolError: {
+                            ...values.disabledImageGenerationToolError,
+                            code: event.target.value,
+                          },
+                        })
+                      }
+                      disabled={disabled}
+                    />
+                    <Input
+                      label={t(
+                        'config_management.visual.sections.auth.disabled_image_tool_error_message'
+                      )}
+                      placeholder="image_generation tool is disabled for this credential"
+                      value={values.disabledImageGenerationToolError.message}
+                      onChange={(event) =>
+                        onChange({
+                          disabledImageGenerationToolError: {
+                            ...values.disabledImageGenerationToolError,
+                            message: event.target.value,
+                          },
+                        })
+                      }
+                      disabled={disabled}
+                    />
+                  </SectionGrid>
+                ) : null}
               </SectionSubsection>
             </SectionStack>
           </ConfigSection>
