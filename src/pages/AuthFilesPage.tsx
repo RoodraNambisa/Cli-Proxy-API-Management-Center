@@ -201,6 +201,7 @@ export function AuthFilesPage() {
   const [viewMode, setViewMode] = useState<'diagram' | 'list'>('list');
   const [sortMode, setSortMode] = useState<AuthFilesSortMode>('default');
   const [codexUsageRefreshing, setCodexUsageRefreshing] = useState(false);
+  const [codexResetCreditsRefreshing, setCodexResetCreditsRefreshing] = useState(false);
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
   const [uiStateHydrated, setUiStateHydrated] = useState(false);
   const floatingBatchActionsRef = useRef<HTMLDivElement>(null);
@@ -816,8 +817,56 @@ export function AuthFilesPage() {
       results.forEach((result) => {
         next[result.file.name] =
           result.status === 'success'
-            ? CODEX_CONFIG.buildSuccessState(result.data)
+            ? CODEX_CONFIG.buildSuccessState(result.data, prev[result.file.name])
             : CODEX_CONFIG.buildErrorState(result.error, result.errorStatus);
+      });
+      return next;
+    });
+
+    return {
+      success: results.filter((result) => result.status === 'success').length,
+      failed: results.filter((result) => result.status === 'error').length,
+    };
+  }, [currentPageCodexUsageTargets, setCodexQuota, t]);
+
+  const refreshCurrentPageCodexResetCredits = useCallback(async () => {
+    const fetchResetCredits = CODEX_CONFIG.fetchResetCredits;
+    const buildResetCreditsSuccessState = CODEX_CONFIG.buildResetCreditsSuccessState;
+    if (!fetchResetCredits || !buildResetCreditsSuccessState) {
+      return { success: 0, failed: 0 };
+    }
+
+    const targets = currentPageCodexUsageTargets;
+    if (targets.length === 0) {
+      return { success: 0, failed: 0 };
+    }
+
+    const results = await Promise.all(
+      targets.map(async (file) => {
+        try {
+          const data = await fetchResetCredits(file, t);
+          const refreshError = CODEX_CONFIG.getResetCreditsRefreshError?.(data) ?? '';
+          return {
+            file,
+            status: refreshError ? 'error' as const : 'success' as const,
+            data,
+            error: refreshError,
+          };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : t('common.unknown_error');
+          return { file, status: 'error' as const, error: message };
+        }
+      })
+    );
+
+    setCodexQuota((prev) => {
+      const next = { ...prev };
+      results.forEach((result) => {
+        if (!result.data) return;
+        next[result.file.name] = buildResetCreditsSuccessState(
+          result.data,
+          prev[result.file.name]
+        );
       });
       return next;
     });
@@ -862,6 +911,38 @@ export function AuthFilesPage() {
     showNotification,
     t,
     usageRefreshLoading,
+  ]);
+
+  const handleRefreshPageResetCredits = useCallback(async () => {
+    if (codexResetCreditsRefreshing) return;
+    setCodexResetCreditsRefreshing(true);
+    try {
+      const result = await refreshCurrentPageCodexResetCredits();
+      if (result.failed > 0) {
+        showNotification(
+          t('auth_files.reset_credits_refresh_partial', {
+            success: result.success,
+            failed: result.failed,
+          }),
+          'warning'
+        );
+        return;
+      }
+      showNotification(
+        t('auth_files.reset_credits_refresh_page_success', { count: result.success }),
+        'success'
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t('common.unknown_error');
+      showNotification(t('auth_files.reset_credits_refresh_page_failed', { message }), 'error');
+    } finally {
+      setCodexResetCreditsRefreshing(false);
+    }
+  }, [
+    codexResetCreditsRefreshing,
+    refreshCurrentPageCodexResetCredits,
+    showNotification,
+    t,
   ]);
 
   const copyTextWithNotification = useCallback(
@@ -1095,6 +1176,23 @@ export function AuthFilesPage() {
               <>
                 <IconRefreshCw size={14} />
                 <span>{t('auth_files.refresh_page_usage_stats')}</span>
+              </>
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void handleRefreshPageResetCredits()}
+              disabled={
+                disableControls ||
+                codexResetCreditsRefreshing ||
+                currentPageCodexUsageTargets.length === 0
+              }
+              loading={codexResetCreditsRefreshing}
+              className={styles.usageRefreshButton}
+            >
+              <>
+                <IconRefreshCw size={14} />
+                <span>{t('auth_files.refresh_page_reset_credits')}</span>
               </>
             </Button>
             <Button

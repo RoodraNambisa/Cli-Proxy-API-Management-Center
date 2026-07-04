@@ -111,16 +111,19 @@ export interface QuotaStore {
   clearQuotaCache: () => void;
 }
 
-export interface QuotaConfig<TState, TData> {
+export interface QuotaConfig<TState, TData, TResetData = unknown> {
   type: QuotaType;
   i18nPrefix: string;
   cardIdleMessageKey?: string;
   filterFn: (file: AuthFileItem) => boolean;
   fetchQuota: (file: AuthFileItem, t: TFunction) => Promise<TData>;
+  fetchResetCredits?: (file: AuthFileItem, t: TFunction) => Promise<TResetData>;
   storeSelector: (state: QuotaStore) => Record<string, TState>;
   storeSetter: keyof QuotaStore;
   buildLoadingState: () => TState;
-  buildSuccessState: (data: TData) => TState;
+  buildSuccessState: (data: TData, previous?: TState) => TState;
+  buildResetCreditsSuccessState?: (data: TResetData, previous?: TState) => TState;
+  getResetCreditsRefreshError?: (data: TResetData) => string;
   buildErrorState: (message: string, status?: number) => TState;
   cardClassName: string;
   controlsClassName: string;
@@ -138,9 +141,6 @@ type CodexResetCreditsData = {
 type CodexQuotaData = {
   planType: string | null;
   windows: CodexQuotaWindow[];
-  resetCreditsAvailableCount: number | null;
-  resetCredits: CodexRateLimitResetCredit[];
-  resetCreditsError: string;
 };
 
 const resolveAntigravityProjectId = async (file: AuthFileItem): Promise<string> => {
@@ -469,6 +469,31 @@ const fetchCodexResetCredits = async (
   }
 };
 
+const fetchCodexResetCreditsForFile = async (
+  file: AuthFileItem,
+  t: TFunction
+): Promise<CodexResetCreditsData> => {
+  const rawAuthIndex = file['auth_index'] ?? file.authIndex;
+  const authIndex = normalizeAuthIndex(rawAuthIndex);
+  if (!authIndex) {
+    throw new Error(t('codex_quota.missing_auth_index'));
+  }
+
+  const accountId = resolveCodexChatgptAccountId(file);
+  if (!accountId) {
+    throw new Error(t('codex_quota.missing_account_id'));
+  }
+
+  return fetchCodexResetCredits(
+    authIndex,
+    {
+      ...CODEX_REQUEST_HEADERS,
+      'Chatgpt-Account-Id': accountId,
+    },
+    t
+  );
+};
+
 const fetchCodexQuota = async (file: AuthFileItem, t: TFunction): Promise<CodexQuotaData> => {
   const rawAuthIndex = file['auth_index'] ?? file.authIndex;
   const authIndex = normalizeAuthIndex(rawAuthIndex);
@@ -505,23 +530,9 @@ const fetchCodexQuota = async (file: AuthFileItem, t: TFunction): Promise<CodexQ
 
   const planTypeFromUsage = normalizePlanType(payload.plan_type ?? payload.planType);
   const windows = buildCodexQuotaWindows(payload, t);
-  const resetCredits = payload.rate_limit_reset_credits ?? payload.rateLimitResetCredits ?? null;
-  const usageResetCreditsAvailableCount = normalizeNumberValue(
-    resetCredits?.available_count ?? resetCredits?.availableCount
-  );
-  const resetCreditsData = await fetchCodexResetCredits(authIndex, requestHeader, t);
-  const resetCreditsCountFromDetails =
-    resetCreditsData.credits.length > 0 ? resetCreditsData.credits.length : null;
-  const resetCreditsAvailableCount =
-    resetCreditsData.availableCount ??
-    resetCreditsCountFromDetails ??
-    usageResetCreditsAvailableCount;
   return {
     planType: planTypeFromUsage ?? planTypeFromFile,
     windows,
-    resetCreditsAvailableCount,
-    resetCredits: resetCreditsData.credits,
-    resetCreditsError: resetCreditsData.error,
   };
 };
 
@@ -1317,24 +1328,36 @@ export const ANTIGRAVITY_CONFIG: QuotaConfig<AntigravityQuotaState, AntigravityQ
 
 export const CODEX_CONFIG: QuotaConfig<
   CodexQuotaState,
-  CodexQuotaData
+  CodexQuotaData,
+  CodexResetCreditsData
 > = {
   type: 'codex',
   i18nPrefix: 'codex_quota',
   cardIdleMessageKey: 'quota_management.card_idle_hint',
   filterFn: (file) => isCodexFile(file) && !isDisabledAuthFile(file),
   fetchQuota: fetchCodexQuota,
+  fetchResetCredits: fetchCodexResetCreditsForFile,
   storeSelector: (state) => state.codexQuota,
   storeSetter: 'setCodexQuota',
   buildLoadingState: () => ({ status: 'loading', windows: [] }),
-  buildSuccessState: (data) => ({
+  buildSuccessState: (data, previous) => ({
     status: 'success',
     windows: data.windows,
     planType: data.planType,
-    resetCreditsAvailableCount: data.resetCreditsAvailableCount,
-    resetCredits: data.resetCredits,
-    resetCreditsError: data.resetCreditsError,
+    resetCreditsAvailableCount: previous?.resetCreditsAvailableCount,
+    resetCredits: previous?.resetCredits,
+    resetCreditsError: previous?.resetCreditsError,
   }),
+  buildResetCreditsSuccessState: (data, previous) => ({
+    status: 'success',
+    windows: previous?.windows ?? [],
+    planType: previous?.planType,
+    resetCreditsAvailableCount:
+      data.availableCount ?? (data.credits.length > 0 ? data.credits.length : null),
+    resetCredits: data.credits,
+    resetCreditsError: data.error,
+  }),
+  getResetCreditsRefreshError: (data) => data.error,
   buildErrorState: (message, status) => ({
     status: 'error',
     windows: [],

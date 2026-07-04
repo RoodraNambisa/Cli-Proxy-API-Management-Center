@@ -9,13 +9,43 @@ import {
   parseIdTokenPayload
 } from './parsers';
 
+const CODEX_ACCOUNT_ID_KEYS = [
+  'chatgpt_account_id',
+  'chatgptAccountId',
+  'account_id',
+  'accountId',
+] as const;
+
+const pickCodexAccountIdFromRecord = (record: Record<string, unknown> | null): string | null => {
+  if (!record) return null;
+
+  for (const key of CODEX_ACCOUNT_ID_KEYS) {
+    const id = normalizeStringValue(record[key]);
+    if (id) return id;
+  }
+
+  const account =
+    record.account && typeof record.account === 'object' && !Array.isArray(record.account)
+      ? (record.account as Record<string, unknown>)
+      : null;
+  if (!account) return null;
+
+  for (const key of [...CODEX_ACCOUNT_ID_KEYS, 'id'] as const) {
+    const id = normalizeStringValue(account[key]);
+    if (id) return id;
+  }
+
+  return null;
+};
+
 export function extractCodexChatgptAccountId(value: unknown): string | null {
   const payload = parseIdTokenPayload(value);
   if (!payload) return null;
-  return normalizeStringValue(payload.chatgpt_account_id ?? payload.chatgptAccountId);
+  return pickCodexAccountIdFromRecord(payload);
 }
 
 export function resolveCodexChatgptAccountId(file: AuthFileItem): string | null {
+  const base = file as unknown as Record<string, unknown>;
   const metadata =
     file && typeof file.metadata === 'object' && file.metadata !== null
       ? (file.metadata as Record<string, unknown>)
@@ -24,6 +54,12 @@ export function resolveCodexChatgptAccountId(file: AuthFileItem): string | null 
     file && typeof file.attributes === 'object' && file.attributes !== null
       ? (file.attributes as Record<string, unknown>)
       : null;
+
+  const records = [base, metadata, attributes];
+  for (const record of records) {
+    const id = pickCodexAccountIdFromRecord(record);
+    if (id) return id;
+  }
 
   const candidates = [file.id_token, metadata?.id_token, attributes?.id_token];
 

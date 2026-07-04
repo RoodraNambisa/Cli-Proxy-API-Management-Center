@@ -23,7 +23,9 @@ interface LoadQuotaResult<TData> {
   errorStatus?: number;
 }
 
-export function useQuotaLoader<TState, TData>(config: QuotaConfig<TState, TData>) {
+export function useQuotaLoader<TState, TData, TResetData = unknown>(
+  config: QuotaConfig<TState, TData, TResetData>
+) {
   const { t } = useTranslation();
   const quota = useQuotaStore(config.storeSelector);
   const setQuota = useQuotaStore((state) => state[config.storeSetter]) as QuotaSetter<
@@ -74,7 +76,10 @@ export function useQuotaLoader<TState, TData>(config: QuotaConfig<TState, TData>
           const nextState = { ...prev };
           results.forEach((result) => {
             if (result.status === 'success') {
-              nextState[result.name] = config.buildSuccessState(result.data as TData);
+              nextState[result.name] = config.buildSuccessState(
+                result.data as TData,
+                prev[result.name]
+              );
             } else {
               nextState[result.name] = config.buildErrorState(
                 result.error || t('common.unknown_error'),

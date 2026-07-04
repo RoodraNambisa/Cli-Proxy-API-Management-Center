@@ -1,4 +1,4 @@
-import { useCallback, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
@@ -39,6 +39,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
   const { file, quotaType, disableControls } = props;
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
+  const [resetCreditsRefreshing, setResetCreditsRefreshing] = useState(false);
 
   const quota = useQuotaStore((state) => {
     if (quotaType === 'antigravity') return state.antigravityQuota[file.name] as QuotaState;
@@ -65,8 +66,11 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
     const config = getQuotaConfig(quotaType) as unknown as {
       i18nPrefix: string;
       fetchQuota: (file: AuthFileItem, t: TFunction) => Promise<unknown>;
+      fetchResetCredits?: (file: AuthFileItem, t: TFunction) => Promise<unknown>;
       buildLoadingState: () => unknown;
-      buildSuccessState: (data: unknown) => unknown;
+      buildSuccessState: (data: unknown, previous?: unknown) => unknown;
+      buildResetCreditsSuccessState?: (data: unknown, previous?: unknown) => unknown;
+      getResetCreditsRefreshError?: (data: unknown) => string;
       buildErrorState: (message: string, status?: number) => unknown;
       renderQuotaItems: (quota: unknown, t: TFunction, helpers: unknown) => unknown;
     };
@@ -80,7 +84,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
       const data = await config.fetchQuota(file, t);
       updateQuotaState((prev: Record<string, unknown>) => ({
         ...prev,
-        [file.name]: config.buildSuccessState(data)
+        [file.name]: config.buildSuccessState(data, prev[file.name])
       }));
       showNotification(t('auth_files.quota_refresh_success', { name: file.name }), 'success');
     } catch (err: unknown) {
@@ -97,10 +101,67 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
   const config = getQuotaConfig(quotaType) as unknown as {
     i18nPrefix: string;
     renderQuotaItems: (quota: unknown, t: TFunction, helpers: unknown) => unknown;
+    fetchResetCredits?: (file: AuthFileItem, t: TFunction) => Promise<unknown>;
+    buildResetCreditsSuccessState?: (data: unknown, previous?: unknown) => unknown;
+    getResetCreditsRefreshError?: (data: unknown) => string;
   };
+
+  const refreshResetCreditsForFile = useCallback(async () => {
+    if (disableControls) return;
+    if (isRuntimeOnlyAuthFile(file)) return;
+    if (file.disabled) return;
+    if (resetCreditsRefreshing) return;
+    const fetchResetCredits = config.fetchResetCredits;
+    const buildResetCreditsSuccessState = config.buildResetCreditsSuccessState;
+    if (!fetchResetCredits || !buildResetCreditsSuccessState) return;
+
+    setResetCreditsRefreshing(true);
+    try {
+      const data = await fetchResetCredits(file, t);
+      const refreshError = config.getResetCreditsRefreshError?.(data) ?? '';
+      updateQuotaState((prev: Record<string, unknown>) => ({
+        ...prev,
+        [file.name]: buildResetCreditsSuccessState(data, prev[file.name])
+      }));
+
+      if (refreshError) {
+        showNotification(
+          t('auth_files.reset_credits_refresh_failed', {
+            name: file.name,
+            message: refreshError,
+          }),
+          'warning'
+        );
+        return;
+      }
+
+      showNotification(
+        t('auth_files.reset_credits_refresh_success', { name: file.name }),
+        'success'
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t('common.unknown_error');
+      showNotification(
+        t('auth_files.reset_credits_refresh_failed', { name: file.name, message }),
+        'error'
+      );
+    } finally {
+      setResetCreditsRefreshing(false);
+    }
+  }, [
+    config,
+    disableControls,
+    file,
+    resetCreditsRefreshing,
+    showNotification,
+    t,
+    updateQuotaState,
+  ]);
 
   const quotaStatus = quota?.status ?? 'idle';
   const canRefreshQuota = !disableControls && !file.disabled;
+  const canRefreshResetCredits =
+    canRefreshQuota && Boolean(config.fetchResetCredits && config.buildResetCreditsSuccessState);
   const quotaErrorMessage = resolveQuotaErrorMessage(
     t,
     quota?.errorStatus,
@@ -109,6 +170,30 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
 
   return (
     <div className={styles.quotaSection}>
+      {canRefreshResetCredits && (
+        <div className={styles.quotaInlineActions}>
+          <button
+            type="button"
+            className={styles.quotaInlineAction}
+            onClick={() => void refreshQuotaForFile()}
+            disabled={!canRefreshQuota || quotaStatus === 'loading' || resetCreditsRefreshing}
+          >
+            {t(`${config.i18nPrefix}.refresh_button`)}
+          </button>
+          <button
+            type="button"
+            className={styles.quotaInlineAction}
+            onClick={() => void refreshResetCreditsForFile()}
+            disabled={
+              !canRefreshResetCredits || quotaStatus === 'loading' || resetCreditsRefreshing
+            }
+          >
+            {resetCreditsRefreshing
+              ? t('codex_quota.reset_credits_loading')
+              : t('codex_quota.refresh_reset_credits_button')}
+          </button>
+        </div>
+      )}
       {quotaStatus === 'loading' ? (
         <div className={styles.quotaMessage}>{t(`${config.i18nPrefix}.loading`)}</div>
       ) : quotaStatus === 'idle' ? (

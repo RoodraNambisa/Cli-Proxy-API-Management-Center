@@ -131,21 +131,21 @@ const useQuotaPagination = <T,>(items: T[], defaultPageSize = 6): QuotaPaginatio
   };
 };
 
-interface QuotaSectionProps<TState extends QuotaStatusState, TData> {
-  config: QuotaConfig<TState, TData>;
+interface QuotaSectionProps<TState extends QuotaStatusState, TData, TResetData = unknown> {
+  config: QuotaConfig<TState, TData, TResetData>;
   files: AuthFileItem[];
   loading: boolean;
   disabled: boolean;
   searchTerm?: string;
 }
 
-export function QuotaSection<TState extends QuotaStatusState, TData>({
+export function QuotaSection<TState extends QuotaStatusState, TData, TResetData = unknown>({
   config,
   files,
   loading,
   disabled,
   searchTerm = ''
-}: QuotaSectionProps<TState, TData>) {
+}: QuotaSectionProps<TState, TData, TResetData>) {
   const { t } = useTranslation();
   const resolvedTheme: ResolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const showNotification = useNotificationStore((state) => state.showNotification);
@@ -157,6 +157,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
   const [columns, gridRef] = useGridColumns(380); // Min card width 380px matches SCSS
   const [viewMode, setViewMode] = useState<ViewMode>('paged');
   const [showTooManyWarning, setShowTooManyWarning] = useState(false);
+  const [resetCreditsLoading, setResetCreditsLoading] = useState(false);
 
   const sectionFiles = useMemo(() => files.filter((file) => config.filterFn(file)), [
     files,
@@ -267,7 +268,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
         const data = await config.fetchQuota(file, t);
         setQuota((prev) => ({
           ...prev,
-          [file.name]: config.buildSuccessState(data)
+          [file.name]: config.buildSuccessState(data, prev[file.name])
         }));
         showNotification(t('auth_files.quota_refresh_success', { name: file.name }), 'success');
       } catch (err: unknown) {
@@ -286,6 +287,79 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
     [config, disabled, quota, setQuota, showNotification, t]
   );
 
+  const refreshResetCreditsForVisibleFiles = useCallback(async () => {
+    const fetchResetCredits = config.fetchResetCredits;
+    const buildResetCreditsSuccessState = config.buildResetCreditsSuccessState;
+    if (!fetchResetCredits || !buildResetCreditsSuccessState) return;
+    if (disabled || resetCreditsLoading) return;
+
+    const targets = effectiveViewMode === 'all' ? visibleFiles : pageItems;
+    const enabledTargets = targets.filter((file) => !file.disabled);
+    if (enabledTargets.length === 0) return;
+
+    setResetCreditsLoading(true);
+    try {
+      const results = await Promise.all(
+        enabledTargets.map(async (file) => {
+          try {
+            const data = await fetchResetCredits(file, t);
+            const refreshError = config.getResetCreditsRefreshError?.(data) ?? '';
+            return {
+              file,
+              status: refreshError ? 'error' as const : 'success' as const,
+              data,
+              error: refreshError,
+            };
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : t('common.unknown_error');
+            return { file, status: 'error' as const, error: message };
+          }
+        })
+      );
+
+      setQuota((prev) => {
+        const next = { ...prev };
+        results.forEach((result) => {
+          if (!result.data) return;
+          next[result.file.name] = buildResetCreditsSuccessState(
+            result.data,
+            prev[result.file.name]
+          );
+        });
+        return next;
+      });
+
+      const success = results.filter((result) => result.status === 'success').length;
+      const failed = results.length - success;
+      if (failed > 0) {
+        showNotification(
+          t('quota_management.reset_credits_refresh_partial', { success, failed }),
+          'warning'
+        );
+        return;
+      }
+      showNotification(
+        t('quota_management.reset_credits_refresh_success', { count: success }),
+        'success'
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t('common.unknown_error');
+      showNotification(t('quota_management.reset_credits_refresh_failed', { message }), 'error');
+    } finally {
+      setResetCreditsLoading(false);
+    }
+  }, [
+    config,
+    disabled,
+    effectiveViewMode,
+    pageItems,
+    resetCreditsLoading,
+    setQuota,
+    showNotification,
+    t,
+    visibleFiles,
+  ]);
+
   const titleNode = (
     <div className={styles.titleWrapper}>
       <span>{t(`${config.i18nPrefix}.title`)}</span>
@@ -298,6 +372,9 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
   );
 
   const isRefreshing = sectionLoading || loading;
+  const canRefreshResetCredits =
+    Boolean(config.fetchResetCredits && config.buildResetCreditsSuccessState) &&
+    visibleFiles.length > 0;
 
   return (
     <Card
@@ -337,7 +414,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
             size="sm"
             className={styles.refreshAllButton}
             onClick={handleRefresh}
-            disabled={disabled || isRefreshing}
+            disabled={disabled || isRefreshing || resetCreditsLoading}
             loading={isRefreshing}
             title={t('quota_management.refresh_all_credentials')}
             aria-label={t('quota_management.refresh_all_credentials')}
@@ -345,6 +422,21 @@ export function QuotaSection<TState extends QuotaStatusState, TData>({
             {!isRefreshing && <IconRefreshCw size={16} />}
             {t('quota_management.refresh_all_credentials')}
           </Button>
+          {canRefreshResetCredits && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className={styles.refreshAllButton}
+              onClick={() => void refreshResetCreditsForVisibleFiles()}
+              disabled={disabled || isRefreshing || resetCreditsLoading}
+              loading={resetCreditsLoading}
+              title={t('quota_management.refresh_all_reset_credits')}
+              aria-label={t('quota_management.refresh_all_reset_credits')}
+            >
+              {!resetCreditsLoading && <IconRefreshCw size={16} />}
+              {t('quota_management.refresh_all_reset_credits')}
+            </Button>
+          )}
         </div>
       }
     >
