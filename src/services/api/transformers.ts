@@ -718,6 +718,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   config.authModelExclusions = normalizeAuthModelExclusions(
     raw['auth-model-exclusions'] ?? raw.authModelExclusions
   );
+  config.disabledImageGenerationToolFallback = normalizeBoolean(
+    raw['disabled-image-generation-tool-fallback'] ?? raw.disabledImageGenerationToolFallback
+  );
   config.disabledImageGenerationToolAction = normalizeString(
     raw['disabled-image-generation-tool-action'] ?? raw.disabledImageGenerationToolAction
   );

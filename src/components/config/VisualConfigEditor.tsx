@@ -1664,6 +1664,17 @@ export function VisualConfigEditor({
                   'config_management.visual.sections.auth.disabled_image_tool_policy_desc'
                 )}
               >
+                <ToggleRow
+                  title={t('config_management.visual.sections.auth.disabled_image_tool_fallback')}
+                  description={t(
+                    'config_management.visual.sections.auth.disabled_image_tool_fallback_desc'
+                  )}
+                  checked={values.disabledImageGenerationToolFallback}
+                  disabled={disabled}
+                  onChange={(disabledImageGenerationToolFallback) =>
+                    onChange({ disabledImageGenerationToolFallback })
+                  }
+                />
                 <SectionGrid>
                   <FieldShell
                     label={t('config_management.visual.sections.auth.disabled_image_tool_action')}

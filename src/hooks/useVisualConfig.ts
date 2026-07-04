@@ -1648,6 +1648,13 @@ function getNextDirtyFields(
       )
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'disabledImageGenerationToolFallback')) {
+    updateDirty(
+      'disabledImageGenerationToolFallback',
+      nextValues.disabledImageGenerationToolFallback ===
+        baselineValues.disabledImageGenerationToolFallback
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'disabledImageGenerationToolAction')) {
     updateDirty(
       'disabledImageGenerationToolAction',
@@ -2186,6 +2193,10 @@ export function useVisualConfig() {
         authModelExclusions: parseAuthModelExclusions(
           parsed['auth-model-exclusions'] ?? parsed.authModelExclusions
         ),
+        disabledImageGenerationToolFallback: parseBooleanValue(
+          parsed['disabled-image-generation-tool-fallback'] ??
+            parsed.disabledImageGenerationToolFallback
+        ),
         disabledImageGenerationToolAction: parseDisabledImageGenerationToolAction(
           parsed['disabled-image-generation-tool-action'] ??
             parsed.disabledImageGenerationToolAction
@@ -2538,6 +2549,16 @@ export function useVisualConfig() {
           );
         }
         const disabledImageGenerationToolDefaults = DEFAULT_VISUAL_VALUES;
+        if (
+          docHas(doc, ['disabled-image-generation-tool-fallback']) ||
+          values.disabledImageGenerationToolFallback !==
+            disabledImageGenerationToolDefaults.disabledImageGenerationToolFallback
+        ) {
+          doc.setIn(
+            ['disabled-image-generation-tool-fallback'],
+            values.disabledImageGenerationToolFallback
+          );
+        }
         if (
           docHas(doc, ['disabled-image-generation-tool-action']) ||
           values.disabledImageGenerationToolAction !==

@@ -184,6 +184,7 @@ export interface Config {
   fixedErrorCooldowns?: FixedErrorCooldownConfig[];
   nonRetryableErrors?: NonRetryableErrorConfig[];
   authModelExclusions?: AuthModelExclusionConfig[];
+  disabledImageGenerationToolFallback?: boolean;
   disabledImageGenerationToolAction?: DisabledImageGenerationToolAction | string;
   disabledImageGenerationToolError?: DisabledImageGenerationToolErrorConfig;
   quotaExceeded?: QuotaExceededConfig;

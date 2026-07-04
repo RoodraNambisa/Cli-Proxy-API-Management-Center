@@ -235,6 +235,7 @@ export type VisualConfigValues = {
   fixedErrorCooldowns: FixedErrorCooldownVisualEntry[];
   nonRetryableErrors: NonRetryableErrorVisualEntry[];
   authModelExclusions: AuthModelExclusionVisualEntry[];
+  disabledImageGenerationToolFallback: boolean;
   disabledImageGenerationToolAction: DisabledImageGenerationToolAction;
   disabledImageGenerationToolError: DisabledImageGenerationToolErrorVisualConfig;
   quotaSwitchProject: boolean;
@@ -315,6 +316,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     },
   ],
   authModelExclusions: [],
+  disabledImageGenerationToolFallback: false,
   disabledImageGenerationToolAction: 'remove',
   disabledImageGenerationToolError: {
     statusCode: '400',
