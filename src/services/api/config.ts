@@ -54,6 +54,17 @@ const readNumericConfigValue = (data: Record<string, unknown>, key: NumericConfi
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const readNamedNumericConfigValue = (
+  data: Record<string, unknown>,
+  key: string,
+  fallback = 0
+): number => {
+  const camelKey = key.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+  const rawValue = data[key] ?? data[camelKey] ?? data.value ?? fallback;
+  const parsed = Number(rawValue);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 const getNumericConfig = async (key: NumericConfigKey): Promise<number> => {
   const data = await apiClient.get<Record<string, unknown>>(`/${key}`);
   return readNumericConfigValue(data, key);
@@ -268,6 +279,17 @@ const normalizeRoutingPriorityOverrides = (value: unknown): RoutingPriorityOverr
         entry.maxRetryCredentials = parsed;
       }
     }
+    const fillFirstRangeRaw = Object.prototype.hasOwnProperty.call(source, 'fill-first-range')
+      ? source['fill-first-range']
+      : source.fillFirstRange;
+    if (fillFirstRangeRaw === null) {
+      entry.fillFirstRange = null;
+    } else if (fillFirstRangeRaw !== undefined) {
+      const parsed = Number(fillFirstRangeRaw);
+      if (Number.isSafeInteger(parsed) && parsed >= 1) {
+        entry.fillFirstRange = parsed;
+      }
+    }
 
     result.push(entry);
     return result;
@@ -294,6 +316,9 @@ const serializeRoutingPriorityOverrides = (
     if (override.strategy) entry.strategy = override.strategy;
     if (override.maxRetryCredentials !== undefined) {
       entry['max-retry-credentials'] = override.maxRetryCredentials;
+    }
+    if (override.fillFirstRange !== undefined) {
+      entry['fill-first-range'] = override.fillFirstRange;
     }
     return entry;
   });
@@ -516,6 +541,26 @@ export const configApi = {
    */
   updateRoutingStrategy: (strategy: string) =>
     apiClient.put('/routing/strategy', { value: strategy }),
+
+  /**
+   * 获取 fill-first 填充范围
+   */
+  async getRoutingFillFirstRange(): Promise<number> {
+    const data = await apiClient.get<Record<string, unknown>>('/routing/fill-first-range');
+    return readNamedNumericConfigValue(data, 'fill-first-range', 1);
+  },
+
+  /**
+   * 更新 fill-first 填充范围
+   */
+  updateRoutingFillFirstRange: (value: number) =>
+    apiClient.put('/routing/fill-first-range', { value }),
+
+  /**
+   * PATCH 更新 fill-first 填充范围
+   */
+  patchRoutingFillFirstRange: (value: number) =>
+    apiClient.patch('/routing/fill-first-range', { value }),
 
   /**
    * 获取优先级覆盖规则

@@ -57,6 +57,7 @@ export interface RoutingPriorityOverrideConfig {
   priority: number;
   strategy?: RoutingStrategy | string;
   maxRetryCredentials?: number | null;
+  fillFirstRange?: number | null;
 }
 
 export interface RequestBodyAuditErrorConfig {
@@ -207,6 +208,7 @@ export interface Config {
   images?: ImagesConfig;
   streaming?: StreamingConfig;
   routingStrategy?: string;
+  routingFillFirstRange?: number;
   routingPriorityOverrides?: RoutingPriorityOverrideConfig[];
   routingSessionAffinity?: boolean;
   routingSessionAffinityFailover?: boolean;
@@ -251,6 +253,7 @@ export type RawConfigSection =
   | 'images'
   | 'streaming'
   | 'routing/strategy'
+  | 'routing/fill-first-range'
   | 'routing/priority-overrides'
   | 'routing/session-affinity'
   | 'routing/session-affinity-failover'

@@ -1003,7 +1003,7 @@
 
 .priorityOverrideGrid {
   display: grid;
-  grid-template-columns: minmax(120px, 0.7fr) minmax(180px, 1fr) minmax(180px, 1fr);
+  grid-template-columns: minmax(120px, 0.7fr) repeat(3, minmax(180px, 1fr));
   gap: 12px;
   align-items: start;
 }

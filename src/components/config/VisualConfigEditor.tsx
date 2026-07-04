@@ -618,6 +618,10 @@ export function VisualConfigEditor({
   const requestRetryError = getValidationMessage(t, validationErrors?.requestRetry);
   const maxRetryCredentialsError = getValidationMessage(t, validationErrors?.maxRetryCredentials);
   const maxRetryIntervalError = getValidationMessage(t, validationErrors?.maxRetryInterval);
+  const routingFillFirstRangeError = getValidationMessage(
+    t,
+    validationErrors?.routingFillFirstRange
+  );
   const noCooldownStatusCodesError = getValidationMessage(
     t,
     validationErrors?.noCooldownStatusCodes
@@ -762,6 +766,7 @@ export function VisualConfigEditor({
         priority: '',
         strategy: '',
         maxRetryCredentials: '',
+        fillFirstRange: '',
       },
     ]);
   }, [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]);
@@ -784,7 +789,7 @@ export function VisualConfigEditor({
     [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]
   );
   const getRoutingPriorityOverrideError = useCallback(
-    (clientId: string, field: 'priority' | 'maxRetryCredentials') =>
+    (clientId: string, field: 'priority' | 'maxRetryCredentials' | 'fillFirstRange') =>
       getValidationMessage(t, validationErrors?.[`routingPriorityOverrides.${clientId}.${field}`]),
     [t, validationErrors]
   );
@@ -979,7 +984,12 @@ export function VisualConfigEditor({
         description: t('config_management.visual.sections.network.description'),
         icon: IconTrendingUp,
         errorCount:
-          countErrors(['requestRetry', 'maxRetryCredentials', 'maxRetryInterval']) +
+          countErrors([
+            'requestRetry',
+            'maxRetryCredentials',
+            'maxRetryInterval',
+            'routingFillFirstRange',
+          ]) +
           routingPriorityOverridesErrorCount +
           nonRetryableErrorsErrorCount,
       },
@@ -2004,6 +2014,21 @@ export function VisualConfigEditor({
                     }
                   />
                 </FieldShell>
+                {values.routingStrategy === 'fill-first' && (
+                  <Input
+                    label={t('config_management.visual.sections.network.routing_fill_first_range')}
+                    type="number"
+                    min={1}
+                    placeholder="1"
+                    value={values.routingFillFirstRange}
+                    onChange={(e) => onChange({ routingFillFirstRange: e.target.value })}
+                    disabled={disabled}
+                    hint={t(
+                      'config_management.visual.sections.network.routing_fill_first_range_hint'
+                    )}
+                    error={routingFillFirstRangeError}
+                  />
+                )}
                 <Input
                   label={t('config_management.visual.sections.network.session_affinity_ttl')}
                   placeholder="1h"
@@ -2046,7 +2071,12 @@ export function VisualConfigEditor({
                         rule.clientId,
                         'maxRetryCredentials'
                       );
+                      const fillFirstRangeError = getRoutingPriorityOverrideError(
+                        rule.clientId,
+                        'fillFirstRange'
+                      );
                       const strategyLabelId = `routing-priority-${rule.clientId}-strategy-label`;
+                      const effectiveStrategy = rule.strategy || values.routingStrategy;
 
                       return (
                         <div key={rule.clientId} className={styles.ruleCard}>
@@ -2120,6 +2150,29 @@ export function VisualConfigEditor({
                               disabled={disabled}
                               error={maxRetryCredentialsError}
                             />
+                            {effectiveStrategy === 'fill-first' && (
+                              <Input
+                                label={t(
+                                  'config_management.visual.sections.network.priority_overrides_fill_first_range'
+                                )}
+                                type="number"
+                                min={1}
+                                placeholder={t(
+                                  'config_management.visual.sections.network.priority_overrides_inherit_global'
+                                )}
+                                value={rule.fillFirstRange}
+                                onChange={(event) =>
+                                  updateRoutingPriorityOverride(rule.clientId, {
+                                    fillFirstRange: event.target.value,
+                                  })
+                                }
+                                disabled={disabled}
+                                hint={t(
+                                  'config_management.visual.sections.network.priority_overrides_fill_first_range_hint'
+                                )}
+                                error={fillFirstRangeError}
+                              />
+                            )}
                           </div>
                         </div>
                       );

@@ -15,6 +15,7 @@ export type VisualConfigFieldPath =
   | 'maxRetryCredentials'
   | 'maxRetryInterval'
   | 'noCooldownStatusCodes'
+  | 'routingFillFirstRange'
   | 'fixedErrorCooldowns'
   | 'nonRetryableErrors'
   | 'authModelExclusions'
@@ -183,6 +184,7 @@ export interface RoutingPriorityOverrideVisualEntry {
   priority: string;
   strategy: RoutingPriorityOverrideStrategy;
   maxRetryCredentials: string;
+  fillFirstRange: string;
 }
 
 export type CodexCustomModelValidationErrors = Record<
@@ -244,6 +246,7 @@ export type VisualConfigValues = {
   authMaintenance: AuthMaintenanceVisualConfig;
   images: ImagesVisualConfig;
   routingStrategy: 'round-robin' | 'fill-first' | 'random';
+  routingFillFirstRange: string;
   routingPriorityOverrides: RoutingPriorityOverrideVisualEntry[];
   routingSessionAffinity: boolean;
   routingSessionAffinityFailover: boolean;
@@ -368,6 +371,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     },
   },
   routingStrategy: 'round-robin',
+  routingFillFirstRange: '1',
   routingPriorityOverrides: [],
   routingSessionAffinity: false,
   routingSessionAffinityFailover: true,

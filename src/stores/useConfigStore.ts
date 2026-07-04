@@ -60,6 +60,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'auth-maintenance',
   'images',
   'routing/strategy',
+  'routing/fill-first-range',
   'routing/priority-overrides',
   'routing/session-affinity',
   'routing/session-affinity-failover',
@@ -130,6 +131,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.images;
     case 'routing/strategy':
       return config.routingStrategy;
+    case 'routing/fill-first-range':
+      return config.routingFillFirstRange;
     case 'routing/priority-overrides':
       return config.routingPriorityOverrides;
     case 'routing/session-affinity':
@@ -332,6 +335,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'routing/strategy':
           nextConfig.routingStrategy = value as Config['routingStrategy'];
+          break;
+        case 'routing/fill-first-range':
+          nextConfig.routingFillFirstRange = value as Config['routingFillFirstRange'];
           break;
         case 'routing/priority-overrides':
           nextConfig.routingPriorityOverrides = value as Config['routingPriorityOverrides'];

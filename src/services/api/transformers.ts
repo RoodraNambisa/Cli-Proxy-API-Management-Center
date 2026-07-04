@@ -153,6 +153,9 @@ const normalizeRoutingPriorityOverrides = (
       )
         ? item['max-retry-credentials']
         : item.maxRetryCredentials;
+      const fillFirstRangeRaw = Object.prototype.hasOwnProperty.call(item, 'fill-first-range')
+        ? item['fill-first-range']
+        : item.fillFirstRange;
       const entry: NonNullable<Config['routingPriorityOverrides']>[number] = { priority };
 
       if (strategy) {
@@ -168,6 +171,18 @@ const normalizeRoutingPriorityOverrides = (
           maxRetryCredentials >= 0
         ) {
           entry.maxRetryCredentials = maxRetryCredentials;
+        }
+      }
+      if (fillFirstRangeRaw === null) {
+        entry.fillFirstRange = null;
+      } else {
+        const fillFirstRange = normalizeNumber(fillFirstRangeRaw);
+        if (
+          fillFirstRange !== undefined &&
+          Number.isSafeInteger(fillFirstRange) &&
+          fillFirstRange >= 1
+        ) {
+          entry.fillFirstRange = fillFirstRange;
         }
       }
 
@@ -940,6 +955,16 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     config.routingStrategy = String(strategyRaw);
   }
   if (isRecord(routing)) {
+    const fillFirstRange = normalizeNumber(
+      routing['fill-first-range'] ?? routing.fillFirstRange
+    );
+    if (
+      fillFirstRange !== undefined &&
+      Number.isSafeInteger(fillFirstRange) &&
+      fillFirstRange >= 1
+    ) {
+      config.routingFillFirstRange = fillFirstRange;
+    }
     config.routingPriorityOverrides = normalizeRoutingPriorityOverrides(
       routing['priority-overrides'] ?? routing.priorityOverrides
     );
