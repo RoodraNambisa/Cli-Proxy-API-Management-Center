@@ -1018,10 +1018,11 @@
 
 .priorityOverrideGridWithFill {
   grid-template-columns:
-    minmax(110px, 0.62fr)
+    minmax(96px, 0.55fr)
+    minmax(150px, 0.95fr)
     minmax(170px, 1fr)
-    minmax(190px, 1fr)
-    minmax(190px, 1fr);
+    minmax(170px, 1fr)
+    minmax(170px, 1fr);
 }
 
 .codexCustomModelGroups {

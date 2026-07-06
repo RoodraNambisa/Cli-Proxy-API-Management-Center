@@ -61,6 +61,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'images',
   'routing/strategy',
   'routing/fill-first-range',
+  'routing/fill-first-per-auth-rpm',
   'routing/priority-overrides',
   'routing/session-affinity',
   'routing/session-affinity-failover',
@@ -133,6 +134,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.routingStrategy;
     case 'routing/fill-first-range':
       return config.routingFillFirstRange;
+    case 'routing/fill-first-per-auth-rpm':
+      return config.routingFillFirstPerAuthRpm;
     case 'routing/priority-overrides':
       return config.routingPriorityOverrides;
     case 'routing/session-affinity':
@@ -338,6 +341,10 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'routing/fill-first-range':
           nextConfig.routingFillFirstRange = value as Config['routingFillFirstRange'];
+          break;
+        case 'routing/fill-first-per-auth-rpm':
+          nextConfig.routingFillFirstPerAuthRpm =
+            value as Config['routingFillFirstPerAuthRpm'];
           break;
         case 'routing/priority-overrides':
           nextConfig.routingPriorityOverrides = value as Config['routingPriorityOverrides'];

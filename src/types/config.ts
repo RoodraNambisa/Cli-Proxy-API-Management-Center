@@ -58,6 +58,7 @@ export interface RoutingPriorityOverrideConfig {
   strategy?: RoutingStrategy | string;
   maxRetryCredentials?: number | null;
   fillFirstRange?: number | null;
+  fillFirstPerAuthRpm?: number | null;
 }
 
 export interface RequestBodyAuditErrorConfig {
@@ -209,6 +210,7 @@ export interface Config {
   streaming?: StreamingConfig;
   routingStrategy?: string;
   routingFillFirstRange?: number;
+  routingFillFirstPerAuthRpm?: number;
   routingPriorityOverrides?: RoutingPriorityOverrideConfig[];
   routingSessionAffinity?: boolean;
   routingSessionAffinityFailover?: boolean;
@@ -254,6 +256,7 @@ export type RawConfigSection =
   | 'streaming'
   | 'routing/strategy'
   | 'routing/fill-first-range'
+  | 'routing/fill-first-per-auth-rpm'
   | 'routing/priority-overrides'
   | 'routing/session-affinity'
   | 'routing/session-affinity-failover'

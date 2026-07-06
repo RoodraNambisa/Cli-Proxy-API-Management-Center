@@ -586,6 +586,11 @@ function parseRoutingPriorityOverrides(raw: unknown): RoutingPriorityOverrideVis
         record['fill-first-range'] === undefined && record.fillFirstRange === undefined
           ? ''
           : String(record['fill-first-range'] ?? record.fillFirstRange ?? ''),
+      fillFirstPerAuthRpm:
+        record['fill-first-per-auth-rpm'] === undefined &&
+        record.fillFirstPerAuthRpm === undefined
+          ? ''
+          : String(record['fill-first-per-auth-rpm'] ?? record.fillFirstPerAuthRpm ?? ''),
     });
     return result;
   }, []);
@@ -603,7 +608,8 @@ function areRoutingPriorityOverridesEqual(
       entry.priority === other.priority &&
       entry.strategy === other.strategy &&
       entry.maxRetryCredentials === other.maxRetryCredentials &&
-      entry.fillFirstRange === other.fillFirstRange
+      entry.fillFirstRange === other.fillFirstRange &&
+      entry.fillFirstPerAuthRpm === other.fillFirstPerAuthRpm
     );
   });
 }
@@ -768,6 +774,11 @@ function serializeRoutingPriorityOverridesForYaml(
       if (fillFirstRange === null) return result;
       entry['fill-first-range'] = fillFirstRange;
     }
+    if (rule.fillFirstPerAuthRpm.trim()) {
+      const fillFirstPerAuthRpm = parseNonNegativeIntegerString(rule.fillFirstPerAuthRpm);
+      if (fillFirstPerAuthRpm === null) return result;
+      entry['fill-first-per-auth-rpm'] = fillFirstPerAuthRpm;
+    }
 
     result.push(entry);
     return result;
@@ -859,10 +870,30 @@ function getHttpStatusListError(value: string): 'integer_list' | 'http_status_li
 export function getVisualConfigValidationErrors(
   values: VisualConfigValues
 ): VisualConfigValidationErrors {
-  const routingFillFirstRangeError =
+  const routingFillFirstRangeValue = parsePositiveIntegerString(values.routingFillFirstRange);
+  const routingFillFirstPerAuthRpmValue = parseNonNegativeIntegerString(
+    values.routingFillFirstPerAuthRpm
+  );
+  const routingFillFirstRangeBaseError =
     values.routingStrategy === 'fill-first'
       ? getPositiveIntegerError(values.routingFillFirstRange)
       : undefined;
+  const routingFillFirstPerAuthRpmBaseError =
+    values.routingStrategy === 'fill-first'
+      ? getNonNegativeIntegerError(values.routingFillFirstPerAuthRpm)
+      : undefined;
+  const routingFillFirstControlsConflict =
+    values.routingStrategy === 'fill-first' &&
+    !routingFillFirstRangeBaseError &&
+    !routingFillFirstPerAuthRpmBaseError &&
+    (routingFillFirstRangeValue ?? 1) > 1 &&
+    (routingFillFirstPerAuthRpmValue ?? 0) > 0;
+  const routingFillFirstRangeError = routingFillFirstControlsConflict
+    ? 'fill_first_controls_conflict'
+    : routingFillFirstRangeBaseError;
+  const routingFillFirstPerAuthRpmError = routingFillFirstControlsConflict
+    ? 'fill_first_controls_conflict'
+    : routingFillFirstPerAuthRpmBaseError;
   const priorityCounts = values.routingPriorityOverrides.reduce<Map<number, number>>(
     (result, rule) => {
       const priority = parseIntegerString(rule.priority);
@@ -895,6 +926,35 @@ export function getVisualConfigValidationErrors(
       if (fillFirstRangeError) {
         result[`routingPriorityOverrides.${rule.clientId}.fillFirstRange`] =
           fillFirstRangeError;
+      }
+      const fillFirstPerAuthRpmError =
+        effectiveStrategy === 'fill-first' && rule.fillFirstPerAuthRpm.trim()
+          ? getNonNegativeIntegerError(rule.fillFirstPerAuthRpm)
+          : undefined;
+      if (fillFirstPerAuthRpmError) {
+        result[`routingPriorityOverrides.${rule.clientId}.fillFirstPerAuthRpm`] =
+          fillFirstPerAuthRpmError;
+      }
+      const hasOverrideFillControl =
+        Boolean(rule.fillFirstRange.trim()) || Boolean(rule.fillFirstPerAuthRpm.trim());
+      const effectiveFillFirstRange = rule.fillFirstRange.trim()
+        ? parsePositiveIntegerString(rule.fillFirstRange)
+        : (routingFillFirstRangeValue ?? 1);
+      const effectiveFillFirstPerAuthRpm = rule.fillFirstPerAuthRpm.trim()
+        ? parseNonNegativeIntegerString(rule.fillFirstPerAuthRpm)
+        : (routingFillFirstPerAuthRpmValue ?? 0);
+      if (
+        effectiveStrategy === 'fill-first' &&
+        hasOverrideFillControl &&
+        !fillFirstRangeError &&
+        !fillFirstPerAuthRpmError &&
+        (effectiveFillFirstRange ?? 1) > 1 &&
+        (effectiveFillFirstPerAuthRpm ?? 0) > 0
+      ) {
+        result[`routingPriorityOverrides.${rule.clientId}.fillFirstRange`] =
+          'fill_first_controls_conflict';
+        result[`routingPriorityOverrides.${rule.clientId}.fillFirstPerAuthRpm`] =
+          'fill_first_controls_conflict';
       }
       return result;
     }, {});
@@ -975,6 +1035,7 @@ export function getVisualConfigValidationErrors(
     maxRetryInterval: getNonNegativeIntegerError(values.maxRetryInterval),
     noCooldownStatusCodes: getHttpStatusListError(values.noCooldownStatusCodes),
     routingFillFirstRange: routingFillFirstRangeError,
+    routingFillFirstPerAuthRpm: routingFillFirstPerAuthRpmError,
     ...routingPriorityOverrideErrors,
     ...fixedErrorCooldownErrors,
     ...nonRetryableErrorErrors,
@@ -1868,6 +1929,12 @@ function getNextDirtyFields(
       nextValues.routingFillFirstRange === baselineValues.routingFillFirstRange
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'routingFillFirstPerAuthRpm')) {
+    updateDirty(
+      'routingFillFirstPerAuthRpm',
+      nextValues.routingFillFirstPerAuthRpm === baselineValues.routingFillFirstPerAuthRpm
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingPriorityOverrides')) {
     updateDirty(
       'routingPriorityOverrides',
@@ -2324,6 +2391,11 @@ export function useVisualConfig() {
           routing?.['fill-first-range'] ??
             routing?.fillFirstRange ??
             DEFAULT_VISUAL_VALUES.routingFillFirstRange
+        ),
+        routingFillFirstPerAuthRpm: String(
+          routing?.['fill-first-per-auth-rpm'] ??
+            routing?.fillFirstPerAuthRpm ??
+            DEFAULT_VISUAL_VALUES.routingFillFirstPerAuthRpm
         ),
         routingPriorityOverrides: parseRoutingPriorityOverrides(
           routing?.['priority-overrides'] ?? routing?.priorityOverrides
@@ -2799,7 +2871,11 @@ export function useVisualConfig() {
             const fillFirstRange =
               parsePositiveIntegerString(values.routingFillFirstRange) ??
               Number(DEFAULT_VISUAL_VALUES.routingFillFirstRange);
+            const fillFirstPerAuthRpm =
+              parseNonNegativeIntegerString(values.routingFillFirstPerAuthRpm) ??
+              Number(DEFAULT_VISUAL_VALUES.routingFillFirstPerAuthRpm);
             doc.setIn(['routing', 'fill-first-range'], fillFirstRange);
+            doc.setIn(['routing', 'fill-first-per-auth-rpm'], fillFirstPerAuthRpm);
           }
           if (values.routingPriorityOverrides.length > 0) {
             doc.setIn(

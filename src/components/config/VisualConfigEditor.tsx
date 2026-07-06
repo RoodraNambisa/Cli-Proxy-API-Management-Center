@@ -622,6 +622,10 @@ export function VisualConfigEditor({
     t,
     validationErrors?.routingFillFirstRange
   );
+  const routingFillFirstPerAuthRpmError = getValidationMessage(
+    t,
+    validationErrors?.routingFillFirstPerAuthRpm
+  );
   const noCooldownStatusCodesError = getValidationMessage(
     t,
     validationErrors?.noCooldownStatusCodes
@@ -767,6 +771,7 @@ export function VisualConfigEditor({
         strategy: '',
         maxRetryCredentials: '',
         fillFirstRange: '',
+        fillFirstPerAuthRpm: '',
       },
     ]);
   }, [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]);
@@ -789,7 +794,10 @@ export function VisualConfigEditor({
     [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]
   );
   const getRoutingPriorityOverrideError = useCallback(
-    (clientId: string, field: 'priority' | 'maxRetryCredentials' | 'fillFirstRange') =>
+    (
+      clientId: string,
+      field: 'priority' | 'maxRetryCredentials' | 'fillFirstRange' | 'fillFirstPerAuthRpm'
+    ) =>
       getValidationMessage(t, validationErrors?.[`routingPriorityOverrides.${clientId}.${field}`]),
     [t, validationErrors]
   );
@@ -989,6 +997,7 @@ export function VisualConfigEditor({
             'maxRetryCredentials',
             'maxRetryInterval',
             'routingFillFirstRange',
+            'routingFillFirstPerAuthRpm',
           ]) +
           routingPriorityOverridesErrorCount +
           nonRetryableErrorsErrorCount,
@@ -2015,19 +2024,36 @@ export function VisualConfigEditor({
                   />
                 </FieldShell>
                 {values.routingStrategy === 'fill-first' && (
-                  <Input
-                    label={t('config_management.visual.sections.network.routing_fill_first_range')}
-                    type="number"
-                    min={1}
-                    placeholder="1"
-                    value={values.routingFillFirstRange}
-                    onChange={(e) => onChange({ routingFillFirstRange: e.target.value })}
-                    disabled={disabled}
-                    hint={t(
-                      'config_management.visual.sections.network.routing_fill_first_range_hint'
-                    )}
-                    error={routingFillFirstRangeError}
-                  />
+                  <>
+                    <Input
+                      label={t('config_management.visual.sections.network.routing_fill_first_range')}
+                      type="number"
+                      min={1}
+                      placeholder="1"
+                      value={values.routingFillFirstRange}
+                      onChange={(e) => onChange({ routingFillFirstRange: e.target.value })}
+                      disabled={disabled}
+                      hint={t(
+                        'config_management.visual.sections.network.routing_fill_first_range_hint'
+                      )}
+                      error={routingFillFirstRangeError}
+                    />
+                    <Input
+                      label={t(
+                        'config_management.visual.sections.network.routing_fill_first_per_auth_rpm'
+                      )}
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      value={values.routingFillFirstPerAuthRpm}
+                      onChange={(e) => onChange({ routingFillFirstPerAuthRpm: e.target.value })}
+                      disabled={disabled}
+                      hint={t(
+                        'config_management.visual.sections.network.routing_fill_first_per_auth_rpm_hint'
+                      )}
+                      error={routingFillFirstPerAuthRpmError}
+                    />
+                  </>
                 )}
                 <Input
                   label={t('config_management.visual.sections.network.session_affinity_ttl')}
@@ -2074,6 +2100,10 @@ export function VisualConfigEditor({
                       const fillFirstRangeError = getRoutingPriorityOverrideError(
                         rule.clientId,
                         'fillFirstRange'
+                      );
+                      const fillFirstPerAuthRpmError = getRoutingPriorityOverrideError(
+                        rule.clientId,
+                        'fillFirstPerAuthRpm'
                       );
                       const strategyLabelId = `routing-priority-${rule.clientId}-strategy-label`;
                       const effectiveStrategy = rule.strategy || values.routingStrategy;
@@ -2157,27 +2187,50 @@ export function VisualConfigEditor({
                               error={maxRetryCredentialsError}
                             />
                             {effectiveStrategy === 'fill-first' && (
-                              <Input
-                                label={t(
-                                  'config_management.visual.sections.network.priority_overrides_fill_first_range'
-                                )}
-                                type="number"
-                                min={1}
-                                placeholder={t(
-                                  'config_management.visual.sections.network.priority_overrides_inherit_global'
-                                )}
-                                value={rule.fillFirstRange}
-                                onChange={(event) =>
-                                  updateRoutingPriorityOverride(rule.clientId, {
-                                    fillFirstRange: event.target.value,
-                                  })
-                                }
-                                disabled={disabled}
-                                hint={t(
-                                  'config_management.visual.sections.network.priority_overrides_fill_first_range_hint'
-                                )}
-                                error={fillFirstRangeError}
-                              />
+                              <>
+                                <Input
+                                  label={t(
+                                    'config_management.visual.sections.network.priority_overrides_fill_first_range'
+                                  )}
+                                  type="number"
+                                  min={1}
+                                  placeholder={t(
+                                    'config_management.visual.sections.network.priority_overrides_inherit_global'
+                                  )}
+                                  value={rule.fillFirstRange}
+                                  onChange={(event) =>
+                                    updateRoutingPriorityOverride(rule.clientId, {
+                                      fillFirstRange: event.target.value,
+                                    })
+                                  }
+                                  disabled={disabled}
+                                  hint={t(
+                                    'config_management.visual.sections.network.priority_overrides_fill_first_range_hint'
+                                  )}
+                                  error={fillFirstRangeError}
+                                />
+                                <Input
+                                  label={t(
+                                    'config_management.visual.sections.network.priority_overrides_fill_first_per_auth_rpm'
+                                  )}
+                                  type="number"
+                                  min={0}
+                                  placeholder={t(
+                                    'config_management.visual.sections.network.priority_overrides_inherit_global'
+                                  )}
+                                  value={rule.fillFirstPerAuthRpm}
+                                  onChange={(event) =>
+                                    updateRoutingPriorityOverride(rule.clientId, {
+                                      fillFirstPerAuthRpm: event.target.value,
+                                    })
+                                  }
+                                  disabled={disabled}
+                                  hint={t(
+                                    'config_management.visual.sections.network.priority_overrides_fill_first_per_auth_rpm_hint'
+                                  )}
+                                  error={fillFirstPerAuthRpmError}
+                                />
+                              </>
                             )}
                           </div>
                         </div>

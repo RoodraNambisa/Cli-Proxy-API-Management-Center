@@ -156,6 +156,12 @@ const normalizeRoutingPriorityOverrides = (
       const fillFirstRangeRaw = Object.prototype.hasOwnProperty.call(item, 'fill-first-range')
         ? item['fill-first-range']
         : item.fillFirstRange;
+      const fillFirstPerAuthRpmRaw = Object.prototype.hasOwnProperty.call(
+        item,
+        'fill-first-per-auth-rpm'
+      )
+        ? item['fill-first-per-auth-rpm']
+        : item.fillFirstPerAuthRpm;
       const entry: NonNullable<Config['routingPriorityOverrides']>[number] = { priority };
 
       if (strategy) {
@@ -183,6 +189,18 @@ const normalizeRoutingPriorityOverrides = (
           fillFirstRange >= 1
         ) {
           entry.fillFirstRange = fillFirstRange;
+        }
+      }
+      if (fillFirstPerAuthRpmRaw === null) {
+        entry.fillFirstPerAuthRpm = null;
+      } else {
+        const fillFirstPerAuthRpm = normalizeNumber(fillFirstPerAuthRpmRaw);
+        if (
+          fillFirstPerAuthRpm !== undefined &&
+          Number.isSafeInteger(fillFirstPerAuthRpm) &&
+          fillFirstPerAuthRpm >= 0
+        ) {
+          entry.fillFirstPerAuthRpm = fillFirstPerAuthRpm;
         }
       }
 
@@ -964,6 +982,16 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       fillFirstRange >= 1
     ) {
       config.routingFillFirstRange = fillFirstRange;
+    }
+    const fillFirstPerAuthRpm = normalizeNumber(
+      routing['fill-first-per-auth-rpm'] ?? routing.fillFirstPerAuthRpm
+    );
+    if (
+      fillFirstPerAuthRpm !== undefined &&
+      Number.isSafeInteger(fillFirstPerAuthRpm) &&
+      fillFirstPerAuthRpm >= 0
+    ) {
+      config.routingFillFirstPerAuthRpm = fillFirstPerAuthRpm;
     }
     config.routingPriorityOverrides = normalizeRoutingPriorityOverrides(
       routing['priority-overrides'] ?? routing.priorityOverrides

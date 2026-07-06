@@ -290,6 +290,20 @@ const normalizeRoutingPriorityOverrides = (value: unknown): RoutingPriorityOverr
         entry.fillFirstRange = parsed;
       }
     }
+    const fillFirstPerAuthRpmRaw = Object.prototype.hasOwnProperty.call(
+      source,
+      'fill-first-per-auth-rpm'
+    )
+      ? source['fill-first-per-auth-rpm']
+      : source.fillFirstPerAuthRpm;
+    if (fillFirstPerAuthRpmRaw === null) {
+      entry.fillFirstPerAuthRpm = null;
+    } else if (fillFirstPerAuthRpmRaw !== undefined) {
+      const parsed = Number(fillFirstPerAuthRpmRaw);
+      if (Number.isSafeInteger(parsed) && parsed >= 0) {
+        entry.fillFirstPerAuthRpm = parsed;
+      }
+    }
 
     result.push(entry);
     return result;
@@ -319,6 +333,9 @@ const serializeRoutingPriorityOverrides = (
     }
     if (override.fillFirstRange !== undefined) {
       entry['fill-first-range'] = override.fillFirstRange;
+    }
+    if (override.fillFirstPerAuthRpm !== undefined) {
+      entry['fill-first-per-auth-rpm'] = override.fillFirstPerAuthRpm;
     }
     return entry;
   });
@@ -561,6 +578,26 @@ export const configApi = {
    */
   patchRoutingFillFirstRange: (value: number) =>
     apiClient.patch('/routing/fill-first-range', { value }),
+
+  /**
+   * 获取 fill-first 每凭证 RPM
+   */
+  async getRoutingFillFirstPerAuthRpm(): Promise<number> {
+    const data = await apiClient.get<Record<string, unknown>>('/routing/fill-first-per-auth-rpm');
+    return readNamedNumericConfigValue(data, 'fill-first-per-auth-rpm', 0);
+  },
+
+  /**
+   * 更新 fill-first 每凭证 RPM
+   */
+  updateRoutingFillFirstPerAuthRpm: (value: number) =>
+    apiClient.put('/routing/fill-first-per-auth-rpm', { value }),
+
+  /**
+   * PATCH 更新 fill-first 每凭证 RPM
+   */
+  patchRoutingFillFirstPerAuthRpm: (value: number) =>
+    apiClient.patch('/routing/fill-first-per-auth-rpm', { value }),
 
   /**
    * 获取优先级覆盖规则
