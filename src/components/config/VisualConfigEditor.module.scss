@@ -1003,9 +1003,25 @@
 
 .priorityOverrideGrid {
   display: grid;
-  grid-template-columns: minmax(120px, 0.7fr) repeat(3, minmax(180px, 1fr));
+  grid-template-columns: minmax(120px, 0.7fr) minmax(180px, 1fr) minmax(220px, 1.1fr);
   gap: 12px;
   align-items: start;
+
+  :global(.form-group > label),
+  .fieldLabel {
+    min-height: 34px;
+    display: flex;
+    align-items: flex-end;
+    line-height: 1.35;
+  }
+}
+
+.priorityOverrideGridWithFill {
+  grid-template-columns:
+    minmax(110px, 0.62fr)
+    minmax(170px, 1fr)
+    minmax(190px, 1fr)
+    minmax(190px, 1fr);
 }
 
 .codexCustomModelGroups {

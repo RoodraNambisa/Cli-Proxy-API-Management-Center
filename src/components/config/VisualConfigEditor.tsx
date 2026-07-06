@@ -2099,7 +2099,13 @@ export function VisualConfigEditor({
                               {t('config_management.visual.common.delete')}
                             </Button>
                           </div>
-                          <div className={styles.priorityOverrideGrid}>
+                          <div
+                            className={`${styles.priorityOverrideGrid} ${
+                              effectiveStrategy === 'fill-first'
+                                ? styles.priorityOverrideGridWithFill
+                                : ''
+                            }`}
+                          >
                             <Input
                               label={t(
                                 'config_management.visual.sections.network.priority_overrides_priority'
