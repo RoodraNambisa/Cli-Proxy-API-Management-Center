@@ -143,6 +143,11 @@ type CodexQuotaData = {
   windows: CodexQuotaWindow[];
 };
 
+type CodexAuthFileDetails = {
+  accountId: string | null;
+  planType: string | null;
+};
+
 const resolveAntigravityProjectId = async (file: AuthFileItem): Promise<string> => {
   try {
     const text = await authFilesApi.downloadText(file.name);
@@ -173,6 +178,25 @@ const resolveAntigravityProjectId = async (file: AuthFileItem): Promise<string> 
   }
 
   return DEFAULT_ANTIGRAVITY_PROJECT_ID;
+};
+
+const resolveCodexAuthFileDetails = async (file: AuthFileItem): Promise<CodexAuthFileDetails> => {
+  const accountIdFromList = resolveCodexChatgptAccountId(file);
+  const planTypeFromList = resolveCodexPlanType(file);
+  if (accountIdFromList && planTypeFromList) {
+    return { accountId: accountIdFromList, planType: planTypeFromList };
+  }
+
+  try {
+    const authFileJson = await authFilesApi.downloadJsonObject(file.name);
+    const fullFile = { name: file.name, ...authFileJson } as AuthFileItem;
+    return {
+      accountId: accountIdFromList ?? resolveCodexChatgptAccountId(fullFile),
+      planType: planTypeFromList ?? resolveCodexPlanType(fullFile),
+    };
+  } catch {
+    return { accountId: accountIdFromList, planType: planTypeFromList };
+  }
 };
 
 const fetchAntigravityQuota = async (
@@ -479,7 +503,7 @@ const fetchCodexResetCreditsForFile = async (
     throw new Error(t('codex_quota.missing_auth_index'));
   }
 
-  const accountId = resolveCodexChatgptAccountId(file);
+  const { accountId } = await resolveCodexAuthFileDetails(file);
   if (!accountId) {
     throw new Error(t('codex_quota.missing_account_id'));
   }
@@ -501,8 +525,7 @@ const fetchCodexQuota = async (file: AuthFileItem, t: TFunction): Promise<CodexQ
     throw new Error(t('codex_quota.missing_auth_index'));
   }
 
-  const planTypeFromFile = resolveCodexPlanType(file);
-  const accountId = resolveCodexChatgptAccountId(file);
+  const { accountId, planType: planTypeFromFile } = await resolveCodexAuthFileDetails(file);
   if (!accountId) {
     throw new Error(t('codex_quota.missing_account_id'));
   }
