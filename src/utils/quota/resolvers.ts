@@ -16,24 +16,54 @@ const CODEX_ACCOUNT_ID_KEYS = [
   'accountId',
 ] as const;
 
-const pickCodexAccountIdFromRecord = (record: Record<string, unknown> | null): string | null => {
-  if (!record) return null;
+const CODEX_USER_ID_FALLBACK_KEYS = [
+  'chatgpt_user_id',
+  'chatgptUserId',
+  'user_id',
+  'userId',
+] as const;
 
-  for (const key of CODEX_ACCOUNT_ID_KEYS) {
+const OPENAI_AUTH_CLAIM_KEY = 'https://api.openai.com/auth';
+
+const pickStringFromRecord = (
+  record: Record<string, unknown> | null,
+  keys: readonly string[]
+): string | null => {
+  if (!record) return null;
+  for (const key of keys) {
     const id = normalizeStringValue(record[key]);
     if (id) return id;
   }
+  return null;
+};
+
+const pickCodexAccountIdFromRecord = (record: Record<string, unknown> | null): string | null => {
+  if (!record) return null;
+
+  const directAccountId = pickStringFromRecord(record, CODEX_ACCOUNT_ID_KEYS);
+  if (directAccountId) return directAccountId;
 
   const account =
     record.account && typeof record.account === 'object' && !Array.isArray(record.account)
       ? (record.account as Record<string, unknown>)
       : null;
-  if (!account) return null;
+  const nestedAccountId = pickStringFromRecord(account, [...CODEX_ACCOUNT_ID_KEYS, 'id']);
+  if (nestedAccountId) return nestedAccountId;
 
-  for (const key of [...CODEX_ACCOUNT_ID_KEYS, 'id'] as const) {
-    const id = normalizeStringValue(account[key]);
-    if (id) return id;
-  }
+  const openaiAuth =
+    record[OPENAI_AUTH_CLAIM_KEY] &&
+    typeof record[OPENAI_AUTH_CLAIM_KEY] === 'object' &&
+    !Array.isArray(record[OPENAI_AUTH_CLAIM_KEY])
+      ? (record[OPENAI_AUTH_CLAIM_KEY] as Record<string, unknown>)
+      : null;
+  const openaiAccountId = pickStringFromRecord(openaiAuth, CODEX_ACCOUNT_ID_KEYS);
+  if (openaiAccountId) return openaiAccountId;
+
+  const directUserId = pickStringFromRecord(record, CODEX_USER_ID_FALLBACK_KEYS);
+  if (directUserId) return directUserId;
+
+  const openaiUserId = pickStringFromRecord(openaiAuth, CODEX_USER_ID_FALLBACK_KEYS);
+  if (openaiUserId) return openaiUserId;
 
   return null;
 };
@@ -61,7 +91,23 @@ export function resolveCodexChatgptAccountId(file: AuthFileItem): string | null 
     if (id) return id;
   }
 
-  const candidates = [file.id_token, metadata?.id_token, attributes?.id_token];
+  const candidates = [
+    file.id_token,
+    file.idToken,
+    file['id_token_source'],
+    file.access_token,
+    file.accessToken,
+    metadata?.id_token,
+    metadata?.idToken,
+    metadata?.id_token_source,
+    metadata?.access_token,
+    metadata?.accessToken,
+    attributes?.id_token,
+    attributes?.idToken,
+    attributes?.id_token_source,
+    attributes?.access_token,
+    attributes?.accessToken
+  ];
 
   for (const candidate of candidates) {
     const id = extractCodexChatgptAccountId(candidate);
