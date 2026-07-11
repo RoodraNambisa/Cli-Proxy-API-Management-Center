@@ -31,6 +31,17 @@ import { configFileApi } from '@/services/api/configFile';
 import styles from './ConfigPage.module.scss';
 
 type ConfigEditorTab = 'visual' | 'source';
+type RequestBodyPanelId = 'request-body-release' | 'request-body-audit';
+
+type RequestBodyDirtySnapshot = {
+  release: boolean;
+  audit: boolean;
+};
+
+type RequestBodySaveResult = {
+  succeeded: RequestBodyPanelId[];
+  failed: RequestBodyPanelId[];
+};
 
 const LazyConfigSourceEditor = lazy(() => import('@/components/config/ConfigSourceEditor'));
 
@@ -160,53 +171,31 @@ export function ConfigPage() {
     return false;
   }, [navigate, requestBodyAuditDirty, requestBodyReleaseDirty, showNotification, t]);
 
-  const saveDirtySidecars = useCallback(async () => {
-    const results: Array<{ id: 'request-body-release' | 'request-body-audit'; success: boolean }> =
-      [];
-    if (requestBodyReleaseDirty) {
-      results.push({
-        id: 'request-body-release',
-        success: (await requestBodyReleaseRef.current?.save()) !== false,
-      });
-    }
-    if (requestBodyAuditDirty) {
-      results.push({
-        id: 'request-body-audit',
-        success: (await requestBodyAuditRef.current?.save()) !== false,
-      });
-    }
-    const failedResult = results.find((result) => !result.success);
-    const succeeded = !failedResult;
-    if (!succeeded) {
-      setActiveTab('visual');
-      localStorage.setItem('config-management:tab', 'visual');
-      navigate(`/config?section=${failedResult.id}`, { replace: true });
-      showNotification(t('config_management.settings_center.partial_save'), 'warning');
-    }
-    return succeeded;
-  }, [navigate, requestBodyAuditDirty, requestBodyReleaseDirty, showNotification, t]);
-
-  const handleConfirmSave = async () => {
-    if (!validateDirtySidecars()) return;
-    setSaving(true);
-    try {
-      const previousCommercialMode = readCommercialModeFromYaml(serverYaml);
-      const nextCommercialMode = readCommercialModeFromYaml(mergedYaml);
-      const commercialModeChanged = previousCommercialMode !== nextCommercialMode;
-
-      await configFileApi.saveConfigYaml(mergedYaml);
-      const latestContent = await configFileApi.fetchConfigYaml();
+  const applyYamlSnapshot = useCallback(
+    (nextContent: string) => {
       setDirty(false);
-      setDiffModalOpen(false);
-      setContent(latestContent);
-      setServerYaml(latestContent);
-      setMergedYaml(latestContent);
-      loadVisualValuesFromYaml(latestContent);
+      setContent(nextContent);
+      setServerYaml(nextContent);
+      setMergedYaml(nextContent);
+      loadVisualValuesFromYaml(nextContent);
+    },
+    [loadVisualValuesFromYaml]
+  );
 
-      // Keep the global config store in sync so sidebar / other pages reflect YAML changes immediately.
+  const refreshSavedSnapshots = useCallback(
+    async ({ reloadRelease = false, reloadAudit = false } = {}) => {
       try {
-        useConfigStore.getState().clearCache();
-        await useConfigStore.getState().fetchConfig(undefined, true);
+        const [latestContent] = await Promise.all([
+          configFileApi.fetchConfigYaml(),
+          reloadRelease
+            ? (requestBodyReleaseRef.current?.reload() ?? Promise.resolve())
+            : Promise.resolve(),
+          reloadAudit
+            ? (requestBodyAuditRef.current?.reload() ?? Promise.resolve())
+            : Promise.resolve(),
+        ]);
+        applyYamlSnapshot(latestContent);
+        return true;
       } catch (refreshError: unknown) {
         const message =
           refreshError instanceof Error
@@ -218,14 +207,117 @@ export function ConfigPage() {
           `${t('notification.refresh_failed')}${message ? `: ${message}` : ''}`,
           'error'
         );
+        return false;
       }
+    },
+    [applyYamlSnapshot, showNotification, t]
+  );
+
+  const refreshSharedConfig = useCallback(async () => {
+    try {
+      useConfigStore.getState().clearCache();
+      await useConfigStore.getState().fetchConfig(undefined, true);
+    } catch (refreshError: unknown) {
+      const message =
+        refreshError instanceof Error
+          ? refreshError.message
+          : typeof refreshError === 'string'
+            ? refreshError
+            : '';
+      showNotification(
+        `${t('notification.refresh_failed')}${message ? `: ${message}` : ''}`,
+        'error'
+      );
+    }
+  }, [showNotification, t]);
+
+  const saveDirtySidecars = useCallback(
+    async (snapshot: RequestBodyDirtySnapshot): Promise<RequestBodySaveResult> => {
+      const results: Array<{ id: RequestBodyPanelId; success: boolean }> = [];
+      if (snapshot.release) {
+        const panel = requestBodyReleaseRef.current;
+        results.push({
+          id: 'request-body-release',
+          success: panel ? await panel.save() : false,
+        });
+      }
+      if (snapshot.audit) {
+        const panel = requestBodyAuditRef.current;
+        results.push({
+          id: 'request-body-audit',
+          success: panel ? await panel.save() : false,
+        });
+      }
+
+      const failedResult = results.find((result) => !result.success);
+      if (failedResult) {
+        setActiveTab('visual');
+        localStorage.setItem('config-management:tab', 'visual');
+        navigate(`/config?section=${failedResult.id}`, { replace: true });
+      }
+
+      return {
+        succeeded: results.filter((result) => result.success).map((result) => result.id),
+        failed: results.filter((result) => !result.success).map((result) => result.id),
+      };
+    },
+    [navigate]
+  );
+
+  const showSidecarSaveSummary = useCallback(
+    (result: RequestBodySaveResult, yamlSaved: boolean) => {
+      if (result.failed.length === 0) return;
+      if (yamlSaved) {
+        showNotification(t('config_management.settings_center.partial_save'), 'warning');
+      } else if (result.succeeded.length > 0) {
+        showNotification(t('config_management.settings_center.sidecar_partial_save'), 'warning');
+      }
+    },
+    [showNotification, t]
+  );
+
+  const saveSidecarsWithoutYaml = useCallback(
+    async (snapshot: RequestBodyDirtySnapshot) => {
+      const result = await saveDirtySidecars(snapshot);
+      if (result.succeeded.length > 0) {
+        await refreshSavedSnapshots();
+      }
+      showSidecarSaveSummary(result, false);
+      return result;
+    },
+    [refreshSavedSnapshots, saveDirtySidecars, showSidecarSaveSummary]
+  );
+
+  const handleConfirmSave = async () => {
+    if (!validateDirtySidecars()) return;
+    const sidecarSnapshot: RequestBodyDirtySnapshot = {
+      release: requestBodyReleaseDirty,
+      audit: requestBodyAuditDirty,
+    };
+    setSaving(true);
+    try {
+      const previousCommercialMode = readCommercialModeFromYaml(serverYaml);
+      const nextCommercialMode = readCommercialModeFromYaml(mergedYaml);
+      const commercialModeChanged = previousCommercialMode !== nextCommercialMode;
+
+      await configFileApi.saveConfigYaml(mergedYaml);
+      setDiffModalOpen(false);
+      applyYamlSnapshot(mergedYaml);
+
+      const sidecarResult = await saveDirtySidecars(sidecarSnapshot);
+      await refreshSavedSnapshots({
+        reloadRelease: !sidecarSnapshot.release,
+        reloadAudit: !sidecarSnapshot.audit,
+      });
+      await refreshSharedConfig();
 
       if (commercialModeChanged) {
         showNotification(t('notification.commercial_mode_restart_required'), 'warning');
       }
 
-      const sidecarsSaved = await saveDirtySidecars();
-      if (sidecarsSaved) {
+      if (sidecarResult.failed.length > 0) {
+        showSidecarSaveSummary(sidecarResult, true);
+      } else {
         showNotification(t('config_management.save_success'), 'success');
       }
     } catch (err: unknown) {
@@ -240,9 +332,13 @@ export function ConfigPage() {
     if (!validateDirtySidecars()) return;
 
     if (!yamlDirty && (requestBodyReleaseDirty || requestBodyAuditDirty)) {
+      const sidecarSnapshot: RequestBodyDirtySnapshot = {
+        release: requestBodyReleaseDirty,
+        audit: requestBodyAuditDirty,
+      };
       setSaving(true);
       try {
-        await saveDirtySidecars();
+        await saveSidecarsWithoutYaml(sidecarSnapshot);
       } finally {
         setSaving(false);
       }
@@ -291,13 +387,12 @@ export function ConfigPage() {
       }
 
       if (diffOriginal === nextMergedYaml) {
-        setDirty(false);
-        setContent(latestServerYaml);
-        setServerYaml(latestServerYaml);
-        setMergedYaml(nextMergedYaml);
-        loadVisualValuesFromYaml(latestServerYaml);
+        applyYamlSnapshot(latestServerYaml);
         if (requestBodyReleaseDirty || requestBodyAuditDirty) {
-          await saveDirtySidecars();
+          await saveSidecarsWithoutYaml({
+            release: requestBodyReleaseDirty,
+            audit: requestBodyAuditDirty,
+          });
           return;
         }
         showNotification(t('config_management.diff.no_changes'), 'info');

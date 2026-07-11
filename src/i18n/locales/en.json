@@ -1454,6 +1454,7 @@
       "legacy_images_active": "Compatibility settings active",
       "sidecar_validation_failed": "Fix validation errors in the request body settings first",
       "partial_save": "YAML was saved, but some request body settings failed to save and remain modified",
+      "sidecar_partial_save": "Some request body settings were saved; failed settings remain modified",
       "grok": {
         "title": "Grok management",
         "description": "Manage Grok login, credential-level using_api/websockets, and quota data on their dedicated pages.",

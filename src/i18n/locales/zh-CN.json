@@ -1458,6 +1458,7 @@
       "legacy_images_active": "兼容设置生效中",
       "sidecar_validation_failed": "请先修复请求体配置中的校验错误",
       "partial_save": "YAML 已保存，但部分请求体配置保存失败；失败项仍保留未保存状态",
+      "sidecar_partial_save": "部分请求体配置已保存；失败项仍保留未保存状态",
       "grok": {
         "title": "Grok 管理入口",
         "description": "Grok 的登录、凭证级 using_api/websockets 和额度信息在对应管理页面维护。",

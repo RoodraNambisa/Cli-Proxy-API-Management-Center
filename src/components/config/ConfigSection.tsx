@@ -24,7 +24,7 @@ export const ConfigSection = forwardRef<HTMLElement, PropsWithChildren<ConfigSec
             {icon ? <span className={styles.iconBadge}>{icon}</span> : null}
           </div>
           <div className={styles.headingGroup}>
-            <h2 className={styles.title}>{title}</h2>
+            <h3 className={styles.title}>{title}</h3>
             {description ? <p className={styles.description}>{description}</p> : null}
           </div>
         </header>

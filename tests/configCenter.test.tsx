@@ -110,6 +110,30 @@ describe('configuration settings center', () => {
     expect(screen.getByTestId('location').textContent).toBe('/config?section=request-body-audit');
   });
 
+  test('searches fully qualified nested YAML keys', () => {
+    renderEditor('/config?section=global-basics');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'routing.fill-first-per-auth-rpm' },
+    });
+    fireEvent.click(screen.getByText('config_management.visual.sections.network.routing_strategy'));
+
+    expect(screen.getByTestId('location').textContent).toBe('/config?section=config-routing');
+  });
+
+  test('uses a catalog parent key to find newly added nested keys', () => {
+    renderEditor('/config?section=global-basics');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'auth-maintenance.scan-interval-seconds' },
+    });
+    fireEvent.click(screen.getByText('config_management.visual.sections.maintenance.title'));
+
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-auth-maintenance'
+    );
+  });
+
   test('scrolls a concrete control when a search target uses display contents', async () => {
     renderEditor('/config?section=global-basics');
 

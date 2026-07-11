@@ -180,7 +180,7 @@ function SectionSubsection({
   return (
     <div className={styles.subsection}>
       <div className={styles.subsectionHeader}>
-        <h3 className={styles.subsectionTitle}>{title}</h3>
+        <h4 className={styles.subsectionTitle}>{title}</h4>
         {description ? <p className={styles.subsectionDescription}>{description}</p> : null}
       </div>
       {children}
@@ -1211,7 +1211,19 @@ export function VisualConfigEditor({
       ]
         .join(' ')
         .toLocaleLowerCase();
-      return { item, page, label, matches: searchText.includes(normalizedConfigSearchQuery) };
+      const matchesNestedYamlKey = item.yamlKeys.some((yamlKey) => {
+        const normalizedYamlKey = yamlKey.toLocaleLowerCase();
+        return (
+          normalizedConfigSearchQuery.startsWith(`${normalizedYamlKey}.`) ||
+          normalizedConfigSearchQuery.startsWith(`${normalizedYamlKey}[`)
+        );
+      });
+      return {
+        item,
+        page,
+        label,
+        matches: searchText.includes(normalizedConfigSearchQuery) || matchesNestedYamlKey,
+      };
     })
       .filter((result) => result.matches && result.page)
       .slice(0, 12);
@@ -1339,7 +1351,10 @@ export function VisualConfigEditor({
               <div className={styles.activePageIcon}>
                 {ActivePageIcon ? <ActivePageIcon size={17} /> : null}
               </div>
-              <div>
+              <div className={styles.activePageCopy}>
+                <span className={styles.activePageEyebrow}>
+                  {t(`config_management.settings_center.groups.${activePage.group}`)}
+                </span>
                 <h2>{activePage.title}</h2>
                 <p>{activePage.description}</p>
               </div>

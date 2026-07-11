@@ -1476,6 +1476,7 @@
       "legacy_images_active": "相容設定生效中",
       "sidecar_validation_failed": "請先修正請求本文設定中的驗證錯誤",
       "partial_save": "YAML 已儲存，但部分請求本文設定儲存失敗；失敗項目仍保留未儲存狀態",
+      "sidecar_partial_save": "部分請求本文設定已儲存；失敗項目仍保留未儲存狀態",
       "grok": {
         "title": "Grok 管理入口",
         "description": "Grok 登入、憑證層級 using_api/websockets 和配額資訊在對應管理頁維護。",
