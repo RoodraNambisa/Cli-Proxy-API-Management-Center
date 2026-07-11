@@ -10,9 +10,10 @@ interface ConfigSectionProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> 
 
 export const ConfigSection = forwardRef<HTMLElement, PropsWithChildren<ConfigSectionProps>>(
   function ConfigSection(
-    { title, description, indexLabel, icon, className, children, ...rest },
+    { title, description, indexLabel, icon, className, children, hidden, ...rest },
     ref
   ) {
+    if (hidden) return null;
     const sectionClassName = [styles.section, className].filter(Boolean).join(' ');
 
     return (

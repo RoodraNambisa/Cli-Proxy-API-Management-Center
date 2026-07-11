@@ -1385,6 +1385,87 @@
       "visual": "可视化编辑",
       "source": "源文件编辑"
     },
+    "settings_center": {
+      "nav": "配置分类",
+      "groups": {
+        "global": "全局",
+        "providers": "提供商",
+        "advanced": "高级"
+      },
+      "pages": {
+        "global_basics": {
+          "title": "基础与访问",
+          "description": "服务器监听、TLS、远程管理和控制面板访问。"
+        },
+        "global_credentials": {
+          "title": "凭证与密钥",
+          "description": "认证目录、管理密钥和凭证模型排除规则。"
+        },
+        "global_network": {
+          "title": "网络与路由",
+          "description": "全局代理、重试轮次、路由策略、会话亲和与 WebSocket 鉴权。"
+        },
+        "global_request": {
+          "title": "请求与错误",
+          "description": "请求体处理、错误直返、固定冷却和配额回退。"
+        },
+        "global_observability": {
+          "title": "维护与观测",
+          "description": "凭证维护、日志、Usage、调试、商业模式和 pprof。"
+        },
+        "global_streaming": {
+          "title": "流式响应",
+          "description": "Keepalive、启动重试、流刷新和 SSE 处理。"
+        },
+        "provider_codex": {
+          "title": "Codex",
+          "description": "模型、身份与 TLS 特征、默认请求头、图片 Tool 和原生 Images。"
+        },
+        "provider_antigravity": {
+          "title": "Antigravity",
+          "description": "Antigravity 专属 Credits 重试策略。"
+        },
+        "provider_gemini_cli": {
+          "title": "Gemini CLI",
+          "description": "Gemini CLI 内部接口等专属设置。"
+        },
+        "provider_grok": {
+          "title": "Grok",
+          "description": "进入 Grok OAuth、认证文件和额度管理；凭证级开关仍在认证文件页维护。"
+        },
+        "advanced_payload": {
+          "title": "Payload 规则",
+          "description": "Default、override、filter 以及 raw 参数规则。"
+        }
+      },
+      "subsections": {
+        "codex_models_tools": "模型与图片 Tool",
+        "codex_models_tools_desc": "Codex 自定义模型及 image_generation tool 的全局处理策略。",
+        "codex_transport": "身份、TLS 与默认请求头",
+        "codex_transport_desc": "Codex 上游身份混淆、传输特征和默认请求头。",
+        "gemini_endpoint": "Gemini CLI 内部接口",
+        "gemini_endpoint_desc": "控制 Gemini CLI 专用内部接口是否可用。",
+        "request_error_rules": "错误直返规则",
+        "request_error_rules_desc": "命中后不再切换凭证或进入额外请求轮次。",
+        "antigravity_credits": "Credits 重试",
+        "antigravity_credits_desc": "控制 Antigravity Credits 耗尽后的专属重试行为。"
+      },
+      "search_placeholder": "搜索名称、说明或 YAML key",
+      "search_empty": "没有匹配的配置项",
+      "status_enabled": "已启用",
+      "status_disabled": "未启用",
+      "legacy_images_optional": "Native 接口已覆盖",
+      "legacy_images_active": "兼容设置生效中",
+      "sidecar_validation_failed": "请先修复请求体配置中的校验错误",
+      "partial_save": "YAML 已保存，但部分请求体配置保存失败；失败项仍保留未保存状态",
+      "grok": {
+        "title": "Grok 管理入口",
+        "description": "Grok 的登录、凭证级 using_api/websockets 和额度信息在对应管理页面维护。",
+        "oauth": "打开 Grok OAuth",
+        "auth_files": "查看 Grok 凭证",
+        "quota": "查看 Grok 额度"
+      }
+    },
     "request_body_release": {
       "title": "请求体驻留释放",
       "description": "enable=false 时关闭请求体释放；enable=true 且 log-only=true 时只释放请求日志、上游日志、WebSocket timeline 里保留的请求体副本，计时达到或流式上游成功建立后释放，不影响真实请求转发，也不会禁止换账号、模型 fallback 或 request-retry；enable=true 且 log-only=false 时执行请求体真实释放，不会主动中断当前已发出的上游请求，计时达到或流式上游成功建立后释放，释放后不再换账号、模型 fallback、stream bootstrap retry 或 request-retry。日志中会用占位文本替代原始请求体。",
@@ -1403,6 +1484,8 @@
       "refresh_failed": "加载请求体驻留释放配置失败",
       "save_success": "请求体驻留释放配置已保存",
       "save_failed": "保存请求体驻留释放配置失败",
+      "status_log_only": "仅释放日志副本",
+      "status_full_release": "真实释放",
       "reset": "还原"
     },
     "request_body_audit": {
@@ -1442,6 +1525,7 @@
       "refresh_failed": "加载请求体审核配置失败",
       "save_success": "请求体审核配置已保存",
       "save_failed": "保存请求体审核配置失败",
+      "status_enabled": "已启用 · {{count}} 个关键字",
       "reset": "还原"
     },
     "visual": {

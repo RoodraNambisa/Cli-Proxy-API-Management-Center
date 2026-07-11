@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import type { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { parse as parseYaml, parseDocument } from 'yaml';
 import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer';
@@ -45,6 +46,7 @@ function readCommercialModeFromYaml(yamlContent: string): boolean {
 
 export function ConfigPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const pageTransitionLayer = usePageTransitionLayer();
   const isCurrentLayer = pageTransitionLayer ? pageTransitionLayer.isCurrentLayer : true;
   const showNotification = useNotificationStore((state) => state.showNotification);
@@ -57,6 +59,7 @@ export function ConfigPage() {
     visualValues,
     baselineValues,
     visualDirty,
+    visualDirtyFields,
     visualParseError,
     visualValidationErrors,
     visualCodexCustomModelValidationErrors,
@@ -80,6 +83,8 @@ export function ConfigPage() {
   const [dirty, setDirty] = useState(false);
   const [requestBodyReleaseDirty, setRequestBodyReleaseDirty] = useState(false);
   const [requestBodyAuditDirty, setRequestBodyAuditDirty] = useState(false);
+  const [requestBodyReleaseErrorCount, setRequestBodyReleaseErrorCount] = useState(0);
+  const [requestBodyAuditErrorCount, setRequestBodyAuditErrorCount] = useState(0);
   const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [serverYaml, setServerYaml] = useState('');
   const [mergedYaml, setMergedYaml] = useState('');
@@ -141,7 +146,48 @@ export function ConfigPage() {
     );
   }, [activeTab, showNotification, t, visualParseError]);
 
+  const validateDirtySidecars = useCallback(() => {
+    const releaseValid =
+      !requestBodyReleaseDirty || requestBodyReleaseRef.current?.validate() !== false;
+    const auditValid = !requestBodyAuditDirty || requestBodyAuditRef.current?.validate() !== false;
+    if (releaseValid && auditValid) return true;
+    setActiveTab('visual');
+    localStorage.setItem('config-management:tab', 'visual');
+    navigate(`/config?section=${releaseValid ? 'request-body-audit' : 'request-body-release'}`, {
+      replace: true,
+    });
+    showNotification(t('config_management.settings_center.sidecar_validation_failed'), 'error');
+    return false;
+  }, [navigate, requestBodyAuditDirty, requestBodyReleaseDirty, showNotification, t]);
+
+  const saveDirtySidecars = useCallback(async () => {
+    const results: Array<{ id: 'request-body-release' | 'request-body-audit'; success: boolean }> =
+      [];
+    if (requestBodyReleaseDirty) {
+      results.push({
+        id: 'request-body-release',
+        success: (await requestBodyReleaseRef.current?.save()) !== false,
+      });
+    }
+    if (requestBodyAuditDirty) {
+      results.push({
+        id: 'request-body-audit',
+        success: (await requestBodyAuditRef.current?.save()) !== false,
+      });
+    }
+    const failedResult = results.find((result) => !result.success);
+    const succeeded = !failedResult;
+    if (!succeeded) {
+      setActiveTab('visual');
+      localStorage.setItem('config-management:tab', 'visual');
+      navigate(`/config?section=${failedResult.id}`, { replace: true });
+      showNotification(t('config_management.settings_center.partial_save'), 'warning');
+    }
+    return succeeded;
+  }, [navigate, requestBodyAuditDirty, requestBodyReleaseDirty, showNotification, t]);
+
   const handleConfirmSave = async () => {
+    if (!validateDirtySidecars()) return;
     setSaving(true);
     try {
       const previousCommercialMode = readCommercialModeFromYaml(serverYaml);
@@ -174,16 +220,13 @@ export function ConfigPage() {
         );
       }
 
-      showNotification(t('config_management.save_success'), 'success');
       if (commercialModeChanged) {
         showNotification(t('notification.commercial_mode_restart_required'), 'warning');
       }
 
-      if (requestBodyReleaseDirty) {
-        await requestBodyReleaseRef.current?.save();
-      }
-      if (requestBodyAuditDirty) {
-        await requestBodyAuditRef.current?.save();
+      const sidecarsSaved = await saveDirtySidecars();
+      if (sidecarsSaved) {
+        showNotification(t('config_management.save_success'), 'success');
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';
@@ -194,15 +237,12 @@ export function ConfigPage() {
   };
 
   const handleSave = async () => {
+    if (!validateDirtySidecars()) return;
+
     if (!yamlDirty && (requestBodyReleaseDirty || requestBodyAuditDirty)) {
       setSaving(true);
       try {
-        if (requestBodyReleaseDirty) {
-          await requestBodyReleaseRef.current?.save();
-        }
-        if (requestBodyAuditDirty) {
-          await requestBodyAuditRef.current?.save();
-        }
+        await saveDirtySidecars();
       } finally {
         setSaving(false);
       }
@@ -256,16 +296,8 @@ export function ConfigPage() {
         setServerYaml(latestServerYaml);
         setMergedYaml(nextMergedYaml);
         loadVisualValuesFromYaml(latestServerYaml);
-        let savedSidecarConfig = false;
-        if (requestBodyReleaseDirty) {
-          await requestBodyReleaseRef.current?.save();
-          savedSidecarConfig = true;
-        }
-        if (requestBodyAuditDirty) {
-          await requestBodyAuditRef.current?.save();
-          savedSidecarConfig = true;
-        }
-        if (savedSidecarConfig) {
+        if (requestBodyReleaseDirty || requestBodyAuditDirty) {
+          await saveDirtySidecars();
           return;
         }
         showNotification(t('config_management.diff.no_changes'), 'info');
@@ -600,20 +632,6 @@ export function ConfigPage() {
         </div>
       </div>
 
-      <RequestBodyReleaseCard
-        ref={requestBodyReleaseRef}
-        disabled={disableControls}
-        externalSaving={saving}
-        onDirtyChange={setRequestBodyReleaseDirty}
-      />
-
-      <RequestBodyAuditCard
-        ref={requestBodyAuditRef}
-        disabled={disableControls}
-        externalSaving={saving}
-        onDirtyChange={setRequestBodyAuditDirty}
-      />
-
       <div className={styles.workspaceShell}>
         <div className={styles.content}>
           {error && <div className="error-box">{error}</div>}
@@ -623,7 +641,7 @@ export function ConfigPage() {
             </div>
           )}
 
-          {activeTab === 'visual' ? (
+          <div hidden={activeTab !== 'visual'}>
             <VisualConfigEditor
               values={visualValues}
               baselineValues={baselineValues}
@@ -631,9 +649,35 @@ export function ConfigPage() {
               codexCustomModelValidationErrors={visualCodexCustomModelValidationErrors}
               hasPayloadValidationErrors={visualHasPayloadValidationErrors}
               disabled={disableControls || loading}
+              dirtyFields={visualDirtyFields}
+              requestBodyDirty={requestBodyReleaseDirty || requestBodyAuditDirty}
+              requestBodyErrorCount={requestBodyReleaseErrorCount + requestBodyAuditErrorCount}
+              renderRequestBodyPanels={({ focusTarget }) => (
+                <>
+                  <RequestBodyReleaseCard
+                    ref={requestBodyReleaseRef}
+                    disabled={disableControls}
+                    externalSaving={saving}
+                    embedded
+                    focusTarget={focusTarget}
+                    onDirtyChange={setRequestBodyReleaseDirty}
+                    onErrorCountChange={setRequestBodyReleaseErrorCount}
+                  />
+                  <RequestBodyAuditCard
+                    ref={requestBodyAuditRef}
+                    disabled={disableControls}
+                    externalSaving={saving}
+                    embedded
+                    focusTarget={focusTarget}
+                    onDirtyChange={setRequestBodyAuditDirty}
+                    onErrorCountChange={setRequestBodyAuditErrorCount}
+                  />
+                </>
+              )}
               onChange={setVisualValues}
             />
-          ) : (
+          </div>
+          {activeTab === 'source' ? (
             <div className={styles.sourceWorkspace}>
               <div className={styles.sourceToolbar}>
                 <div className={styles.searchInputWrapper}>
@@ -710,7 +754,7 @@ export function ConfigPage() {
                 </Suspense>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 

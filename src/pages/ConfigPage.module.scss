@@ -6,7 +6,7 @@
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: $spacing-lg;
+  gap: 14px;
   overflow-y: auto;
   padding-bottom: calc(
     var(--config-action-bar-height, 0px) + 16px + env(safe-area-inset-bottom) + #{$spacing-md}
@@ -14,54 +14,24 @@
 }
 
 .pageHeader {
-  position: relative;
-  overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) auto;
-  gap: 24px;
-  align-items: end;
-  padding: clamp(22px, 3vw, 30px);
-  border-radius: 30px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
-  background:
-    radial-gradient(
-      circle at top right,
-      color-mix(in srgb, var(--primary-color) 14%, transparent),
-      transparent 34%
-    ),
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--bg-primary) 94%, transparent),
-      color-mix(in srgb, var(--bg-secondary) 96%, transparent)
-    );
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0 auto auto 0;
-    width: min(260px, 48vw);
-    height: min(260px, 48vw);
-    background: radial-gradient(
-      circle,
-      color-mix(in srgb, var(--primary-color) 12%, transparent),
-      transparent 70%
-    );
-    pointer-events: none;
-    opacity: 0.7;
-  }
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 4px 0 14px;
+  border-bottom: 1px solid var(--border-color);
 
   @include mobile {
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
-    gap: 16px;
+    gap: 10px;
   }
 }
 
 .pageHeaderCopy {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -69,35 +39,34 @@
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .pageTitle {
   margin: 0;
   color: var(--text-primary);
-  font-size: clamp(32px, 4vw, 52px);
-  line-height: 0.95;
-  letter-spacing: -0.04em;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: 0;
 }
 
 .description {
   margin: 0;
   max-width: 46rem;
   color: var(--text-secondary);
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .pageMeta {
-  position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 12px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 
   @include mobile {
+    flex-direction: column;
     align-items: stretch;
   }
 }
@@ -106,14 +75,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  padding: 0 14px;
-  border-radius: 999px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
   border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
   background: color-mix(in srgb, var(--bg-primary) 86%, transparent);
   color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 650;
   text-align: center;
 
   @include mobile {
@@ -126,7 +95,7 @@
   align-items: center;
   gap: 4px;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: 7px;
   background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
   border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
   width: fit-content;
@@ -145,12 +114,13 @@
 
 .tabItem {
   @include button-reset;
-  padding: 10px 16px;
-  border-radius: 999px;
+  min-height: 30px;
+  padding: 5px 11px;
+  border-radius: 5px;
   border: 1px solid transparent;
   color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 650;
   white-space: nowrap;
   transition:
     color 0.15s ease,
@@ -186,23 +156,23 @@
 .workspaceShell {
   display: flex;
   flex-direction: column;
-  gap: $spacing-lg;
-  padding: clamp(18px, 3vw, 28px);
-  border-radius: 32px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
-  background: color-mix(in srgb, var(--bg-primary) 74%, transparent);
-  box-shadow: var(--shadow);
+  gap: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 
   @include mobile {
-    padding: 16px;
-    border-radius: 28px;
+    padding: 0;
+    border-radius: 0;
   }
 }
 
 .content {
   display: flex;
   flex-direction: column;
-  gap: $spacing-lg;
+  gap: 14px;
   min-height: 0;
 }
 

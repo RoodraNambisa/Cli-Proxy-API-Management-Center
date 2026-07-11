@@ -7,6 +7,10 @@
   gap: $spacing-lg;
 }
 
+.providerAnchor {
+  scroll-margin-top: calc(var(--header-height, 64px) + 16px);
+}
+
 .pageHeader {
   display: flex;
   flex-direction: column;

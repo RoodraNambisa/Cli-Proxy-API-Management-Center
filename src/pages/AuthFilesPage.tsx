@@ -11,7 +11,7 @@ import {
 import { createPortal } from 'react-dom';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { animate } from 'motion/mini';
 import type { AnimationPlaybackControlsWithThen } from 'motion-dom';
 import { useInterval } from '@/hooks/useInterval';
@@ -184,6 +184,8 @@ export function AuthFilesPage() {
   const pageTransitionLayer = usePageTransitionLayer();
   const isCurrentLayer = pageTransitionLayer ? pageTransitionLayer.status === 'current' : true;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const providerParam = searchParams.get('provider');
 
   const [filter, setFilter] = useState<'all' | string>('all');
   const [planFilter, setPlanFilter] = useState(ALL_PLAN_FILTER);
@@ -419,6 +421,14 @@ export function AuthFilesPage() {
     sortMode,
     uiStateHydrated,
   ]);
+
+  useEffect(() => {
+    if (!uiStateHydrated || !providerParam) return;
+    const normalizedProvider = normalizeProviderKey(providerParam);
+    if (!normalizedProvider) return;
+    setFilter(normalizedProvider);
+    setPage(1);
+  }, [providerParam, uiStateHydrated]);
 
   useEffect(() => {
     setPageSizeInput(String(pageSize));

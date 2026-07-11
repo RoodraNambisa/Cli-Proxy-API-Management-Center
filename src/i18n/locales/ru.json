@@ -1382,6 +1382,83 @@
       "visual": "Визуальный редактор",
       "source": "Редактор файла"
     },
+    "settings_center": {
+      "nav": "Категории конфигурации",
+      "groups": { "global": "Общие", "providers": "Провайдеры", "advanced": "Дополнительно" },
+      "pages": {
+        "global_basics": {
+          "title": "Основы и доступ",
+          "description": "Адрес сервера, TLS, удалённое управление и доступ к панели."
+        },
+        "global_credentials": {
+          "title": "Учётные данные и ключи",
+          "description": "Каталог авторизации, ключи управления и правила исключения моделей."
+        },
+        "global_network": {
+          "title": "Сеть и маршрутизация",
+          "description": "Прокси, раунды повторов, стратегия маршрутизации, привязка сессий и WebSocket auth."
+        },
+        "global_request": {
+          "title": "Запросы и ошибки",
+          "description": "Обработка тела запроса, прямой возврат ошибок, cooldown и quota fallback."
+        },
+        "global_observability": {
+          "title": "Обслуживание и наблюдение",
+          "description": "Обслуживание учётных данных, журналы, Usage, debug, коммерческий режим и pprof."
+        },
+        "global_streaming": {
+          "title": "Потоковые ответы",
+          "description": "Keepalive, bootstrap retry, сброс потока и обработка SSE."
+        },
+        "provider_codex": {
+          "title": "Codex",
+          "description": "Модели, идентичность и TLS, заголовки, политика image Tool и native Images."
+        },
+        "provider_antigravity": {
+          "title": "Antigravity",
+          "description": "Специальная политика повторов Credits для Antigravity."
+        },
+        "provider_gemini_cli": {
+          "title": "Gemini CLI",
+          "description": "Внутренний endpoint Gemini CLI и специальные настройки."
+        },
+        "provider_grok": {
+          "title": "Grok",
+          "description": "Переход к Grok OAuth, файлам авторизации и квотам. Настройки учётных данных остаются на странице файлов."
+        },
+        "advanced_payload": {
+          "title": "Правила Payload",
+          "description": "Правила default, override, filter и raw-параметров."
+        }
+      },
+      "subsections": {
+        "codex_models_tools": "Модели и Image Tool",
+        "codex_models_tools_desc": "Пользовательские модели Codex и глобальная обработка image_generation tool.",
+        "codex_transport": "Идентичность, TLS и заголовки",
+        "codex_transport_desc": "Маскировка идентичности, транспорт и заголовки Codex upstream.",
+        "gemini_endpoint": "Внутренний endpoint Gemini CLI",
+        "gemini_endpoint_desc": "Управляет доступностью внутреннего endpoint для Gemini CLI.",
+        "request_error_rules": "Правила прямого возврата ошибок",
+        "request_error_rules_desc": "Совпавшие ошибки возвращаются без смены учётных данных и нового раунда запроса.",
+        "antigravity_credits": "Повтор Credits",
+        "antigravity_credits_desc": "Управляет повтором Antigravity после исчерпания Credits."
+      },
+      "search_placeholder": "Поиск по названию, описанию или YAML key",
+      "search_empty": "Подходящих настроек нет",
+      "status_enabled": "Включено",
+      "status_disabled": "Выключено",
+      "legacy_images_optional": "Покрыто native endpoints",
+      "legacy_images_active": "Настройки совместимости активны",
+      "sidecar_validation_failed": "Сначала исправьте ошибки в настройках тела запроса",
+      "partial_save": "YAML сохранён, но часть настроек тела запроса сохранить не удалось; они остаются изменёнными",
+      "grok": {
+        "title": "Управление Grok",
+        "description": "Управляйте входом Grok, параметрами using_api/websockets и квотами на соответствующих страницах.",
+        "oauth": "Открыть Grok OAuth",
+        "auth_files": "Учётные данные Grok",
+        "quota": "Квота Grok"
+      }
+    },
     "request_body_release": {
       "title": "Освобождение удерживаемого тела запроса",
       "description": "enable=false отключает освобождение тела запроса. enable=true и log-only=true освобождает только копии тела в request log, upstream log и WebSocket timeline после срабатывания таймера или успешного установления upstream stream; это не влияет на реальную отправку запроса и не запрещает переключение учётных данных, fallback модели или request-retry. enable=true и log-only=false выполняет реальное освобождение тела запроса после срабатывания таймера или успешного установления upstream stream; уже отправленный upstream-запрос не прерывается, но после освобождения больше не будет переключения учётных данных, fallback модели, stream bootstrap retry или request-retry. В журналах исходное тело заменяется placeholder-текстом.",
@@ -1400,6 +1477,8 @@
       "refresh_failed": "Не удалось загрузить конфигурацию освобождения тела запроса",
       "save_success": "Конфигурация освобождения тела запроса сохранена",
       "save_failed": "Не удалось сохранить конфигурацию освобождения тела запроса",
+      "status_log_only": "Только копии журналов",
+      "status_full_release": "Полное освобождение",
       "reset": "Сбросить"
     },
     "request_body_audit": {
@@ -1439,6 +1518,7 @@
       "refresh_failed": "Не удалось загрузить конфигурацию проверки тела запроса",
       "save_success": "Конфигурация проверки тела запроса сохранена",
       "save_failed": "Не удалось сохранить конфигурацию проверки тела запроса",
+      "status_enabled": "Включено · ключевых слов: {{count}}",
       "reset": "Сбросить"
     },
     "visual": {

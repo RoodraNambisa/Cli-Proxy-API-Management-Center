@@ -3027,6 +3027,7 @@ export function useVisualConfig() {
     visualValues,
     baselineValues,
     visualDirty,
+    visualDirtyFields: Array.from(state.dirtyFields),
     visualParseError,
     visualValidationErrors,
     visualCodexCustomModelValidationErrors,

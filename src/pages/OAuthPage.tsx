@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -140,6 +140,8 @@ const formatCountdown = (seconds: number): string => {
 export function OAuthPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedProvider = searchParams.get('provider')?.trim().toLowerCase();
   const { showNotification } = useNotificationStore();
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>(
@@ -183,6 +185,18 @@ export function OAuthPage() {
       });
     };
   }, [clearTimers]);
+
+  useEffect(() => {
+    if (!requestedProvider) return undefined;
+    const provider = requestedProvider === 'grok' ? 'xai' : requestedProvider;
+    if (!PROVIDERS.some((item) => item.id === provider)) return undefined;
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById(`oauth-provider-${provider}`);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (target instanceof HTMLElement) target.focus({ preventScroll: true });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [requestedProvider]);
 
   const updateProviderState = (provider: OAuthProvider, next: Partial<ProviderState>) => {
     setStates((prev) => ({
@@ -565,7 +579,12 @@ export function OAuthPage() {
             .filter(Boolean)
             .join(' ');
           return (
-            <div key={provider.id}>
+            <div
+              key={provider.id}
+              id={`oauth-provider-${provider.id}`}
+              className={styles.providerAnchor}
+              tabIndex={-1}
+            >
               <Card
                 title={
                   <span className={styles.cardTitle}>

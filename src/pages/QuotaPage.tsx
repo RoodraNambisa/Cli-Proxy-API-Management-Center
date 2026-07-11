@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useAuthStore } from '@/stores';
 import { authFilesApi, configFileApi } from '@/services/api';
@@ -23,6 +24,8 @@ import styles from './QuotaPage.module.scss';
 export function QuotaPage() {
   const { t } = useTranslation();
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
+  const [searchParams] = useSearchParams();
+  const requestedProvider = searchParams.get('provider')?.trim().toLowerCase();
 
   const [files, setFiles] = useState<AuthFileItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +67,16 @@ export function QuotaPage() {
     loadFiles();
     loadConfig();
   }, [loadFiles, loadConfig]);
+
+  useEffect(() => {
+    if (requestedProvider !== 'xai' && requestedProvider !== 'grok') return undefined;
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById('quota-provider-xai');
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (target instanceof HTMLElement) target.focus({ preventScroll: true });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [requestedProvider]);
 
   return (
     <div className={styles.container}>
@@ -119,13 +132,15 @@ export function QuotaPage() {
         disabled={disableControls}
         searchTerm={search}
       />
-      <QuotaSection
-        config={XAI_CONFIG}
-        files={files}
-        loading={loading}
-        disabled={disableControls}
-        searchTerm={search}
-      />
+      <div id="quota-provider-xai" className={styles.providerAnchor} tabIndex={-1}>
+        <QuotaSection
+          config={XAI_CONFIG}
+          files={files}
+          loading={loading}
+          disabled={disableControls}
+          searchTerm={search}
+        />
+      </div>
     </div>
   );
 }

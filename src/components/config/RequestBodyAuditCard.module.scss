@@ -146,3 +146,22 @@
 .actions {
   padding-top: $spacing-sm;
 }
+
+.embeddedContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  > .section {
+    padding: 0 0 $spacing-md;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
+    border-radius: 0;
+    background: transparent;
+
+    &:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+  }
+}

@@ -1407,6 +1407,83 @@
       "visual": "視覺化編輯",
       "source": "原始檔編輯"
     },
+    "settings_center": {
+      "nav": "設定分類",
+      "groups": { "global": "全域", "providers": "供應商", "advanced": "進階" },
+      "pages": {
+        "global_basics": {
+          "title": "基礎與存取",
+          "description": "伺服器監聽、TLS、遠端管理和控制面板存取。"
+        },
+        "global_credentials": {
+          "title": "憑證與金鑰",
+          "description": "認證目錄、管理金鑰和憑證模型排除規則。"
+        },
+        "global_network": {
+          "title": "網路與路由",
+          "description": "全域代理、重試輪次、路由策略、工作階段親和與 WebSocket 驗證。"
+        },
+        "global_request": {
+          "title": "請求與錯誤",
+          "description": "請求本文處理、錯誤直接回傳、固定冷卻和配額回退。"
+        },
+        "global_observability": {
+          "title": "維護與觀測",
+          "description": "憑證維護、日誌、Usage、除錯、商業模式和 pprof。"
+        },
+        "global_streaming": {
+          "title": "串流回應",
+          "description": "Keepalive、啟動重試、串流刷新和 SSE 處理。"
+        },
+        "provider_codex": {
+          "title": "Codex",
+          "description": "模型、身分與 TLS 特徵、預設請求標頭、圖片 Tool 和原生 Images。"
+        },
+        "provider_antigravity": {
+          "title": "Antigravity",
+          "description": "Antigravity 專屬 Credits 重試策略。"
+        },
+        "provider_gemini_cli": {
+          "title": "Gemini CLI",
+          "description": "Gemini CLI 內部介面等專屬設定。"
+        },
+        "provider_grok": {
+          "title": "Grok",
+          "description": "前往 Grok OAuth、認證檔案和配額管理；憑證層級開關仍在認證檔案頁維護。"
+        },
+        "advanced_payload": {
+          "title": "Payload 規則",
+          "description": "Default、override、filter 以及 raw 參數規則。"
+        }
+      },
+      "subsections": {
+        "codex_models_tools": "模型與圖片 Tool",
+        "codex_models_tools_desc": "Codex 自訂模型及 image_generation tool 的全域處理策略。",
+        "codex_transport": "身分、TLS 與預設請求標頭",
+        "codex_transport_desc": "Codex 上游身分混淆、傳輸特徵和預設請求標頭。",
+        "gemini_endpoint": "Gemini CLI 內部介面",
+        "gemini_endpoint_desc": "控制 Gemini CLI 專用內部介面是否可用。",
+        "request_error_rules": "錯誤直接回傳規則",
+        "request_error_rules_desc": "命中後不再切換憑證或進入額外請求輪次。",
+        "antigravity_credits": "Credits 重試",
+        "antigravity_credits_desc": "控制 Antigravity Credits 用盡後的專屬重試行為。"
+      },
+      "search_placeholder": "搜尋名稱、說明或 YAML key",
+      "search_empty": "沒有符合的設定項目",
+      "status_enabled": "已啟用",
+      "status_disabled": "未啟用",
+      "legacy_images_optional": "Native 介面已涵蓋",
+      "legacy_images_active": "相容設定生效中",
+      "sidecar_validation_failed": "請先修正請求本文設定中的驗證錯誤",
+      "partial_save": "YAML 已儲存，但部分請求本文設定儲存失敗；失敗項目仍保留未儲存狀態",
+      "grok": {
+        "title": "Grok 管理入口",
+        "description": "Grok 登入、憑證層級 using_api/websockets 和配額資訊在對應管理頁維護。",
+        "oauth": "開啟 Grok OAuth",
+        "auth_files": "檢視 Grok 憑證",
+        "quota": "檢視 Grok 配額"
+      }
+    },
     "request_body_release": {
       "title": "請求體駐留釋放",
       "description": "enable=false 時關閉請求體釋放；enable=true 且 log-only=true 時只釋放請求記錄、上游記錄、WebSocket timeline 裡保留的請求體副本，計時達到或流式上游成功建立後釋放，不影響真實請求轉發，也不會禁止換帳號、模型 fallback 或 request-retry；enable=true 且 log-only=false 時執行請求體真實釋放，不會主動中斷目前已發出的上游請求，計時達到或流式上游成功建立後釋放，釋放後不再換帳號、模型 fallback、stream bootstrap retry 或 request-retry。記錄中會用佔位文字替代原始請求體。",
@@ -1425,6 +1502,8 @@
       "refresh_failed": "載入請求體駐留釋放設定失敗",
       "save_success": "請求體駐留釋放設定已儲存",
       "save_failed": "儲存請求體駐留釋放設定失敗",
+      "status_log_only": "僅釋放日誌副本",
+      "status_full_release": "真實釋放",
       "reset": "還原"
     },
     "request_body_audit": {
@@ -1464,6 +1543,7 @@
       "refresh_failed": "載入請求體審核設定失敗",
       "save_success": "請求體審核設定已儲存",
       "save_failed": "儲存請求體審核設定失敗",
+      "status_enabled": "已啟用 · {{count}} 個關鍵字",
       "reset": "還原"
     },
     "visual": {

@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { IconRefreshCw } from '@/components/ui/icons';
+import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { configApi } from '@/services/api';
 import type { RequestBodyReleaseConfig } from '@/types';
 import { useConfigStore, useNotificationStore } from '@/stores';
@@ -23,13 +24,19 @@ export type RequestBodyReleaseCardHandle = {
   save: () => Promise<boolean>;
   reload: () => Promise<void>;
   reset: () => void;
+  validate: () => boolean;
 };
 
 type RequestBodyReleaseCardProps = {
   disabled?: boolean;
   externalSaving?: boolean;
   onDirtyChange?: (dirty: boolean) => void;
+  onErrorCountChange?: (count: number) => void;
+  embedded?: boolean;
+  focusTarget?: string;
 };
+
+const DISCLOSURE_STORAGE_KEY = 'config-management:request-body-release-expanded';
 
 const defaultDraft = (): RequestBodyReleaseDraft => ({
   enable: false,
@@ -74,7 +81,14 @@ export const RequestBodyReleaseCard = forwardRef<
   RequestBodyReleaseCardHandle,
   RequestBodyReleaseCardProps
 >(function RequestBodyReleaseCard(
-  { disabled = false, externalSaving = false, onDirtyChange },
+  {
+    disabled = false,
+    externalSaving = false,
+    onDirtyChange,
+    onErrorCountChange,
+    embedded = false,
+    focusTarget,
+  },
   ref
 ) {
   const { t } = useTranslation();
@@ -88,6 +102,9 @@ export const RequestBodyReleaseCard = forwardRef<
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [loadError, setLoadError] = useState('');
+  const [expanded, setExpanded] = useState(
+    () => localStorage.getItem(DISCLOSURE_STORAGE_KEY) === 'true'
+  );
 
   const isBusy = loading || saving;
   const controlsDisabled = disabled || isBusy || externalSaving;
@@ -100,6 +117,27 @@ export const RequestBodyReleaseCard = forwardRef<
     onDirtyChange?.(dirty);
     return () => onDirtyChange?.(false);
   }, [dirty, onDirtyChange]);
+
+  useEffect(() => {
+    onErrorCountChange?.(Object.keys(errors).length + (loadError ? 1 : 0));
+  }, [errors, loadError, onErrorCountChange]);
+
+  useEffect(() => {
+    if (!focusTarget?.startsWith('request-body-release')) return;
+    setExpanded(true);
+    const timer = window.setTimeout(() => {
+      const target =
+        document.getElementById(focusTarget) ?? document.getElementById('request-body-release');
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (target instanceof HTMLElement) target.focus({ preventScroll: true });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [focusTarget]);
+
+  const handleExpandedChange = useCallback((nextExpanded: boolean) => {
+    setExpanded(nextExpanded);
+    localStorage.setItem(DISCLOSURE_STORAGE_KEY, String(nextExpanded));
+  }, []);
 
   const loadReleaseConfig = useCallback(
     async ({ manual = false }: { manual?: boolean } = {}) => {
@@ -148,10 +186,15 @@ export const RequestBodyReleaseCard = forwardRef<
     return nextErrors;
   }, [draft.afterSeconds, draft.minBodyBytes, t]);
 
-  const handleSave = useCallback(async (): Promise<boolean> => {
+  const runValidation = useCallback((): boolean => {
     const nextErrors = validateDraft();
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return false;
+    if (Object.keys(nextErrors).length > 0) setExpanded(true);
+    return Object.keys(nextErrors).length === 0;
+  }, [validateDraft]);
+
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    if (!runValidation()) return false;
 
     setSaving(true);
     try {
@@ -181,7 +224,7 @@ export const RequestBodyReleaseCard = forwardRef<
     } finally {
       setSaving(false);
     }
-  }, [clearConfigCache, draft, fetchConfig, showNotification, t, validateDraft]);
+  }, [clearConfigCache, draft, fetchConfig, runValidation, showNotification, t]);
 
   const handleReset = useCallback(() => {
     setDraft(baseline);
@@ -194,9 +237,121 @@ export const RequestBodyReleaseCard = forwardRef<
       save: handleSave,
       reload: () => loadReleaseConfig(),
       reset: handleReset,
+      validate: runValidation,
     }),
-    [handleSave, handleReset, loadReleaseConfig]
+    [handleSave, handleReset, loadReleaseConfig, runValidation]
   );
+
+  const editorContent = (
+    <>
+      {loadError && <div className="error-box">{loadError}</div>}
+      {disabled && <div className="hint">{t('notification.connection_required')}</div>}
+
+      <div className={styles.section}>
+        <div className={styles.toggleGrid}>
+          <div className={styles.toggleItem}>
+            <ToggleSwitch
+              label={t('config_management.request_body_release.enable')}
+              checked={draft.enable}
+              disabled={controlsDisabled}
+              onChange={(value) => setDraft((current) => ({ ...current, enable: value }))}
+            />
+            <span className={styles.toggleDescription}>
+              {t('config_management.request_body_release.enable_desc')}
+            </span>
+          </div>
+          <div className={styles.toggleItem}>
+            <ToggleSwitch
+              label={t('config_management.request_body_release.log_only')}
+              checked={draft.logOnly}
+              disabled={controlsDisabled || !draft.enable}
+              onChange={(value) => setDraft((current) => ({ ...current, logOnly: value }))}
+            />
+            <span className={styles.toggleDescription}>
+              {t('config_management.request_body_release.log_only_desc')}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.section}>
+        <h3 className={styles.sectionTitle}>
+          {t('config_management.request_body_release.thresholds')}
+        </h3>
+        <p className={styles.sectionHint}>
+          {t('config_management.request_body_release.thresholds_hint')}
+        </p>
+        <div className={styles.formGrid}>
+          <Input
+            id="request-body-release-after-seconds"
+            label={t('config_management.request_body_release.after_seconds')}
+            type="number"
+            min={0}
+            step={1}
+            placeholder="30"
+            value={draft.afterSeconds}
+            disabled={controlsDisabled}
+            hint={t('config_management.request_body_release.after_seconds_hint')}
+            error={errors.afterSeconds}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, afterSeconds: event.target.value }))
+            }
+          />
+          <Input
+            id="request-body-release-min-body-bytes"
+            label={t('config_management.request_body_release.min_body_bytes')}
+            type="number"
+            min={0}
+            step={1}
+            placeholder="1048576"
+            value={draft.minBodyBytes}
+            disabled={controlsDisabled}
+            hint={t('config_management.request_body_release.min_body_bytes_hint')}
+            error={errors.minBodyBytes}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, minBodyBytes: event.target.value }))
+            }
+          />
+        </div>
+      </div>
+    </>
+  );
+
+  if (embedded) {
+    const summary = !draft.enable
+      ? t('config_management.settings_center.status_disabled')
+      : draft.logOnly
+        ? t('config_management.request_body_release.status_log_only')
+        : t('config_management.request_body_release.status_full_release');
+
+    return (
+      <ConfigDisclosure
+        id="request-body-release"
+        title={t('config_management.request_body_release.title')}
+        description={t('config_management.request_body_release.description')}
+        summary={summary}
+        expanded={expanded || Object.keys(errors).length > 0 || Boolean(loadError)}
+        onExpandedChange={handleExpandedChange}
+        dirty={dirty}
+        errorCount={Object.keys(errors).length + (loadError ? 1 : 0)}
+        actions={
+          dirty ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={controlsDisabled}
+              onClick={handleReset}
+            >
+              {t('config_management.request_body_release.reset')}
+            </Button>
+          ) : null
+        }
+      >
+        <div className={styles.embeddedContent}>{editorContent}</div>
+      </ConfigDisclosure>
+    );
+  }
 
   return (
     <Card>
@@ -225,74 +380,7 @@ export const RequestBodyReleaseCard = forwardRef<
           </div>
         </div>
 
-        {loadError && <div className="error-box">{loadError}</div>}
-        {disabled && <div className="hint">{t('notification.connection_required')}</div>}
-
-        <div className={styles.section}>
-          <div className={styles.toggleGrid}>
-            <div className={styles.toggleItem}>
-              <ToggleSwitch
-                label={t('config_management.request_body_release.enable')}
-                checked={draft.enable}
-                disabled={controlsDisabled}
-                onChange={(value) => setDraft((current) => ({ ...current, enable: value }))}
-              />
-              <span className={styles.toggleDescription}>
-                {t('config_management.request_body_release.enable_desc')}
-              </span>
-            </div>
-            <div className={styles.toggleItem}>
-              <ToggleSwitch
-                label={t('config_management.request_body_release.log_only')}
-                checked={draft.logOnly}
-                disabled={controlsDisabled || !draft.enable}
-                onChange={(value) => setDraft((current) => ({ ...current, logOnly: value }))}
-              />
-              <span className={styles.toggleDescription}>
-                {t('config_management.request_body_release.log_only_desc')}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>
-            {t('config_management.request_body_release.thresholds')}
-          </h3>
-          <p className={styles.sectionHint}>
-            {t('config_management.request_body_release.thresholds_hint')}
-          </p>
-          <div className={styles.formGrid}>
-            <Input
-              label={t('config_management.request_body_release.after_seconds')}
-              type="number"
-              min={0}
-              step={1}
-              placeholder="30"
-              value={draft.afterSeconds}
-              disabled={controlsDisabled}
-              hint={t('config_management.request_body_release.after_seconds_hint')}
-              error={errors.afterSeconds}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, afterSeconds: event.target.value }))
-              }
-            />
-            <Input
-              label={t('config_management.request_body_release.min_body_bytes')}
-              type="number"
-              min={0}
-              step={1}
-              placeholder="1048576"
-              value={draft.minBodyBytes}
-              disabled={controlsDisabled}
-              hint={t('config_management.request_body_release.min_body_bytes_hint')}
-              error={errors.minBodyBytes}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, minBodyBytes: event.target.value }))
-              }
-            />
-          </div>
-        </div>
+        {editorContent}
 
         <div className={styles.actions}>
           <Button

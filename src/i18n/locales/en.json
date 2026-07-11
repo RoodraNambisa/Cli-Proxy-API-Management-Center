@@ -1385,6 +1385,83 @@
       "visual": "Visual Editor",
       "source": "Source File Editor"
     },
+    "settings_center": {
+      "nav": "Configuration categories",
+      "groups": { "global": "Global", "providers": "Providers", "advanced": "Advanced" },
+      "pages": {
+        "global_basics": {
+          "title": "Basics & Access",
+          "description": "Server binding, TLS, remote management, and control panel access."
+        },
+        "global_credentials": {
+          "title": "Credentials & Keys",
+          "description": "Auth directory, management keys, and credential model exclusion rules."
+        },
+        "global_network": {
+          "title": "Network & Routing",
+          "description": "Global proxy, retry rounds, routing strategy, session affinity, and WebSocket auth."
+        },
+        "global_request": {
+          "title": "Requests & Errors",
+          "description": "Request body handling, direct error returns, fixed cooldowns, and quota fallback."
+        },
+        "global_observability": {
+          "title": "Maintenance & Observability",
+          "description": "Credential maintenance, logs, Usage, debug, commercial mode, and pprof."
+        },
+        "global_streaming": {
+          "title": "Streaming Responses",
+          "description": "Keepalive, bootstrap retry, stream flushing, and SSE handling."
+        },
+        "provider_codex": {
+          "title": "Codex",
+          "description": "Models, identity and TLS behavior, default headers, image Tool policy, and native Images."
+        },
+        "provider_antigravity": {
+          "title": "Antigravity",
+          "description": "Antigravity-specific Credits retry behavior."
+        },
+        "provider_gemini_cli": {
+          "title": "Gemini CLI",
+          "description": "Gemini CLI internal endpoint and provider-specific settings."
+        },
+        "provider_grok": {
+          "title": "Grok",
+          "description": "Open Grok OAuth, auth files, and quota management. Credential switches remain on the auth files page."
+        },
+        "advanced_payload": {
+          "title": "Payload Rules",
+          "description": "Default, override, filter, and raw parameter rules."
+        }
+      },
+      "subsections": {
+        "codex_models_tools": "Models & Image Tool",
+        "codex_models_tools_desc": "Codex custom models and global image_generation tool handling.",
+        "codex_transport": "Identity, TLS & Default Headers",
+        "codex_transport_desc": "Codex upstream identity obfuscation, transport behavior, and default headers.",
+        "gemini_endpoint": "Gemini CLI Internal Endpoint",
+        "gemini_endpoint_desc": "Controls availability of the Gemini CLI-specific internal endpoint.",
+        "request_error_rules": "Direct Error Rules",
+        "request_error_rules_desc": "Matched errors return without switching credentials or entering another request round.",
+        "antigravity_credits": "Credits Retry",
+        "antigravity_credits_desc": "Controls Antigravity-specific retry behavior after Credits are exhausted."
+      },
+      "search_placeholder": "Search names, descriptions, or YAML keys",
+      "search_empty": "No matching configuration",
+      "status_enabled": "Enabled",
+      "status_disabled": "Disabled",
+      "legacy_images_optional": "Covered by native endpoints",
+      "legacy_images_active": "Compatibility settings active",
+      "sidecar_validation_failed": "Fix validation errors in the request body settings first",
+      "partial_save": "YAML was saved, but some request body settings failed to save and remain modified",
+      "grok": {
+        "title": "Grok management",
+        "description": "Manage Grok login, credential-level using_api/websockets, and quota data on their dedicated pages.",
+        "oauth": "Open Grok OAuth",
+        "auth_files": "View Grok credentials",
+        "quota": "View Grok quota"
+      }
+    },
     "request_body_release": {
       "title": "Request Body Residency Release",
       "description": "enable=false disables request body release. enable=true with log-only=true releases only request log, upstream log, and WebSocket timeline body copies after the timer fires or a streaming upstream is successfully established; it does not affect real request forwarding and does not block credential switching, model fallback, or request-retry. enable=true with log-only=false performs real request body release after the timer fires or a streaming upstream is successfully established; it does not interrupt the already-sent upstream request, but after release it stops credential switching, model fallback, stream bootstrap retry, and request-retry. Logs use placeholder text instead of the original request body.",
@@ -1403,6 +1480,8 @@
       "refresh_failed": "Failed to load request body release configuration",
       "save_success": "Request body release configuration saved",
       "save_failed": "Failed to save request body release configuration",
+      "status_log_only": "Log copies only",
+      "status_full_release": "Full release",
       "reset": "Reset"
     },
     "request_body_audit": {
@@ -1442,6 +1521,7 @@
       "refresh_failed": "Failed to load request body audit configuration",
       "save_success": "Request body audit configuration saved",
       "save_failed": "Failed to save request body audit configuration",
+      "status_enabled": "Enabled · {{count}} keywords",
       "reset": "Reset"
     },
     "visual": {

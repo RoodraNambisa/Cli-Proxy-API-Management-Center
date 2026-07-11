@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { IconPlus, IconRefreshCw, IconTrash2 } from '@/components/ui/icons';
+import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { configApi } from '@/services/api';
 import type { RequestBodyAuditConfig } from '@/types';
 import { useConfigStore, useNotificationStore } from '@/stores';
@@ -29,13 +30,19 @@ export type RequestBodyAuditCardHandle = {
   save: () => Promise<boolean>;
   reload: () => Promise<void>;
   reset: () => void;
+  validate: () => boolean;
 };
 
 type RequestBodyAuditCardProps = {
   disabled?: boolean;
   externalSaving?: boolean;
   onDirtyChange?: (dirty: boolean) => void;
+  onErrorCountChange?: (count: number) => void;
+  embedded?: boolean;
+  focusTarget?: string;
 };
+
+const DISCLOSURE_STORAGE_KEY = 'config-management:request-body-audit-expanded';
 
 type KeywordListProps = {
   title: string;
@@ -191,7 +198,17 @@ function KeywordList({
 export const RequestBodyAuditCard = forwardRef<
   RequestBodyAuditCardHandle,
   RequestBodyAuditCardProps
->(function RequestBodyAuditCard({ disabled = false, externalSaving = false, onDirtyChange }, ref) {
+>(function RequestBodyAuditCard(
+  {
+    disabled = false,
+    externalSaving = false,
+    onDirtyChange,
+    onErrorCountChange,
+    embedded = false,
+    focusTarget,
+  },
+  ref
+) {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
   const clearConfigCache = useConfigStore((state) => state.clearCache);
@@ -203,6 +220,9 @@ export const RequestBodyAuditCard = forwardRef<
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [loadError, setLoadError] = useState('');
+  const [expanded, setExpanded] = useState(
+    () => localStorage.getItem(DISCLOSURE_STORAGE_KEY) === 'true'
+  );
 
   const isBusy = loading || saving;
   const controlsDisabled = disabled || isBusy || externalSaving;
@@ -215,6 +235,27 @@ export const RequestBodyAuditCard = forwardRef<
     onDirtyChange?.(dirty);
     return () => onDirtyChange?.(false);
   }, [dirty, onDirtyChange]);
+
+  useEffect(() => {
+    onErrorCountChange?.(Object.keys(errors).length + (loadError ? 1 : 0));
+  }, [errors, loadError, onErrorCountChange]);
+
+  useEffect(() => {
+    if (!focusTarget?.startsWith('request-body-audit')) return;
+    setExpanded(true);
+    const timer = window.setTimeout(() => {
+      const target =
+        document.getElementById(focusTarget) ?? document.getElementById('request-body-audit');
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (target instanceof HTMLElement) target.focus({ preventScroll: true });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [focusTarget]);
+
+  const handleExpandedChange = useCallback((nextExpanded: boolean) => {
+    setExpanded(nextExpanded);
+    localStorage.setItem(DISCLOSURE_STORAGE_KEY, String(nextExpanded));
+  }, []);
 
   const loadAuditConfig = useCallback(
     async ({ manual = false }: { manual?: boolean } = {}) => {
@@ -260,10 +301,15 @@ export const RequestBodyAuditCard = forwardRef<
     return nextErrors;
   }, [draft.errorStatusCode, draft.maxBodyBytes, t]);
 
-  const handleSave = useCallback(async (): Promise<boolean> => {
+  const runValidation = useCallback((): boolean => {
     const nextErrors = validateDraft();
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return false;
+    if (Object.keys(nextErrors).length > 0) setExpanded(true);
+    return Object.keys(nextErrors).length === 0;
+  }, [validateDraft]);
+
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    if (!runValidation()) return false;
 
     setSaving(true);
     try {
@@ -291,7 +337,7 @@ export const RequestBodyAuditCard = forwardRef<
     } finally {
       setSaving(false);
     }
-  }, [clearConfigCache, draft, fetchConfig, showNotification, t, validateDraft]);
+  }, [clearConfigCache, draft, fetchConfig, runValidation, showNotification, t]);
 
   const handleReset = useCallback(() => {
     setDraft(baseline);
@@ -304,9 +350,187 @@ export const RequestBodyAuditCard = forwardRef<
       save: handleSave,
       reload: () => loadAuditConfig(),
       reset: handleReset,
+      validate: runValidation,
     }),
-    [handleSave, handleReset, loadAuditConfig]
+    [handleSave, handleReset, loadAuditConfig, runValidation]
   );
+
+  const editorContent = (
+    <>
+      {loadError && <div className="error-box">{loadError}</div>}
+      {disabled && <div className="hint">{t('notification.connection_required')}</div>}
+
+      <div className={styles.section}>
+        <div className={styles.toggleGrid}>
+          <div className={styles.toggleItem}>
+            <ToggleSwitch
+              label={t('config_management.request_body_audit.enable')}
+              checked={draft.enable}
+              disabled={controlsDisabled}
+              onChange={(value) => setDraft((current) => ({ ...current, enable: value }))}
+            />
+            <span className={styles.toggleDescription}>
+              {t('config_management.request_body_audit.enable_desc')}
+            </span>
+          </div>
+          <div className={styles.toggleItem}>
+            <ToggleSwitch
+              label={t('config_management.request_body_audit.case_sensitive')}
+              checked={draft.caseSensitive}
+              disabled={controlsDisabled}
+              onChange={(value) => setDraft((current) => ({ ...current, caseSensitive: value }))}
+            />
+            <span className={styles.toggleDescription}>
+              {t('config_management.request_body_audit.case_sensitive_desc')}
+            </span>
+          </div>
+          <div className={styles.toggleItem}>
+            <ToggleSwitch
+              label={t('config_management.request_body_audit.reject_oversize')}
+              checked={draft.rejectOversize}
+              disabled={controlsDisabled}
+              onChange={(value) => setDraft((current) => ({ ...current, rejectOversize: value }))}
+            />
+            <span className={styles.toggleDescription}>
+              {t('config_management.request_body_audit.reject_oversize_desc')}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <KeywordList
+        title={t('config_management.request_body_audit.keywords')}
+        hint={t('config_management.request_body_audit.keywords_hint')}
+        addLabel={t('config_management.request_body_audit.add_keyword')}
+        emptyLabel={t('config_management.request_body_audit.keywords_empty')}
+        placeholder={t('config_management.request_body_audit.keyword_placeholder')}
+        values={draft.keywords}
+        disabled={controlsDisabled}
+        onChange={(keywords) => setDraft((current) => ({ ...current, keywords }))}
+      />
+
+      <KeywordList
+        title={t('config_management.request_body_audit.keywords_base64')}
+        hint={t('config_management.request_body_audit.keywords_base64_hint')}
+        addLabel={t('config_management.request_body_audit.add_base64_keyword')}
+        emptyLabel={t('config_management.request_body_audit.keywords_base64_empty')}
+        placeholder={t('config_management.request_body_audit.keywords_base64_placeholder')}
+        values={draft.keywordsBase64}
+        disabled={controlsDisabled}
+        onChange={(keywordsBase64) => setDraft((current) => ({ ...current, keywordsBase64 }))}
+      />
+
+      <div className={styles.section}>
+        <h3 className={styles.sectionTitle}>
+          {t('config_management.request_body_audit.scan_limits')}
+        </h3>
+        <div className={styles.formGrid}>
+          <Input
+            id="request-body-audit-max-body-bytes"
+            label={t('config_management.request_body_audit.max_body_bytes')}
+            type="number"
+            min={0}
+            step={1}
+            value={draft.maxBodyBytes}
+            disabled={controlsDisabled}
+            hint={t('config_management.request_body_audit.max_body_bytes_hint')}
+            error={errors.maxBodyBytes}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, maxBodyBytes: event.target.value }))
+            }
+          />
+        </div>
+      </div>
+
+      <div className={styles.section}>
+        <h3 className={styles.sectionTitle}>
+          {t('config_management.request_body_audit.error_response')}
+        </h3>
+        <p className={styles.sectionHint}>
+          {t('config_management.request_body_audit.error_response_hint')}
+        </p>
+        <div className={styles.errorGrid}>
+          <Input
+            id="request-body-audit-error-status-code"
+            label={t('config_management.request_body_audit.error_status_code_label')}
+            type="number"
+            min={100}
+            max={599}
+            step={1}
+            value={draft.errorStatusCode}
+            disabled={controlsDisabled}
+            error={errors.errorStatusCode}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, errorStatusCode: event.target.value }))
+            }
+          />
+          <Input
+            label={t('config_management.request_body_audit.error_message')}
+            value={draft.errorMessage}
+            disabled={controlsDisabled}
+            placeholder={t('config_management.request_body_audit.error_message_placeholder')}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, errorMessage: event.target.value }))
+            }
+          />
+          <Input
+            label={t('config_management.request_body_audit.error_type')}
+            value={draft.errorType}
+            disabled={controlsDisabled}
+            placeholder={t('config_management.request_body_audit.error_type_placeholder')}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, errorType: event.target.value }))
+            }
+          />
+          <Input
+            label={t('config_management.request_body_audit.error_code')}
+            value={draft.errorCode}
+            disabled={controlsDisabled}
+            placeholder={t('config_management.request_body_audit.error_code_placeholder')}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, errorCode: event.target.value }))
+            }
+          />
+        </div>
+      </div>
+    </>
+  );
+
+  if (embedded) {
+    const keywordCount =
+      normalizeStringList(draft.keywords).length + normalizeStringList(draft.keywordsBase64).length;
+    const summary = draft.enable
+      ? t('config_management.request_body_audit.status_enabled', { count: keywordCount })
+      : t('config_management.settings_center.status_disabled');
+
+    return (
+      <ConfigDisclosure
+        id="request-body-audit"
+        title={t('config_management.request_body_audit.title')}
+        description={t('config_management.request_body_audit.description')}
+        summary={summary}
+        expanded={expanded || Object.keys(errors).length > 0 || Boolean(loadError)}
+        onExpandedChange={handleExpandedChange}
+        dirty={dirty}
+        errorCount={Object.keys(errors).length + (loadError ? 1 : 0)}
+        actions={
+          dirty ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={controlsDisabled}
+              onClick={handleReset}
+            >
+              {t('config_management.request_body_audit.reset')}
+            </Button>
+          ) : null
+        }
+      >
+        <div className={styles.embeddedContent}>{editorContent}</div>
+      </ConfigDisclosure>
+    );
+  }
 
   return (
     <Card>
@@ -335,140 +559,7 @@ export const RequestBodyAuditCard = forwardRef<
           </div>
         </div>
 
-        {loadError && <div className="error-box">{loadError}</div>}
-        {disabled && <div className="hint">{t('notification.connection_required')}</div>}
-
-        <div className={styles.section}>
-          <div className={styles.toggleGrid}>
-            <div className={styles.toggleItem}>
-              <ToggleSwitch
-                label={t('config_management.request_body_audit.enable')}
-                checked={draft.enable}
-                disabled={controlsDisabled}
-                onChange={(value) => setDraft((current) => ({ ...current, enable: value }))}
-              />
-              <span className={styles.toggleDescription}>
-                {t('config_management.request_body_audit.enable_desc')}
-              </span>
-            </div>
-            <div className={styles.toggleItem}>
-              <ToggleSwitch
-                label={t('config_management.request_body_audit.case_sensitive')}
-                checked={draft.caseSensitive}
-                disabled={controlsDisabled}
-                onChange={(value) => setDraft((current) => ({ ...current, caseSensitive: value }))}
-              />
-              <span className={styles.toggleDescription}>
-                {t('config_management.request_body_audit.case_sensitive_desc')}
-              </span>
-            </div>
-            <div className={styles.toggleItem}>
-              <ToggleSwitch
-                label={t('config_management.request_body_audit.reject_oversize')}
-                checked={draft.rejectOversize}
-                disabled={controlsDisabled}
-                onChange={(value) => setDraft((current) => ({ ...current, rejectOversize: value }))}
-              />
-              <span className={styles.toggleDescription}>
-                {t('config_management.request_body_audit.reject_oversize_desc')}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <KeywordList
-          title={t('config_management.request_body_audit.keywords')}
-          hint={t('config_management.request_body_audit.keywords_hint')}
-          addLabel={t('config_management.request_body_audit.add_keyword')}
-          emptyLabel={t('config_management.request_body_audit.keywords_empty')}
-          placeholder={t('config_management.request_body_audit.keyword_placeholder')}
-          values={draft.keywords}
-          disabled={controlsDisabled}
-          onChange={(keywords) => setDraft((current) => ({ ...current, keywords }))}
-        />
-
-        <KeywordList
-          title={t('config_management.request_body_audit.keywords_base64')}
-          hint={t('config_management.request_body_audit.keywords_base64_hint')}
-          addLabel={t('config_management.request_body_audit.add_base64_keyword')}
-          emptyLabel={t('config_management.request_body_audit.keywords_base64_empty')}
-          placeholder={t('config_management.request_body_audit.keywords_base64_placeholder')}
-          values={draft.keywordsBase64}
-          disabled={controlsDisabled}
-          onChange={(keywordsBase64) => setDraft((current) => ({ ...current, keywordsBase64 }))}
-        />
-
-        <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>
-            {t('config_management.request_body_audit.scan_limits')}
-          </h3>
-          <div className={styles.formGrid}>
-            <Input
-              label={t('config_management.request_body_audit.max_body_bytes')}
-              type="number"
-              min={0}
-              step={1}
-              value={draft.maxBodyBytes}
-              disabled={controlsDisabled}
-              hint={t('config_management.request_body_audit.max_body_bytes_hint')}
-              error={errors.maxBodyBytes}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, maxBodyBytes: event.target.value }))
-              }
-            />
-          </div>
-        </div>
-
-        <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>
-            {t('config_management.request_body_audit.error_response')}
-          </h3>
-          <p className={styles.sectionHint}>
-            {t('config_management.request_body_audit.error_response_hint')}
-          </p>
-          <div className={styles.errorGrid}>
-            <Input
-              label={t('config_management.request_body_audit.error_status_code_label')}
-              type="number"
-              min={100}
-              max={599}
-              step={1}
-              value={draft.errorStatusCode}
-              disabled={controlsDisabled}
-              error={errors.errorStatusCode}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, errorStatusCode: event.target.value }))
-              }
-            />
-            <Input
-              label={t('config_management.request_body_audit.error_message')}
-              value={draft.errorMessage}
-              disabled={controlsDisabled}
-              placeholder={t('config_management.request_body_audit.error_message_placeholder')}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, errorMessage: event.target.value }))
-              }
-            />
-            <Input
-              label={t('config_management.request_body_audit.error_type')}
-              value={draft.errorType}
-              disabled={controlsDisabled}
-              placeholder={t('config_management.request_body_audit.error_type_placeholder')}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, errorType: event.target.value }))
-              }
-            />
-            <Input
-              label={t('config_management.request_body_audit.error_code')}
-              value={draft.errorCode}
-              disabled={controlsDisabled}
-              placeholder={t('config_management.request_body_audit.error_code_placeholder')}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, errorCode: event.target.value }))
-              }
-            />
-          </div>
-        </div>
+        {editorContent}
 
         <div className={styles.actions}>
           <Button
