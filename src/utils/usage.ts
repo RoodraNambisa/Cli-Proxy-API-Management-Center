@@ -36,6 +36,7 @@ export interface KeyStats {
 
 export interface TokenBreakdown {
   cachedTokens: number;
+  cacheCreationTokens: number;
   reasoningTokens: number;
 }
 
@@ -64,9 +65,12 @@ export interface UsageDetail {
     reasoning_tokens: number;
     cached_tokens: number;
     cache_tokens?: number;
+    cache_creation_tokens: number;
     total_tokens: number;
   };
   failed: boolean;
+  request_service_tier?: string;
+  response_service_tier?: string;
   __modelName?: string;
   __timestampMs?: number;
 }
@@ -612,6 +616,14 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
           latency_ms: latencyMs ?? undefined,
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
+          request_service_tier: (() => {
+            const value = detailRaw.request_service_tier ?? detailRaw.requestServiceTier;
+            return typeof value === 'string' ? value.trim() || undefined : undefined;
+          })(),
+          response_service_tier: (() => {
+            const value = detailRaw.response_service_tier ?? detailRaw.responseServiceTier;
+            return typeof value === 'string' ? value.trim() || undefined : undefined;
+          })(),
           __modelName: modelName,
           __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
         });
@@ -738,10 +750,11 @@ export function calculateLatencyStats(usageData: unknown): LatencyStats {
 export function calculateTokenBreakdown(usageData: unknown): TokenBreakdown {
   const details = collectUsageDetails(usageData);
   if (!details.length) {
-    return { cachedTokens: 0, reasoningTokens: 0 };
+    return { cachedTokens: 0, cacheCreationTokens: 0, reasoningTokens: 0 };
   }
 
   let cachedTokens = 0;
+  let cacheCreationTokens = 0;
   let reasoningTokens = 0;
 
   details.forEach((detail) => {
@@ -750,12 +763,16 @@ export function calculateTokenBreakdown(usageData: unknown): TokenBreakdown {
       typeof tokens.cached_tokens === 'number' ? Math.max(tokens.cached_tokens, 0) : 0,
       typeof tokens.cache_tokens === 'number' ? Math.max(tokens.cache_tokens, 0) : 0
     );
+    cacheCreationTokens +=
+      typeof tokens.cache_creation_tokens === 'number'
+        ? Math.max(tokens.cache_creation_tokens, 0)
+        : 0;
     if (typeof tokens.reasoning_tokens === 'number') {
       reasoningTokens += tokens.reasoning_tokens;
     }
   });
 
-  return { cachedTokens, reasoningTokens };
+  return { cachedTokens, cacheCreationTokens, reasoningTokens };
 }
 
 /**
@@ -1928,7 +1945,7 @@ export function computeKeyStatsFromDetails(usageDetails: UsageDetail[]): KeyStat
   return { bySource, byAuthIndex };
 }
 
-export type TokenCategory = 'input' | 'output' | 'cached' | 'reasoning';
+export type TokenCategory = 'input' | 'output' | 'cached' | 'cacheCreation' | 'reasoning';
 
 export interface TokenBreakdownSeries {
   labels: string[];
@@ -1965,6 +1982,7 @@ export function buildHourlyTokenBreakdown(
     input: new Array(labels.length).fill(0),
     output: new Array(labels.length).fill(0),
     cached: new Array(labels.length).fill(0),
+    cacheCreation: new Array(labels.length).fill(0),
     reasoning: new Array(labels.length).fill(0),
   };
 
@@ -1994,10 +2012,15 @@ export function buildHourlyTokenBreakdown(
     );
     const reasoning =
       typeof tokens.reasoning_tokens === 'number' ? Math.max(tokens.reasoning_tokens, 0) : 0;
+    const cacheCreation =
+      typeof tokens.cache_creation_tokens === 'number'
+        ? Math.max(tokens.cache_creation_tokens, 0)
+        : 0;
 
     dataByCategory.input[bucketIndex] += input;
     dataByCategory.output[bucketIndex] += output;
     dataByCategory.cached[bucketIndex] += cached;
+    dataByCategory.cacheCreation[bucketIndex] += cacheCreation;
     dataByCategory.reasoning[bucketIndex] += reasoning;
     hasData = true;
   });
@@ -2023,7 +2046,7 @@ export function buildDailyTokenBreakdown(usageData: unknown): TokenBreakdownSeri
     if (!dayLabel) return;
 
     if (!dayMap[dayLabel]) {
-      dayMap[dayLabel] = { input: 0, output: 0, cached: 0, reasoning: 0 };
+      dayMap[dayLabel] = { input: 0, output: 0, cached: 0, cacheCreation: 0, reasoning: 0 };
     }
 
     const tokens = detail.tokens;
@@ -2035,10 +2058,15 @@ export function buildDailyTokenBreakdown(usageData: unknown): TokenBreakdownSeri
     );
     const reasoning =
       typeof tokens.reasoning_tokens === 'number' ? Math.max(tokens.reasoning_tokens, 0) : 0;
+    const cacheCreation =
+      typeof tokens.cache_creation_tokens === 'number'
+        ? Math.max(tokens.cache_creation_tokens, 0)
+        : 0;
 
     dayMap[dayLabel].input += input;
     dayMap[dayLabel].output += output;
     dayMap[dayLabel].cached += cached;
+    dayMap[dayLabel].cacheCreation += cacheCreation;
     dayMap[dayLabel].reasoning += reasoning;
     hasData = true;
   });
@@ -2048,6 +2076,7 @@ export function buildDailyTokenBreakdown(usageData: unknown): TokenBreakdownSeri
     input: labels.map((l) => dayMap[l].input),
     output: labels.map((l) => dayMap[l].output),
     cached: labels.map((l) => dayMap[l].cached),
+    cacheCreation: labels.map((l) => dayMap[l].cacheCreation),
     reasoning: labels.map((l) => dayMap[l].reasoning),
   };
 

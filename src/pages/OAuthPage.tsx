@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useNotificationStore, useThemeStore } from '@/stores';
 import { oauthApi, type OAuthProvider } from '@/services/api/oauth';
+import { authFilesApi } from '@/services/api/authFiles';
 import { vertexApi, type VertexImportResponse } from '@/services/api/vertex';
 import { copyToClipboard } from '@/utils/clipboard';
 import styles from './OAuthPage.module.scss';
@@ -16,6 +17,8 @@ import iconGemini from '@/assets/icons/gemini.svg';
 import iconKimiLight from '@/assets/icons/kimi-light.svg';
 import iconKimiDark from '@/assets/icons/kimi-dark.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
+import iconGrok from '@/assets/icons/grok.svg';
+import iconGrokDark from '@/assets/icons/grok-dark.svg';
 
 interface ProviderState {
   url?: string;
@@ -29,6 +32,10 @@ interface ProviderState {
   callbackSubmitting?: boolean;
   callbackStatus?: 'success' | 'error';
   callbackError?: string;
+  flow?: string;
+  userCode?: string;
+  remainingSeconds?: number;
+  cancelling?: boolean;
 }
 
 interface VertexImportResult {
@@ -62,12 +69,55 @@ function getErrorStatus(error: unknown): number | undefined {
   return typeof error.status === 'number' ? error.status : undefined;
 }
 
-const PROVIDERS: { id: OAuthProvider; titleKey: string; hintKey: string; urlLabelKey: string; icon: string | { light: string; dark: string } }[] = [
-  { id: 'codex', titleKey: 'auth_login.codex_oauth_title', hintKey: 'auth_login.codex_oauth_hint', urlLabelKey: 'auth_login.codex_oauth_url_label', icon: iconCodex },
-  { id: 'anthropic', titleKey: 'auth_login.anthropic_oauth_title', hintKey: 'auth_login.anthropic_oauth_hint', urlLabelKey: 'auth_login.anthropic_oauth_url_label', icon: iconClaude },
-  { id: 'antigravity', titleKey: 'auth_login.antigravity_oauth_title', hintKey: 'auth_login.antigravity_oauth_hint', urlLabelKey: 'auth_login.antigravity_oauth_url_label', icon: iconAntigravity },
-  { id: 'gemini-cli', titleKey: 'auth_login.gemini_cli_oauth_title', hintKey: 'auth_login.gemini_cli_oauth_hint', urlLabelKey: 'auth_login.gemini_cli_oauth_url_label', icon: iconGemini },
-  { id: 'kimi', titleKey: 'auth_login.kimi_oauth_title', hintKey: 'auth_login.kimi_oauth_hint', urlLabelKey: 'auth_login.kimi_oauth_url_label', icon: { light: iconKimiLight, dark: iconKimiDark } }
+const PROVIDERS: {
+  id: OAuthProvider;
+  titleKey: string;
+  hintKey: string;
+  urlLabelKey: string;
+  icon: string | { light: string; dark: string };
+}[] = [
+  {
+    id: 'codex',
+    titleKey: 'auth_login.codex_oauth_title',
+    hintKey: 'auth_login.codex_oauth_hint',
+    urlLabelKey: 'auth_login.codex_oauth_url_label',
+    icon: iconCodex,
+  },
+  {
+    id: 'anthropic',
+    titleKey: 'auth_login.anthropic_oauth_title',
+    hintKey: 'auth_login.anthropic_oauth_hint',
+    urlLabelKey: 'auth_login.anthropic_oauth_url_label',
+    icon: iconClaude,
+  },
+  {
+    id: 'antigravity',
+    titleKey: 'auth_login.antigravity_oauth_title',
+    hintKey: 'auth_login.antigravity_oauth_hint',
+    urlLabelKey: 'auth_login.antigravity_oauth_url_label',
+    icon: iconAntigravity,
+  },
+  {
+    id: 'gemini-cli',
+    titleKey: 'auth_login.gemini_cli_oauth_title',
+    hintKey: 'auth_login.gemini_cli_oauth_hint',
+    urlLabelKey: 'auth_login.gemini_cli_oauth_url_label',
+    icon: iconGemini,
+  },
+  {
+    id: 'kimi',
+    titleKey: 'auth_login.kimi_oauth_title',
+    hintKey: 'auth_login.kimi_oauth_hint',
+    urlLabelKey: 'auth_login.kimi_oauth_url_label',
+    icon: { light: iconKimiLight, dark: iconKimiDark },
+  },
+  {
+    id: 'xai',
+    titleKey: 'auth_login.xai_oauth_title',
+    hintKey: 'auth_login.xai_oauth_hint',
+    urlLabelKey: 'auth_login.xai_oauth_url_label',
+    icon: { light: iconGrok, dark: iconGrokDark },
+  },
 ];
 
 const CALLBACK_SUPPORTED: OAuthProvider[] = ['codex', 'anthropic', 'antigravity', 'gemini-cli'];
@@ -80,19 +130,30 @@ const getIcon = (icon: string | { light: string; dark: string }, theme: 'light' 
   return typeof icon === 'string' ? icon : icon[theme];
 };
 
+const formatCountdown = (seconds: number): string => {
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(safeSeconds / 60);
+  const remaining = safeSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(remaining).padStart(2, '0')}`;
+};
+
 export function OAuthPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { showNotification } = useNotificationStore();
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
-  const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>({} as Record<OAuthProvider, ProviderState>);
+  const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>(
+    {} as Record<OAuthProvider, ProviderState>
+  );
   const [vertexState, setVertexState] = useState<VertexImportState>({
     fileName: '',
     location: '',
-    loading: false
+    loading: false,
   });
   const pollingTimers = useRef<Partial<Record<OAuthProvider, number>>>({});
+  const countdownTimers = useRef<Partial<Record<OAuthProvider, number>>>({});
   const successResetTimers = useRef<Partial<Record<OAuthProvider, number>>>({});
+  const activeSessions = useRef<Partial<Record<OAuthProvider, string>>>({});
   const vertexFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const clearTimers = useCallback(() => {
@@ -102,20 +163,31 @@ export function OAuthPage() {
     Object.values(successResetTimers.current).forEach((timer) => {
       if (timer !== undefined) window.clearTimeout(timer);
     });
+    Object.values(countdownTimers.current).forEach((timer) => {
+      if (timer !== undefined) window.clearInterval(timer);
+    });
     pollingTimers.current = {};
+    countdownTimers.current = {};
     successResetTimers.current = {};
   }, []);
 
   useEffect(() => {
     return () => {
       clearTimers();
+      const pendingStates = Object.values(activeSessions.current).filter((state): state is string =>
+        Boolean(state)
+      );
+      activeSessions.current = {};
+      pendingStates.forEach((state) => {
+        void oauthApi.cancelAuth(state).catch(() => {});
+      });
     };
   }, [clearTimers]);
 
   const updateProviderState = (provider: OAuthProvider, next: Partial<ProviderState>) => {
     setStates((prev) => ({
       ...prev,
-      [provider]: { ...(prev[provider] ?? {}), ...next }
+      [provider]: { ...(prev[provider] ?? {}), ...next },
     }));
   };
 
@@ -135,8 +207,17 @@ export function OAuthPage() {
     }
   };
 
+  const clearCountdownTimer = (provider: OAuthProvider) => {
+    const timer = countdownTimers.current[provider];
+    if (timer !== undefined) {
+      window.clearInterval(timer);
+      delete countdownTimers.current[provider];
+    }
+  };
+
   const clearProviderTimers = (provider: OAuthProvider) => {
     clearPollingTimer(provider);
+    clearCountdownTimer(provider);
     clearSuccessResetTimer(provider);
   };
 
@@ -150,13 +231,15 @@ export function OAuthPage() {
       }
       return {
         ...prev,
-        [provider]: next
+        [provider]: next,
       };
     });
   };
 
   const completeProviderAuth = (provider: OAuthProvider) => {
+    delete activeSessions.current[provider];
     clearPollingTimer(provider);
+    clearCountdownTimer(provider);
     clearSuccessResetTimer(provider);
     updateProviderState(provider, {
       url: undefined,
@@ -167,11 +250,63 @@ export function OAuthPage() {
       callbackUrl: '',
       callbackSubmitting: false,
       callbackStatus: undefined,
-      callbackError: undefined
+      callbackError: undefined,
+      flow: undefined,
+      userCode: undefined,
+      remainingSeconds: undefined,
+      cancelling: false,
     });
+    if (provider === 'xai') {
+      void authFilesApi.list().catch(() => {});
+    }
     successResetTimers.current[provider] = window.setTimeout(() => {
       resetProviderAttempt(provider);
     }, SUCCESS_RESET_DELAY_MS);
+  };
+
+  const failProviderAuth = (
+    provider: OAuthProvider,
+    message: string,
+    options?: { cancelPending?: boolean }
+  ) => {
+    const pendingState = activeSessions.current[provider];
+    delete activeSessions.current[provider];
+    clearProviderTimers(provider);
+    updateProviderState(provider, {
+      status: 'error',
+      error: message,
+      polling: false,
+      remainingSeconds: undefined,
+      cancelling: false,
+    });
+    if (options?.cancelPending && pendingState) {
+      void oauthApi.cancelAuth(pendingState).catch(() => {});
+    }
+  };
+
+  const startCountdown = (provider: OAuthProvider, state: string, expiresIn?: number) => {
+    clearCountdownTimer(provider);
+    const durationSeconds = Number(expiresIn);
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return;
+
+    const safeDuration = Math.max(1, Math.floor(durationSeconds));
+    let remainingSeconds = safeDuration;
+    updateProviderState(provider, { remainingSeconds: safeDuration });
+
+    countdownTimers.current[provider] = window.setInterval(() => {
+      remainingSeconds = Math.max(0, remainingSeconds - 1);
+      if (activeSessions.current[provider] !== state) {
+        clearCountdownTimer(provider);
+        return;
+      }
+      if (remainingSeconds > 0) {
+        updateProviderState(provider, { remainingSeconds });
+        return;
+      }
+
+      failProviderAuth(provider, t('auth_login.xai_oauth_timeout'), { cancelPending: true });
+      showNotification(t('auth_login.xai_oauth_timeout'), 'error');
+    }, 1000);
   };
 
   const startPolling = (provider: OAuthProvider, state: string) => {
@@ -183,18 +318,17 @@ export function OAuthPage() {
           completeProviderAuth(provider);
           showNotification(t(getAuthKey(provider, 'oauth_status_success')), 'success');
         } else if (res.status === 'error') {
-          updateProviderState(provider, { status: 'error', error: res.error, polling: false });
+          const message = res.error || t(getAuthKey(provider, 'oauth_status_error'));
+          failProviderAuth(provider, message);
           showNotification(
             `${t(getAuthKey(provider, 'oauth_status_error'))} ${res.error || ''}`,
             'error'
           );
-          window.clearInterval(timer);
-          delete pollingTimers.current[provider];
         }
       } catch (err: unknown) {
-        updateProviderState(provider, { status: 'error', error: getErrorMessage(err), polling: false });
-        window.clearInterval(timer);
-        delete pollingTimers.current[provider];
+        const message = getErrorMessage(err) || t(getAuthKey(provider, 'oauth_polling_error'));
+        failProviderAuth(provider, message, { cancelPending: provider === 'xai' });
+        showNotification(`${t(getAuthKey(provider, 'oauth_polling_error'))} ${message}`, 'error');
       }
     }, 3000);
     pollingTimers.current[provider] = timer;
@@ -202,6 +336,11 @@ export function OAuthPage() {
 
   const startAuth = async (provider: OAuthProvider) => {
     clearProviderTimers(provider);
+    const previousState = activeSessions.current[provider];
+    delete activeSessions.current[provider];
+    if (provider === 'xai' && previousState) {
+      void oauthApi.cancelAuth(previousState).catch(() => {});
+    }
     const geminiState = provider === 'gemini-cli' ? states[provider] : undefined;
     const rawProjectId = provider === 'gemini-cli' ? (geminiState?.projectId || '').trim() : '';
     const projectId = rawProjectId
@@ -221,7 +360,11 @@ export function OAuthPage() {
       error: undefined,
       callbackStatus: undefined,
       callbackError: undefined,
-      callbackUrl: ''
+      callbackUrl: '',
+      flow: undefined,
+      userCode: undefined,
+      remainingSeconds: undefined,
+      cancelling: false,
     });
     try {
       const res = await oauthApi.startAuth(
@@ -235,12 +378,26 @@ export function OAuthPage() {
           state: undefined,
           status: 'error',
           error: message,
-          polling: false
+          polling: false,
         });
         showNotification(message, 'error');
         return;
       }
-      updateProviderState(provider, { url: res.url, state: res.state, status: 'waiting', polling: true });
+      if (provider === 'xai') {
+        activeSessions.current[provider] = res.state;
+      }
+      updateProviderState(provider, {
+        url: res.url,
+        state: res.state,
+        status: 'waiting',
+        polling: true,
+        flow: res.flow,
+        userCode: typeof res.user_code === 'string' ? res.user_code.trim() : undefined,
+      });
+      if (provider === 'xai') {
+        window.open(res.url, '_blank', 'noopener,noreferrer');
+        startCountdown(provider, res.state, res.expires_in);
+      }
       startPolling(provider, res.state);
     } catch (err: unknown) {
       const message = getErrorMessage(err);
@@ -261,6 +418,39 @@ export function OAuthPage() {
     );
   };
 
+  const copyUserCode = async (userCode?: string) => {
+    if (!userCode) return;
+    const copied = await copyToClipboard(userCode);
+    showNotification(
+      t(copied ? 'auth_login.xai_user_code_copied' : 'notification.copy_failed'),
+      copied ? 'success' : 'error'
+    );
+  };
+
+  const cancelAuth = async (provider: OAuthProvider) => {
+    const state = states[provider]?.state ?? activeSessions.current[provider];
+    if (!state || states[provider]?.cancelling) return;
+
+    updateProviderState(provider, { cancelling: true });
+    clearProviderTimers(provider);
+    delete activeSessions.current[provider];
+    try {
+      await oauthApi.cancelAuth(state);
+      resetProviderAttempt(provider);
+      showNotification(t('auth_login.xai_oauth_cancelled'), 'success');
+    } catch (err: unknown) {
+      const message = getErrorMessage(err) || t('auth_login.xai_oauth_cancel_failed');
+      updateProviderState(provider, {
+        status: 'error',
+        error: message,
+        polling: false,
+        cancelling: false,
+        remainingSeconds: undefined,
+      });
+      showNotification(`${t('auth_login.xai_oauth_cancel_failed')} ${message}`, 'error');
+    }
+  };
+
   const submitCallback = async (provider: OAuthProvider) => {
     const redirectUrl = (states[provider]?.callbackUrl || '').trim();
     if (!redirectUrl) {
@@ -270,7 +460,7 @@ export function OAuthPage() {
     updateProviderState(provider, {
       callbackSubmitting: true,
       callbackStatus: undefined,
-      callbackError: undefined
+      callbackError: undefined,
     });
     try {
       await oauthApi.submitCallback(provider, redirectUrl);
@@ -282,13 +472,13 @@ export function OAuthPage() {
       const errorMessage =
         status === 404
           ? t('auth_login.oauth_callback_upgrade_hint', {
-              defaultValue: 'Please update CLI Proxy API or check the connection.'
+              defaultValue: 'Please update CLI Proxy API or check the connection.',
             })
           : message || undefined;
       updateProviderState(provider, {
         callbackSubmitting: false,
         callbackStatus: 'error',
-        callbackError: errorMessage
+        callbackError: errorMessage,
       });
       const notificationMessage = errorMessage
         ? `${t('auth_login.oauth_callback_error')} ${errorMessage}`
@@ -314,7 +504,7 @@ export function OAuthPage() {
       file,
       fileName: file.name,
       error: undefined,
-      result: undefined
+      result: undefined,
     }));
     event.target.value = '';
   };
@@ -337,7 +527,7 @@ export function OAuthPage() {
         projectId: res.project_id,
         email: res.email,
         location: res.location,
-        authFile: res['auth-file'] ?? res.auth_file
+        authFile: res['auth-file'] ?? res.auth_file,
       };
       setVertexState((prev) => ({ ...prev, loading: false, result }));
       showNotification(t('vertex_import.success'), 'success');
@@ -346,7 +536,7 @@ export function OAuthPage() {
       setVertexState((prev) => ({
         ...prev,
         loading: false,
-        error: message || t('notification.upload_failed')
+        error: message || t('notification.upload_failed'),
       }));
       const notification = message
         ? `${t('notification.upload_failed')}: ${message}`
@@ -370,7 +560,7 @@ export function OAuthPage() {
           const statusBadgeClassName = [
             'status-badge',
             state.status === 'success' ? 'success' : '',
-            state.status === 'error' ? 'error' : ''
+            state.status === 'error' ? 'error' : '',
           ]
             .filter(Boolean)
             .join(' ');
@@ -406,7 +596,7 @@ export function OAuthPage() {
                         onChange={(e) =>
                           updateProviderState(provider.id, {
                             projectId: e.target.value,
-                            projectIdError: undefined
+                            projectIdError: undefined,
                           })
                         }
                         placeholder={t('auth_login.gemini_cli_project_id_placeholder')}
@@ -428,6 +618,42 @@ export function OAuthPage() {
                         >
                           {t(getAuthKey(provider.id, 'open_link'))}
                         </Button>
+                        {provider.id === 'xai' && state.status === 'waiting' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void cancelAuth(provider.id)}
+                            loading={state.cancelling}
+                          >
+                            {t('auth_login.xai_oauth_cancel')}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {provider.id === 'xai' && state.userCode && state.status === 'waiting' && (
+                    <div className={styles.deviceCodeBox}>
+                      <div className={styles.deviceCodeContent}>
+                        <span className={styles.deviceCodeLabel}>
+                          {t('auth_login.xai_user_code_label')}
+                        </span>
+                        <code className={styles.deviceCodeValue}>{state.userCode}</code>
+                      </div>
+                      <div className={styles.deviceCodeActions}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => void copyUserCode(state.userCode)}
+                        >
+                          {t('auth_login.xai_copy_user_code')}
+                        </Button>
+                        {typeof state.remainingSeconds === 'number' && (
+                          <span className={styles.deviceCodeCountdown}>
+                            {t('auth_login.xai_expires_in', {
+                              time: formatCountdown(state.remainingSeconds),
+                            })}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
@@ -441,7 +667,7 @@ export function OAuthPage() {
                           updateProviderState(provider.id, {
                             callbackUrl: e.target.value,
                             callbackStatus: undefined,
-                            callbackError: undefined
+                            callbackError: undefined,
                           })
                         }
                         placeholder={t('auth_login.oauth_callback_placeholder')}
@@ -513,7 +739,7 @@ export function OAuthPage() {
               onChange={(e) =>
                 setVertexState((prev) => ({
                   ...prev,
-                  location: e.target.value
+                  location: e.target.value,
                 }))
               }
               placeholder={t('vertex_import.location_placeholder')}
@@ -541,18 +767,16 @@ export function OAuthPage() {
                 onChange={handleVertexFileChange}
               />
             </div>
-            {vertexState.error && (
-              <div className="status-badge error">
-                {vertexState.error}
-              </div>
-            )}
+            {vertexState.error && <div className="status-badge error">{vertexState.error}</div>}
             {vertexState.result && (
               <div className={styles.connectionBox}>
                 <div className={styles.connectionLabel}>{t('vertex_import.result_title')}</div>
                 <div className={styles.keyValueList}>
                   {vertexState.result.projectId && (
                     <div className={styles.keyValueItem}>
-                      <span className={styles.keyValueKey}>{t('vertex_import.result_project')}</span>
+                      <span className={styles.keyValueKey}>
+                        {t('vertex_import.result_project')}
+                      </span>
                       <span className={styles.keyValueValue}>{vertexState.result.projectId}</span>
                     </div>
                   )}
@@ -564,7 +788,9 @@ export function OAuthPage() {
                   )}
                   {vertexState.result.location && (
                     <div className={styles.keyValueItem}>
-                      <span className={styles.keyValueKey}>{t('vertex_import.result_location')}</span>
+                      <span className={styles.keyValueKey}>
+                        {t('vertex_import.result_location')}
+                      </span>
                       <span className={styles.keyValueValue}>{vertexState.result.location}</span>
                     </div>
                   )}

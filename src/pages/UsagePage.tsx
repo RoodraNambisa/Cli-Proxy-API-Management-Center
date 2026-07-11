@@ -344,6 +344,7 @@ export function UsagePage() {
       {/* Stats Overview Cards */}
       <StatCards
         usage={filteredUsage}
+        authUsage={authUsage}
         loading={loading}
         modelPrices={modelPrices}
         nowMs={nowMs}
@@ -398,6 +399,7 @@ export function UsagePage() {
         isDark={isDark}
         isMobile={isMobile}
         hourWindowHours={hourWindowHours}
+        range={usageRange}
       />
 
       {/* Cost Trend Chart */}

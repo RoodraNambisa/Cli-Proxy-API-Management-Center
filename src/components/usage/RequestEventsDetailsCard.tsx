@@ -58,7 +58,10 @@ type RequestEventRow = {
   outputTokens: number;
   reasoningTokens: number;
   cachedTokens: number;
+  cacheCreationTokens: number;
   totalTokens: number;
+  requestServiceTier: string;
+  responseServiceTier: string;
 };
 
 export interface RequestEventsDetailsCardProps {
@@ -186,6 +189,7 @@ export function RequestEventsDetailsCard({
         Math.max(toNumber(detail.tokens?.cached_tokens), 0),
         Math.max(toNumber(detail.tokens?.cache_tokens), 0)
       );
+      const cacheCreationTokens = Math.max(toNumber(detail.tokens?.cache_creation_tokens), 0);
       const totalTokens = Math.max(
         toNumber(detail.tokens?.total_tokens),
         extractTotalTokens(detail)
@@ -209,7 +213,10 @@ export function RequestEventsDetailsCard({
         outputTokens,
         reasoningTokens,
         cachedTokens,
+        cacheCreationTokens,
         totalTokens,
+        requestServiceTier: String(detail.request_service_tier ?? '').trim(),
+        responseServiceTier: String(detail.response_service_tier ?? '').trim(),
       };
     });
 
@@ -233,6 +240,10 @@ export function RequestEventsDetailsCard({
   }, [authFileMap, details, i18n.language, sourceInfoMap]);
 
   const hasLatencyData = useMemo(() => rows.some((row) => row.latencyMs !== null), [rows]);
+  const hasServiceTierData = useMemo(
+    () => rows.some((row) => row.requestServiceTier || row.responseServiceTier),
+    [rows]
+  );
 
   const modelOptions = useMemo(
     () => [
@@ -356,10 +367,12 @@ export function RequestEventsDetailsCard({
       'auth_index',
       'result',
       ...(hasLatencyData ? ['latency_ms'] : []),
+      ...(hasServiceTierData ? ['request_service_tier', 'response_service_tier'] : []),
       'input_tokens',
       'output_tokens',
       'reasoning_tokens',
       'cached_tokens',
+      'cache_creation_tokens',
       'total_tokens',
     ];
 
@@ -372,10 +385,12 @@ export function RequestEventsDetailsCard({
         row.authIndex,
         row.failed ? 'failed' : 'success',
         ...(hasLatencyData ? [row.latencyMs ?? ''] : []),
+        ...(hasServiceTierData ? [row.requestServiceTier, row.responseServiceTier] : []),
         row.inputTokens,
         row.outputTokens,
         row.reasoningTokens,
         row.cachedTokens,
+        row.cacheCreationTokens,
         row.totalTokens,
       ]
         .map((value) => encodeCsv(value))
@@ -401,11 +416,14 @@ export function RequestEventsDetailsCard({
       auth_index: row.authIndex,
       failed: row.failed,
       ...(hasLatencyData && row.latencyMs !== null ? { latency_ms: row.latencyMs } : {}),
+      ...(row.requestServiceTier ? { request_service_tier: row.requestServiceTier } : {}),
+      ...(row.responseServiceTier ? { response_service_tier: row.responseServiceTier } : {}),
       tokens: {
         input_tokens: row.inputTokens,
         output_tokens: row.outputTokens,
         reasoning_tokens: row.reasoningTokens,
         cached_tokens: row.cachedTokens,
+        cache_creation_tokens: row.cacheCreationTokens,
         total_tokens: row.totalTokens,
       },
     }));
@@ -572,10 +590,13 @@ export function RequestEventsDetailsCard({
                       <th>{t('usage_stats.request_events_auth_index')}</th>
                       <th>{t('usage_stats.request_events_result')}</th>
                       {hasLatencyData && <th title={latencyHint}>{t('usage_stats.time')}</th>}
+                      {hasServiceTierData && <th>{t('usage_stats.request_service_tier')}</th>}
+                      {hasServiceTierData && <th>{t('usage_stats.response_service_tier')}</th>}
                       <th>{t('usage_stats.input_tokens')}</th>
                       <th>{t('usage_stats.output_tokens')}</th>
                       <th>{t('usage_stats.reasoning_tokens')}</th>
                       <th>{t('usage_stats.cached_tokens')}</th>
+                      <th>{t('usage_stats.cache_creation_tokens')}</th>
                       <th>{t('usage_stats.total_tokens')}</th>
                     </tr>
                   </thead>
@@ -609,10 +630,13 @@ export function RequestEventsDetailsCard({
                         {hasLatencyData && (
                           <td className={styles.durationCell}>{formatDurationMs(row.latencyMs)}</td>
                         )}
+                        {hasServiceTierData && <td>{row.requestServiceTier || '-'}</td>}
+                        {hasServiceTierData && <td>{row.responseServiceTier || '-'}</td>}
                         <td>{row.inputTokens.toLocaleString()}</td>
                         <td>{row.outputTokens.toLocaleString()}</td>
                         <td>{row.reasoningTokens.toLocaleString()}</td>
                         <td>{row.cachedTokens.toLocaleString()}</td>
+                        <td>{row.cacheCreationTokens.toLocaleString()}</td>
                         <td>{row.totalTokens.toLocaleString()}</td>
                       </tr>
                     ))}

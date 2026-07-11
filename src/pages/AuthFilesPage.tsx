@@ -232,6 +232,7 @@ export function AuthFilesPage() {
     codexPlanRefreshStarting,
     codexPlanRefreshActionLoading,
     statusUpdating,
+    xaiFieldsUpdating,
     batchStatusUpdating,
     fileInputRef,
     loadFiles,
@@ -241,6 +242,7 @@ export function AuthFilesPage() {
     handleDeleteAll,
     handleDownload,
     handleStatusToggle,
+    handleXaiFieldToggle,
     toggleSelect,
     selectAllVisible,
     invertVisibleSelection,
@@ -848,7 +850,7 @@ export function AuthFilesPage() {
           const refreshError = CODEX_CONFIG.getResetCreditsRefreshError?.(data) ?? '';
           return {
             file,
-            status: refreshError ? 'error' as const : 'success' as const,
+            status: refreshError ? ('error' as const) : ('success' as const),
             data,
             error: refreshError,
           };
@@ -863,10 +865,7 @@ export function AuthFilesPage() {
       const next = { ...prev };
       results.forEach((result) => {
         if (!result.data) return;
-        next[result.file.name] = buildResetCreditsSuccessState(
-          result.data,
-          prev[result.file.name]
-        );
+        next[result.file.name] = buildResetCreditsSuccessState(result.data, prev[result.file.name]);
       });
       return next;
     });
@@ -938,12 +937,7 @@ export function AuthFilesPage() {
     } finally {
       setCodexResetCreditsRefreshing(false);
     }
-  }, [
-    codexResetCreditsRefreshing,
-    refreshCurrentPageCodexResetCredits,
-    showNotification,
-    t,
-  ]);
+  }, [codexResetCreditsRefreshing, refreshCurrentPageCodexResetCredits, showNotification, t]);
 
   const copyTextWithNotification = useCallback(
     async (text: string) => {
@@ -1540,6 +1534,7 @@ export function AuthFilesPage() {
                     disableControls={disableControls}
                     deleting={deleting}
                     statusUpdating={statusUpdating}
+                    xaiFieldsUpdating={xaiFieldsUpdating}
                     quotaFilterType={quotaFilterType}
                     keyStats={keyStats}
                     statusBarCache={statusBarCache}
@@ -1550,6 +1545,7 @@ export function AuthFilesPage() {
                     onOpenPrefixProxyEditor={openPrefixProxyEditor}
                     onDelete={handleDelete}
                     onToggleStatus={handleStatusToggle}
+                    onToggleXaiField={handleXaiFieldToggle}
                     onToggleSelect={toggleSelect}
                   />
                 ))}

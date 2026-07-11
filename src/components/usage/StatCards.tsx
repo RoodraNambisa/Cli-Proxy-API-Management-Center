@@ -23,6 +23,7 @@ import {
 import { sparklineOptions } from '@/utils/usage/chartConfig';
 import type { UsagePayload } from './hooks/useUsageData';
 import type { SparklineBundle } from './hooks/useSparklines';
+import type { UsageAuthSummary } from '@/types';
 import styles from '@/pages/UsagePage.module.scss';
 
 interface StatCardData {
@@ -39,6 +40,7 @@ interface StatCardData {
 
 export interface StatCardsProps {
   usage: UsagePayload | null;
+  authUsage?: UsageAuthSummary[];
   loading: boolean;
   modelPrices: Record<string, ModelPrice>;
   nowMs: number;
@@ -51,7 +53,14 @@ export interface StatCardsProps {
   };
 }
 
-export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: StatCardsProps) {
+export function StatCards({
+  usage,
+  authUsage = [],
+  loading,
+  modelPrices,
+  nowMs,
+  sparklines,
+}: StatCardsProps) {
   const { t } = useTranslation();
   const latencyHint = t('usage_stats.latency_unit_hint', {
     field: LATENCY_SOURCE_FIELD,
@@ -62,7 +71,7 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
 
   const { tokenBreakdown, rateStats, totalCost, latencyStats } = useMemo(() => {
     const empty = {
-      tokenBreakdown: { cachedTokens: 0, reasoningTokens: 0 },
+      tokenBreakdown: { cachedTokens: 0, cacheCreationTokens: 0, reasoningTokens: 0 },
       rateStats: { rpm: 0, tpm: 0, windowMinutes: 30, requestCount: 0, tokenCount: 0 },
       totalCost: 0,
       latencyStats: {
@@ -72,13 +81,33 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
       },
     };
 
-    if (!usage) return empty;
+    const authTokenBreakdown = authUsage.reduce<{
+      cachedTokens: number;
+      cacheCreationTokens: number;
+      reasoningTokens: number;
+    }>(
+      (result, auth) => {
+        const tokens = auth.tokens ?? {};
+        result.cachedTokens += Math.max(
+          Number(tokens.cached_tokens) || 0,
+          Number(tokens.cache_tokens) || 0,
+          0
+        );
+        result.cacheCreationTokens += Math.max(Number(tokens.cache_creation_tokens) || 0, 0);
+        result.reasoningTokens += Math.max(Number(tokens.reasoning_tokens) || 0, 0);
+        return result;
+      },
+      { cachedTokens: 0, cacheCreationTokens: 0, reasoningTokens: 0 }
+    );
+
+    if (!usage) return { ...empty, tokenBreakdown: authTokenBreakdown };
     const details = collectUsageDetails(usage);
-    if (!details.length) return empty;
+    if (!details.length) return { ...empty, tokenBreakdown: authTokenBreakdown };
 
     const latencyStats = calculateLatencyStatsFromDetails(details);
 
     let cachedTokens = 0;
+    let cacheCreationTokens = 0;
     let reasoningTokens = 0;
     let totalCost = 0;
 
@@ -95,6 +124,7 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
         typeof tokens.cached_tokens === 'number' ? Math.max(tokens.cached_tokens, 0) : 0,
         typeof tokens.cache_tokens === 'number' ? Math.max(tokens.cache_tokens, 0) : 0
       );
+      cacheCreationTokens += Math.max(Number(tokens.cache_creation_tokens) || 0, 0);
       if (typeof tokens.reasoning_tokens === 'number') {
         reasoningTokens += tokens.reasoning_tokens;
       }
@@ -117,7 +147,7 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
 
     const denominator = windowMinutes > 0 ? windowMinutes : 1;
     return {
-      tokenBreakdown: { cachedTokens, reasoningTokens },
+      tokenBreakdown: { cachedTokens, cacheCreationTokens, reasoningTokens },
       rateStats: {
         rpm: requestCount / denominator,
         tpm: tokenCount / denominator,
@@ -128,7 +158,7 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
       totalCost,
       latencyStats,
     };
-  }, [hasPrices, modelPrices, nowMs, usage]);
+  }, [authUsage, hasPrices, modelPrices, nowMs, usage]);
 
   const statsCards: StatCardData[] = [
     {
@@ -176,6 +206,10 @@ export function StatCards({ usage, loading, modelPrices, nowMs, sparklines }: St
           <span className={styles.statMetaItem}>
             {t('usage_stats.reasoning_tokens')}:{' '}
             {loading ? '-' : formatCompactNumber(tokenBreakdown.reasoningTokens)}
+          </span>
+          <span className={styles.statMetaItem}>
+            {t('usage_stats.cache_creation_tokens')}:{' '}
+            {loading ? '-' : formatCompactNumber(tokenBreakdown.cacheCreationTokens)}
           </span>
         </>
       ),

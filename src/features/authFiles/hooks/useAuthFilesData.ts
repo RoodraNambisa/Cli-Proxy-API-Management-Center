@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { authFilesApi } from '@/services/api';
+import { authFilesApi, type XaiAuthFileField } from '@/services/api';
 import { apiClient } from '@/services/api/client';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem, CodexPlanTypeRefreshMode, CodexPlanTypeRefreshTask } from '@/types';
@@ -11,6 +11,9 @@ import {
   getTypeLabel,
   hasAuthFileStatusMessage,
   isRuntimeOnlyAuthFile,
+  isXaiProvider,
+  readXaiAuthFileUsingApi,
+  readXaiAuthFileWebsockets,
 } from '@/features/authFiles/constants';
 
 const CODEX_PLAN_TYPE_REFRESH_POLL_INTERVAL_MS = 3000;
@@ -103,6 +106,7 @@ export type UseAuthFilesDataResult = {
   codexPlanRefreshStarting: boolean;
   codexPlanRefreshActionLoading: boolean;
   statusUpdating: Record<string, boolean>;
+  xaiFieldsUpdating: Record<string, Partial<Record<XaiAuthFileField, boolean>>>;
   batchStatusUpdating: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
   loadFiles: () => Promise<void>;
@@ -112,6 +116,11 @@ export type UseAuthFilesDataResult = {
   handleDeleteAll: (options: DeleteAllOptions) => void;
   handleDownload: (name: string) => Promise<void>;
   handleStatusToggle: (item: AuthFileItem, enabled: boolean) => Promise<void>;
+  handleXaiFieldToggle: (
+    item: AuthFileItem,
+    field: XaiAuthFileField,
+    value: boolean
+  ) => Promise<void>;
   toggleSelect: (name: string) => void;
   selectAllVisible: (visibleFiles: AuthFileItem[]) => void;
   invertVisibleSelection: (visibleFiles: AuthFileItem[]) => void;
@@ -159,6 +168,9 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const [codexPlanRefreshActionLoading, setCodexPlanRefreshActionLoading] = useState(false);
   const [codexPlanRefreshSupported, setCodexPlanRefreshSupported] = useState<boolean | null>(null);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
+  const [xaiFieldsUpdating, setXaiFieldsUpdating] = useState<
+    Record<string, Partial<Record<XaiAuthFileField, boolean>>>
+  >({});
   const [batchStatusUpdating, setBatchStatusUpdating] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
@@ -784,6 +796,83 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     [showNotification, t]
   );
 
+  const handleXaiFieldToggle = useCallback(
+    async (item: AuthFileItem, field: XaiAuthFileField, value: boolean) => {
+      const provider = String(item.provider ?? item.type ?? '');
+      if (!isXaiProvider(provider)) return;
+
+      const name = item.name || String(item.id ?? '').trim();
+      if (!name || xaiFieldsUpdating[name]?.[field]) return;
+      const previousValue =
+        field === 'using_api' ? readXaiAuthFileUsingApi(item) : readXaiAuthFileWebsockets(item);
+
+      setXaiFieldsUpdating((prev) => ({
+        ...prev,
+        [name]: { ...prev[name], [field]: true },
+      }));
+      setFiles((prev) =>
+        prev.map((file) =>
+          file.name === item.name
+            ? {
+                ...file,
+                [field]: value,
+                ...(field === 'using_api' ? { usingApi: value } : {}),
+              }
+            : file
+        )
+      );
+
+      try {
+        await authFilesApi.patchFields(name, { [field]: value });
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : '';
+        setFiles((prev) =>
+          prev.map((file) =>
+            file.name === item.name
+              ? {
+                  ...file,
+                  [field]: previousValue,
+                  ...(field === 'using_api' ? { usingApi: previousValue } : {}),
+                }
+              : file
+          )
+        );
+        showNotification(`${t('notification.update_failed')}: ${errorMessage}`, 'error');
+        return;
+      } finally {
+        setXaiFieldsUpdating((prev) => {
+          const current = prev[name];
+          if (!current) return prev;
+          const nextForFile = { ...current };
+          delete nextForFile[field];
+          const next = { ...prev };
+          if (Object.keys(nextForFile).length > 0) {
+            next[name] = nextForFile;
+          } else {
+            delete next[name];
+          }
+          return next;
+        });
+      }
+
+      try {
+        const data = await authFilesApi.list();
+        setFiles(data?.files || []);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : '';
+        showNotification(`${t('notification.refresh_failed')}: ${errorMessage}`, 'warning');
+      }
+
+      showNotification(
+        t('auth_files.xai_field_saved', {
+          field: t(`auth_files.${field === 'using_api' ? 'using_api_label' : 'websockets_label'}`),
+        }),
+        'success'
+      );
+    },
+    [showNotification, t, xaiFieldsUpdating]
+  );
+
   const batchSetStatus = useCallback(
     async (names: string[], enabled: boolean) => {
       if (batchStatusPendingRef.current) return;
@@ -1110,6 +1199,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     codexPlanRefreshStarting,
     codexPlanRefreshActionLoading,
     statusUpdating,
+    xaiFieldsUpdating,
     batchStatusUpdating,
     fileInputRef,
     loadFiles,
@@ -1119,6 +1209,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     handleDeleteAll,
     handleDownload,
     handleStatusToggle,
+    handleXaiFieldToggle,
     toggleSelect,
     selectAllVisible,
     invertVisibleSelection,

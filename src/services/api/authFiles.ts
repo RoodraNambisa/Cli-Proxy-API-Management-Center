@@ -18,6 +18,9 @@ type StatusError = { status?: number };
 type RawHeaders = Record<string, unknown> | undefined;
 type AuthFileStatusResponse = { status: string; disabled: boolean };
 type AuthFileEntry = AuthFilesResponse['files'][number];
+export type XaiAuthFileField = 'using_api' | 'websockets';
+export type XaiAuthFileFieldsPatch = Partial<Record<XaiAuthFileField, boolean>>;
+export type AuthFileFieldsPatchResponse = { status: string };
 type AuthFileBatchFailure = { name: string; error: string };
 type AuthFileArchiveRequest = { names: string[] } | { all: true };
 type AuthFileArchiveResult = {
@@ -393,8 +396,27 @@ const mergeAuthFileEntries = (entries: AuthFileEntry[]): AuthFileEntry => {
   return merged;
 };
 
-const normalizeAuthFileEntry = (entry: AuthFileEntry): AuthFileEntry => {
+export const normalizeAuthFileEntry = (entry: AuthFileEntry): AuthFileEntry => {
   const normalized: AuthFileEntry = { ...entry };
+  const rawProvider = readStringValue(entry.provider) ?? readStringValue(entry.type) ?? '';
+  const providerKey = rawProvider.toLowerCase().replace(/_/g, '-');
+  const normalizedProvider = providerKey === 'x-ai' || providerKey === 'grok' ? 'xai' : providerKey;
+  if (normalizedProvider === 'xai') {
+    normalized.type = 'xai';
+    normalized.provider = 'xai';
+    const metadata = isRecord(entry.metadata) ? entry.metadata : {};
+    const attributes = isRecord(entry.attributes) ? entry.attributes : {};
+    const authKind =
+      readStringValue(entry['auth_kind'] ?? entry.authKind) ??
+      readStringValue(metadata.auth_kind ?? metadata.authKind) ??
+      readStringValue(attributes.auth_kind ?? attributes.authKind);
+    const usingApi =
+      readBooleanValue(entry['using_api'] ?? entry.usingApi) ?? authKind?.toLowerCase() !== 'oauth';
+    const websockets = readBooleanValue(entry.websockets) ?? false;
+    normalized['using_api'] = usingApi;
+    normalized.usingApi = usingApi;
+    normalized.websockets = websockets;
+  }
   const planType = readStringValue(entry.planType) ?? readStringValue(entry['plan_type']);
   if (planType) {
     normalized.planType = planType;
@@ -652,6 +674,12 @@ export const authFilesApi = {
 
   setStatus: (name: string, disabled: boolean) =>
     apiClient.patch<AuthFileStatusResponse>('/auth-files/status', { name, disabled }),
+
+  patchFields: (name: string, fields: XaiAuthFileFieldsPatch) =>
+    apiClient.patch<AuthFileFieldsPatchResponse>('/auth-files/fields', {
+      name,
+      ...fields,
+    }),
 
   uploadFiles: async (files: File[]): Promise<AuthFileBatchUploadResult> => {
     const requestedNames = files.map((file) => file.name);

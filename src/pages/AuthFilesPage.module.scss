@@ -728,6 +728,55 @@
   background-image: linear-gradient(180deg, rgba(220, 232, 255, 0.08), transparent);
 }
 
+.xaiCard {
+  background-image: linear-gradient(180deg, rgba(17, 24, 39, 0.035), transparent);
+}
+
+.xaiCredentialSettings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-md;
+  padding: $spacing-sm 0;
+  border-top: 1px dashed color-mix(in srgb, var(--border-color) 82%, transparent);
+  border-bottom: 1px dashed color-mix(in srgb, var(--border-color) 82%, transparent);
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.xaiCredentialSettingsCompact {
+  grid-template-columns: 1fr;
+  gap: $spacing-xs;
+}
+
+.xaiCredentialSetting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: $spacing-sm;
+}
+
+.xaiCredentialSettingText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.xaiCredentialSettingLabel {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.xaiCredentialSettingHint {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .quotaSection {
   display: flex;
   flex-direction: column;
@@ -2353,6 +2402,30 @@
   border-radius: 10px;
   flex-shrink: 0;
   margin-left: auto;
+}
+
+.modelCapability {
+  padding: 2px 7px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.modelCapabilityText {
+  background: color-mix(in srgb, var(--bg-tertiary) 82%, transparent);
+}
+
+.modelCapabilityImage {
+  background: color-mix(in srgb, #22c55e 10%, var(--bg-secondary));
+  border-color: color-mix(in srgb, #22c55e 38%, var(--border-color));
+}
+
+.modelCapabilityVideo {
+  background: color-mix(in srgb, #f59e0b 11%, var(--bg-secondary));
+  border-color: color-mix(in srgb, #f59e0b 40%, var(--border-color));
 }
 
 .modelItemExcluded {

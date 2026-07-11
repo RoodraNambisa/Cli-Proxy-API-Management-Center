@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { AuthFileModelItem } from '@/features/authFiles/constants';
-import { isModelExcluded } from '@/features/authFiles/constants';
+import { getAuthFileModelCapability, isModelExcluded } from '@/features/authFiles/constants';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
 export type AuthFileModelsModalProps = {
@@ -61,6 +61,7 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
           <div className={styles.modelsList}>
             {models.map((model) => {
               const excludedModel = isModelExcluded(model.id, fileType, excluded);
+              const capability = getAuthFileModelCapability(model, fileType);
               return (
                 <div
                   key={model.id}
@@ -79,6 +80,13 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
                   <span className={styles.modelId}>{model.id}</span>
                   {model.display_name && model.display_name !== model.id && (
                     <span className={styles.modelDisplayName}>{model.display_name}</span>
+                  )}
+                  {capability && (
+                    <span
+                      className={`${styles.modelCapability} ${styles[`modelCapability${capability.charAt(0).toUpperCase()}${capability.slice(1)}`]}`}
+                    >
+                      {t(`auth_files.model_capability_${capability}`)}
+                    </span>
                   )}
                   {model.type && <span className={styles.modelType}>{model.type}</span>}
                   {excludedModel && (

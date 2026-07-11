@@ -54,9 +54,10 @@ const getTokenBreakdownLabel = (auth: UsageAuthSummary, t: (key: string) => stri
   const input = Math.max(toNumber(tokens.input_tokens), 0);
   const output = Math.max(toNumber(tokens.output_tokens), 0);
   const cached = Math.max(toNumber(tokens.cached_tokens), toNumber(tokens.cache_tokens), 0);
+  const cacheCreation = Math.max(toNumber(tokens.cache_creation_tokens), 0);
   const reasoning = Math.max(toNumber(tokens.reasoning_tokens), 0);
 
-  if (input + output + cached + reasoning <= 0) {
+  if (input + output + cached + cacheCreation + reasoning <= 0) {
     return '';
   }
 
@@ -64,6 +65,7 @@ const getTokenBreakdownLabel = (auth: UsageAuthSummary, t: (key: string) => stri
     `${t('usage_stats.input_tokens')}: ${formatCompactNumber(input)}`,
     `${t('usage_stats.output_tokens')}: ${formatCompactNumber(output)}`,
     `${t('usage_stats.cached_tokens')}: ${formatCompactNumber(cached)}`,
+    `${t('usage_stats.cache_creation_tokens')}: ${formatCompactNumber(cacheCreation)}`,
     `${t('usage_stats.reasoning_tokens')}: ${formatCompactNumber(reasoning)}`,
   ].join(' · ');
 };

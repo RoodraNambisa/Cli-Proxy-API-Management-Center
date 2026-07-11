@@ -57,6 +57,7 @@ export interface UsageTokens {
   reasoning_tokens?: number;
   cached_tokens?: number;
   cache_tokens?: number;
+  cache_creation_tokens?: number;
   total_tokens?: number;
   [key: string]: unknown;
 }
@@ -152,8 +153,19 @@ export interface UsageSeriesQuery extends UsageRangeQuery {
 }
 
 export interface UsageSeriesResponse {
-  items?: unknown[];
+  items?: UsageSeriesItem[];
   series?: unknown[];
   buckets?: unknown[];
+  [key: string]: unknown;
+}
+
+export interface UsageSeriesItem {
+  bucket?: string;
+  group?: string;
+  requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  tokens?: UsageTokens;
   [key: string]: unknown;
 }

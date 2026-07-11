@@ -175,7 +175,13 @@ const normalizeTokenNumber = (value: unknown): number => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
 
-const normalizeUsageDetail = (detail: unknown, index: number): UsageDetail => {
+const normalizeOptionalString = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+};
+
+export const normalizeUsageDetail = (detail: unknown, index: number): UsageDetail => {
   const record = isRecord(detail) ? detail : {};
   const tokensRecord = isRecord(record.tokens) ? record.tokens : {};
   const timestamp =
@@ -240,9 +246,18 @@ const normalizeUsageDetail = (detail: unknown, index: number): UsageDetail => {
         normalizeTokenNumber(tokensRecord.cache_tokens)
       ),
       cache_tokens: normalizeTokenNumber(tokensRecord.cache_tokens),
+      cache_creation_tokens: normalizeTokenNumber(
+        tokensRecord.cache_creation_tokens ?? tokensRecord.cacheCreationTokens
+      ),
       total_tokens: normalizeTokenNumber(tokensRecord.total_tokens),
     },
     failed,
+    request_service_tier: normalizeOptionalString(
+      record.request_service_tier ?? record.requestServiceTier
+    ),
+    response_service_tier: normalizeOptionalString(
+      record.response_service_tier ?? record.responseServiceTier
+    ),
     __modelName: modelName || undefined,
     __timestampMs: Number.isNaN(timestampMs) ? index : timestampMs,
     __endpoint: endpoint,

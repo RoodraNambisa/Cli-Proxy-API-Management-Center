@@ -11,6 +11,7 @@ import {
   IconTrash2,
 } from '@/components/ui/icons';
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
+import type { XaiAuthFileField } from '@/services/api';
 import type { AuthFileItem } from '@/types';
 import { resolveAuthProvider, resolveCodexPlanType } from '@/utils/quota';
 import { calculateStatusBarData, normalizeAuthIndex, type KeyStats } from '@/utils/usage';
@@ -23,7 +24,11 @@ import {
   getTypeColor,
   getTypeLabel,
   isRuntimeOnlyAuthFile,
+  isXaiProvider,
+  normalizeProviderKey,
   parsePriorityValue,
+  readXaiAuthFileUsingApi,
+  readXaiAuthFileWebsockets,
   resolveAuthFileStats,
   type QuotaProviderType,
   type ResolvedTheme,
@@ -45,6 +50,7 @@ export type AuthFileCardProps = {
   disableControls: boolean;
   deleting: string | null;
   statusUpdating: Record<string, boolean>;
+  xaiFieldsUpdating: Record<string, Partial<Record<XaiAuthFileField, boolean>>>;
   quotaFilterType: QuotaProviderType | null;
   keyStats: KeyStats;
   statusBarCache: Map<string, AuthFileStatusBarData>;
@@ -55,6 +61,7 @@ export type AuthFileCardProps = {
   onOpenPrefixProxyEditor: (file: AuthFileItem) => void;
   onDelete: (name: string) => void;
   onToggleStatus: (file: AuthFileItem, enabled: boolean) => void;
+  onToggleXaiField: (file: AuthFileItem, field: XaiAuthFileField, value: boolean) => void;
   onToggleSelect: (name: string) => void;
 };
 
@@ -74,6 +81,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     disableControls,
     deleting,
     statusUpdating,
+    xaiFieldsUpdating,
     quotaFilterType,
     keyStats,
     statusBarCache,
@@ -84,16 +92,19 @@ export function AuthFileCard(props: AuthFileCardProps) {
     onOpenPrefixProxyEditor,
     onDelete,
     onToggleStatus,
+    onToggleXaiField,
     onToggleSelect,
   } = props;
 
   const fileStats = resolveAuthFileStats(file, keyStats);
   const isRuntimeOnly = isRuntimeOnlyAuthFile(file);
-  const isAistudio = (file.type || '').toLowerCase() === 'aistudio';
-  const showModelsButton = !isRuntimeOnly || isAistudio;
-  const typeColor = getTypeColor(file.type || 'unknown', resolvedTheme);
-  const typeLabel = getTypeLabel(t, file.type || 'unknown');
-  const providerIcon = getAuthFileIcon(file.type || 'unknown', resolvedTheme);
+  const providerKey = normalizeProviderKey(String(file.provider ?? file.type ?? 'unknown'));
+  const isAistudio = providerKey === 'aistudio';
+  const isXai = isXaiProvider(providerKey);
+  const showModelsButton = !isRuntimeOnly || isAistudio || isXai;
+  const typeColor = getTypeColor(providerKey, resolvedTheme);
+  const typeLabel = getTypeLabel(t, providerKey);
+  const providerIcon = getAuthFileIcon(providerKey, resolvedTheme);
 
   const resolvedQuotaType = resolveQuotaType(file);
   const quotaType =
@@ -116,7 +127,9 @@ export function AuthFileCard(props: AuthFileCardProps) {
             ? styles.geminiCliCard
             : quotaType === 'kimi'
               ? styles.kimiCard
-              : '';
+              : quotaType === 'xai'
+                ? styles.xaiCard
+                : '';
 
   const rawAuthIndex = file['auth_index'] ?? file.authIndex;
   const authIndexKey = normalizeAuthIndex(rawAuthIndex);
@@ -144,6 +157,10 @@ export function AuthFileCard(props: AuthFileCardProps) {
 
   const priorityValue = parsePriorityValue(file.priority ?? file['priority']);
   const noteValue = typeof file.note === 'string' ? file.note.trim() : '';
+  const xaiUsingApi = readXaiAuthFileUsingApi(file);
+  const xaiWebsockets = readXaiAuthFileWebsockets(file);
+  const xaiUsingApiUpdating = xaiFieldsUpdating[file.name]?.using_api === true;
+  const xaiWebsocketsUpdating = xaiFieldsUpdating[file.name]?.websockets === true;
   const codexPlanType = resolveCodexPlanType(file);
   const codexPlanKey = codexPlanType ? `codex_quota.plan_${codexPlanType}` : '';
   const codexPlanLabel = codexPlanKey ? t(codexPlanKey) : '';
@@ -254,6 +271,49 @@ export function AuthFileCard(props: AuthFileCardProps) {
             <div className={styles.codexPlan}>
               <span className={styles.codexPlanLabel}>{t('codex_quota.plan_label')}</span>
               <span className={codexPlanValueClass}>{codexPlanDisplay}</span>
+            </div>
+          )}
+
+          {isXai && (
+            <div
+              className={`${styles.xaiCredentialSettings} ${compact ? styles.xaiCredentialSettingsCompact : ''}`}
+            >
+              <div className={styles.xaiCredentialSetting}>
+                <div className={styles.xaiCredentialSettingText}>
+                  <span className={styles.xaiCredentialSettingLabel}>
+                    {t('auth_files.using_api_label')}
+                  </span>
+                  {!compact && (
+                    <span className={styles.xaiCredentialSettingHint}>
+                      {t('auth_files.using_api_hint')}
+                    </span>
+                  )}
+                </div>
+                <ToggleSwitch
+                  ariaLabel={t('auth_files.using_api_label')}
+                  checked={xaiUsingApi}
+                  disabled={disableControls || xaiUsingApiUpdating}
+                  onChange={(value) => onToggleXaiField(file, 'using_api', value)}
+                />
+              </div>
+              <div className={styles.xaiCredentialSetting}>
+                <div className={styles.xaiCredentialSettingText}>
+                  <span className={styles.xaiCredentialSettingLabel}>
+                    {t('auth_files.websockets_label')}
+                  </span>
+                  {!compact && (
+                    <span className={styles.xaiCredentialSettingHint}>
+                      {t('auth_files.websockets_hint')}
+                    </span>
+                  )}
+                </div>
+                <ToggleSwitch
+                  ariaLabel={t('auth_files.websockets_label')}
+                  checked={xaiWebsockets}
+                  disabled={disableControls || xaiWebsocketsUpdating}
+                  onChange={(value) => onToggleXaiField(file, 'websockets', value)}
+                />
+              </div>
             </div>
           )}
 

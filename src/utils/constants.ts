@@ -60,6 +60,7 @@ export const OAUTH_CARD_IDS = [
   'antigravity-oauth-card',
   'gemini-cli-oauth-card',
   'kimi-oauth-card',
+  'xai-oauth-card',
 ];
 export const OAUTH_PROVIDERS = {
   CODEX: 'codex',
@@ -67,6 +68,7 @@ export const OAUTH_PROVIDERS = {
   ANTIGRAVITY: 'antigravity',
   GEMINI_CLI: 'gemini-cli',
   KIMI: 'kimi',
+  XAI: 'xai',
 } as const;
 
 // API 端点

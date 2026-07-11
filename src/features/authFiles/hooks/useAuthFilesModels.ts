@@ -4,6 +4,7 @@ import { authFilesApi } from '@/services/api';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem } from '@/types';
 import type { AuthFileModelItem } from '@/features/authFiles/constants';
+import { normalizeProviderKey } from '@/features/authFiles/constants';
 
 type ModelsError = 'unsupported' | null;
 
@@ -37,7 +38,7 @@ export function useAuthFilesModels(): UseAuthFilesModelsResult {
   const showModels = useCallback(
     async (item: AuthFileItem) => {
       setModelsFileName(item.name);
-      setModelsFileType(item.type || '');
+      setModelsFileType(normalizeProviderKey(String(item.provider ?? item.type ?? '')));
       setModelsList([]);
       setModelsError(null);
       setModelsModalOpen(true);
@@ -80,7 +81,6 @@ export function useAuthFilesModels(): UseAuthFilesModelsResult {
     modelsFileType,
     modelsError,
     showModels,
-    closeModelsModal
+    closeModelsModal,
   };
 }
-
