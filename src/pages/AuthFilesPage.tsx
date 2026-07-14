@@ -58,6 +58,15 @@ import { useAuthFilesStats } from '@/features/authFiles/hooks/useAuthFilesStats'
 import { useAuthFilesStatusBarCache } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import { useAuthFilesUsageSummary } from '@/features/authFiles/hooks/useAuthFilesUsageSummary';
 import {
+  ALL_PLAN_FILTER,
+  ALL_PRIORITY_FILTER,
+  UNSET_PRIORITY_FILTER,
+  getAvailablePlanFilters,
+  getAvailablePriorityFilters,
+  matchesAuthFilePlanFilter,
+  matchesAuthFilePriorityFilter,
+} from '@/features/authFiles/linkedFilters';
+import {
   isAuthFilesSortMode,
   readAuthFilesUiState,
   readPersistedAuthFilesCompactMode,
@@ -77,9 +86,6 @@ const BATCH_BAR_BASE_TRANSFORM = 'translateX(-50%)';
 const BATCH_BAR_HIDDEN_TRANSFORM = 'translateX(-50%) translateY(56px)';
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
 const DEFAULT_COMPACT_PAGE_SIZE = 12;
-const ALL_PLAN_FILTER = 'all';
-const ALL_PRIORITY_FILTER = 'all';
-const UNSET_PRIORITY_FILTER = '__unset__';
 
 const escapeWildcardSearchSegment = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -551,59 +557,100 @@ export function AuthFilesPage() {
     [disabledOnly, enabledOnly, files, problemOnly]
   );
 
-  const planFilterOptions = useMemo(() => {
-    const plans = new Set<string>();
-    filesMatchingStatusFilters.forEach((file) => {
-      const planType = resolveCodexPlanType(file);
-      if (planType) plans.add(planType);
-    });
+  const availablePlanFilters = useMemo(
+    () => getAvailablePlanFilters(filesMatchingStatusFilters, priorityFilter),
+    [filesMatchingStatusFilters, priorityFilter]
+  );
 
+  const planFilterOptions = useMemo(() => {
     return [
       { value: ALL_PLAN_FILTER, label: t('auth_files.plan_filter_all') },
-      ...Array.from(plans)
-        .sort((a, b) => a.localeCompare(b))
-        .map((planType) => {
-          const key = `codex_quota.plan_${planType}`;
-          const translated = t(key);
-          return {
-            value: planType,
-            label: translated === key ? planType : translated,
-          };
-        }),
+      ...availablePlanFilters.map((planType) => {
+        const key = `codex_quota.plan_${planType}`;
+        const translated = t(key);
+        return {
+          value: planType,
+          label: translated === key ? planType : translated,
+        };
+      }),
     ];
-  }, [filesMatchingStatusFilters, t]);
+  }, [availablePlanFilters, t]);
+
+  const availablePriorityFilters = useMemo(
+    () => getAvailablePriorityFilters(filesMatchingStatusFilters, planFilter),
+    [filesMatchingStatusFilters, planFilter]
+  );
 
   const priorityFilterOptions = useMemo(() => {
-    const priorities = new Set<number>();
-    let hasUnsetPriority = false;
-
-    filesMatchingStatusFilters.forEach((file) => {
-      const priority = parsePriorityValue(file.priority ?? file['priority']);
-      if (priority === undefined) {
-        hasUnsetPriority = true;
-        return;
-      }
-      priorities.add(priority);
-    });
-
     return [
       { value: ALL_PRIORITY_FILTER, label: t('auth_files.priority_filter_all') },
-      ...Array.from(priorities)
-        .sort((a, b) => b - a)
-        .map((priority) => ({
-          value: String(priority),
-          label: t('auth_files.priority_filter_value', { priority }),
-        })),
-      ...(hasUnsetPriority
-        ? [
-            {
-              value: UNSET_PRIORITY_FILTER,
+      ...availablePriorityFilters.map((priority) =>
+        priority === UNSET_PRIORITY_FILTER
+          ? {
+              value: priority,
               label: t('auth_files.priority_filter_unset'),
-            },
-          ]
-        : []),
+            }
+          : {
+              value: priority,
+              label: t('auth_files.priority_filter_value', { priority }),
+            }
+      ),
     ];
-  }, [filesMatchingStatusFilters, t]);
+  }, [availablePriorityFilters, t]);
+
+  const allPriorityFilters = useMemo(
+    () => getAvailablePriorityFilters(filesMatchingStatusFilters, ALL_PLAN_FILTER),
+    [filesMatchingStatusFilters]
+  );
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (priorityFilter !== ALL_PRIORITY_FILTER && !allPriorityFilters.includes(priorityFilter)) {
+      setPriorityFilter(ALL_PRIORITY_FILTER);
+      setPage(1);
+      return;
+    }
+
+    if (planFilter !== ALL_PLAN_FILTER && !availablePlanFilters.includes(planFilter)) {
+      setPlanFilter(ALL_PLAN_FILTER);
+      setPage(1);
+    }
+  }, [allPriorityFilters, availablePlanFilters, loading, planFilter, priorityFilter]);
+
+  const handlePlanFilterChange = useCallback(
+    (value: string) => {
+      const nextPlanFilter = value || ALL_PLAN_FILTER;
+      setPlanFilter(nextPlanFilter);
+      if (
+        priorityFilter !== ALL_PRIORITY_FILTER &&
+        !getAvailablePriorityFilters(filesMatchingStatusFilters, nextPlanFilter).includes(
+          priorityFilter
+        )
+      ) {
+        setPriorityFilter(ALL_PRIORITY_FILTER);
+      }
+      setPage(1);
+    },
+    [filesMatchingStatusFilters, priorityFilter]
+  );
+
+  const handlePriorityFilterChange = useCallback(
+    (value: string) => {
+      const nextPriorityFilter = value || ALL_PRIORITY_FILTER;
+      setPriorityFilter(nextPriorityFilter);
+      if (
+        planFilter !== ALL_PLAN_FILTER &&
+        !getAvailablePlanFilters(filesMatchingStatusFilters, nextPriorityFilter).includes(
+          planFilter
+        )
+      ) {
+        setPlanFilter(ALL_PLAN_FILTER);
+      }
+      setPage(1);
+    },
+    [filesMatchingStatusFilters, planFilter]
+  );
 
   const sortOptions = useMemo(
     () => [
@@ -632,12 +679,8 @@ export function AuthFilesPage() {
     return filesMatchingStatusFilters.filter((item) => {
       const matchType = filter === 'all' || item.type === filter;
       const itemPlanType = resolveCodexPlanType(item);
-      const matchPlan = planFilter === ALL_PLAN_FILTER || itemPlanType === planFilter;
-      const itemPriority = parsePriorityValue(item.priority ?? item['priority']);
-      const matchPriority =
-        priorityFilter === ALL_PRIORITY_FILTER ||
-        (priorityFilter === UNSET_PRIORITY_FILTER && itemPriority === undefined) ||
-        (itemPriority !== undefined && String(itemPriority) === priorityFilter);
+      const matchPlan = matchesAuthFilePlanFilter(item, planFilter);
+      const matchPriority = matchesAuthFilePriorityFilter(item, priorityFilter);
       const matchSearch =
         !normalizedSearch ||
         [
@@ -1434,10 +1477,7 @@ export function AuthFilesPage() {
                     className={styles.sortSelect}
                     value={planFilter}
                     options={planFilterOptions}
-                    onChange={(value) => {
-                      setPlanFilter(value || ALL_PLAN_FILTER);
-                      setPage(1);
-                    }}
+                    onChange={handlePlanFilterChange}
                     ariaLabel={t('auth_files.plan_filter_label')}
                     fullWidth
                   />
@@ -1448,10 +1488,7 @@ export function AuthFilesPage() {
                     className={styles.sortSelect}
                     value={priorityFilter}
                     options={priorityFilterOptions}
-                    onChange={(value) => {
-                      setPriorityFilter(value || ALL_PRIORITY_FILTER);
-                      setPage(1);
-                    }}
+                    onChange={handlePriorityFilterChange}
                     ariaLabel={t('auth_files.priority_filter_label')}
                     fullWidth
                   />
