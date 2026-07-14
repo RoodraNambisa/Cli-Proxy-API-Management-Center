@@ -452,8 +452,8 @@ export function useAuthFilesPrefixProxyEditor(
         }
       }
       showNotification(t('auth_files.prefix_proxy_saved_success', { name }), 'success');
-      await loadFiles();
       setPrefixProxyEditor(null);
+      void loadFiles().catch(() => {});
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '';
       showNotification(`${t('notification.upload_failed')}: ${errorMessage}`, 'error');

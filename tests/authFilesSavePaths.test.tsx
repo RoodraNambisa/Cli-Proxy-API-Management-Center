@@ -37,7 +37,13 @@ describe('auth file save paths', () => {
     });
     const downloadJsonObject = vi.spyOn(authFilesApi, 'downloadJsonObject');
     const saveText = vi.spyOn(authFilesApi, 'saveText');
-    const loadFiles = vi.fn().mockResolvedValue(undefined);
+    let resolveLoadFiles: (() => void) | undefined;
+    const loadFiles = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveLoadFiles = resolve;
+        })
+    );
     const deselectAll = vi.fn();
     const { result } = renderHook(() =>
       useAuthFilesBatchSettings({
@@ -59,6 +65,8 @@ describe('auth file save paths', () => {
     expect(saveText).not.toHaveBeenCalled();
     expect(loadFiles).toHaveBeenCalledTimes(1);
     expect(deselectAll).toHaveBeenCalledTimes(1);
+    expect(result.current.batchSettings.open).toBe(false);
+    resolveLoadFiles?.();
   });
 
   test('uses bounded full-file updates for fields missing from the PATCH API', async () => {
@@ -120,7 +128,13 @@ describe('auth file save paths', () => {
     );
     const patchFields = vi.spyOn(authFilesApi, 'patchFields').mockResolvedValue({ status: 'ok' });
     const saveText = vi.spyOn(authFilesApi, 'saveText');
-    const loadFiles = vi.fn().mockResolvedValue(undefined);
+    let resolveLoadFiles: (() => void) | undefined;
+    const loadFiles = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveLoadFiles = resolve;
+        })
+    );
     const { result } = renderHook(() =>
       useAuthFilesPrefixProxyEditor({ disableControls: false, loadFiles })
     );
@@ -134,6 +148,8 @@ describe('auth file save paths', () => {
     expect(patchFields).toHaveBeenCalledWith('codex.json', { priority: -1 });
     expect(saveText).not.toHaveBeenCalled();
     expect(loadFiles).toHaveBeenCalledTimes(1);
+    expect(result.current.prefixProxyEditor).toBeNull();
+    resolveLoadFiles?.();
   });
 
   test('preserves header replacement semantics on the single-file PATCH path', async () => {

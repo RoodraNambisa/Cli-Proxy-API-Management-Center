@@ -90,6 +90,10 @@ type DeleteAllOptions = {
   onResetDisabledOnly: () => void;
 };
 
+type LoadFilesOptions = {
+  background?: boolean;
+};
+
 export type UseAuthFilesDataResult = {
   files: AuthFileItem[];
   selectedFiles: Set<string>;
@@ -111,7 +115,7 @@ export type UseAuthFilesDataResult = {
   xaiFieldsUpdating: Record<string, Partial<Record<XaiAuthFileField, boolean>>>;
   batchStatusUpdating: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
-  loadFiles: () => Promise<void>;
+  loadFiles: (options?: LoadFilesOptions) => Promise<void>;
   handleUploadClick: () => void;
   handleFileChange: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
   handleDelete: (name: string) => void;
@@ -266,19 +270,27 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     });
   }, [files, selectedFiles.size]);
 
-  const loadFiles = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await authFilesApi.list();
-      setFiles(data?.files || []);
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : t('notification.refresh_failed');
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
+  const loadFiles = useCallback(
+    async (options?: LoadFilesOptions) => {
+      const background = options?.background === true;
+      if (!background) {
+        setLoading(true);
+      }
+      setError('');
+      try {
+        const data = await authFilesApi.list();
+        setFiles(data?.files || []);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : t('notification.refresh_failed');
+        setError(errorMessage);
+      } finally {
+        if (!background) {
+          setLoading(false);
+        }
+      }
+    },
+    [t]
+  );
 
   const applyCodexPlanRefreshTask = useCallback(
     async (
@@ -566,7 +578,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
             `${t('auth_files.upload_success')}${suffix}`,
             result.failed.length ? 'warning' : 'success'
           );
-          await loadFiles();
+          void loadFiles({ background: true });
         }
 
         if (result.failed.length > 0) {

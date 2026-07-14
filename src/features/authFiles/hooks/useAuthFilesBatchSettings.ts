@@ -350,13 +350,9 @@ export function useAuthFilesBatchSettings(
     });
 
     if (successCount > 0) {
-      try {
-        await loadFiles();
-      } catch {
-        // The files were already saved; a later page refresh can recover stale list metadata.
-      }
       deselectAll();
       setBatchSettings(createEmptyBatchSettingsState());
+      void loadFiles().catch(() => {});
     } else {
       setBatchSettings((prev) => ({ ...prev, saving: false }));
     }

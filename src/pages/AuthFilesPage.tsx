@@ -265,6 +265,8 @@ export function AuthFilesPage() {
     batchDelete,
   } = useAuthFilesData({ refreshKeyStats: refreshVisibleKeyStats, active: isCurrentLayer });
 
+  const refreshFilesInBackground = useCallback(() => loadFiles({ background: true }), [loadFiles]);
+
   const disableControls = connectionStatus !== 'connected';
   const statusBarCache = useAuthFilesStatusBarCache(files, []);
   const usageSummaryCache = useAuthFilesUsageSummary(usageAuths);
@@ -307,7 +309,7 @@ export function AuthFilesPage() {
     handlePrefixProxySave,
   } = useAuthFilesPrefixProxyEditor({
     disableControls,
-    loadFiles,
+    loadFiles: refreshFilesInBackground,
   });
 
   const {
@@ -320,7 +322,7 @@ export function AuthFilesPage() {
   } = useAuthFilesBatchSettings({
     files,
     disableControls,
-    loadFiles,
+    loadFiles: refreshFilesInBackground,
     deselectAll,
   });
 
