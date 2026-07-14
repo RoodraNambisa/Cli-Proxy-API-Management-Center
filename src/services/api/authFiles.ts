@@ -13,13 +13,23 @@ import type {
 import type { OAuthModelAliasEntry } from '@/types';
 import { parseTimestampMs } from '@/utils/timestamp';
 import { AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
+import { mapWithConcurrency } from '@/utils/concurrency';
 
 type StatusError = { status?: number };
 type RawHeaders = Record<string, unknown> | undefined;
 type AuthFileStatusResponse = { status: string; disabled: boolean };
 type AuthFileEntry = AuthFilesResponse['files'][number];
 export type XaiAuthFileField = 'using_api' | 'websockets';
-export type XaiAuthFileFieldsPatch = Partial<Record<XaiAuthFileField, boolean>>;
+export type AuthFileFieldsPatch = {
+  prefix?: string;
+  proxy_url?: string;
+  headers?: Record<string, string>;
+  priority?: number;
+  note?: string;
+  using_api?: boolean;
+  websockets?: boolean;
+};
+export type XaiAuthFileFieldsPatch = Partial<Pick<AuthFileFieldsPatch, XaiAuthFileField>>;
 export type AuthFileFieldsPatchResponse = { status: string };
 type AuthFileBatchFailure = { name: string; error: string };
 type AuthFileArchiveRequest = { names: string[] } | { all: true };
@@ -570,6 +580,7 @@ const normalizeOauthModelAlias = (payload: unknown): Record<string, OAuthModelAl
 
 const OAUTH_MODEL_ALIAS_ENDPOINT = '/oauth-model-alias';
 const AUTH_FILES_ARCHIVE_FALLBACK_NAME = 'auth-files.zip';
+const AUTH_FILE_UPLOAD_CONCURRENCY = 4;
 const EMPTY_CODEX_PLAN_TYPE_REFRESH_SUMMARY: CodexPlanTypeRefreshSummary = {
   eligible: 0,
   processed: 0,
@@ -669,13 +680,25 @@ const downloadAuthFilesArchive = async (
   return { blob, filename };
 };
 
+const uploadAuthFilesRequest = async (files: File[]): Promise<AuthFileBatchUploadResult> => {
+  const requestedNames = files.map((file) => file.name);
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('file', file, file.name);
+  });
+  const payload = await apiClient.postForm<AuthFileBatchUploadResponse>('/auth-files', formData, {
+    timeout: AUTH_FILE_UPLOAD_TIMEOUT_MS,
+  });
+  return normalizeBatchUploadResponse(payload, requestedNames);
+};
+
 export const authFilesApi = {
   list: async () => dedupeAuthFilesResponse(await apiClient.get<AuthFilesResponse>('/auth-files')),
 
   setStatus: (name: string, disabled: boolean) =>
     apiClient.patch<AuthFileStatusResponse>('/auth-files/status', { name, disabled }),
 
-  patchFields: (name: string, fields: XaiAuthFileFieldsPatch) =>
+  patchFields: (name: string, fields: AuthFileFieldsPatch) =>
     apiClient.patch<AuthFileFieldsPatchResponse>('/auth-files/fields', {
       name,
       ...fields,
@@ -687,14 +710,34 @@ export const authFilesApi = {
       return { status: 'ok', uploaded: 0, files: [], failed: [] };
     }
 
-    const formData = new FormData();
-    files.forEach((file) => {
-      formData.append('file', file, file.name);
+    if (files.length === 1 || new Set(requestedNames).size !== requestedNames.length) {
+      return uploadAuthFilesRequest(files);
+    }
+
+    const results = await mapWithConcurrency(files, AUTH_FILE_UPLOAD_CONCURRENCY, (file) =>
+      uploadAuthFilesRequest([file])
+    );
+    const uploadedFiles: string[] = [];
+    const failed: AuthFileBatchFailure[] = [];
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        uploadedFiles.push(...result.value.files);
+        failed.push(...result.value.failed);
+        return;
+      }
+      failed.push({
+        name: files[index].name,
+        error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+      });
     });
-    const payload = await apiClient.postForm<AuthFileBatchUploadResponse>('/auth-files', formData, {
-      timeout: AUTH_FILE_UPLOAD_TIMEOUT_MS,
-    });
-    return normalizeBatchUploadResponse(payload, requestedNames);
+
+    return {
+      status: failed.length > 0 ? (uploadedFiles.length > 0 ? 'partial' : 'error') : 'ok',
+      uploaded: uploadedFiles.length,
+      files: uploadedFiles,
+      failed,
+    };
   },
 
   upload: (file: File) => authFilesApi.uploadFiles([file]),

@@ -567,7 +567,6 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
             result.failed.length ? 'warning' : 'success'
           );
           await loadFiles();
-          await refreshKeyStats();
         }
 
         if (result.failed.length > 0) {
@@ -582,7 +581,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         event.target.value = '';
       }
     },
-    [loadFiles, refreshKeyStats, showNotification, t]
+    [loadFiles, showNotification, t]
   );
 
   const handleDelete = useCallback(

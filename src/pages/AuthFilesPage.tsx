@@ -308,7 +308,6 @@ export function AuthFilesPage() {
   } = useAuthFilesPrefixProxyEditor({
     disableControls,
     loadFiles,
-    loadKeyStats: refreshVisibleKeyStats,
   });
 
   const {
@@ -322,7 +321,6 @@ export function AuthFilesPage() {
     files,
     disableControls,
     loadFiles,
-    loadKeyStats: refreshVisibleKeyStats,
     deselectAll,
   });
 

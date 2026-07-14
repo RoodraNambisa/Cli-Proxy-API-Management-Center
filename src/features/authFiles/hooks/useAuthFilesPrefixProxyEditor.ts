@@ -5,6 +5,7 @@ import type { AuthFileItem } from '@/types';
 import { useNotificationStore } from '@/stores';
 import { formatFileSize } from '@/utils/format';
 import { MAX_AUTH_FILE_SIZE } from '@/utils/constants';
+import type { AuthFileFieldsPatch } from '@/services/api/authFiles';
 import {
   applyCodexAuthFileWebsockets,
   normalizeExcludedModels,
@@ -58,7 +59,6 @@ export type PrefixProxyEditorState = {
 export type UseAuthFilesPrefixProxyEditorOptions = {
   disableControls: boolean;
   loadFiles: () => Promise<void>;
-  loadKeyStats: () => Promise<void>;
 };
 
 export type UseAuthFilesPrefixProxyEditorResult = {
@@ -84,6 +84,64 @@ const validateHeadersValue = (value: unknown): AuthFileHeadersErrorKey | null =>
   return Object.values(value).every((item) => typeof item === 'string')
     ? null
     : 'auth_files.headers_invalid_value';
+};
+
+const jsonValuesEqual = (left: unknown, right: unknown): boolean =>
+  JSON.stringify(left) === JSON.stringify(right);
+
+const buildHeadersPatch = (previous: unknown, next: unknown): AuthFileHeaders => {
+  const previousHeaders = isRecordObject(previous) ? previous : {};
+  const nextHeaders = isRecordObject(next) ? next : {};
+  const patch: AuthFileHeaders = {};
+
+  new Set([...Object.keys(previousHeaders), ...Object.keys(nextHeaders)]).forEach((key) => {
+    patch[key] = typeof nextHeaders[key] === 'string' ? nextHeaders[key] : '';
+  });
+
+  return patch;
+};
+
+const buildAuthFileFieldsPatch = (
+  previous: Record<string, unknown>,
+  next: Record<string, unknown>
+): AuthFileFieldsPatch => {
+  const patch: AuthFileFieldsPatch = {};
+
+  if (!jsonValuesEqual(previous.prefix, next.prefix)) {
+    patch.prefix = typeof next.prefix === 'string' ? next.prefix : '';
+  }
+  if (!jsonValuesEqual(previous.proxy_url, next.proxy_url)) {
+    patch.proxy_url = typeof next.proxy_url === 'string' ? next.proxy_url : '';
+  }
+  if (!jsonValuesEqual(previous.priority, next.priority)) {
+    patch.priority = parsePriorityValue(next.priority) ?? 0;
+  }
+  if (!jsonValuesEqual(previous.note, next.note)) {
+    patch.note = typeof next.note === 'string' ? next.note : '';
+  }
+  if (!jsonValuesEqual(previous.headers, next.headers)) {
+    patch.headers = buildHeadersPatch(previous.headers, next.headers);
+  }
+
+  return patch;
+};
+
+const requiresFullFileUpdate = (
+  previous: Record<string, unknown>,
+  next: Record<string, unknown>,
+  isCodexFile: boolean
+): boolean => {
+  const explicitlySetsZeroPriority =
+    Object.prototype.hasOwnProperty.call(next, 'priority') &&
+    parsePriorityValue(next.priority) === 0 &&
+    !jsonValuesEqual(previous.priority, next.priority);
+
+  return (
+    !jsonValuesEqual(previous.excluded_models, next.excluded_models) ||
+    !jsonValuesEqual(previous.disable_cooling, next.disable_cooling) ||
+    (isCodexFile && !jsonValuesEqual(previous.websockets, next.websockets)) ||
+    explicitlySetsZeroPriority
+  );
 };
 
 export const parseHeadersText = (
@@ -172,7 +230,7 @@ const buildPrefixProxyUpdatedText = (
 export function useAuthFilesPrefixProxyEditor(
   options: UseAuthFilesPrefixProxyEditorOptions
 ): UseAuthFilesPrefixProxyEditorResult {
-  const { disableControls, loadFiles, loadKeyStats } = options;
+  const { disableControls, loadFiles } = options;
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
 
@@ -380,10 +438,21 @@ export function useAuthFilesPrefixProxyEditor(
     });
 
     try {
-      await authFilesApi.saveText(name, payload);
+      const nextJson = JSON.parse(payload) as Record<string, unknown>;
+      if (requiresFullFileUpdate(prefixProxyEditor.json, nextJson, prefixProxyEditor.isCodexFile)) {
+        await authFilesApi.saveText(name, payload);
+      } else {
+        const fieldsPatch = buildAuthFileFieldsPatch(prefixProxyEditor.json, nextJson);
+        const headersPatchSupported =
+          fieldsPatch.headers === undefined || Object.keys(fieldsPatch.headers).length > 0;
+        if (Object.keys(fieldsPatch).length > 0 && headersPatchSupported) {
+          await authFilesApi.patchFields(name, fieldsPatch);
+        } else {
+          await authFilesApi.saveText(name, payload);
+        }
+      }
       showNotification(t('auth_files.prefix_proxy_saved_success', { name }), 'success');
       await loadFiles();
-      await loadKeyStats();
       setPrefixProxyEditor(null);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '';

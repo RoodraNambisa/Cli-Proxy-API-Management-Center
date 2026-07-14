@@ -4,7 +4,9 @@ import { authFilesApi } from '@/services/api';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem } from '@/types';
 import { MAX_AUTH_FILE_SIZE } from '@/utils/constants';
+import { mapWithConcurrency } from '@/utils/concurrency';
 import { formatFileSize } from '@/utils/format';
+import type { AuthFileFieldsPatch } from '@/services/api/authFiles';
 import {
   applyCodexAuthFileWebsockets,
   isRuntimeOnlyAuthFile,
@@ -49,7 +51,6 @@ export type UseAuthFilesBatchSettingsOptions = {
   files: AuthFileItem[];
   disableControls: boolean;
   loadFiles: () => Promise<void>;
-  loadKeyStats: () => Promise<void>;
   deselectAll: () => void;
 };
 
@@ -72,6 +73,8 @@ type BatchSettingsPatch = {
   note?: string;
   websockets?: boolean;
 };
+
+const BATCH_SETTINGS_CONCURRENCY = 6;
 
 const createEmptyBatchSettingsState = (): AuthFilesBatchSettingsState => ({
   open: false,
@@ -116,6 +119,20 @@ const resolveTargetFiles = (names: string[], files: AuthFileItem[]): AuthFileIte
 };
 
 const hasPatchFields = (patch: BatchSettingsPatch): boolean => Object.keys(patch).length > 0;
+
+const requiresFullFileUpdate = (patch: BatchSettingsPatch): boolean =>
+  patch.excluded_models !== undefined ||
+  patch.headers !== undefined ||
+  patch.disable_cooling !== undefined ||
+  patch.websockets !== undefined ||
+  patch.priority === 0;
+
+const buildDirectFieldsPatch = (patch: BatchSettingsPatch): AuthFileFieldsPatch => ({
+  ...(patch.prefix !== undefined ? { prefix: patch.prefix } : {}),
+  ...(patch.proxy_url !== undefined ? { proxy_url: patch.proxy_url } : {}),
+  ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
+  ...(patch.note !== undefined ? { note: patch.note } : {}),
+});
 
 const buildBatchSettingsPatch = (
   state: AuthFilesBatchSettingsState
@@ -218,7 +235,7 @@ const applyBatchSettingsPatch = (
 export function useAuthFilesBatchSettings(
   options: UseAuthFilesBatchSettingsOptions
 ): UseAuthFilesBatchSettingsResult {
-  const { files, disableControls, loadFiles, loadKeyStats, deselectAll } = options;
+  const { files, disableControls, loadFiles, deselectAll } = options;
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
   const [batchSettings, setBatchSettings] = useState<AuthFilesBatchSettingsState>(
@@ -294,37 +311,47 @@ export function useAuthFilesBatchSettings(
 
     setBatchSettings((prev) => ({ ...prev, saving: true }));
 
+    const fullFileUpdate = requiresFullFileUpdate(patch);
+    const directFieldsPatch = buildDirectFieldsPatch(patch);
+    const results = await mapWithConcurrency(targets, BATCH_SETTINGS_CONCURRENCY, async (file) => {
+      if (!fullFileUpdate) {
+        await authFilesApi.patchFields(file.name, directFieldsPatch);
+        return 'success' as const;
+      }
+
+      const json = await authFilesApi.downloadJsonObject(file.name);
+      const { next, applied } = applyBatchSettingsPatch(json, patch, isCodexAuthFile(file));
+      if (!applied) {
+        return 'skipped' as const;
+      }
+
+      const payload = JSON.stringify(next);
+      if (new Blob([payload]).size > MAX_AUTH_FILE_SIZE) {
+        throw new Error(
+          t('auth_files.upload_error_size', { maxSize: formatFileSize(MAX_AUTH_FILE_SIZE) })
+        );
+      }
+
+      await authFilesApi.saveText(file.name, payload);
+      return 'success' as const;
+    });
+
     let successCount = 0;
     let failedCount = 0;
     let skippedCount = 0;
-
-    for (const file of targets) {
-      try {
-        const json = await authFilesApi.downloadJsonObject(file.name);
-        const { next, applied } = applyBatchSettingsPatch(json, patch, isCodexAuthFile(file));
-        if (!applied) {
-          skippedCount += 1;
-          continue;
-        }
-
-        const payload = JSON.stringify(next);
-        if (new Blob([payload]).size > MAX_AUTH_FILE_SIZE) {
-          throw new Error(
-            t('auth_files.upload_error_size', { maxSize: formatFileSize(MAX_AUTH_FILE_SIZE) })
-          );
-        }
-
-        await authFilesApi.saveText(file.name, payload);
-        successCount += 1;
-      } catch {
+    results.forEach((result) => {
+      if (result.status === 'rejected') {
         failedCount += 1;
+      } else if (result.value === 'skipped') {
+        skippedCount += 1;
+      } else {
+        successCount += 1;
       }
-    }
+    });
 
     if (successCount > 0) {
       try {
         await loadFiles();
-        await loadKeyStats();
       } catch {
         // The files were already saved; a later page refresh can recover stale list metadata.
       }
