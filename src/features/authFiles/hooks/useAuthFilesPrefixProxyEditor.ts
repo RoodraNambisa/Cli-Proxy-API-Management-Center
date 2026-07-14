@@ -37,6 +37,7 @@ export type PrefixProxyEditorState = {
   fileName: string;
   fileInfoText: string;
   isCodexFile: boolean;
+  readOnly: boolean;
   loading: boolean;
   saving: boolean;
   error: string | null;
@@ -262,6 +263,7 @@ export function useAuthFilesPrefixProxyEditor(
       .trim()
       .toLowerCase();
     const isCodexFile = normalizedType === 'codex' || normalizedProvider === 'codex';
+    const readOnly = normalizedType === 'gemini-cli' || normalizedProvider === 'gemini-cli';
 
     if (disableControls) return;
     if (prefixProxyEditor?.fileName === name) {
@@ -273,6 +275,7 @@ export function useAuthFilesPrefixProxyEditor(
       fileName: name,
       fileInfoText: JSON.stringify(file, null, 2),
       isCodexFile,
+      readOnly,
       loading: true,
       saving: false,
       error: null,

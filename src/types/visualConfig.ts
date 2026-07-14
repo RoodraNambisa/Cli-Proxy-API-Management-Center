@@ -224,7 +224,6 @@ export type VisualConfigValues = {
   pprofEnable: boolean;
   pprofAddr: string;
   proxyUrl: string;
-  enableGeminiCliEndpoint: boolean;
   forceModelPrefix: boolean;
   codexIdentityConfuse: boolean;
   codexFingerprintJA3: boolean;
@@ -292,7 +291,6 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   pprofEnable: false,
   pprofAddr: '',
   proxyUrl: '',
-  enableGeminiCliEndpoint: false,
   forceModelPrefix: false,
   codexIdentityConfuse: false,
   codexFingerprintJA3: false,

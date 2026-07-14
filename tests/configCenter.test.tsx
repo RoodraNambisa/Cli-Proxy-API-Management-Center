@@ -24,7 +24,6 @@ const translations: Record<string, string> = {
   'config_management.settings_center.pages.global_streaming.title': 'Streaming Responses',
   'config_management.settings_center.pages.provider_codex.title': 'Codex',
   'config_management.settings_center.pages.provider_antigravity.title': 'Antigravity',
-  'config_management.settings_center.pages.provider_gemini_cli.title': 'Gemini CLI',
   'config_management.settings_center.pages.provider_grok.title': 'Grok',
   'config_management.settings_center.pages.advanced_payload.title': 'Payload Rules',
   'config_management.settings_center.search_placeholder': 'Search configuration',

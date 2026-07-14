@@ -5,9 +5,6 @@ import type {
   ModelAlias,
   OpenAIProviderConfig,
   ProviderKeyConfig,
-  AmpcodeConfig,
-  AmpcodeModelMapping,
-  AmpcodeUpstreamApiKeyMapping,
 } from '@/types';
 import {
   CODEX_CUSTOM_MODEL_GROUPS,
@@ -599,88 +596,6 @@ const normalizeOauthExcluded = (payload: unknown): Record<string, string[]> | un
   return map;
 };
 
-const normalizeAmpcodeModelMappings = (input: unknown): AmpcodeModelMapping[] => {
-  if (!Array.isArray(input)) return [];
-  const seen = new Set<string>();
-  const mappings: AmpcodeModelMapping[] = [];
-
-  input.forEach((entry) => {
-    if (!isRecord(entry)) return;
-    const from = String(entry.from ?? entry['from'] ?? '').trim();
-    const to = String(entry.to ?? entry['to'] ?? '').trim();
-    if (!from || !to) return;
-    const key = from.toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    mappings.push({ from, to });
-  });
-
-  return mappings;
-};
-
-const normalizeAmpcodeUpstreamApiKeys = (input: unknown): AmpcodeUpstreamApiKeyMapping[] => {
-  if (!Array.isArray(input)) return [];
-
-  const seen = new Set<string>();
-  const mappings: AmpcodeUpstreamApiKeyMapping[] = [];
-
-  input.forEach((entry) => {
-    if (!isRecord(entry)) return;
-
-    const upstreamApiKey = String(
-      entry['upstream-api-key'] ?? entry.upstreamApiKey ?? entry['upstream_api_key'] ?? ''
-    ).trim();
-    if (!upstreamApiKey || seen.has(upstreamApiKey)) return;
-
-    const rawApiKeys = entry['api-keys'] ?? entry.apiKeys ?? entry['api_keys'] ?? [];
-    const apiKeys = Array.isArray(rawApiKeys)
-      ? Array.from(new Set(rawApiKeys.map((item) => String(item ?? '').trim()).filter(Boolean)))
-      : [];
-    if (!apiKeys.length) return;
-
-    seen.add(upstreamApiKey);
-    mappings.push({ upstreamApiKey, apiKeys });
-  });
-
-  return mappings;
-};
-
-const normalizeAmpcodeConfig = (payload: unknown): AmpcodeConfig | undefined => {
-  const sourceRaw = isRecord(payload) ? (payload.ampcode ?? payload) : payload;
-  if (!isRecord(sourceRaw)) return undefined;
-  const source = sourceRaw;
-
-  const config: AmpcodeConfig = {};
-  const upstreamUrl = source['upstream-url'] ?? source.upstreamUrl ?? source['upstream_url'];
-  if (upstreamUrl) config.upstreamUrl = String(upstreamUrl);
-  const upstreamApiKey =
-    source['upstream-api-key'] ?? source.upstreamApiKey ?? source['upstream_api_key'];
-  if (upstreamApiKey) config.upstreamApiKey = String(upstreamApiKey);
-
-  const upstreamApiKeys = normalizeAmpcodeUpstreamApiKeys(
-    source['upstream-api-keys'] ?? source.upstreamApiKeys ?? source['upstream_api_keys']
-  );
-  if (upstreamApiKeys.length) {
-    config.upstreamApiKeys = upstreamApiKeys;
-  }
-
-  const forceModelMappings = normalizeBoolean(
-    source['force-model-mappings'] ?? source.forceModelMappings ?? source['force_model_mappings']
-  );
-  if (forceModelMappings !== undefined) {
-    config.forceModelMappings = forceModelMappings;
-  }
-
-  const modelMappings = normalizeAmpcodeModelMappings(
-    source['model-mappings'] ?? source.modelMappings ?? source['model_mappings']
-  );
-  if (modelMappings.length) {
-    config.modelMappings = modelMappings;
-  }
-
-  return config;
-};
-
 /**
  * 规范化 /config 返回值
  */
@@ -735,9 +650,6 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   const logsMaxTotalSizeMb = raw['logs-max-total-size-mb'] ?? raw.logsMaxTotalSizeMb;
   config.logsMaxTotalSizeMb = normalizeNumber(logsMaxTotalSizeMb);
   config.wsAuth = normalizeBoolean(raw['ws-auth'] ?? raw.wsAuth);
-  config.enableGeminiCliEndpoint = normalizeBoolean(
-    raw['enable-gemini-cli-endpoint'] ?? raw.enableGeminiCliEndpoint
-  );
   config.forceModelPrefix = normalizeBoolean(raw['force-model-prefix'] ?? raw.forceModelPrefix);
   config.noCooldownStatusCodes = normalizeIntegerArray(
     raw['no-cooldown-status-codes'] ?? raw.noCooldownStatusCodes
@@ -973,9 +885,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     config.routingStrategy = String(strategyRaw);
   }
   if (isRecord(routing)) {
-    const fillFirstRange = normalizeNumber(
-      routing['fill-first-range'] ?? routing.fillFirstRange
-    );
+    const fillFirstRange = normalizeNumber(routing['fill-first-range'] ?? routing.fillFirstRange);
     if (
       fillFirstRange !== undefined &&
       Number.isSafeInteger(fillFirstRange) &&
@@ -1018,6 +928,14 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       .filter(Boolean) as GeminiKeyConfig[];
   }
 
+  const interactionsList =
+    raw['interactions-api-key'] ?? raw.interactionsApiKey ?? raw.interactionsApiKeys;
+  if (Array.isArray(interactionsList)) {
+    config.interactionsApiKeys = interactionsList
+      .map((item) => normalizeGeminiKeyConfig(item))
+      .filter(Boolean) as GeminiKeyConfig[];
+  }
+
   const codexList = raw['codex-api-key'] ?? raw.codexApiKey ?? raw.codexApiKeys;
   if (Array.isArray(codexList)) {
     config.codexApiKeys = codexList
@@ -1047,11 +965,6 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       .filter(Boolean) as OpenAIProviderConfig[];
   }
 
-  const ampcode = normalizeAmpcodeConfig(raw.ampcode);
-  if (ampcode) {
-    config.ampcode = ampcode;
-  }
-
   const oauthExcluded = normalizeOauthExcluded(
     raw['oauth-excluded-models'] ?? raw.oauthExcludedModels
   );
@@ -1077,8 +990,5 @@ export {
   normalizeProviderKeyConfig,
   normalizeHeaders,
   normalizeExcludedModels,
-  normalizeAmpcodeConfig,
-  normalizeAmpcodeModelMappings,
-  normalizeAmpcodeUpstreamApiKeys,
   normalizeCodexCustomModels,
 };

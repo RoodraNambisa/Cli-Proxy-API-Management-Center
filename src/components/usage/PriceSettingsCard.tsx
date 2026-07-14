@@ -1,236 +1,310 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
-import { Select } from '@/components/ui/Select';
-import type { ModelPrice } from '@/utils/usage';
+import { usageApi } from '@/services/api/usage';
+import { useNotificationStore } from '@/stores';
+import type { UsageModelPriceConfig, UsageModelPrices, UsagePricesResponse } from '@/types';
+import { buildSharedModelPricesFromLegacy, loadModelPrices } from '@/utils/usage';
+import type { UsageResource } from './hooks/useUsageData';
 import styles from '@/pages/UsagePage.module.scss';
+
+const LEGACY_MODEL_PRICES_KEY = 'cli-proxy-model-prices-v2';
 
 export interface PriceSettingsCardProps {
   modelNames: string[];
-  modelPrices: Record<string, ModelPrice>;
-  onPricesChange: (prices: Record<string, ModelPrice>) => void;
+  modelPrices: UsageModelPrices;
+  resource: UsageResource<UsagePricesResponse>;
+  legacyImportAvailable: boolean;
+  onChanged: () => Promise<void>;
 }
+
+const parsePrice = (value: string): number | null => {
+  const parsed = value.trim() === '' ? 0 : Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
 
 export function PriceSettingsCard({
   modelNames,
   modelPrices,
-  onPricesChange
+  resource,
+  legacyImportAvailable,
+  onChanged,
 }: PriceSettingsCardProps) {
   const { t } = useTranslation();
+  const { showNotification, showConfirmation } = useNotificationStore();
+  const [model, setModel] = useState('');
+  const [inputPrice, setInputPrice] = useState('');
+  const [outputPrice, setOutputPrice] = useState('');
+  const [cachedInputPrice, setCachedInputPrice] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deletingModel, setDeletingModel] = useState('');
+  const [importingLegacy, setImportingLegacy] = useState(false);
 
-  // Add form state
-  const [selectedModel, setSelectedModel] = useState('');
-  const [promptPrice, setPromptPrice] = useState('');
-  const [completionPrice, setCompletionPrice] = useState('');
-  const [cachePrice, setCachePrice] = useState('');
+  const suggestions = useMemo(
+    () => Array.from(new Set([...modelNames, ...Object.keys(modelPrices)])).sort(),
+    [modelNames, modelPrices]
+  );
+  const controlsDisabled = resource.status === 'unsupported' || saving || importingLegacy;
 
-  // Edit modal state
-  const [editModel, setEditModel] = useState<string | null>(null);
-  const [editPrompt, setEditPrompt] = useState('');
-  const [editCompletion, setEditCompletion] = useState('');
-  const [editCache, setEditCache] = useState('');
-
-  const handleSavePrice = () => {
-    if (!selectedModel) return;
-    const prompt = parseFloat(promptPrice) || 0;
-    const completion = parseFloat(completionPrice) || 0;
-    const cache = cachePrice.trim() === '' ? prompt : parseFloat(cachePrice) || 0;
-    const newPrices = { ...modelPrices, [selectedModel]: { prompt, completion, cache } };
-    onPricesChange(newPrices);
-    setSelectedModel('');
-    setPromptPrice('');
-    setCompletionPrice('');
-    setCachePrice('');
+  const resetForm = () => {
+    setModel('');
+    setInputPrice('');
+    setOutputPrice('');
+    setCachedInputPrice('');
   };
 
-  const handleDeletePrice = (model: string) => {
-    const newPrices = { ...modelPrices };
-    delete newPrices[model];
-    onPricesChange(newPrices);
+  const editPrice = (name: string, price: UsageModelPriceConfig) => {
+    setModel(name);
+    setInputPrice(String(price['input-per-million'] ?? 0));
+    setOutputPrice(String(price['output-per-million'] ?? 0));
+    setCachedInputPrice(String(price['cached-input-per-million'] ?? 0));
   };
 
-  const handleOpenEdit = (model: string) => {
-    const price = modelPrices[model];
-    setEditModel(model);
-    setEditPrompt(price?.prompt?.toString() || '');
-    setEditCompletion(price?.completion?.toString() || '');
-    setEditCache(price?.cache?.toString() || '');
-  };
+  const savePrice = async () => {
+    const normalizedModel = model.trim();
+    const input = parsePrice(inputPrice);
+    const output = parsePrice(outputPrice);
+    const cachedInput = parsePrice(cachedInputPrice);
+    if (!normalizedModel || input === null || output === null || cachedInput === null) {
+      showNotification(t('usage_stats.price_invalid'), 'error');
+      return;
+    }
 
-  const handleSaveEdit = () => {
-    if (!editModel) return;
-    const prompt = parseFloat(editPrompt) || 0;
-    const completion = parseFloat(editCompletion) || 0;
-    const cache = editCache.trim() === '' ? prompt : parseFloat(editCache) || 0;
-    const newPrices = { ...modelPrices, [editModel]: { prompt, completion, cache } };
-    onPricesChange(newPrices);
-    setEditModel(null);
-  };
-
-  const handleModelSelect = (value: string) => {
-    setSelectedModel(value);
-    const price = modelPrices[value];
-    if (price) {
-      setPromptPrice(price.prompt.toString());
-      setCompletionPrice(price.completion.toString());
-      setCachePrice(price.cache.toString());
-    } else {
-      setPromptPrice('');
-      setCompletionPrice('');
-      setCachePrice('');
+    setSaving(true);
+    try {
+      await usageApi.patchUsagePrices({
+        [normalizedModel]: {
+          'input-per-million': input,
+          'output-per-million': output,
+          'cached-input-per-million': cachedInput,
+        },
+      });
+      showNotification(t('usage_stats.price_saved'), 'success');
+      resetForm();
+      await onChanged();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      showNotification(
+        `${t('usage_stats.price_save_failed')}${message ? `: ${message}` : ''}`,
+        'error'
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
-  const options = useMemo(
-    () => [
-      { value: '', label: t('usage_stats.model_price_select_placeholder') },
-      ...modelNames.map((name) => ({ value: name, label: name }))
-    ],
-    [modelNames, t]
-  );
+  const deletePrice = async (name: string) => {
+    setDeletingModel(name);
+    try {
+      await usageApi.deleteUsagePrice(name);
+      showNotification(t('usage_stats.price_deleted'), 'success');
+      if (model === name) resetForm();
+      await onChanged();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      showNotification(
+        `${t('usage_stats.price_delete_failed')}${message ? `: ${message}` : ''}`,
+        'error'
+      );
+    } finally {
+      setDeletingModel('');
+    }
+  };
+
+  const clearPrices = () => {
+    showConfirmation({
+      title: t('usage_stats.price_clear_title'),
+      message: t('usage_stats.price_clear_confirm'),
+      variant: 'danger',
+      confirmText: t('common.delete'),
+      onConfirm: async () => {
+        setSaving(true);
+        try {
+          await usageApi.clearUsagePrices();
+          resetForm();
+          showNotification(t('usage_stats.price_cleared'), 'success');
+          await onChanged();
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : '';
+          showNotification(
+            `${t('usage_stats.price_delete_failed')}${message ? `: ${message}` : ''}`,
+            'error'
+          );
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
+  };
+
+  const importLegacyPrices = async () => {
+    const models = buildSharedModelPricesFromLegacy(loadModelPrices());
+    if (Object.keys(models).length === 0) return;
+
+    setImportingLegacy(true);
+    try {
+      await usageApi.replaceUsagePrices(models);
+      localStorage.removeItem(LEGACY_MODEL_PRICES_KEY);
+      showNotification(t('usage_stats.legacy_prices_imported'), 'success');
+      await onChanged();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      showNotification(
+        `${t('usage_stats.legacy_prices_import_failed')}${message ? `: ${message}` : ''}`,
+        'error'
+      );
+    } finally {
+      setImportingLegacy(false);
+    }
+  };
 
   return (
-    <Card title={t('usage_stats.model_price_settings')}>
-      <div className={styles.pricingSection}>
-        {/* Price Form */}
-        <div className={styles.priceForm}>
-          <div className={styles.formRow}>
-            <div className={styles.formField}>
-              <label>{t('usage_stats.model_name')}</label>
-              <Select
-                value={selectedModel}
-                options={options}
-                onChange={handleModelSelect}
-                placeholder={t('usage_stats.model_price_select_placeholder')}
-              />
+    <Card
+      title={t('usage_stats.model_price_settings')}
+      extra={
+        Object.keys(modelPrices).length > 0 ? (
+          <Button variant="danger" size="sm" onClick={clearPrices} disabled={controlsDisabled}>
+            {t('usage_stats.price_clear_all')}
+          </Button>
+        ) : null
+      }
+    >
+      {resource.status === 'unsupported' ? (
+        <div className={styles.hint}>{t('usage_stats.state_unsupported')}</div>
+      ) : (
+        <div className={styles.pricingSection}>
+          {resource.status === 'error' && (
+            <div className={styles.errorBox}>{resource.error || t('usage_stats.state_error')}</div>
+          )}
+          {legacyImportAvailable && (
+            <div className={styles.legacyImportRow}>
+              <span>{t('usage_stats.legacy_prices_found')}</span>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void importLegacyPrices()}
+                loading={importingLegacy}
+                disabled={controlsDisabled}
+              >
+                {t('usage_stats.import_legacy_prices')}
+              </Button>
             </div>
-            <div className={styles.formField}>
-              <label>{t('usage_stats.model_price_prompt')} ($/1M)</label>
-              <Input
-                type="number"
-                value={promptPrice}
-                onChange={(e) => setPromptPrice(e.target.value)}
-                placeholder="0.00"
-                step="0.0001"
-              />
+          )}
+          <div className={styles.priceForm}>
+            <div className={styles.formRow}>
+              <div className={styles.formField}>
+                <label>{t('usage_stats.model_name')}</label>
+                <Input
+                  list="usage-model-price-options"
+                  value={model}
+                  onChange={(event) => setModel(event.target.value)}
+                  placeholder={t('usage_stats.model_price_select_placeholder')}
+                  disabled={controlsDisabled}
+                />
+                <datalist id="usage-model-price-options">
+                  {suggestions.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+                <span className={styles.formHint}>{t('usage_stats.model_price_exact_hint')}</span>
+              </div>
+              <div className={styles.formField}>
+                <label>{t('usage_stats.model_price_input')} ($/1M)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={inputPrice}
+                  onChange={(event) => setInputPrice(event.target.value)}
+                  placeholder="0.00"
+                  step="0.0001"
+                  disabled={controlsDisabled}
+                />
+              </div>
+              <div className={styles.formField}>
+                <label>{t('usage_stats.model_price_output')} ($/1M)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={outputPrice}
+                  onChange={(event) => setOutputPrice(event.target.value)}
+                  placeholder="0.00"
+                  step="0.0001"
+                  disabled={controlsDisabled}
+                />
+              </div>
+              <div className={styles.formField}>
+                <label>{t('usage_stats.model_price_cached_input')} ($/1M)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={cachedInputPrice}
+                  onChange={(event) => setCachedInputPrice(event.target.value)}
+                  placeholder="0.00"
+                  step="0.0001"
+                  disabled={controlsDisabled}
+                />
+              </div>
+              <Button onClick={() => void savePrice()} loading={saving} disabled={controlsDisabled}>
+                {t('common.save')}
+              </Button>
             </div>
-            <div className={styles.formField}>
-              <label>{t('usage_stats.model_price_completion')} ($/1M)</label>
-              <Input
-                type="number"
-                value={completionPrice}
-                onChange={(e) => setCompletionPrice(e.target.value)}
-                placeholder="0.00"
-                step="0.0001"
-              />
-            </div>
-            <div className={styles.formField}>
-              <label>{t('usage_stats.model_price_cache')} ($/1M)</label>
-              <Input
-                type="number"
-                value={cachePrice}
-                onChange={(e) => setCachePrice(e.target.value)}
-                placeholder="0.00"
-                step="0.0001"
-              />
-            </div>
-            <Button variant="primary" onClick={handleSavePrice} disabled={!selectedModel}>
-              {t('common.save')}
-            </Button>
           </div>
-        </div>
 
-        {/* Saved Prices List */}
-        <div className={styles.pricesList}>
-          <h4 className={styles.pricesTitle}>{t('usage_stats.saved_prices')}</h4>
-          {Object.keys(modelPrices).length > 0 ? (
-            <div className={styles.pricesGrid}>
-              {Object.entries(modelPrices).map(([model, price]) => (
-                <div key={model} className={styles.priceItem}>
-                  <div className={styles.priceInfo}>
-                    <span className={styles.priceModel}>{model}</span>
-                    <div className={styles.priceMeta}>
-                      <span>
-                        {t('usage_stats.model_price_prompt')}: ${price.prompt.toFixed(4)}/1M
-                      </span>
-                      <span>
-                        {t('usage_stats.model_price_completion')}: ${price.completion.toFixed(4)}/1M
-                      </span>
-                      <span>
-                        {t('usage_stats.model_price_cache')}: ${price.cache.toFixed(4)}/1M
-                      </span>
+          <div className={styles.pricesList}>
+            <h4 className={styles.pricesTitle}>{t('usage_stats.saved_prices')}</h4>
+            {resource.status === 'loading' ? (
+              <div className={styles.hint}>{t('common.loading')}</div>
+            ) : Object.keys(modelPrices).length > 0 ? (
+              <div className={styles.pricesGrid}>
+                {Object.entries(modelPrices).map(([name, price]) => (
+                  <div key={name} className={styles.priceItem}>
+                    <div className={styles.priceInfo}>
+                      <span className={styles.priceModel}>{name}</span>
+                      <div className={styles.priceMeta}>
+                        <span>
+                          {t('usage_stats.model_price_input')}: $
+                          {price['input-per-million'].toFixed(4)}/1M
+                        </span>
+                        <span>
+                          {t('usage_stats.model_price_output')}: $
+                          {price['output-per-million'].toFixed(4)}/1M
+                        </span>
+                        <span>
+                          {t('usage_stats.model_price_cached_input')}: $
+                          {price['cached-input-per-million'].toFixed(4)}/1M
+                        </span>
+                      </div>
+                    </div>
+                    <div className={styles.priceActions}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => editPrice(name, price)}
+                        disabled={controlsDisabled}
+                      >
+                        {t('common.edit')}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => void deletePrice(name)}
+                        loading={deletingModel === name}
+                        disabled={controlsDisabled || Boolean(deletingModel)}
+                      >
+                        {t('common.delete')}
+                      </Button>
                     </div>
                   </div>
-                  <div className={styles.priceActions}>
-                    <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(model)}>
-                      {t('common.edit')}
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => handleDeletePrice(model)}>
-                      {t('common.delete')}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className={styles.hint}>{t('usage_stats.model_price_empty')}</div>
-          )}
-        </div>
-      </div>
-
-      {/* Edit Modal */}
-      <Modal
-        open={editModel !== null}
-        title={editModel ?? ''}
-        onClose={() => setEditModel(null)}
-        footer={
-          <div className={styles.priceActions}>
-            <Button variant="secondary" onClick={() => setEditModel(null)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="primary" onClick={handleSaveEdit}>
-              {t('common.save')}
-            </Button>
-          </div>
-        }
-        width={420}
-      >
-        <div className={styles.editModalBody}>
-          <div className={styles.formField}>
-            <label>{t('usage_stats.model_price_prompt')} ($/1M)</label>
-            <Input
-              type="number"
-              value={editPrompt}
-              onChange={(e) => setEditPrompt(e.target.value)}
-              placeholder="0.00"
-              step="0.0001"
-            />
-          </div>
-          <div className={styles.formField}>
-            <label>{t('usage_stats.model_price_completion')} ($/1M)</label>
-            <Input
-              type="number"
-              value={editCompletion}
-              onChange={(e) => setEditCompletion(e.target.value)}
-              placeholder="0.00"
-              step="0.0001"
-            />
-          </div>
-          <div className={styles.formField}>
-            <label>{t('usage_stats.model_price_cache')} ($/1M)</label>
-            <Input
-              type="number"
-              value={editCache}
-              onChange={(e) => setEditCache(e.target.value)}
-              placeholder="0.00"
-              step="0.0001"
-            />
+                ))}
+              </div>
+            ) : (
+              <div className={styles.hint}>{t('usage_stats.model_price_empty')}</div>
+            )}
           </div>
         </div>
-      </Modal>
+      )}
     </Card>
   );
 }

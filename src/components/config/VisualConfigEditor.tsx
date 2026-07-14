@@ -90,7 +90,6 @@ const CONFIG_PAGE_ICONS: Record<ConfigPageId, ComponentType<IconProps>> = {
   'global-streaming': IconSatellite,
   'provider-codex': IconCode,
   'provider-antigravity': IconShield,
-  'provider-gemini-cli': IconDiamond,
   'provider-grok': IconSatellite,
   'advanced-payload': IconCode,
 };
@@ -1105,7 +1104,6 @@ export function VisualConfigEditor({
           'images.native.edits.unsupportedModelStatusCode',
         ]),
       'provider-antigravity': 0,
-      'provider-gemini-cli': 0,
       'provider-grok': 0,
       'advanced-payload': hasPayloadValidationErrors ? 1 : 0,
     }),
@@ -1971,31 +1969,22 @@ export function VisualConfigEditor({
             <ConfigSection
               id="network"
               hidden={
-                ![
-                  'global-network',
-                  'global-request',
-                  'provider-codex',
-                  'provider-gemini-cli',
-                ].includes(activePageId)
+                !['global-network', 'global-request', 'provider-codex'].includes(activePageId)
               }
               icon={<IconTrendingUp size={16} />}
               title={t(
                 activePageId === 'provider-codex'
                   ? 'config_management.settings_center.subsections.codex_transport'
-                  : activePageId === 'provider-gemini-cli'
-                    ? 'config_management.settings_center.subsections.gemini_endpoint'
-                    : activePageId === 'global-request'
-                      ? 'config_management.settings_center.subsections.request_error_rules'
-                      : 'config_management.visual.sections.network.title'
+                  : activePageId === 'global-request'
+                    ? 'config_management.settings_center.subsections.request_error_rules'
+                    : 'config_management.visual.sections.network.title'
               )}
               description={t(
                 activePageId === 'provider-codex'
                   ? 'config_management.settings_center.subsections.codex_transport_desc'
-                  : activePageId === 'provider-gemini-cli'
-                    ? 'config_management.settings_center.subsections.gemini_endpoint_desc'
-                    : activePageId === 'global-request'
-                      ? 'config_management.settings_center.subsections.request_error_rules_desc'
-                      : 'config_management.visual.sections.network.description'
+                  : activePageId === 'global-request'
+                    ? 'config_management.settings_center.subsections.request_error_rules_desc'
+                    : 'config_management.visual.sections.network.description'
               )}
             >
               <SectionStack>
@@ -2513,22 +2502,6 @@ export function VisualConfigEditor({
                 </PageGroup>
 
                 <SectionGrid>
-                  <PageGroup
-                    id="config-gemini-cli-endpoint"
-                    active={activePageId === 'provider-gemini-cli'}
-                  >
-                    <ToggleRow
-                      title={t(
-                        'config_management.visual.sections.network.enable_gemini_cli_endpoint'
-                      )}
-                      description={t(
-                        'config_management.visual.sections.network.enable_gemini_cli_endpoint_desc'
-                      )}
-                      checked={values.enableGeminiCliEndpoint}
-                      disabled={disabled}
-                      onChange={(enableGeminiCliEndpoint) => onChange({ enableGeminiCliEndpoint })}
-                    />
-                  </PageGroup>
                   <PageGroup active={activePageId === 'global-network'}>
                     <div id="config-force-model-prefix" className={styles.pageGroup}>
                       <ToggleRow

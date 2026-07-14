@@ -15,7 +15,11 @@ import { modelsApi, providersApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import type { GeminiKeyConfig } from '@/types';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
-import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
+import {
+  areKeyValueEntriesEqual,
+  areModelEntriesEqual,
+  areStringArraysEqual,
+} from '@/utils/compare';
 import type { ModelInfo } from '@/utils/models';
 import { entriesToModels, modelsToEntries } from '@/components/ui/modelInputListUtils';
 import { excludedModelsToText, parseExcludedModels } from '@/components/providers/utils';
@@ -75,7 +79,9 @@ type GeminiFormBaseline = {
 const buildGeminiBaseline = (form: GeminiFormState): GeminiFormBaseline => ({
   apiKey: String(form.apiKey ?? '').trim(),
   priority:
-    form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
+    form.priority !== undefined && Number.isFinite(form.priority)
+      ? Math.trunc(form.priority)
+      : null,
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
   proxyUrl: String(form.proxyUrl ?? '').trim(),
@@ -84,7 +90,13 @@ const buildGeminiBaseline = (form: GeminiFormState): GeminiFormBaseline => ({
   excludedModels: parseExcludedModels(form.excludedText ?? ''),
 });
 
-export function AiProvidersGeminiEditPage() {
+interface AiProvidersGeminiEditPageProps {
+  providerType?: 'gemini' | 'interactions';
+}
+
+export function AiProvidersGeminiEditPage({
+  providerType = 'gemini',
+}: AiProvidersGeminiEditPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -97,6 +109,9 @@ export function AiProvidersGeminiEditPage() {
   const fetchConfig = useConfigStore((state) => state.fetchConfig);
   const updateConfigValue = useConfigStore((state) => state.updateConfigValue);
   const clearCache = useConfigStore((state) => state.clearCache);
+  const isInteractions = providerType === 'interactions';
+  const configSection = isInteractions ? 'interactions-api-key' : 'gemini-api-key';
+  const translationPrefix = isInteractions ? 'interactions' : 'gemini';
 
   const [configs, setConfigs] = useState<GeminiKeyConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,8 +143,8 @@ export function AiProvidersGeminiEditPage() {
 
   const title =
     editIndex !== null
-      ? t('ai_providers.gemini_edit_modal_title')
-      : t('ai_providers.gemini_add_modal_title');
+      ? t(`ai_providers.${translationPrefix}_edit_modal_title`)
+      : t(`ai_providers.${translationPrefix}_add_modal_title`);
 
   const handleBack = useCallback(() => {
     const state = location.state as LocationState;
@@ -157,7 +172,11 @@ export function AiProvidersGeminiEditPage() {
     setLoading(true);
     setError('');
 
-    fetchConfig('gemini-api-key')
+    const request = isInteractions
+      ? providersApi.getInteractionsKeys()
+      : fetchConfig('gemini-api-key');
+
+    request
       .then((value) => {
         if (cancelled) return;
         setConfigs(Array.isArray(value) ? (value as GeminiKeyConfig[]) : []);
@@ -175,7 +194,7 @@ export function AiProvidersGeminiEditPage() {
     return () => {
       cancelled = true;
     };
-  }, [fetchConfig, t]);
+  }, [fetchConfig, isInteractions, t]);
 
   useEffect(() => {
     if (loading) return;
@@ -462,13 +481,21 @@ export function AiProvidersGeminiEditPage() {
           ? configs.map((item, idx) => (idx === editIndex ? payload : item))
           : [...configs, payload];
 
-      await providersApi.saveGeminiKeys(nextList);
-      updateConfigValue('gemini-api-key', nextList);
-      clearCache('gemini-api-key');
+      if (isInteractions) {
+        if (editIndex !== null) {
+          await providersApi.updateInteractionsKey(editIndex, payload);
+        } else {
+          await providersApi.saveInteractionsKeys(nextList);
+        }
+      } else {
+        await providersApi.saveGeminiKeys(nextList);
+      }
+      updateConfigValue(configSection, nextList);
+      clearCache(configSection);
       showNotification(
         editIndex !== null
-          ? t('notification.gemini_key_updated')
-          : t('notification.gemini_key_added'),
+          ? t(`notification.${translationPrefix}_key_updated`)
+          : t(`notification.${translationPrefix}_key_added`),
         'success'
       );
       allowNextNavigation();
@@ -485,12 +512,15 @@ export function AiProvidersGeminiEditPage() {
     allowNextNavigation,
     canSave,
     clearCache,
+    configSection,
     configs,
     editIndex,
     form,
     handleBack,
+    isInteractions,
     showNotification,
     t,
+    translationPrefix,
     updateConfigValue,
   ]);
 
@@ -540,8 +570,8 @@ export function AiProvidersGeminiEditPage() {
         ) : (
           <>
             <Input
-              label={t('ai_providers.gemini_add_modal_key_label')}
-              placeholder={t('ai_providers.gemini_add_modal_key_placeholder')}
+              label={t(`ai_providers.${translationPrefix}_add_modal_key_label`)}
+              placeholder={t(`ai_providers.${translationPrefix}_add_modal_key_placeholder`)}
               value={form.apiKey}
               onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
               disabled={disableControls || saving}

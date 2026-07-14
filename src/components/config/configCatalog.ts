@@ -9,7 +9,6 @@ export type ConfigPageId =
   | 'global-streaming'
   | 'provider-codex'
   | 'provider-antigravity'
-  | 'provider-gemini-cli'
   | 'provider-grok'
   | 'advanced-payload';
 
@@ -123,13 +122,6 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     titleKey: 'config_management.settings_center.pages.provider_antigravity.title',
     descriptionKey: 'config_management.settings_center.pages.provider_antigravity.description',
     dirtyPrefixes: ['quotaAntigravityCredits'],
-  },
-  {
-    id: 'provider-gemini-cli',
-    group: 'providers',
-    titleKey: 'config_management.settings_center.pages.provider_gemini_cli.title',
-    descriptionKey: 'config_management.settings_center.pages.provider_gemini_cli.description',
-    dirtyPrefixes: ['enableGeminiCliEndpoint'],
   },
   {
     id: 'provider-grok',
@@ -442,12 +434,6 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     pageId: 'provider-antigravity',
     labelKey: 'config_management.visual.sections.quota.antigravity_credits',
     yamlKeys: ['quota-exceeded.antigravity-credits'],
-  },
-  {
-    id: 'config-gemini-cli-endpoint',
-    pageId: 'provider-gemini-cli',
-    labelKey: 'config_management.visual.sections.network.enable_gemini_cli_endpoint',
-    yamlKeys: ['enable-gemini-cli-endpoint'],
   },
   {
     id: 'config-grok-auth',

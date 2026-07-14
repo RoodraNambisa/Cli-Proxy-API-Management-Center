@@ -1,13 +1,9 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  collectUsageDetails,
-  calculateServiceHealthData,
-  type ServiceHealthData,
-  type StatusBlockDetail,
-} from '@/utils/usage';
-import type { UsagePayload } from './hooks/useUsageData';
+import type { UsageHealthResponse } from '@/types';
+import type { ServiceHealthData, StatusBlockDetail, StatusBlockState } from '@/utils/usage';
+import type { UsageResource } from './hooks/useUsageData';
 import styles from '@/pages/UsagePage.module.scss';
 
 const COLOR_STOPS = [
@@ -55,19 +51,54 @@ function formatDateTime(timestamp: number): string {
 }
 
 export interface ServiceHealthCardProps {
-  usage: UsagePayload | null;
-  loading: boolean;
+  resource: UsageResource<UsageHealthResponse>;
 }
 
-export function ServiceHealthCard({ usage, loading }: ServiceHealthCardProps) {
+export function ServiceHealthCard({ resource }: ServiceHealthCardProps) {
   const { t } = useTranslation();
   const [activeTooltip, setActiveTooltip] = useState<ActiveTooltipState | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const healthData: ServiceHealthData = useMemo(() => {
-    const details = usage ? collectUsageDetails(usage) : [];
-    return calculateServiceHealthData(details);
-  }, [usage]);
+    const blockDetails = (resource.data?.items ?? []).map((item) => {
+      const success = Math.max(Number(item.success_count) || 0, 0);
+      const failure = Math.max(Number(item.failure_count) || 0, 0);
+      const startTime = new Date(item.bucket ?? '').getTime();
+      return {
+        success,
+        failure,
+        rate:
+          item.success_rate === null || item.success_rate === undefined
+            ? -1
+            : Math.max(0, Math.min(1, Number(item.success_rate) || 0)),
+        startTime: Number.isFinite(startTime) ? startTime : 0,
+        endTime: Number.isFinite(startTime) ? startTime + 15 * 60 * 1000 : 0,
+      };
+    });
+    const totals = blockDetails.reduce(
+      (acc, detail) => ({
+        success: acc.success + detail.success,
+        failure: acc.failure + detail.failure,
+      }),
+      { success: 0, failure: 0 }
+    );
+    const blocks: StatusBlockState[] = blockDetails.map((detail) => {
+      if (detail.rate < 0) return 'idle';
+      if (detail.failure === 0) return 'success';
+      if (detail.success === 0) return 'failure';
+      return 'mixed';
+    });
+    const total = totals.success + totals.failure;
+    return {
+      blocks,
+      blockDetails,
+      successRate: total > 0 ? (totals.success / total) * 100 : 0,
+      totalSuccess: totals.success,
+      totalFailure: totals.failure,
+      rows: 7,
+      cols: 96,
+    };
+  }, [resource.data]);
 
   const hasData = healthData.totalSuccess + healthData.totalFailure > 0;
 
@@ -221,6 +252,18 @@ export function ServiceHealthCard({ usage, loading }: ServiceHealthCardProps) {
       : healthData.successRate >= 50
         ? styles.healthRateMedium
         : styles.healthRateLow;
+  const stateText =
+    resource.status === 'loading'
+      ? t('common.loading')
+      : resource.status === 'disabled'
+        ? t('usage_stats.state_disabled')
+        : resource.status === 'unsupported'
+          ? t('usage_stats.state_unsupported')
+          : resource.status === 'error'
+            ? resource.error || t('usage_stats.state_error')
+            : resource.status === 'empty'
+              ? t('usage_stats.no_data')
+              : '';
 
   return (
     <div className={styles.healthCard}>
@@ -229,35 +272,43 @@ export function ServiceHealthCard({ usage, loading }: ServiceHealthCardProps) {
         <div className={styles.healthMeta}>
           <span className={styles.healthWindow}>{t('service_health.window')}</span>
           <span className={`${styles.healthRate} ${rateClass}`}>
-            {loading ? '--' : hasData ? `${healthData.successRate.toFixed(1)}%` : '--'}
+            {resource.status === 'loading'
+              ? '--'
+              : hasData
+                ? `${healthData.successRate.toFixed(1)}%`
+                : '--'}
           </span>
         </div>
       </div>
-      <div className={styles.healthGridScroller}>
-        <div className={styles.healthGrid} ref={gridRef}>
-          {healthData.blockDetails.map((detail, idx) => {
-            const isIdle = detail.rate === -1;
-            const blockStyle = isIdle ? undefined : { backgroundColor: rateToColor(detail.rate) };
-            const isActive = activeTooltip?.idx === idx;
+      {stateText ? (
+        <div className={styles.hint}>{stateText}</div>
+      ) : (
+        <div className={styles.healthGridScroller}>
+          <div className={styles.healthGrid} ref={gridRef}>
+            {healthData.blockDetails.map((detail, idx) => {
+              const isIdle = detail.rate === -1;
+              const blockStyle = isIdle ? undefined : { backgroundColor: rateToColor(detail.rate) };
+              const isActive = activeTooltip?.idx === idx;
 
-            return (
-              <div
-                key={idx}
-                className={`${styles.healthBlockWrapper} ${isActive ? styles.healthBlockActive : ''}`}
-                onPointerEnter={(e) => handlePointerEnter(e, idx)}
-                onPointerLeave={handlePointerLeave}
-                onPointerDown={(e) => handlePointerDown(e, idx)}
-              >
+              return (
                 <div
-                  className={`${styles.healthBlock} ${isIdle ? styles.healthBlockIdle : ''}`}
-                  style={blockStyle}
-                />
-                {isActive && activeTooltip && renderTooltip(detail, activeTooltip)}
-              </div>
-            );
-          })}
+                  key={idx}
+                  className={`${styles.healthBlockWrapper} ${isActive ? styles.healthBlockActive : ''}`}
+                  onPointerEnter={(e) => handlePointerEnter(e, idx)}
+                  onPointerLeave={handlePointerLeave}
+                  onPointerDown={(e) => handlePointerDown(e, idx)}
+                >
+                  <div
+                    className={`${styles.healthBlock} ${isIdle ? styles.healthBlockIdle : ''}`}
+                    style={blockStyle}
+                  />
+                  {isActive && activeTooltip && renderTooltip(detail, activeTooltip)}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
       <div className={styles.healthLegend}>
         <span className={styles.healthLegendLabel}>{t('service_health.oldest')}</span>
         <div className={styles.healthLegendColors}>

@@ -260,7 +260,6 @@ export function DashboardPage() {
           ? styles.configBadgeRandom
           : styles.configBadgeUnknown;
   const authMaintenanceEnabled = config?.authMaintenance?.enable === true;
-  const geminiCliEndpointEnabled = config?.enableGeminiCliEndpoint === true;
   const usageStatisticsPersistInterval = config?.usageStatisticsPersistIntervalSeconds;
   const usageStatisticsPersistDisplay =
     usageStatisticsPersistInterval === undefined
@@ -435,16 +434,6 @@ export function DashboardPage() {
                 className={`${styles.configPillValue} ${config.wsAuth ? styles.on : styles.off}`}
               >
                 {config.wsAuth ? t('common.yes') : t('common.no')}
-              </span>
-            </div>
-            <div className={styles.configPill}>
-              <span className={styles.configPillLabel}>{t('dashboard.gemini_cli_endpoint')}</span>
-              <span
-                className={`${styles.configPillValue} ${
-                  geminiCliEndpointEnabled ? styles.on : styles.off
-                }`}
-              >
-                {geminiCliEndpointEnabled ? t('common.yes') : t('common.no')}
               </span>
             </div>
             <div className={styles.configPill}>

@@ -1,35 +1,143 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { USAGE_STATS_STALE_TIME_MS, useNotificationStore, useUsageStatsStore } from '@/stores';
 import { usageApi } from '@/services/api/usage';
-import type { UsageAuthSummary } from '@/types';
+import { useNotificationStore } from '@/stores';
+import type {
+  UsageAuthSummary,
+  UsageCostsResponse,
+  UsageHealthResponse,
+  UsageMeta,
+  UsageModelPrices,
+  UsagePricesResponse,
+  UsageRangeQuery,
+  UsageRatesResponse,
+  UsageTokensResponse,
+} from '@/types';
 import { downloadBlob } from '@/utils/download';
-import {
-  buildUsageRangeForTimeRange,
-  loadModelPrices,
-  saveModelPrices,
-  type ModelPrice,
-  type UsageTimeRange,
-} from '@/utils/usage';
+import { buildUsageRangeForTimeRange, loadModelPrices, type UsageTimeRange } from '@/utils/usage';
 
 export interface UsagePayload {
+  version?: string | number;
+  enabled?: boolean;
+  available?: boolean;
+  as_of?: string;
   total_requests?: number;
   success_count?: number;
   failure_count?: number;
   total_tokens?: number;
+  tokens?: Record<string, unknown>;
   apis?: Record<string, unknown>;
+  models?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
+export type UsageResourceStatus =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'empty'
+  | 'disabled'
+  | 'unsupported'
+  | 'error';
+
+export interface UsageResource<T> {
+  status: UsageResourceStatus;
+  data: T | null;
+  error: string;
+}
+
+export interface UsageQuerySnapshot {
+  asOf: string;
+  range: UsageRangeQuery;
+  aggregateBucket: 'hour' | 'day';
+}
+
+type UsageCapability =
+  | 'meta'
+  | 'summary'
+  | 'auths'
+  | 'health'
+  | 'rates'
+  | 'tokens'
+  | 'costs'
+  | 'prices';
+
+const HEALTH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+const emptyResource = <T>(): UsageResource<T> => ({
+  status: 'idle',
+  data: null,
+  error: '',
+});
+
+const loadingResource = <T>(current: UsageResource<T>): UsageResource<T> => ({
+  status: 'loading',
+  data: current.data,
+  error: '',
+});
+
+const terminalResource = <T>(
+  status: Extract<UsageResourceStatus, 'disabled' | 'unsupported'>
+): UsageResource<T> => ({ status, data: null, error: '' });
+
+const errorStatus = (error: unknown): number | undefined => {
+  if (!error || typeof error !== 'object' || !('status' in error)) return undefined;
+  const status = Number((error as { status?: unknown }).status);
+  return Number.isFinite(status) ? status : undefined;
+};
+
+const isAbortError = (error: unknown): boolean =>
+  Boolean(
+    error &&
+    typeof error === 'object' &&
+    ('code' in error || 'name' in error) &&
+    ((error as { code?: unknown }).code === 'ERR_CANCELED' ||
+      (error as { name?: unknown }).name === 'AbortError')
+  );
+
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+const readUsageEnvelope = (response: unknown): UsagePayload => {
+  if (!response || typeof response !== 'object') return {};
+  const record = response as Record<string, unknown>;
+  const value =
+    record.usage && typeof record.usage === 'object'
+      ? (record.usage as Record<string, unknown>)
+      : record;
+  const usage: UsagePayload = { ...value };
+  if (usage.failure_count === undefined && typeof record.failed_requests === 'number') {
+    usage.failure_count = record.failed_requests;
+  }
+  return usage;
+};
+
+const hasLegacyPrices = (): boolean => Object.keys(loadModelPrices()).length > 0;
+
+const resourceStatusForData = <T>(data: T, isEmpty: (value: T) => boolean): UsageResource<T> => ({
+  status: isEmpty(data) ? 'empty' : 'ready',
+  data,
+  error: '',
+});
+
 export interface UseUsageDataReturn {
   usage: UsagePayload | null;
+  usageMeta: UsageMeta | null;
   authUsage: UsageAuthSummary[];
+  summaryResource: UsageResource<UsagePayload>;
+  authResource: UsageResource<UsageAuthSummary[]>;
+  healthResource: UsageResource<UsageHealthResponse>;
+  ratesResource: UsageResource<UsageRatesResponse>;
+  tokensResource: UsageResource<UsageTokensResponse>;
+  costsResource: UsageResource<UsageCostsResponse>;
+  pricesResource: UsageResource<UsagePricesResponse>;
+  querySnapshot: UsageQuerySnapshot;
   loading: boolean;
   authUsageLoading: boolean;
   error: string;
   lastRefreshedAt: Date | null;
-  modelPrices: Record<string, ModelPrice>;
-  setModelPrices: (prices: Record<string, ModelPrice>) => void;
+  modelPrices: UsageModelPrices;
+  legacyPriceImportAvailable: boolean;
   loadUsage: () => Promise<void>;
   handleExport: () => Promise<void>;
   handleImport: () => void;
@@ -48,38 +156,255 @@ export interface UseUsageDataOptions {
 export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataReturn {
   const { t } = useTranslation();
   const { showNotification, showConfirmation } = useNotificationStore();
-  const usageSnapshot = useUsageStatsStore((state) => state.usage);
-  const authUsage = useUsageStatsStore((state) => state.usageAuths);
-  const loading = useUsageStatsStore((state) => state.loading);
-  const authUsageLoading = useUsageStatsStore((state) => state.authsLoading);
-  const storeError = useUsageStatsStore((state) => state.error);
-  const lastRefreshedAtTs = useUsageStatsStore((state) => state.lastRefreshedAt);
-  const loadUsageStats = useUsageStatsStore((state) => state.loadUsageStats);
-  const loadUsageAuths = useUsageStatsStore((state) => state.loadUsageAuths);
-  const clearUsageStats = useUsageStatsStore((state) => state.clearUsageStats);
-
-  const [modelPrices, setModelPrices] = useState<Record<string, ModelPrice>>({});
+  const [summaryResource, setSummaryResource] =
+    useState<UsageResource<UsagePayload>>(emptyResource);
+  const [authResource, setAuthResource] =
+    useState<UsageResource<UsageAuthSummary[]>>(emptyResource);
+  const [healthResource, setHealthResource] =
+    useState<UsageResource<UsageHealthResponse>>(emptyResource);
+  const [ratesResource, setRatesResource] =
+    useState<UsageResource<UsageRatesResponse>>(emptyResource);
+  const [tokensResource, setTokensResource] =
+    useState<UsageResource<UsageTokensResponse>>(emptyResource);
+  const [costsResource, setCostsResource] =
+    useState<UsageResource<UsageCostsResponse>>(emptyResource);
+  const [pricesResource, setPricesResource] =
+    useState<UsageResource<UsagePricesResponse>>(emptyResource);
+  const [usageMeta, setUsageMeta] = useState<UsageMeta | null>(null);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
+  const [legacyPriceImportAvailable, setLegacyPriceImportAvailable] = useState(false);
+  const [querySnapshot, setQuerySnapshot] = useState<UsageQuerySnapshot>(() => {
+    const asOfMs = Date.now();
+    const asOf = new Date(asOfMs).toISOString();
+    return {
+      asOf,
+      range: { ...buildUsageRangeForTimeRange(timeRange, asOfMs), to: asOf },
+      aggregateBucket: timeRange === '7d' || timeRange === 'all' ? 'day' : 'hour',
+    };
+  });
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [clearing, setClearing] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const requestControllerRef = useRef<AbortController | null>(null);
+  const unsupportedCapabilitiesRef = useRef<Set<UsageCapability>>(new Set());
+  const summaryCacheRef = useRef<{
+    version: string;
+    rangeKey: string;
+    data: UsagePayload;
+  } | null>(null);
 
-  const loadUsage = useCallback(async () => {
-    const range = buildUsageRangeForTimeRange(timeRange);
-    await Promise.all([
-      loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
-      loadUsageAuths({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
-    ]);
-  }, [loadUsageAuths, loadUsageStats, timeRange]);
+  const requestResource = useCallback(
+    async <T>(
+      capability: UsageCapability,
+      request: () => Promise<T>,
+      isEmpty: (value: T) => boolean
+    ): Promise<UsageResource<T>> => {
+      if (unsupportedCapabilitiesRef.current.has(capability)) {
+        return terminalResource('unsupported');
+      }
+      try {
+        const data = await request();
+        return resourceStatusForData(data, isEmpty);
+      } catch (error: unknown) {
+        if (isAbortError(error)) throw error;
+        if (errorStatus(error) === 404) {
+          unsupportedCapabilitiesRef.current.add(capability);
+          return terminalResource('unsupported');
+        }
+        return { status: 'error', data: null, error: errorMessage(error) };
+      }
+    },
+    []
+  );
+
+  const refresh = useCallback(
+    async (force: boolean) => {
+      requestControllerRef.current?.abort();
+      const controller = new AbortController();
+      requestControllerRef.current = controller;
+
+      const asOfMs = Date.now();
+      const asOf = new Date(asOfMs).toISOString();
+      const range = { ...buildUsageRangeForTimeRange(timeRange, asOfMs), to: asOf };
+      const aggregateBucket = timeRange === '7d' || timeRange === 'all' ? 'day' : 'hour';
+      const snapshot: UsageQuerySnapshot = { asOf, range, aggregateBucket };
+      const healthRange = {
+        from: new Date(asOfMs - HEALTH_WINDOW_MS).toISOString(),
+        to: asOf,
+      };
+      const rangeKey = `${range.from || ''}::${range.to || ''}`;
+      setQuerySnapshot(snapshot);
+      setSummaryResource((current) => loadingResource(current));
+      setAuthResource((current) => loadingResource(current));
+      setHealthResource((current) => loadingResource(current));
+      setRatesResource((current) => loadingResource(current));
+      setTokensResource((current) => loadingResource(current));
+      setCostsResource((current) => loadingResource(current));
+      setPricesResource((current) => loadingResource(current));
+
+      const [metaResult, pricesResult] = await Promise.all([
+        requestResource(
+          'meta',
+          () => usageApi.getUsageMeta({ signal: controller.signal }),
+          () => false
+        ),
+        requestResource(
+          'prices',
+          () => usageApi.getUsagePrices({ signal: controller.signal }),
+          (response) => Object.keys(response.models ?? {}).length === 0
+        ),
+      ]);
+      if (controller.signal.aborted) return;
+      setPricesResource(pricesResult);
+      setLegacyPriceImportAvailable(pricesResult.status === 'empty' && hasLegacyPrices());
+
+      if (metaResult.status === 'unsupported') {
+        setUsageMeta(null);
+        setSummaryResource(terminalResource('unsupported'));
+        setAuthResource(terminalResource('unsupported'));
+        setHealthResource(terminalResource('unsupported'));
+        setRatesResource(terminalResource('unsupported'));
+        setTokensResource(terminalResource('unsupported'));
+        setCostsResource(terminalResource('unsupported'));
+        setLastRefreshedAt(new Date(asOfMs));
+        return;
+      }
+      if (metaResult.status === 'error') {
+        setSummaryResource({ status: 'error', data: null, error: metaResult.error });
+        setAuthResource({ status: 'error', data: null, error: metaResult.error });
+        setHealthResource({ status: 'error', data: null, error: metaResult.error });
+        setRatesResource({ status: 'error', data: null, error: metaResult.error });
+        setTokensResource({ status: 'error', data: null, error: metaResult.error });
+        setCostsResource({ status: 'error', data: null, error: metaResult.error });
+        return;
+      }
+
+      const meta = readUsageEnvelope(metaResult.data) as UsageMeta;
+      setUsageMeta(meta);
+      if (meta.enabled === false) {
+        setSummaryResource(terminalResource('disabled'));
+        setAuthResource(terminalResource('disabled'));
+        setHealthResource(terminalResource('disabled'));
+        setRatesResource(terminalResource('disabled'));
+        setTokensResource(terminalResource('disabled'));
+        setCostsResource(terminalResource('disabled'));
+        setLastRefreshedAt(new Date(asOfMs));
+        return;
+      }
+      if (meta.available === false) {
+        const message = t('usage_stats.state_unavailable');
+        setSummaryResource({ status: 'error', data: null, error: message });
+        setAuthResource({ status: 'error', data: null, error: message });
+        setHealthResource({ status: 'error', data: null, error: message });
+        setRatesResource({ status: 'error', data: null, error: message });
+        setTokensResource({ status: 'error', data: null, error: message });
+        setCostsResource({ status: 'error', data: null, error: message });
+        setLastRefreshedAt(new Date(asOfMs));
+        return;
+      }
+
+      const version = String(meta.version ?? '');
+      const cachedSummary = summaryCacheRef.current;
+      const canReuseSummary =
+        !force &&
+        Boolean(version) &&
+        cachedSummary?.version === version &&
+        cachedSummary.rangeKey === rangeKey;
+
+      const summaryPromise = canReuseSummary
+        ? Promise.resolve(
+            resourceStatusForData(cachedSummary.data, (value) => (value.total_requests ?? 0) === 0)
+          )
+        : requestResource(
+            'summary',
+            () => usageApi.getUsageSummary(range, { signal: controller.signal }),
+            (response) => (readUsageEnvelope(response).total_requests ?? 0) === 0
+          ).then((result) => {
+            if (result.data) {
+              const data = { ...meta, ...readUsageEnvelope(result.data) };
+              summaryCacheRef.current = { version, rangeKey, data };
+              return { ...result, data };
+            }
+            return result as UsageResource<UsagePayload>;
+          });
+
+      const [summary, auths, health, rates, tokens, costs] = await Promise.all([
+        summaryPromise,
+        requestResource(
+          'auths',
+          () => usageApi.getUsageAuths(range, { signal: controller.signal }),
+          (response) => (response.auths ?? []).length === 0
+        ).then((result): UsageResource<UsageAuthSummary[]> => {
+          if (!result.data) {
+            return { status: result.status, data: null, error: result.error };
+          }
+          const auths = result.data.auths ?? [];
+          return resourceStatusForData(auths, (items) => items.length === 0);
+        }),
+        requestResource(
+          'health',
+          () =>
+            usageApi.getUsageHealth(
+              { ...healthRange, bucket: '15m', group_by: 'none' },
+              { signal: controller.signal }
+            ),
+          (response) => !(response.items ?? []).some((item) => Number(item.requests) > 0)
+        ),
+        requestResource(
+          'rates',
+          () =>
+            usageApi.getUsageRates(
+              { window_minutes: 30, sparkline_minutes: 60 },
+              { signal: controller.signal }
+            ),
+          (response) => Number(response.request_count) <= 0 && Number(response.token_count) <= 0
+        ),
+        requestResource(
+          'tokens',
+          () =>
+            usageApi.getUsageTokens(
+              { ...range, bucket: aggregateBucket, group_by: 'none' },
+              { signal: controller.signal }
+            ),
+          (response) => Number(response.total_tokens) <= 0
+        ),
+        requestResource(
+          'costs',
+          () =>
+            usageApi.getUsageCosts(
+              { ...range, bucket: aggregateBucket },
+              { signal: controller.signal }
+            ),
+          (response) =>
+            Number(response.total?.amount_micros) === 0 &&
+            (response.by_model ?? []).length === 0 &&
+            (response.unpriced_models ?? []).length === 0
+        ),
+      ]);
+
+      if (controller.signal.aborted) return;
+      setSummaryResource(summary);
+      setAuthResource(auths);
+      setHealthResource(health);
+      setRatesResource(rates);
+      setTokensResource(tokens);
+      setCostsResource(costs);
+      setLastRefreshedAt(new Date(asOfMs));
+    },
+    [requestResource, t, timeRange]
+  );
+
+  const loadUsage = useCallback(() => refresh(true), [refresh]);
 
   useEffect(() => {
-    const range = buildUsageRangeForTimeRange(timeRange);
-    void Promise.all([
-      loadUsageStats({ staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
-      loadUsageAuths({ staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
-    ]).catch(() => {});
-    setModelPrices(loadModelPrices());
-  }, [loadUsageAuths, loadUsageStats, timeRange]);
+    void refresh(false).catch((error: unknown) => {
+      if (!isAbortError(error)) {
+        setSummaryResource({ status: 'error', data: null, error: errorMessage(error) });
+      }
+    });
+    return () => requestControllerRef.current?.abort();
+  }, [refresh]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -96,8 +421,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         blob: new Blob([JSON.stringify(data ?? {}, null, 2)], { type: 'application/json' }),
       });
       showNotification(t('usage_stats.export_success'), 'success');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '';
+    } catch (error: unknown) {
+      const message = errorMessage(error);
       showNotification(
         `${t('notification.download_failed')}${message ? `: ${message}` : ''}`,
         'error'
@@ -107,9 +432,7 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
     }
   };
 
-  const handleImport = () => {
-    importInputRef.current?.click();
-  };
+  const handleImport = () => importInputRef.current?.click();
 
   const handleImportChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -118,15 +441,13 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
 
     setImporting(true);
     try {
-      const text = await file.text();
       let payload: unknown;
       try {
-        payload = JSON.parse(text);
+        payload = JSON.parse(await file.text());
       } catch {
         showNotification(t('usage_stats.import_invalid'), 'error');
         return;
       }
-
       const result = await usageApi.importUsage(payload);
       showNotification(
         t('usage_stats.import_success', {
@@ -137,21 +458,9 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         }),
         'success'
       );
-      try {
-        const range = buildUsageRangeForTimeRange(timeRange);
-        await Promise.all([
-          loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
-          loadUsageAuths({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
-        ]);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : '';
-        showNotification(
-          `${t('notification.refresh_failed')}${message ? `: ${message}` : ''}`,
-          'error'
-        );
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '';
+      await loadUsage();
+    } catch (error: unknown) {
+      const message = errorMessage(error);
       showNotification(
         `${t('notification.upload_failed')}${message ? `: ${message}` : ''}`,
         'error'
@@ -171,12 +480,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         setClearing(true);
         try {
           const result = await usageApi.clearUsage();
-          clearUsageStats();
-          const range = buildUsageRangeForTimeRange(timeRange);
-          await Promise.all([
-            loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
-            loadUsageAuths({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }),
-          ]);
+          summaryCacheRef.current = null;
+          await loadUsage();
           showNotification(
             t('usage_stats.clear_success', {
               total: result?.total_requests_before ?? 0,
@@ -185,8 +490,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
             }),
             'success'
           );
-        } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : '';
+        } catch (error: unknown) {
+          const message = errorMessage(error);
           showNotification(
             `${t('usage_stats.clear_failed')}${message ? `: ${message}` : ''}`,
             'error'
@@ -196,34 +501,32 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         }
       },
     });
-  }, [
-    clearUsageStats,
-    loadUsageAuths,
-    loadUsageStats,
-    showConfirmation,
-    showNotification,
-    t,
-    timeRange,
-  ]);
+  }, [loadUsage, showConfirmation, showNotification, t]);
 
-  const handleSetModelPrices = useCallback((prices: Record<string, ModelPrice>) => {
-    setModelPrices(prices);
-    saveModelPrices(prices);
-  }, []);
-
-  const usage = usageSnapshot as UsagePayload | null;
-  const error = storeError || '';
-  const lastRefreshedAt = lastRefreshedAtTs ? new Date(lastRefreshedAtTs) : null;
+  const usage = summaryResource.data;
+  const authUsage = authResource.data ?? [];
+  const modelPrices = pricesResource.data?.models ?? {};
+  const loading = summaryResource.status === 'loading';
+  const authUsageLoading = authResource.status === 'loading';
 
   return {
     usage,
+    usageMeta,
     authUsage,
+    summaryResource,
+    authResource,
+    healthResource,
+    ratesResource,
+    tokensResource,
+    costsResource,
+    pricesResource,
+    querySnapshot,
     loading,
     authUsageLoading,
-    error,
+    error: summaryResource.status === 'error' ? summaryResource.error : '',
     lastRefreshedAt,
     modelPrices,
-    setModelPrices: handleSetModelPrices,
+    legacyPriceImportAvailable,
     loadUsage,
     handleExport,
     handleImport,

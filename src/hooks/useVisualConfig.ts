@@ -587,8 +587,7 @@ function parseRoutingPriorityOverrides(raw: unknown): RoutingPriorityOverrideVis
           ? ''
           : String(record['fill-first-range'] ?? record.fillFirstRange ?? ''),
       fillFirstPerAuthRpm:
-        record['fill-first-per-auth-rpm'] === undefined &&
-        record.fillFirstPerAuthRpm === undefined
+        record['fill-first-per-auth-rpm'] === undefined && record.fillFirstPerAuthRpm === undefined
           ? ''
           : String(record['fill-first-per-auth-rpm'] ?? record.fillFirstPerAuthRpm ?? ''),
     });
@@ -924,8 +923,7 @@ export function getVisualConfigValidationErrors(
           ? getPositiveIntegerError(rule.fillFirstRange)
           : undefined;
       if (fillFirstRangeError) {
-        result[`routingPriorityOverrides.${rule.clientId}.fillFirstRange`] =
-          fillFirstRangeError;
+        result[`routingPriorityOverrides.${rule.clientId}.fillFirstRange`] = fillFirstRangeError;
       }
       const fillFirstPerAuthRpmError =
         effectiveStrategy === 'fill-first' && rule.fillFirstPerAuthRpm.trim()
@@ -1633,12 +1631,6 @@ function getNextDirtyFields(
   if (Object.prototype.hasOwnProperty.call(patch, 'proxyUrl')) {
     updateDirty('proxyUrl', nextValues.proxyUrl === baselineValues.proxyUrl);
   }
-  if (Object.prototype.hasOwnProperty.call(patch, 'enableGeminiCliEndpoint')) {
-    updateDirty(
-      'enableGeminiCliEndpoint',
-      nextValues.enableGeminiCliEndpoint === baselineValues.enableGeminiCliEndpoint
-    );
-  }
   if (Object.prototype.hasOwnProperty.call(patch, 'forceModelPrefix')) {
     updateDirty(
       'forceModelPrefix',
@@ -2252,7 +2244,6 @@ export function useVisualConfig() {
         pprofAddr: typeof pprof?.addr === 'string' ? pprof.addr : '',
 
         proxyUrl: typeof parsed['proxy-url'] === 'string' ? parsed['proxy-url'] : '',
-        enableGeminiCliEndpoint: Boolean(parsed['enable-gemini-cli-endpoint']),
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
         codexFingerprintJA3,
@@ -2570,7 +2561,6 @@ export function useVisualConfig() {
         }
 
         setStringInDoc(doc, ['proxy-url'], values.proxyUrl);
-        setBooleanInDoc(doc, ['enable-gemini-cli-endpoint'], values.enableGeminiCliEndpoint);
         setBooleanInDoc(doc, ['force-model-prefix'], values.forceModelPrefix);
         setIntFromStringInDoc(doc, ['request-retry'], values.requestRetry);
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);

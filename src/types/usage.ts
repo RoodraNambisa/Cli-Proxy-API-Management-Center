@@ -64,6 +64,11 @@ export interface UsageTokens {
 
 export interface UsageMeta {
   version?: string | number;
+  enabled?: boolean;
+  available?: boolean;
+  as_of?: string;
+  oldest_at?: string | null;
+  newest_at?: string | null;
   total_requests?: number;
   success_count?: number;
   failure_count?: number;
@@ -168,4 +173,184 @@ export interface UsageSeriesItem {
   total_tokens?: number;
   tokens?: UsageTokens;
   [key: string]: unknown;
+}
+
+export type UsageHealthBucket = '15m' | 'hour' | 'day';
+export type UsageHealthGroupBy = 'none' | 'auth_index' | 'source';
+
+export interface UsageHealthQuery extends UsageRangeQuery {
+  bucket?: UsageHealthBucket;
+  group_by?: UsageHealthGroupBy;
+  auth_index?: string | string[];
+  source?: string | string[];
+}
+
+export interface UsageHealthItem {
+  bucket?: string;
+  group?: string;
+  requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  success_rate?: number | null;
+  state?: 'no_data' | 'healthy' | 'degraded' | 'unhealthy' | string;
+}
+
+export interface UsageHealthResponse {
+  as_of?: string;
+  from?: string;
+  to?: string;
+  bucket?: UsageHealthBucket;
+  group_by?: UsageHealthGroupBy;
+  truncated?: boolean;
+  items?: UsageHealthItem[];
+}
+
+export interface UsageRatesQuery {
+  window_minutes?: number;
+  sparkline_minutes?: number;
+}
+
+export interface UsageRateItem {
+  bucket?: string;
+  requests?: number;
+  total_tokens?: number;
+  rpm?: number;
+  tpm?: number;
+}
+
+export interface UsageRatesResponse {
+  as_of?: string;
+  window_minutes?: number;
+  sparkline_minutes?: number;
+  request_count?: number;
+  token_count?: number;
+  rpm?: number;
+  tpm?: number;
+  items?: UsageRateItem[];
+}
+
+export type UsageAggregateBucket = 'hour' | 'day';
+export type UsageTokensGroupBy = 'none' | 'model' | 'api';
+
+export interface UsageTokensQuery extends UsageRangeQuery {
+  bucket?: UsageAggregateBucket;
+  group_by?: UsageTokensGroupBy;
+}
+
+export type UsageTokenItem = UsageSeriesItem;
+
+export interface UsageTokensResponse {
+  as_of?: string;
+  from?: string | null;
+  to?: string | null;
+  bucket?: UsageAggregateBucket;
+  group_by?: UsageTokensGroupBy;
+  truncated?: boolean;
+  total_tokens?: number;
+  tokens?: UsageTokens;
+  items?: UsageTokenItem[];
+}
+
+export interface UsageCostsQuery extends UsageRangeQuery {
+  bucket?: UsageAggregateBucket;
+}
+
+export interface UsageMoney {
+  currency?: 'USD' | string;
+  amount_micros?: number;
+  amount?: number;
+}
+
+export interface UsageCostCoverage {
+  total_requests?: number;
+  priced_requests?: number;
+  calculated_requests?: number;
+  request_coverage?: number | null;
+  calculation_request_coverage?: number | null;
+  total_tokens?: number;
+  priced_tokens?: number;
+  calculated_tokens?: number;
+  token_coverage?: number | null;
+  calculation_token_coverage?: number | null;
+}
+
+export interface UsageModelCost {
+  model?: string;
+  priced?: boolean;
+  requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  calculated_requests?: number;
+  calculated_tokens?: number;
+  tokens?: UsageTokens;
+  cost?: UsageMoney;
+}
+
+export interface UsageApiCost {
+  api?: string;
+  requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  tokens?: UsageTokens;
+  coverage?: UsageCostCoverage;
+  cost?: UsageMoney;
+  rounding_adjustment_micros?: number;
+}
+
+export interface UsageCostSeriesItem {
+  bucket?: string;
+  requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  tokens?: UsageTokens;
+  coverage?: UsageCostCoverage;
+  cost?: UsageMoney;
+  rounding_adjustment_micros?: number;
+}
+
+export interface UsageUnpricedModel {
+  model?: string;
+  requests?: number;
+  success_count?: number;
+  failure_count?: number;
+  total_tokens?: number;
+  tokens?: UsageTokens;
+}
+
+export interface UsageUncalculatedModel {
+  model?: string;
+  requests?: number;
+  total_tokens?: number;
+}
+
+export interface UsageCostsResponse {
+  as_of?: string;
+  from?: string | null;
+  to?: string | null;
+  bucket?: UsageAggregateBucket;
+  truncated?: boolean;
+  total?: UsageMoney;
+  total_tokens?: number;
+  tokens?: UsageTokens;
+  coverage?: UsageCostCoverage;
+  by_model?: UsageModelCost[];
+  by_api?: UsageApiCost[];
+  series?: UsageCostSeriesItem[];
+  unpriced_models?: UsageUnpricedModel[];
+  uncalculated_models?: UsageUncalculatedModel[];
+}
+
+export interface UsageModelPriceConfig {
+  'input-per-million': number;
+  'output-per-million': number;
+  'cached-input-per-million': number;
+}
+
+export type UsageModelPrices = Record<string, UsageModelPriceConfig>;
+
+export interface UsagePricesResponse {
+  models?: UsageModelPrices;
 }

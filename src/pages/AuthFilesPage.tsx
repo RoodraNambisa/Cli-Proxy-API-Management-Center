@@ -87,6 +87,11 @@ const BATCH_BAR_HIDDEN_TRANSFORM = 'translateX(-50%) translateY(56px)';
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
 const DEFAULT_COMPACT_PAGE_SIZE = 12;
 
+const isRetiredGeminiCliAuthFile = (file: { provider?: unknown; type?: unknown }) =>
+  [file.provider, file.type].some(
+    (value) => normalizeProviderKey(String(value ?? '')) === 'gemini-cli'
+  );
+
 const escapeWildcardSearchSegment = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const buildWildcardSearch = (value: string): RegExp | null => {
@@ -761,11 +766,13 @@ export function AuthFilesPage() {
   }, [currentPageAuthIndexes, currentPageAuthIndexesKey, isCurrentLayer, loadKeyStats]);
 
   const selectablePageItems = useMemo(
-    () => pageItems.filter((file) => !isRuntimeOnlyAuthFile(file)),
+    () =>
+      pageItems.filter((file) => !isRuntimeOnlyAuthFile(file) && !isRetiredGeminiCliAuthFile(file)),
     [pageItems]
   );
   const selectableFilteredItems = useMemo(
-    () => sorted.filter((file) => !isRuntimeOnlyAuthFile(file)),
+    () =>
+      sorted.filter((file) => !isRuntimeOnlyAuthFile(file) && !isRetiredGeminiCliAuthFile(file)),
     [sorted]
   );
   const currentPageCodexUsageTargets = useMemo(

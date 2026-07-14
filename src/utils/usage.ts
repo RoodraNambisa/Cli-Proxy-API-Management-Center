@@ -71,6 +71,7 @@ export interface UsageDetail {
   failed: boolean;
   request_service_tier?: string;
   response_service_tier?: string;
+  __sourceFilterValue?: string;
   __modelName?: string;
   __timestampMs?: number;
 }
@@ -938,6 +939,26 @@ export function loadModelPrices(): Record<string, ModelPrice> {
   } catch {
     return {};
   }
+}
+
+export function buildSharedModelPricesFromLegacy(prices: Record<string, ModelPrice>): Record<
+  string,
+  {
+    'input-per-million': number;
+    'output-per-million': number;
+    'cached-input-per-million': number;
+  }
+> {
+  return Object.fromEntries(
+    Object.entries(prices).map(([name, price]) => [
+      name,
+      {
+        'input-per-million': Math.max(Number(price.prompt) || 0, 0),
+        'output-per-million': Math.max(Number(price.completion) || 0, 0),
+        'cached-input-per-million': Math.max(Number(price.cache) || 0, 0),
+      },
+    ])
+  );
 }
 
 /**

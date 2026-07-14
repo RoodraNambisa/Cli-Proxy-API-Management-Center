@@ -5,6 +5,7 @@ import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import {
   IconDownload,
+  IconEye,
   IconInfo,
   IconModelCluster,
   IconSettings,
@@ -99,9 +100,12 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const fileStats = resolveAuthFileStats(file, keyStats);
   const isRuntimeOnly = isRuntimeOnlyAuthFile(file);
   const providerKey = normalizeProviderKey(String(file.provider ?? file.type ?? 'unknown'));
+  const isRetiredGeminiCli = [file.provider, file.type].some(
+    (value) => normalizeProviderKey(String(value ?? '')) === 'gemini-cli'
+  );
   const isAistudio = providerKey === 'aistudio';
   const isXai = isXaiProvider(providerKey);
-  const showModelsButton = !isRuntimeOnly || isAistudio || isXai;
+  const showModelsButton = !isRetiredGeminiCli && (!isRuntimeOnly || isAistudio || isXai);
   const typeColor = getTypeColor(providerKey, resolvedTheme);
   const typeLabel = getTypeLabel(t, providerKey);
   const providerIcon = getAuthFileIcon(providerKey, resolvedTheme);
@@ -123,13 +127,11 @@ export function AuthFileCard(props: AuthFileCardProps) {
         ? styles.claudeCard
         : quotaType === 'codex'
           ? styles.codexCard
-          : quotaType === 'gemini-cli'
-            ? styles.geminiCliCard
-            : quotaType === 'kimi'
-              ? styles.kimiCard
-              : quotaType === 'xai'
-                ? styles.xaiCard
-                : '';
+          : quotaType === 'kimi'
+            ? styles.kimiCard
+            : quotaType === 'xai'
+              ? styles.xaiCard
+              : '';
 
   const rawAuthIndex = file['auth_index'] ?? file.authIndex;
   const authIndexKey = normalizeAuthIndex(rawAuthIndex);
@@ -146,11 +148,15 @@ export function AuthFileCard(props: AuthFileCardProps) {
         : 0;
   const hasLastErrorStatusCode = Number.isFinite(lastErrorStatusCode) && lastErrorStatusCode > 0;
   const hasStatusWarning =
+    isRetiredGeminiCli ||
     hasLastErrorStatusCode ||
     (Boolean(rawStatusMessage) && !HEALTHY_STATUS_MESSAGES.has(rawStatusMessage.toLowerCase()));
+  const displayStatusMessage = isRetiredGeminiCli
+    ? t('auth_files.gemini_cli_unsupported')
+    : rawStatusMessage;
   const healthStatusTitle = [
     hasLastErrorStatusCode ? `HTTP ${lastErrorStatusCode}` : '',
-    rawStatusMessage,
+    displayStatusMessage,
   ]
     .filter(Boolean)
     .join(' ');
@@ -169,22 +175,26 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const codexPlanValueClass = PREMIUM_CODEX_PLAN_TYPES.has(codexPlanType ?? '')
     ? `${styles.codexPlanValue} ${styles.premiumPlanValue}`
     : styles.codexPlanValue;
-  const stateLabel = isRuntimeOnly
-    ? t('auth_files.type_virtual') || '虚拟认证文件'
-    : file.disabled
-      ? t('auth_files.health_status_disabled')
-      : hasStatusWarning
-        ? t('auth_files.health_status_warning')
-        : rawStatusMessage
-          ? t('auth_files.health_status_healthy')
-          : t('auth_files.status_toggle_label');
-  const stateBadgeClass = isRuntimeOnly
-    ? styles.stateBadgeVirtual
-    : file.disabled
-      ? styles.stateBadgeDisabled
-      : hasStatusWarning
-        ? styles.stateBadgeWarning
-        : styles.stateBadgeActive;
+  const stateLabel = isRetiredGeminiCli
+    ? t('auth_files.health_status_unsupported')
+    : isRuntimeOnly
+      ? t('auth_files.type_virtual') || '虚拟认证文件'
+      : file.disabled
+        ? t('auth_files.health_status_disabled')
+        : hasStatusWarning
+          ? t('auth_files.health_status_warning')
+          : rawStatusMessage
+            ? t('auth_files.health_status_healthy')
+            : t('auth_files.status_toggle_label');
+  const stateBadgeClass = isRetiredGeminiCli
+    ? styles.stateBadgeWarning
+    : isRuntimeOnly
+      ? styles.stateBadgeVirtual
+      : file.disabled
+        ? styles.stateBadgeDisabled
+        : hasStatusWarning
+          ? styles.stateBadgeWarning
+          : styles.stateBadgeActive;
 
   return (
     <div
@@ -193,7 +203,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
       <div className={styles.fileCardLayout}>
         <div className={styles.fileCardMain}>
           <div className={styles.cardHeader}>
-            {!isRuntimeOnly && (
+            {!isRuntimeOnly && !isRetiredGeminiCli && (
               <SelectionCheckbox
                 checked={selected}
                 onChange={() => onToggleSelect(file.name)}
@@ -317,14 +327,14 @@ export function AuthFileCard(props: AuthFileCardProps) {
             </div>
           )}
 
-          {hasStatusWarning && (rawStatusMessage || hasLastErrorStatusCode) && (
+          {hasStatusWarning && (displayStatusMessage || hasLastErrorStatusCode) && (
             <div className={styles.healthStatusMessage} title={healthStatusTitle}>
               <IconInfo className={styles.messageIcon} size={14} />
               <span className={styles.healthStatusContent}>
                 {hasLastErrorStatusCode && (
                   <span className={styles.httpStatusBadge}>HTTP {lastErrorStatusCode}</span>
                 )}
-                {rawStatusMessage && <span>{rawStatusMessage}</span>}
+                {displayStatusMessage && <span>{displayStatusMessage}</span>}
               </span>
             </div>
           )}
@@ -384,7 +394,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   </>
                 </Button>
               )}
-              {!isRuntimeOnly && (
+              {(!isRuntimeOnly || isRetiredGeminiCli) && (
                 <div className={styles.cardUtilityActions}>
                   <Button
                     variant="secondary"
@@ -401,10 +411,18 @@ export function AuthFileCard(props: AuthFileCardProps) {
                     size="sm"
                     onClick={() => onOpenPrefixProxyEditor(file)}
                     className={styles.iconButton}
-                    title={t('auth_files.prefix_proxy_button')}
+                    title={
+                      isRetiredGeminiCli
+                        ? t('auth_files.view_button')
+                        : t('auth_files.prefix_proxy_button')
+                    }
                     disabled={disableControls}
                   >
-                    <IconSettings className={styles.actionIcon} size={16} />
+                    {isRetiredGeminiCli ? (
+                      <IconEye className={styles.actionIcon} size={16} />
+                    ) : (
+                      <IconSettings className={styles.actionIcon} size={16} />
+                    )}
                   </Button>
                   <Button
                     variant="danger"
@@ -423,7 +441,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 </div>
               )}
             </div>
-            {!isRuntimeOnly && (
+            {!isRuntimeOnly && !isRetiredGeminiCli && (
               <div className={styles.statusToggle}>
                 <span className={styles.statusToggleLabel}>
                   {t('auth_files.status_toggle_label')}

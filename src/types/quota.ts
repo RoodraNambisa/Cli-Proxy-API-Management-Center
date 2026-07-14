@@ -8,45 +8,6 @@ export type TypeColorSet = { light: ThemeColors; dark?: ThemeColors };
 export type ResolvedTheme = 'light' | 'dark';
 
 // API payload types
-export interface GeminiCliQuotaBucket {
-  modelId?: string;
-  model_id?: string;
-  tokenType?: string;
-  token_type?: string;
-  remainingFraction?: number | string;
-  remaining_fraction?: number | string;
-  remainingAmount?: number | string;
-  remaining_amount?: number | string;
-  resetTime?: string;
-  reset_time?: string;
-}
-
-export interface GeminiCliQuotaPayload {
-  buckets?: GeminiCliQuotaBucket[];
-}
-
-export interface GeminiCliCredits {
-  creditType?: string;
-  credit_type?: string;
-  creditAmount?: string | number;
-  credit_amount?: string | number;
-}
-
-export interface GeminiCliUserTier {
-  id?: string;
-  name?: string;
-  description?: string;
-  availableCredits?: GeminiCliCredits[];
-  available_credits?: GeminiCliCredits[];
-}
-
-export interface GeminiCliCodeAssistPayload {
-  currentTier?: GeminiCliUserTier | null;
-  current_tier?: GeminiCliUserTier | null;
-  paidTier?: GeminiCliUserTier | null;
-  paid_tier?: GeminiCliUserTier | null;
-}
-
 export interface AntigravityQuotaInfo {
   displayName?: string;
   quotaInfo?: {
@@ -72,21 +33,6 @@ export interface AntigravityQuotaGroupDefinition {
   label: string;
   identifiers: string[];
   labelFromModel?: boolean;
-}
-
-export interface GeminiCliQuotaGroupDefinition {
-  id: string;
-  label: string;
-  preferredModelId?: string;
-  modelIds: string[];
-}
-
-export interface GeminiCliParsedBucket {
-  modelId: string;
-  tokenType: string | null;
-  remainingFraction: number | null;
-  remainingAmount: number | null;
-  resetTime: string | undefined;
 }
 
 export interface CodexUsageWindow {
@@ -219,26 +165,6 @@ export interface AntigravityQuotaGroup {
 export interface AntigravityQuotaState {
   status: 'idle' | 'loading' | 'success' | 'error';
   groups: AntigravityQuotaGroup[];
-  error?: string;
-  errorStatus?: number;
-}
-
-export interface GeminiCliQuotaBucketState {
-  id: string;
-  label: string;
-  remainingFraction: number | null;
-  remainingAmount: number | null;
-  resetTime: string | undefined;
-  tokenType: string | null;
-  modelIds?: string[];
-}
-
-export interface GeminiCliQuotaState {
-  status: 'idle' | 'loading' | 'success' | 'error';
-  buckets: GeminiCliQuotaBucketState[];
-  tierLabel?: string | null;
-  tierId?: string | null;
-  creditBalance?: number | null;
   error?: string;
   errorStatus?: number;
 }

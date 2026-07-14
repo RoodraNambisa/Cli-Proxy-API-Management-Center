@@ -19,6 +19,7 @@ import {
 } from '../utils';
 
 interface GeminiSectionProps {
+  kind?: 'gemini' | 'interactions';
   configs: GeminiKeyConfig[];
   keyStats: KeyStats;
   usageDetailsBySource: UsageDetailsBySource;
@@ -33,6 +34,7 @@ interface GeminiSectionProps {
 }
 
 export function GeminiSection({
+  kind = 'gemini',
   configs,
   keyStats,
   usageDetailsBySource,
@@ -46,6 +48,7 @@ export function GeminiSection({
   onToggle,
 }: GeminiSectionProps) {
   const { t } = useTranslation();
+  const i18nPrefix = kind === 'interactions' ? 'interactions' : 'gemini';
   const actionsDisabled = disableControls || loading || isSwitching;
   const toggleDisabled = disableControls || loading || isSwitching;
 
@@ -76,21 +79,36 @@ export function GeminiSection({
         title={
           <span className={styles.cardTitle}>
             <img src={iconGemini} alt="" className={styles.cardTitleIcon} />
-            {t('ai_providers.gemini_title')}
+            {t(`ai_providers.${i18nPrefix}_title`)}
           </span>
         }
         extra={
           <Button size="sm" onClick={onAdd} disabled={actionsDisabled}>
-            {t('ai_providers.gemini_add_button')}
+            {t(`ai_providers.${i18nPrefix}_add_button`)}
           </Button>
         }
       >
+        {kind === 'interactions' && (
+          <div className={styles.endpointList}>
+            <div className={styles.endpointRow}>
+              <code>POST /v1/interactions</code>
+              <span className={styles.endpointBadge}>
+                {t('ai_providers.interactions_endpoint_recommended')}
+              </span>
+              <span>{t('ai_providers.interactions_endpoint_stable_desc')}</span>
+            </div>
+            <div className={styles.endpointRow}>
+              <code>POST /v1beta/interactions</code>
+              <span>{t('ai_providers.interactions_endpoint_beta_desc')}</span>
+            </div>
+          </div>
+        )}
         <ProviderList<GeminiKeyConfig>
           items={configs}
           loading={loading}
           keyField={(item, index) => getProviderConfigKey(item, index)}
-          emptyTitle={t('ai_providers.gemini_empty_title')}
-          emptyDescription={t('ai_providers.gemini_empty_desc')}
+          emptyTitle={t(`ai_providers.${i18nPrefix}_empty_title`)}
+          emptyDescription={t(`ai_providers.${i18nPrefix}_empty_desc`)}
           onEdit={(_, index) => onEdit(index)}
           onDelete={(_, index) => onDelete(index)}
           actionsDisabled={actionsDisabled}
@@ -117,7 +135,7 @@ export function GeminiSection({
             return (
               <Fragment>
                 <div className="item-title">
-                  {t('ai_providers.gemini_item_title')} #{index + 1}
+                  {t(`ai_providers.${i18nPrefix}_item_title`)} #{index + 1}
                 </div>
                 <div className={styles.fieldRow}>
                   <span className={styles.fieldLabel}>{t('common.api_key')}:</span>
@@ -183,7 +201,10 @@ export function GeminiSection({
                     </div>
                     <div className={styles.modelTagList}>
                       {excludedModels.map((model) => (
-                        <span key={model} className={`${styles.modelTag} ${styles.excludedModelTag}`}>
+                        <span
+                          key={model}
+                          className={`${styles.modelTag} ${styles.excludedModelTag}`}
+                        >
                           <span className={styles.modelName}>{model}</span>
                         </span>
                       ))}

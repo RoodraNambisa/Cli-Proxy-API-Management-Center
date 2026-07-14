@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { triggerHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useNotificationStore, useQuotaStore, useThemeStore } from '@/stores';
 import type { AuthFileItem, ResolvedTheme } from '@/types';
-import { getStatusFromError, resolveCodexPlanType, resolveGeminiCliProjectId } from '@/utils/quota';
+import { getStatusFromError, resolveCodexPlanType } from '@/utils/quota';
 import { QuotaCard } from './QuotaCard';
 import type { QuotaStatusState } from './QuotaCard';
 import { useQuotaLoader } from './useQuotaLoader';
@@ -64,7 +64,6 @@ const matchesQuotaSearch = (
     file.planType,
     file['plan_type'],
     resolveCodexPlanType(file),
-    resolveGeminiCliProjectId(file),
   ].some((value) => stringifySearchValue(value).toLowerCase().includes(normalizedSearch));
 };
 
@@ -127,7 +126,7 @@ const useQuotaPagination = <T,>(items: T[], defaultPageSize = 6): QuotaPaginatio
     goToNext,
     loading,
     loadingScope,
-    setLoading
+    setLoading,
   };
 };
 
@@ -144,7 +143,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData, TResetData 
   files,
   loading,
   disabled,
-  searchTerm = ''
+  searchTerm = '',
 }: QuotaSectionProps<TState, TData, TResetData>) {
   const { t } = useTranslation();
   const resolvedTheme: ResolvedTheme = useThemeStore((state) => state.resolvedTheme);
@@ -159,14 +158,13 @@ export function QuotaSection<TState extends QuotaStatusState, TData, TResetData 
   const [showTooManyWarning, setShowTooManyWarning] = useState(false);
   const [resetCreditsLoading, setResetCreditsLoading] = useState(false);
 
-  const sectionFiles = useMemo(() => files.filter((file) => config.filterFn(file)), [
-    files,
-    config
-  ]);
+  const sectionFiles = useMemo(
+    () => files.filter((file) => config.filterFn(file)),
+    [files, config]
+  );
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const visibleFiles = useMemo(
-    () =>
-      sectionFiles.filter((file) => matchesQuotaSearch(file, normalizedSearch, config.type)),
+    () => sectionFiles.filter((file) => matchesQuotaSearch(file, normalizedSearch, config.type)),
     [sectionFiles, normalizedSearch, config.type]
   );
   const hasSearch = normalizedSearch.length > 0;
@@ -182,7 +180,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData, TResetData 
     goToPrev,
     goToNext,
     loading: sectionLoading,
-    setLoading
+    setLoading,
   } = useQuotaPagination(visibleFiles);
 
   useEffect(() => {
@@ -261,14 +259,14 @@ export function QuotaSection<TState extends QuotaStatusState, TData, TResetData 
 
       setQuota((prev) => ({
         ...prev,
-        [file.name]: config.buildLoadingState()
+        [file.name]: config.buildLoadingState(),
       }));
 
       try {
         const data = await config.fetchQuota(file, t);
         setQuota((prev) => ({
           ...prev,
-          [file.name]: config.buildSuccessState(data, prev[file.name])
+          [file.name]: config.buildSuccessState(data, prev[file.name]),
         }));
         showNotification(t('auth_files.quota_refresh_success', { name: file.name }), 'success');
       } catch (err: unknown) {
@@ -276,7 +274,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData, TResetData 
         const status = getStatusFromError(err);
         setQuota((prev) => ({
           ...prev,
-          [file.name]: config.buildErrorState(message, status)
+          [file.name]: config.buildErrorState(message, status),
         }));
         showNotification(
           t('auth_files.quota_refresh_failed', { name: file.name, message }),
@@ -306,7 +304,7 @@ export function QuotaSection<TState extends QuotaStatusState, TData, TResetData 
             const refreshError = config.getResetCreditsRefreshError?.(data) ?? '';
             return {
               file,
-              status: refreshError ? 'error' as const : 'success' as const,
+              status: refreshError ? ('error' as const) : ('success' as const),
               data,
               error: refreshError,
             };
@@ -471,19 +469,14 @@ export function QuotaSection<TState extends QuotaStatusState, TData, TResetData 
           </div>
           {visibleFiles.length > pageSize && effectiveViewMode === 'paged' && (
             <div className={styles.pagination}>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={goToPrev}
-                disabled={currentPage <= 1}
-              >
+              <Button variant="secondary" size="sm" onClick={goToPrev} disabled={currentPage <= 1}>
                 {t('auth_files.pagination_prev')}
               </Button>
               <div className={styles.pageInfo}>
                 {t('auth_files.pagination_info', {
                   current: currentPage,
                   total: totalPages,
-                  count: visibleFiles.length
+                  count: visibleFiles.length,
                 })}
               </div>
               <Button

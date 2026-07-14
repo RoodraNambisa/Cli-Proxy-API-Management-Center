@@ -64,6 +64,15 @@
   font-size: 12px;
 }
 
+.usageStateBanner {
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-sm;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 .hint {
   color: var(--text-secondary);
   font-size: 12px;
@@ -669,6 +678,24 @@
   gap: 16px;
 }
 
+.legacyImportRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--warning-border, #d6a94a);
+  border-radius: $radius-sm;
+  background: var(--warning-bg, rgba(214, 169, 74, 0.1));
+  color: var(--text-secondary);
+  font-size: 12px;
+
+  @include mobile {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 .priceForm {
   padding: 10px;
   background-color: var(--bg-secondary);
@@ -714,6 +741,34 @@
     height: 40px;
     box-sizing: border-box;
   }
+}
+
+.formHint {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.costSummaryRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.costNotice {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--warning-color, #d6a94a);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .pricesList {

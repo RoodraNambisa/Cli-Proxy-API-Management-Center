@@ -9,10 +9,9 @@ import iconOpenaiDark from '@/assets/icons/openai-dark.svg';
 import iconCodex from '@/assets/icons/codex.svg';
 import iconClaude from '@/assets/icons/claude.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
-import iconAmp from '@/assets/icons/amp.svg';
 import styles from './ProviderNav.module.scss';
 
-export type ProviderId = 'gemini' | 'codex' | 'claude' | 'vertex' | 'ampcode' | 'openai';
+export type ProviderId = 'gemini' | 'interactions' | 'codex' | 'claude' | 'vertex' | 'openai';
 
 interface ProviderNavItem {
   id: ProviderId;
@@ -22,11 +21,15 @@ interface ProviderNavItem {
 
 const PROVIDERS: ProviderNavItem[] = [
   { id: 'gemini', label: 'Gemini', getIcon: () => iconGemini },
+  { id: 'interactions', label: 'Interactions', getIcon: () => iconGemini },
   { id: 'codex', label: 'Codex', getIcon: () => iconCodex },
   { id: 'claude', label: 'Claude', getIcon: () => iconClaude },
   { id: 'vertex', label: 'Vertex', getIcon: () => iconVertex },
-  { id: 'ampcode', label: 'Ampcode', getIcon: () => iconAmp },
-  { id: 'openai', label: 'OpenAI', getIcon: (theme) => (theme === 'dark' ? iconOpenaiDark : iconOpenaiLight) },
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    getIcon: (theme) => (theme === 'dark' ? iconOpenaiDark : iconOpenaiLight),
+  },
 ];
 
 const HEADER_OFFSET = 24;
@@ -43,10 +46,10 @@ export function ProviderNav() {
   const navContainerRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<Record<ProviderId, HTMLButtonElement | null>>({
     gemini: null,
+    interactions: null,
     codex: null,
     claude: null,
     vertex: null,
-    ampcode: null,
     openai: null,
   });
   const [indicatorRect, setIndicatorRect] = useState<{

@@ -4,7 +4,6 @@
  */
 
 import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from './provider';
-import type { AmpcodeConfig } from './ampcode';
 
 export interface QuotaExceededConfig {
   switchProject?: boolean;
@@ -198,7 +197,6 @@ export interface Config {
   loggingToFile?: boolean;
   logsMaxTotalSizeMb?: number;
   wsAuth?: boolean;
-  enableGeminiCliEndpoint?: boolean;
   forceModelPrefix?: boolean;
   remoteManagement?: RemoteManagementConfig;
   codex?: CodexConfig;
@@ -216,8 +214,8 @@ export interface Config {
   routingSessionAffinityFailover?: boolean;
   routingSessionAffinityTTL?: string;
   apiKeys?: string[];
-  ampcode?: AmpcodeConfig;
   geminiApiKeys?: GeminiKeyConfig[];
+  interactionsApiKeys?: GeminiKeyConfig[];
   codexApiKeys?: ProviderKeyConfig[];
   claudeApiKeys?: ProviderKeyConfig[];
   vertexApiKeys?: ProviderKeyConfig[];
@@ -244,7 +242,6 @@ export type RawConfigSection =
   | 'logging-to-file'
   | 'logs-max-total-size-mb'
   | 'ws-auth'
-  | 'enable-gemini-cli-endpoint'
   | 'force-model-prefix'
   | 'remote-management'
   | 'codex'
@@ -262,8 +259,8 @@ export type RawConfigSection =
   | 'routing/session-affinity-failover'
   | 'routing/session-affinity-ttl'
   | 'api-keys'
-  | 'ampcode'
   | 'gemini-api-key'
+  | 'interactions-api-key'
   | 'codex-api-key'
   | 'claude-api-key'
   | 'vertex-api-key'

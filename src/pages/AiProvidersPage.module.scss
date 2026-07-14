@@ -1399,3 +1399,40 @@ $openai-toolbar-control-height: 36px;
     color: #f1b0a6;
   }
 }
+.endpointList {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.endpointRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+
+  code {
+    flex: 0 0 auto;
+    color: var(--text-primary);
+    font-size: 12px;
+  }
+
+  @media (max-width: 768px) {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+.endpointBadge {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--success-color) 45%, var(--border-color));
+  border-radius: 4px;
+  color: var(--success-color);
+  font-size: 11px;
+  font-weight: 600;
+}

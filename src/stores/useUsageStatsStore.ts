@@ -11,8 +11,6 @@ import type {
 import { parseTimestampMs } from '@/utils/timestamp';
 import {
   buildUsageRangeKey,
-  collectUsageDetails,
-  computeKeyStatsFromDetails,
   extractLatencyMs,
   normalizeAuthIndex,
   normalizeUsageSourceId,
@@ -27,12 +25,14 @@ export type LoadUsageStatsOptions = {
   force?: boolean;
   staleTimeMs?: number;
   range?: UsageRangeQuery;
+  signal?: AbortSignal;
 };
 
 export type LoadUsageDetailsOptions = {
   force?: boolean;
   query?: UsageDetailsQuery;
   append?: boolean;
+  signal?: AbortSignal;
 };
 
 export type LoadUsageAuthsOptions = {
@@ -40,6 +40,7 @@ export type LoadUsageAuthsOptions = {
   staleTimeMs?: number;
   authIndexes?: Array<string | number>;
   range?: UsageRangeQuery;
+  signal?: AbortSignal;
 };
 
 type UsageStatsSnapshot = Record<string, unknown>;
@@ -84,6 +85,7 @@ const createEmptyKeyStats = (): KeyStats => ({ bySource: {}, byAuthIndex: {} });
 let usageRequestToken = 0;
 let detailsRequestToken = 0;
 let authsRequestToken = 0;
+const unsupportedUsageCapabilities = new Set<string>();
 let inFlightUsageRequest: {
   id: number;
   scopeKey: string;
@@ -98,11 +100,39 @@ const getErrorMessage = (error: unknown) =>
       ? error
       : i18n.t('usage_stats.loading_error');
 
+const isNotFoundError = (error: unknown): boolean =>
+  Boolean(
+    error &&
+    typeof error === 'object' &&
+    'status' in error &&
+    Number((error as { status?: unknown }).status) === 404
+  );
+
+const createUnsupportedCapabilityError = (): Error & { status: number } =>
+  Object.assign(new Error(i18n.t('usage_stats.state_unsupported')), { status: 404 });
+
+const requestUsageCapability = async <T>(
+  scopeKey: string,
+  capability: 'meta' | 'summary' | 'details' | 'auths',
+  request: () => Promise<T>
+): Promise<T> => {
+  const key = `${scopeKey}::${capability}`;
+  if (unsupportedUsageCapabilities.has(key)) {
+    throw createUnsupportedCapabilityError();
+  }
+  try {
+    return await request();
+  } catch (error: unknown) {
+    if (isNotFoundError(error)) {
+      unsupportedUsageCapabilities.add(key);
+      throw createUnsupportedCapabilityError();
+    }
+    throw error;
+  }
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
-
-const isNotFoundError = (error: unknown): boolean =>
-  isRecord(error) && (error.status === 404 || error.status === '404');
 
 const toNumber = (value: unknown): number => {
   const parsed = Number(value);
@@ -184,6 +214,12 @@ const normalizeOptionalString = (value: unknown): string | undefined => {
 export const normalizeUsageDetail = (detail: unknown, index: number): UsageDetail => {
   const record = isRecord(detail) ? detail : {};
   const tokensRecord = isRecord(record.tokens) ? record.tokens : {};
+  const sourceFilterValue =
+    typeof record.source === 'string'
+      ? record.source.trim()
+      : record.source === null || record.source === undefined
+        ? ''
+        : String(record.source).trim();
   const timestamp =
     typeof record.timestamp === 'string'
       ? record.timestamp
@@ -231,7 +267,7 @@ export const normalizeUsageDetail = (detail: unknown, index: number): UsageDetai
 
   return {
     timestamp,
-    source: normalizeUsageSourceId(record.source),
+    source: normalizeUsageSourceId(sourceFilterValue),
     auth_index: (record.auth_index ?? record.authIndex ?? record.AuthIndex ?? null) as
       | string
       | number
@@ -258,6 +294,7 @@ export const normalizeUsageDetail = (detail: unknown, index: number): UsageDetai
     response_service_tier: normalizeOptionalString(
       record.response_service_tier ?? record.responseServiceTier
     ),
+    __sourceFilterValue: sourceFilterValue || undefined,
     __modelName: modelName || undefined,
     __timestampMs: Number.isNaN(timestampMs) ? index : timestampMs,
     __endpoint: endpoint,
@@ -365,44 +402,27 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
     set({ loading: true, error: null, scopeKey, usageRangeKey: rangeKey });
 
     const requestPromise = (async () => {
-      const loadLegacyUsage = async () => {
-        const usageResponse = await usageApi.getUsage();
-        const rawUsage = usageResponse?.usage ?? usageResponse;
-        const usage =
-          rawUsage && typeof rawUsage === 'object' ? (rawUsage as UsageStatsSnapshot) : null;
-
-        if (requestId !== usageRequestToken) return;
-
-        const usageDetails = collectUsageDetails(usage);
-        set({
-          usage,
-          usageMeta: usage ? (usage as UsageMeta) : null,
-          usageAuths: [],
-          keyStats: computeKeyStatsFromDetails(usageDetails),
-          usageDetails,
-          loading: false,
-          error: null,
-          lastRefreshedAt: Date.now(),
-          scopeKey,
-          usageRangeKey: rangeKey,
-        });
-      };
-
       try {
-        let metaResponse: unknown;
-        try {
-          metaResponse = await usageApi.getUsageMeta();
-        } catch (error: unknown) {
-          if (isNotFoundError(error)) {
-            await loadLegacyUsage();
-            return;
-          }
-          throw error;
-        }
+        const metaResponse = await requestUsageCapability(scopeKey, 'meta', () =>
+          usageApi.getUsageMeta({ signal: options.signal })
+        );
 
         if (requestId !== usageRequestToken) return;
 
         const metaUsage = getUsageEnvelopeData(metaResponse) ?? {};
+        if (metaUsage.enabled === false || metaUsage.available === false) {
+          set({
+            usage: metaUsage,
+            usageMeta: metaUsage as UsageMeta,
+            usageDetails: [],
+            loading: false,
+            error: metaUsage.enabled === false ? null : i18n.t('usage_stats.state_unavailable'),
+            lastRefreshedAt: Date.now(),
+            scopeKey,
+            usageRangeKey: rangeKey,
+          });
+          return;
+        }
         const metaVersion = getUsageVersion(metaUsage);
         const current = get();
         const cachedVersion = getUsageVersion(current.usageMeta ?? current.usage);
@@ -427,16 +447,9 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
           return;
         }
 
-        let summaryResponse: unknown;
-        try {
-          summaryResponse = await usageApi.getUsageSummary(range);
-        } catch (error: unknown) {
-          if (isNotFoundError(error)) {
-            await loadLegacyUsage();
-            return;
-          }
-          throw error;
-        }
+        const summaryResponse = await requestUsageCapability(scopeKey, 'summary', () =>
+          usageApi.getUsageSummary(range, { signal: options.signal })
+        );
 
         if (requestId !== usageRequestToken) return;
 
@@ -499,35 +512,16 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
     set({ detailsLoading: true, detailsError: null, scopeKey });
 
     try {
-      let page: UsageDetailsPage;
-      try {
-        const response = await usageApi.getUsageDetails(query);
-        const detailsRaw = Array.isArray(response.items)
-          ? response.items
-          : Array.isArray(response.details)
-            ? response.details
-            : [];
-        const details = detailsRaw.map((detail, index) => normalizeUsageDetail(detail, index));
-        page = buildDetailsPage(response, details);
-      } catch (error: unknown) {
-        if (!isNotFoundError(error)) {
-          throw error;
-        }
-        const usageResponse = await usageApi.getUsage();
-        const rawUsage = usageResponse?.usage ?? usageResponse;
-        const legacyDetails = collectUsageDetails(rawUsage);
-        page = buildDetailsPage(
-          {
-            details: legacyDetails,
-            offset: 0,
-            limit: legacyDetails.length,
-            next_offset: null,
-            has_more: false,
-            total_matched: legacyDetails.length,
-          },
-          legacyDetails
-        );
-      }
+      const response = await requestUsageCapability(scopeKey, 'details', () =>
+        usageApi.getUsageDetails(query, { signal: options.signal })
+      );
+      const detailsRaw = Array.isArray(response.items)
+        ? response.items
+        : Array.isArray(response.details)
+          ? response.details
+          : [];
+      const details = detailsRaw.map((detail, index) => normalizeUsageDetail(detail, index));
+      const page = buildDetailsPage(response, details);
 
       if (requestId !== detailsRequestToken) return page;
 
@@ -568,6 +562,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
         detailsError: message,
         scopeKey,
       });
+      if (isNotFoundError(error)) throw error;
       throw new Error(message);
     }
   },
@@ -632,35 +627,16 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
     }
 
     try {
-      let usageAuths: UsageAuthSummary[] = [];
-      try {
-        const response = await usageApi.getUsageAuths({
-          ...range,
-          auth_index: hasAuthIndexFilter ? normalizedAuthIndexes : undefined,
-        });
-        usageAuths = Array.isArray(response.auths) ? response.auths : [];
-      } catch (error: unknown) {
-        if (!isNotFoundError(error)) {
-          throw error;
-        }
-        const usageResponse = await usageApi.getUsage();
-        const rawUsage = usageResponse?.usage ?? usageResponse;
-        const legacyDetails = collectUsageDetails(rawUsage);
-        const keyStats = computeKeyStatsFromDetails(legacyDetails);
-        if (requestId === authsRequestToken) {
-          set({
-            usageAuths: [],
-            keyStats,
-            authsLoading: false,
-            authsError: null,
-            authsRefreshedAt: Date.now(),
-            scopeKey,
-            authsRangeKey: rangeKey,
-            authsIndexKey: indexKey,
-          });
-        }
-        return [];
-      }
+      const response = await requestUsageCapability(scopeKey, 'auths', () =>
+        usageApi.getUsageAuths(
+          {
+            ...range,
+            auth_index: hasAuthIndexFilter ? normalizedAuthIndexes : undefined,
+          },
+          { signal: options.signal }
+        )
+      );
+      const usageAuths: UsageAuthSummary[] = Array.isArray(response.auths) ? response.auths : [];
 
       if (requestId !== authsRequestToken) {
         return get().usageAuths;

@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties, type ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Line } from 'react-chartjs-2';
 import {
@@ -8,22 +8,11 @@ import {
   IconTimer,
   IconTrendingUp,
 } from '@/components/ui/icons';
-import {
-  LATENCY_SOURCE_FIELD,
-  calculateLatencyStatsFromDetails,
-  calculateCost,
-  formatCompactNumber,
-  formatDurationMs,
-  formatPerMinuteValue,
-  formatUsd,
-  collectUsageDetails,
-  extractTotalTokens,
-  type ModelPrice,
-} from '@/utils/usage';
+import type { UsageCostsResponse, UsageRatesResponse, UsageTokensResponse } from '@/types';
+import { formatCompactNumber, formatPerMinuteValue, formatUsd } from '@/utils/usage';
 import { sparklineOptions } from '@/utils/usage/chartConfig';
-import type { UsagePayload } from './hooks/useUsageData';
+import type { UsagePayload, UsageResource, UsageResourceStatus } from './hooks/useUsageData';
 import type { SparklineBundle } from './hooks/useSparklines';
-import type { UsageAuthSummary } from '@/types';
 import styles from '@/pages/UsagePage.module.scss';
 
 interface StatCardData {
@@ -40,10 +29,10 @@ interface StatCardData {
 
 export interface StatCardsProps {
   usage: UsagePayload | null;
-  authUsage?: UsageAuthSummary[];
   loading: boolean;
-  modelPrices: Record<string, ModelPrice>;
-  nowMs: number;
+  ratesResource: UsageResource<UsageRatesResponse>;
+  tokensResource: UsageResource<UsageTokensResponse>;
+  costsResource: UsageResource<UsageCostsResponse>;
   sparklines: {
     requests: SparklineBundle | null;
     tokens: SparklineBundle | null;
@@ -53,112 +42,52 @@ export interface StatCardsProps {
   };
 }
 
+const tokenNumber = (value: unknown): number => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : 0;
+};
+
+const moneyAmount = (response: UsageCostsResponse | null): number => {
+  const micros = Number(response?.total?.amount_micros);
+  if (Number.isFinite(micros)) return micros / 1_000_000;
+  const amount = Number(response?.total?.amount);
+  return Number.isFinite(amount) ? amount : 0;
+};
+
 export function StatCards({
   usage,
-  authUsage = [],
   loading,
-  modelPrices,
-  nowMs,
+  ratesResource,
+  tokensResource,
+  costsResource,
   sparklines,
 }: StatCardsProps) {
   const { t } = useTranslation();
-  const latencyHint = t('usage_stats.latency_unit_hint', {
-    field: LATENCY_SOURCE_FIELD,
-    unit: t('usage_stats.duration_unit_ms'),
-  });
+  const tokens = tokensResource.data?.tokens ?? {};
+  const rates = ratesResource.data;
+  const costs = costsResource.data;
+  const cachedTokens = Math.max(
+    tokenNumber(tokens.cached_tokens),
+    tokenNumber(tokens.cache_tokens)
+  );
+  const cacheCreationTokens = tokenNumber(tokens.cache_creation_tokens);
+  const reasoningTokens = tokenNumber(tokens.reasoning_tokens);
+  const rateLoading = ratesResource.status === 'loading';
+  const costLoading = costsResource.status === 'loading';
+  const costUnavailable = ['disabled', 'unsupported', 'error'].includes(costsResource.status);
+  const unpricedCount = costs?.unpriced_models?.length ?? 0;
+  const tokenCoverageValue = costs?.coverage?.token_coverage;
+  const tokenCoverage =
+    tokenCoverageValue === null || tokenCoverageValue === undefined
+      ? null
+      : Number(tokenCoverageValue);
 
-  const hasPrices = Object.keys(modelPrices).length > 0;
-
-  const { tokenBreakdown, rateStats, totalCost, latencyStats } = useMemo(() => {
-    const empty = {
-      tokenBreakdown: { cachedTokens: 0, cacheCreationTokens: 0, reasoningTokens: 0 },
-      rateStats: { rpm: 0, tpm: 0, windowMinutes: 30, requestCount: 0, tokenCount: 0 },
-      totalCost: 0,
-      latencyStats: {
-        averageMs: null as number | null,
-        totalMs: null as number | null,
-        sampleCount: 0,
-      },
-    };
-
-    const authTokenBreakdown = authUsage.reduce<{
-      cachedTokens: number;
-      cacheCreationTokens: number;
-      reasoningTokens: number;
-    }>(
-      (result, auth) => {
-        const tokens = auth.tokens ?? {};
-        result.cachedTokens += Math.max(
-          Number(tokens.cached_tokens) || 0,
-          Number(tokens.cache_tokens) || 0,
-          0
-        );
-        result.cacheCreationTokens += Math.max(Number(tokens.cache_creation_tokens) || 0, 0);
-        result.reasoningTokens += Math.max(Number(tokens.reasoning_tokens) || 0, 0);
-        return result;
-      },
-      { cachedTokens: 0, cacheCreationTokens: 0, reasoningTokens: 0 }
-    );
-
-    if (!usage) return { ...empty, tokenBreakdown: authTokenBreakdown };
-    const details = collectUsageDetails(usage);
-    if (!details.length) return { ...empty, tokenBreakdown: authTokenBreakdown };
-
-    const latencyStats = calculateLatencyStatsFromDetails(details);
-
-    let cachedTokens = 0;
-    let cacheCreationTokens = 0;
-    let reasoningTokens = 0;
-    let totalCost = 0;
-
-    const now = nowMs;
-    const windowMinutes = 30;
-    const windowStart = now - windowMinutes * 60 * 1000;
-    let requestCount = 0;
-    let tokenCount = 0;
-    const hasValidNow = Number.isFinite(now) && now > 0;
-
-    details.forEach((detail) => {
-      const tokens = detail.tokens;
-      cachedTokens += Math.max(
-        typeof tokens.cached_tokens === 'number' ? Math.max(tokens.cached_tokens, 0) : 0,
-        typeof tokens.cache_tokens === 'number' ? Math.max(tokens.cache_tokens, 0) : 0
-      );
-      cacheCreationTokens += Math.max(Number(tokens.cache_creation_tokens) || 0, 0);
-      if (typeof tokens.reasoning_tokens === 'number') {
-        reasoningTokens += tokens.reasoning_tokens;
-      }
-
-      const timestamp = detail.__timestampMs ?? 0;
-      if (
-        hasValidNow &&
-        Number.isFinite(timestamp) &&
-        timestamp >= windowStart &&
-        timestamp <= now
-      ) {
-        requestCount += 1;
-        tokenCount += extractTotalTokens(detail);
-      }
-
-      if (hasPrices) {
-        totalCost += calculateCost(detail, modelPrices);
-      }
-    });
-
-    const denominator = windowMinutes > 0 ? windowMinutes : 1;
-    return {
-      tokenBreakdown: { cachedTokens, cacheCreationTokens, reasoningTokens },
-      rateStats: {
-        rpm: requestCount / denominator,
-        tpm: tokenCount / denominator,
-        windowMinutes,
-        requestCount,
-        tokenCount,
-      },
-      totalCost,
-      latencyStats,
-    };
-  }, [authUsage, hasPrices, modelPrices, nowMs, usage]);
+  const statusLabel = (status: UsageResourceStatus): string => {
+    if (status === 'disabled') return t('usage_stats.state_disabled');
+    if (status === 'unsupported') return t('usage_stats.state_unsupported');
+    if (status === 'error') return t('usage_stats.state_error');
+    return '';
+  };
 
   const statsCards: StatCardData[] = [
     {
@@ -179,12 +108,6 @@ export function StatCards({
             <span className={styles.statMetaDot} style={{ backgroundColor: '#c65746' }} />
             {t('usage_stats.failed_requests')}: {loading ? '-' : (usage?.failure_count ?? 0)}
           </span>
-          {latencyStats.sampleCount > 0 && (
-            <span className={styles.statMetaItem} title={latencyHint}>
-              {t('usage_stats.avg_time')}:{' '}
-              {loading ? '-' : formatDurationMs(latencyStats.averageMs)}
-            </span>
-          )}
         </>
       ),
       trend: sparklines.requests,
@@ -200,17 +123,19 @@ export function StatCards({
       meta: (
         <>
           <span className={styles.statMetaItem}>
-            {t('usage_stats.cached_tokens')}:{' '}
-            {loading ? '-' : formatCompactNumber(tokenBreakdown.cachedTokens)}
+            {t('usage_stats.cached_tokens')}: {formatCompactNumber(cachedTokens)}
           </span>
           <span className={styles.statMetaItem}>
-            {t('usage_stats.reasoning_tokens')}:{' '}
-            {loading ? '-' : formatCompactNumber(tokenBreakdown.reasoningTokens)}
+            {t('usage_stats.reasoning_tokens')}: {formatCompactNumber(reasoningTokens)}
           </span>
           <span className={styles.statMetaItem}>
-            {t('usage_stats.cache_creation_tokens')}:{' '}
-            {loading ? '-' : formatCompactNumber(tokenBreakdown.cacheCreationTokens)}
+            {t('usage_stats.cache_creation_tokens')}: {formatCompactNumber(cacheCreationTokens)}
           </span>
+          {statusLabel(tokensResource.status) && (
+            <span className={`${styles.statMetaItem} ${styles.statSubtle}`}>
+              {statusLabel(tokensResource.status)}
+            </span>
+          )}
         </>
       ),
       trend: sparklines.tokens,
@@ -222,11 +147,11 @@ export function StatCards({
       accent: '#22c55e',
       accentSoft: 'rgba(34, 197, 94, 0.18)',
       accentBorder: 'rgba(34, 197, 94, 0.32)',
-      value: loading ? '-' : formatPerMinuteValue(rateStats.rpm),
+      value: rateLoading ? '-' : formatPerMinuteValue(Number(rates?.rpm) || 0),
       meta: (
         <span className={styles.statMetaItem}>
-          {t('usage_stats.total_requests')}:{' '}
-          {loading ? '-' : rateStats.requestCount.toLocaleString()}
+          {statusLabel(ratesResource.status) ||
+            `${t('usage_stats.total_requests')}: ${(rates?.request_count ?? 0).toLocaleString()}`}
         </span>
       ),
       trend: sparklines.rpm,
@@ -238,11 +163,11 @@ export function StatCards({
       accent: '#f97316',
       accentSoft: 'rgba(249, 115, 22, 0.18)',
       accentBorder: 'rgba(249, 115, 22, 0.32)',
-      value: loading ? '-' : formatPerMinuteValue(rateStats.tpm),
+      value: rateLoading ? '-' : formatPerMinuteValue(Number(rates?.tpm) || 0),
       meta: (
         <span className={styles.statMetaItem}>
-          {t('usage_stats.total_tokens')}:{' '}
-          {loading ? '-' : formatCompactNumber(rateStats.tokenCount)}
+          {statusLabel(ratesResource.status) ||
+            `${t('usage_stats.total_tokens')}: ${formatCompactNumber(rates?.token_count ?? 0)}`}
         </span>
       ),
       trend: sparklines.tpm,
@@ -254,21 +179,25 @@ export function StatCards({
       accent: '#f59e0b',
       accentSoft: 'rgba(245, 158, 11, 0.18)',
       accentBorder: 'rgba(245, 158, 11, 0.32)',
-      value: loading ? '-' : hasPrices ? formatUsd(totalCost) : '--',
+      value: costLoading ? '-' : costUnavailable ? '--' : formatUsd(moneyAmount(costs)),
       meta: (
         <>
           <span className={styles.statMetaItem}>
-            {t('usage_stats.total_tokens')}:{' '}
-            {loading ? '-' : formatCompactNumber(usage?.total_tokens ?? 0)}
+            {statusLabel(costsResource.status) ||
+              `${t('usage_stats.cost_coverage')}: ${
+                tokenCoverage !== null && Number.isFinite(tokenCoverage)
+                  ? `${(tokenCoverage * 100).toFixed(1)}%`
+                  : '--'
+              }`}
           </span>
-          {!hasPrices && (
+          {unpricedCount > 0 && (
             <span className={`${styles.statMetaItem} ${styles.statSubtle}`}>
-              {t('usage_stats.cost_need_price')}
+              {t('usage_stats.unpriced_models_count', { count: unpricedCount })}
             </span>
           )}
         </>
       ),
-      trend: hasPrices ? sparklines.cost : null,
+      trend: costUnavailable ? null : sparklines.cost,
     },
   ];
 
@@ -302,7 +231,7 @@ export function StatCards({
                 options={sparklineOptions}
               />
             ) : (
-              <div className={styles.statTrendPlaceholder}></div>
+              <div className={styles.statTrendPlaceholder} />
             )}
           </div>
         </div>

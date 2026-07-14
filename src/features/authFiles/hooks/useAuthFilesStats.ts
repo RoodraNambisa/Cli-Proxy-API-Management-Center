@@ -3,6 +3,8 @@ import { USAGE_STATS_STALE_TIME_MS, useUsageStatsStore } from '@/stores';
 import type { UsageAuthSummary } from '@/types';
 import { buildUsageRangeForTimeRange, type KeyStats, type UsageDetail } from '@/utils/usage';
 
+const EMPTY_USAGE_DETAILS: UsageDetail[] = [];
+
 export type UseAuthFilesStatsResult = {
   keyStats: KeyStats;
   usageAuths: UsageAuthSummary[];
@@ -15,7 +17,8 @@ export type UseAuthFilesStatsResult = {
 export function useAuthFilesStats(): UseAuthFilesStatsResult {
   const keyStats = useUsageStatsStore((state) => state.keyStats);
   const usageAuths = useUsageStatsStore((state) => state.usageAuths);
-  const usageDetails = useUsageStatsStore((state) => state.usageDetails);
+  // Details are lazy, paginated, and may represent a filter from another page.
+  const usageDetails = EMPTY_USAGE_DETAILS;
   const usageLoading = useUsageStatsStore((state) => state.authsLoading);
   const loadUsageAuths = useUsageStatsStore((state) => state.loadUsageAuths);
 

@@ -1,18 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Select } from '@/components/ui/Select';
-import { authFilesApi } from '@/services/api/authFiles';
 import { useUsageStatsStore, type UsageDetailsPage } from '@/stores';
 import type {
   GeminiKeyConfig,
   ProviderKeyConfig,
   OpenAIProviderConfig,
+  UsageAuthSummary,
   UsageRangeQuery,
 } from '@/types';
-import type { AuthFileItem } from '@/types/authFile';
 import type { CredentialInfo } from '@/types/sourceInfo';
 import { buildSourceInfoMap, resolveSourceDisplay } from '@/utils/sourceResolver';
 import { parseTimestampMs } from '@/utils/timestamp';
@@ -22,24 +21,19 @@ import {
   formatDurationMs,
   LATENCY_SOURCE_FIELD,
   normalizeAuthIndex,
+  normalizeUsageSourceId,
   type UsageDetail,
 } from '@/utils/usage';
 import { downloadBlob } from '@/utils/download';
+import { buildUsageDetailsQuery, type UsageDetailFilters } from './requestDetailsQuery';
+import type { UsageResourceStatus } from './hooks/useUsageData';
 import styles from '@/pages/UsagePage.module.scss';
 
 const ALL_FILTER = '__all__';
 const FAILED_FILTER = 'failed';
 const SUCCESS_FILTER = 'success';
-const DETAILS_LIMIT = 200;
 const MAX_RENDERED_EVENTS = 500;
 const EMPTY_DETAILS: UsageDetail[] = [];
-
-type DetailFilters = {
-  model: string;
-  source: string;
-  authIndex: string;
-  result: string;
-};
 
 type RequestEventRow = {
   id: string;
@@ -49,6 +43,8 @@ type RequestEventRow = {
   model: string;
   sourceKey: string;
   sourceRaw: string;
+  sourceFilterKey: string;
+  sourceFilterValue: string;
   source: string;
   sourceType: string;
   authIndex: string;
@@ -67,11 +63,17 @@ type RequestEventRow = {
 export interface RequestEventsDetailsCardProps {
   loading: boolean;
   geminiKeys: GeminiKeyConfig[];
+  interactionsKeys: GeminiKeyConfig[];
   claudeConfigs: ProviderKeyConfig[];
   codexConfigs: ProviderKeyConfig[];
   vertexConfigs: ProviderKeyConfig[];
   openaiProviders: OpenAIProviderConfig[];
   range: UsageRangeQuery;
+  availableModels: string[];
+  availableSources: string[];
+  authSummaries: UsageAuthSummary[];
+  availabilityStatus: UsageResourceStatus;
+  availabilityError?: string;
 }
 
 const toNumber = (value: unknown): number => {
@@ -87,25 +89,20 @@ const encodeCsv = (value: string | number): string => {
   return `"${safeText.replace(/"/g, '""')}"`;
 };
 
-const buildDetailsQuery = (filters: DetailFilters, range: UsageRangeQuery) => ({
-  ...range,
-  ...(filters.model !== ALL_FILTER ? { model: filters.model } : {}),
-  ...(filters.source !== ALL_FILTER ? { source: filters.source } : {}),
-  ...(filters.authIndex !== ALL_FILTER ? { auth_index: filters.authIndex } : {}),
-  ...(filters.result !== ALL_FILTER ? { failed: filters.result === FAILED_FILTER } : {}),
-  limit: DETAILS_LIMIT,
-  sort_by: 'created_at',
-  sort_order: 'desc',
-});
-
 export function RequestEventsDetailsCard({
   loading,
   geminiKeys,
+  interactionsKeys,
   claudeConfigs,
   codexConfigs,
   vertexConfigs,
   openaiProviders,
   range,
+  availableModels,
+  availableSources,
+  authSummaries,
+  availabilityStatus,
+  availabilityError = '',
 }: RequestEventsDetailsCardProps) {
   const { t, i18n } = useTranslation();
   const loadUsageDetails = useUsageStatsStore((state) => state.loadUsageDetails);
@@ -117,48 +114,39 @@ export function RequestEventsDetailsCard({
   });
 
   const [detailsOpened, setDetailsOpened] = useState(false);
+  const [detailsUnsupported, setDetailsUnsupported] = useState(false);
   const [detailsPage, setDetailsPage] = useState<UsageDetailsPage | null>(null);
   const [modelFilter, setModelFilter] = useState(ALL_FILTER);
   const [sourceFilter, setSourceFilter] = useState(ALL_FILTER);
   const [authIndexFilter, setAuthIndexFilter] = useState(ALL_FILTER);
   const [resultFilter, setResultFilter] = useState(ALL_FILTER);
-  const [authFileMap, setAuthFileMap] = useState<Map<string, CredentialInfo>>(new Map());
+  const sourceFilterValuesRef = useRef(new Map<string, string>());
+  const detailsControllerRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    authFilesApi
-      .list()
-      .then((res) => {
-        if (cancelled) return;
-        const files = Array.isArray(res) ? res : (res as { files?: AuthFileItem[] })?.files;
-        if (!Array.isArray(files)) return;
-        const map = new Map<string, CredentialInfo>();
-        files.forEach((file) => {
-          const key = normalizeAuthIndex(file['auth_index'] ?? file.authIndex);
-          if (!key) return;
-          map.set(key, {
-            name: file.name || key,
-            type: (file.type || file.provider || '').toString(),
-          });
-        });
-        setAuthFileMap(map);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const authFileMap = useMemo(() => {
+    const map = new Map<string, CredentialInfo>();
+    authSummaries.forEach((auth) => {
+      const key = normalizeAuthIndex(auth.auth_index ?? auth.authIndex);
+      if (!key) return;
+      map.set(key, {
+        name: auth.name || auth.label || auth.email || auth.account || key,
+        type: String(auth.type || auth.provider || ''),
+      });
+    });
+    return map;
+  }, [authSummaries]);
 
   const sourceInfoMap = useMemo(
     () =>
       buildSourceInfoMap({
         geminiApiKeys: geminiKeys,
+        interactionsApiKeys: interactionsKeys,
         claudeApiKeys: claudeConfigs,
         codexApiKeys: codexConfigs,
         vertexApiKeys: vertexConfigs,
         openaiCompatibility: openaiProviders,
       }),
-    [claudeConfigs, codexConfigs, geminiKeys, openaiProviders, vertexConfigs]
+    [claudeConfigs, codexConfigs, geminiKeys, interactionsKeys, openaiProviders, vertexConfigs]
   );
 
   const details = detailsPage?.details ?? EMPTY_DETAILS;
@@ -172,6 +160,8 @@ export function RequestEventsDetailsCard({
           : parseTimestampMs(timestamp);
       const date = Number.isNaN(timestampMs) ? null : new Date(timestampMs);
       const sourceRaw = String(detail.source ?? '').trim();
+      const sourceFilterValue = String(detail.__sourceFilterValue ?? '').trim();
+      const sourceFilterKey = sourceRaw || `source-${index}`;
       const authIndexRaw = detail.auth_index as unknown;
       const authIndex =
         authIndexRaw === null || authIndexRaw === undefined || authIndexRaw === ''
@@ -204,6 +194,8 @@ export function RequestEventsDetailsCard({
         model,
         sourceKey,
         sourceRaw: sourceRaw || '-',
+        sourceFilterKey,
+        sourceFilterValue,
         source,
         sourceType,
         authIndex,
@@ -223,7 +215,7 @@ export function RequestEventsDetailsCard({
     const sourceLabelKeyMap = new Map<string, Set<string>>();
     baseRows.forEach((row) => {
       const keys = sourceLabelKeyMap.get(row.source) ?? new Set<string>();
-      keys.add(row.sourceKey);
+      keys.add(row.sourceFilterKey);
       sourceLabelKeyMap.set(row.source, keys);
     });
 
@@ -245,44 +237,71 @@ export function RequestEventsDetailsCard({
     [rows]
   );
 
-  const modelOptions = useMemo(
-    () => [
+  const modelOptions = useMemo(() => {
+    const values = new Set(
+      [...availableModels, ...rows.map((row) => row.model)]
+        .map((model) => model.trim())
+        .filter((model) => model && model !== '-')
+    );
+    if (modelFilter !== ALL_FILTER) values.add(modelFilter);
+    return [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(new Set(rows.map((row) => row.model))).map((model) => ({
-        value: model,
-        label: model,
-      })),
-    ],
-    [rows, t]
-  );
+      ...Array.from(values).map((model) => ({ value: model, label: model })),
+    ];
+  }, [availableModels, modelFilter, rows, t]);
 
   const sourceOptions = useMemo(() => {
     const optionMap = new Map<string, string>();
+    availableSources.forEach((source) => {
+      const sourceFilterValue = source.trim();
+      const sourceFilterKey = normalizeUsageSourceId(sourceFilterValue);
+      if (!sourceFilterValue || !sourceFilterKey) return;
+      sourceFilterValuesRef.current.set(sourceFilterKey, sourceFilterValue);
+      const sourceInfo = resolveSourceDisplay(sourceFilterKey, null, sourceInfoMap, authFileMap);
+      optionMap.set(sourceFilterKey, sourceInfo.displayName);
+    });
     rows.forEach((row) => {
-      if (!optionMap.has(row.sourceKey)) {
-        optionMap.set(row.sourceKey, row.source);
+      if (row.sourceFilterValue) {
+        sourceFilterValuesRef.current.set(row.sourceFilterKey, row.sourceFilterValue);
+      }
+      if (row.sourceFilterValue && row.sourceFilterKey && !optionMap.has(row.sourceFilterKey)) {
+        optionMap.set(row.sourceFilterKey, row.source);
       }
     });
+    if (sourceFilter !== ALL_FILTER && !optionMap.has(sourceFilter)) {
+      optionMap.set(sourceFilter, sourceFilter);
+    }
+
+    const labelCounts = new Map<string, number>();
+    optionMap.forEach((label) => labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1));
 
     return [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
       ...Array.from(optionMap.entries()).map(([value, label]) => ({
         value,
-        label,
+        label: (labelCounts.get(label) ?? 0) > 1 ? `${label} · ${value}` : label,
       })),
     ];
-  }, [rows, t]);
+  }, [authFileMap, availableSources, rows, sourceFilter, sourceInfoMap, t]);
 
-  const authIndexOptions = useMemo(
-    () => [
+  const authIndexOptions = useMemo(() => {
+    const values = new Set(
+      [
+        ...authSummaries.map((auth) => auth.auth_index ?? auth.authIndex ?? ''),
+        ...rows.map((row) => row.authIndex),
+      ]
+        .map((authIndex) => normalizeAuthIndex(authIndex))
+        .filter((authIndex): authIndex is string => Boolean(authIndex) && authIndex !== '-')
+    );
+    if (authIndexFilter !== ALL_FILTER) values.add(authIndexFilter);
+    return [
       { value: ALL_FILTER, label: t('usage_stats.filter_all') },
-      ...Array.from(new Set(rows.map((row) => row.authIndex))).map((authIndex) => ({
+      ...Array.from(values).map((authIndex) => ({
         value: authIndex,
         label: authIndex,
       })),
-    ],
-    [rows, t]
-  );
+    ];
+  }, [authIndexFilter, authSummaries, rows, t]);
 
   const resultOptions = useMemo(
     () => [
@@ -304,22 +323,52 @@ export function RequestEventsDetailsCard({
   );
 
   const loadDetailsPage = useCallback(
-    async (filters: DetailFilters, offset = 0, append = false) => {
-      const page = await loadUsageDetails({
-        query: { ...buildDetailsQuery(filters, range), offset },
-        append,
-      });
-      setDetailsPage(page);
+    async (filters: UsageDetailFilters, offset = 0, append = false) => {
+      detailsControllerRef.current?.abort();
+      const controller = new AbortController();
+      detailsControllerRef.current = controller;
+      const sourceFilterValue =
+        filters.source === ALL_FILTER
+          ? undefined
+          : sourceFilterValuesRef.current.get(filters.source);
+      try {
+        const page = await loadUsageDetails({
+          query: { ...buildUsageDetailsQuery(filters, range, sourceFilterValue), offset },
+          append,
+          signal: controller.signal,
+        });
+        if (!controller.signal.aborted) {
+          setDetailsUnsupported(false);
+          setDetailsPage(page);
+        }
+      } catch (error: unknown) {
+        const status =
+          error && typeof error === 'object' && 'status' in error
+            ? Number((error as { status?: unknown }).status)
+            : undefined;
+        if (status === 404) {
+          setDetailsUnsupported(true);
+          return;
+        }
+        throw error;
+      } finally {
+        if (detailsControllerRef.current === controller) {
+          detailsControllerRef.current = null;
+        }
+      }
     },
     [loadUsageDetails, range]
   );
 
+  useEffect(() => () => detailsControllerRef.current?.abort(), []);
+
   useEffect(() => {
-    if (!detailsOpened) return;
+    const canLoad = availabilityStatus === 'ready' || availabilityStatus === 'empty';
+    if (!detailsOpened || !canLoad || detailsUnsupported) return;
     void Promise.resolve()
       .then(() => loadDetailsPage(currentFilters, 0, false))
       .catch(() => {});
-  }, [currentFilters, detailsOpened, loadDetailsPage]);
+  }, [availabilityStatus, currentFilters, detailsOpened, detailsUnsupported, loadDetailsPage]);
 
   const handleOpenDetails = () => {
     setDetailsOpened(true);
@@ -438,13 +487,22 @@ export function RequestEventsDetailsCard({
 
   const totalMatched = detailsPage?.totalMatched;
   const loadedCount = rows.length;
+  const canLoadDetails = availabilityStatus === 'ready' || availabilityStatus === 'empty';
+  const availabilityText =
+    availabilityStatus === 'disabled'
+      ? t('usage_stats.state_disabled')
+      : availabilityStatus === 'unsupported'
+        ? t('usage_stats.state_unsupported')
+        : availabilityStatus === 'error'
+          ? availabilityError || t('usage_stats.state_error')
+          : t('common.loading');
 
   return (
     <Card
       title={t('usage_stats.request_events_title')}
       extra={
         <div className={styles.requestEventsActions}>
-          {!detailsOpened ? (
+          {!canLoadDetails || detailsUnsupported ? null : !detailsOpened ? (
             <Button variant="secondary" size="sm" onClick={handleOpenDetails} disabled={loading}>
               {t('usage_stats.request_events_load')}
             </Button>
@@ -487,7 +545,11 @@ export function RequestEventsDetailsCard({
         </div>
       }
     >
-      {!detailsOpened ? (
+      {!canLoadDetails ? (
+        <div className={styles.hint}>{availabilityText}</div>
+      ) : detailsUnsupported ? (
+        <div className={styles.hint}>{t('usage_stats.state_unsupported')}</div>
+      ) : !detailsOpened ? (
         <EmptyState
           title={t('usage_stats.request_events_lazy_title')}
           description={t('usage_stats.request_events_lazy_desc')}

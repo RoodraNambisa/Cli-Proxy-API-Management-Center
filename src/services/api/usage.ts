@@ -9,13 +9,23 @@ import type {
   UsageAuthsQuery,
   UsageAuthsResponse,
   UsageAuthSummary,
+  UsageCostsQuery,
+  UsageCostsResponse,
   UsageDetailsQuery,
   UsageDetailsResponse,
   UsageEnvelope,
   UsageMeta,
+  UsageHealthQuery,
+  UsageHealthResponse,
+  UsageModelPrices,
+  UsagePricesResponse,
   UsageRangeQuery,
+  UsageRatesQuery,
+  UsageRatesResponse,
   UsageSeriesQuery,
   UsageSeriesResponse,
+  UsageTokensQuery,
+  UsageTokensResponse,
 } from '@/types';
 
 const USAGE_TIMEOUT_MS = 60 * 1000;
@@ -99,6 +109,22 @@ const normalizeSeriesQuery = (query: UsageSeriesQuery = {}) => ({
   group_by: query.group_by || 'model',
 });
 
+type UsageRequestOptions = {
+  signal?: AbortSignal;
+};
+
+const normalizeCsvValue = (value: string | string[] | undefined): string | undefined => {
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .join(',');
+    return normalized || undefined;
+  }
+  const normalized = value?.trim();
+  return normalized || undefined;
+};
+
 export const usageApi = {
   /**
    * 获取使用统计原始数据。新页面默认不调用，仅用于旧后端兼容。
@@ -108,43 +134,115 @@ export const usageApi = {
   /**
    * 获取轻量元信息，用 version 判断 summary/auths 是否需要刷新
    */
-  getUsageMeta: () =>
-    apiClient.get<UsageEnvelope<UsageMeta>>('/usage/meta', { timeout: USAGE_TIMEOUT_MS }),
+  getUsageMeta: (options: UsageRequestOptions = {}) =>
+    apiClient.get<UsageEnvelope<UsageMeta>>('/usage/meta', {
+      timeout: USAGE_TIMEOUT_MS,
+      signal: options.signal,
+    }),
 
   /**
    * 获取不包含 details 的全局/API/model 汇总
    */
-  getUsageSummary: (query?: UsageRangeQuery) =>
+  getUsageSummary: (query?: UsageRangeQuery, options: UsageRequestOptions = {}) =>
     apiClient.get<UsageEnvelope<Record<string, unknown>>>('/usage/summary', {
       timeout: USAGE_TIMEOUT_MS,
       params: normalizeRangeQuery(query),
+      signal: options.signal,
     }),
 
   /**
    * 按需分页获取请求明细
    */
-  getUsageDetails: (query?: UsageDetailsQuery) =>
+  getUsageDetails: (query?: UsageDetailsQuery, options: UsageRequestOptions = {}) =>
     apiClient.get<UsageDetailsResponse>('/usage/details', {
       timeout: USAGE_TIMEOUT_MS,
       params: normalizeDetailsQuery(query),
+      signal: options.signal,
     }),
 
   /**
    * 获取凭证维度汇总，包含当前零使用量凭证
    */
-  getUsageAuths: (query?: UsageAuthsQuery) =>
+  getUsageAuths: (query?: UsageAuthsQuery, options: UsageRequestOptions = {}) =>
     apiClient.get<UsageAuthsResponse>('/usage/auths', {
       timeout: USAGE_TIMEOUT_MS,
       params: normalizeAuthsQuery(query),
+      signal: options.signal,
     }),
 
   /**
    * 获取时间序列汇总
    */
-  getUsageSeries: (query?: UsageSeriesQuery) =>
+  getUsageSeries: (query?: UsageSeriesQuery, options: UsageRequestOptions = {}) =>
     apiClient.get<UsageSeriesResponse>('/usage/series', {
       timeout: USAGE_TIMEOUT_MS,
       params: normalizeSeriesQuery(query),
+      signal: options.signal,
+    }),
+
+  getUsageHealth: (query?: UsageHealthQuery, options: UsageRequestOptions = {}) =>
+    apiClient.get<UsageHealthResponse>('/usage/health', {
+      timeout: USAGE_TIMEOUT_MS,
+      params: {
+        ...normalizeRangeQuery(query),
+        bucket: query?.bucket || '15m',
+        group_by: query?.group_by || 'none',
+        auth_index: normalizeCsvValue(query?.auth_index),
+        source: normalizeCsvValue(query?.source),
+      },
+      signal: options.signal,
+    }),
+
+  getUsageRates: (query?: UsageRatesQuery, options: UsageRequestOptions = {}) =>
+    apiClient.get<UsageRatesResponse>('/usage/rates', {
+      timeout: USAGE_TIMEOUT_MS,
+      params: query,
+      signal: options.signal,
+    }),
+
+  getUsageTokens: (query?: UsageTokensQuery, options: UsageRequestOptions = {}) =>
+    apiClient.get<UsageTokensResponse>('/usage/tokens', {
+      timeout: USAGE_TIMEOUT_MS,
+      params: {
+        ...normalizeRangeQuery(query),
+        bucket: query?.bucket || 'day',
+        group_by: query?.group_by || 'none',
+      },
+      signal: options.signal,
+    }),
+
+  getUsageCosts: (query?: UsageCostsQuery, options: UsageRequestOptions = {}) =>
+    apiClient.get<UsageCostsResponse>('/usage/costs', {
+      timeout: USAGE_TIMEOUT_MS,
+      params: {
+        ...normalizeRangeQuery(query),
+        bucket: query?.bucket || 'day',
+      },
+      signal: options.signal,
+    }),
+
+  getUsagePrices: (options: UsageRequestOptions = {}) =>
+    apiClient.get<UsagePricesResponse>('/usage/prices', {
+      timeout: USAGE_TIMEOUT_MS,
+      signal: options.signal,
+    }),
+
+  replaceUsagePrices: (models: UsageModelPrices) =>
+    apiClient.put<{ status?: string }>('/usage/prices', { models }, { timeout: USAGE_TIMEOUT_MS }),
+
+  patchUsagePrices: (models: Partial<UsageModelPrices>) =>
+    apiClient.patch<{ status?: string }>(
+      '/usage/prices',
+      { models },
+      { timeout: USAGE_TIMEOUT_MS }
+    ),
+
+  clearUsagePrices: () =>
+    apiClient.delete<{ status?: string }>('/usage/prices', { timeout: USAGE_TIMEOUT_MS }),
+
+  deleteUsagePrice: (model: string) =>
+    apiClient.delete<{ status?: string }>(`/usage/prices/${encodeURIComponent(model)}`, {
+      timeout: USAGE_TIMEOUT_MS,
     }),
 
   /**
@@ -186,26 +284,19 @@ export const usageApi = {
    * 计算密钥成功/失败统计，优先使用轻量 auths 汇总。
    */
   async getKeyStats(usageData?: unknown): Promise<KeyStats> {
-    let payload = usageData;
+    const payload = usageData;
     if (!payload) {
-      try {
-        const response = await usageApi.getUsageAuths();
-        const byAuthIndex: KeyStats['byAuthIndex'] = {};
-        (response.auths ?? []).forEach((auth) => {
-          const authIndex = normalizeAuthIndex(auth.auth_index ?? auth.authIndex);
-          if (!authIndex) return;
-          byAuthIndex[authIndex] = {
-            success: Math.max(Number(auth.success_count) || 0, 0),
-            failure: Math.max(Number(auth.failure_count) || 0, 0),
-          };
-        });
-        return { bySource: {}, byAuthIndex };
-      } catch {
-        const response = await apiClient.get<Record<string, unknown>>('/usage', {
-          timeout: USAGE_TIMEOUT_MS,
-        });
-        payload = response?.usage ?? response;
-      }
+      const response = await usageApi.getUsageAuths();
+      const byAuthIndex: KeyStats['byAuthIndex'] = {};
+      (response.auths ?? []).forEach((auth) => {
+        const authIndex = normalizeAuthIndex(auth.auth_index ?? auth.authIndex);
+        if (!authIndex) return;
+        byAuthIndex[authIndex] = {
+          success: Math.max(Number(auth.success_count) || 0, 0),
+          failure: Math.max(Number(auth.failure_count) || 0, 0),
+        };
+      });
+      return { bySource: {}, byAuthIndex };
     }
     return computeKeyStats(payload);
   },

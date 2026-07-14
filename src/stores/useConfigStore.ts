@@ -50,7 +50,6 @@ const SECTION_KEYS: RawConfigSection[] = [
   'logging-to-file',
   'logs-max-total-size-mb',
   'ws-auth',
-  'enable-gemini-cli-endpoint',
   'force-model-prefix',
   'remote-management',
   'codex',
@@ -67,8 +66,8 @@ const SECTION_KEYS: RawConfigSection[] = [
   'routing/session-affinity-failover',
   'routing/session-affinity-ttl',
   'api-keys',
-  'ampcode',
   'gemini-api-key',
+  'interactions-api-key',
   'codex-api-key',
   'claude-api-key',
   'vertex-api-key',
@@ -112,8 +111,6 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.logsMaxTotalSizeMb;
     case 'ws-auth':
       return config.wsAuth;
-    case 'enable-gemini-cli-endpoint':
-      return config.enableGeminiCliEndpoint;
     case 'force-model-prefix':
       return config.forceModelPrefix;
     case 'remote-management':
@@ -146,10 +143,10 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.routingSessionAffinityTTL;
     case 'api-keys':
       return config.apiKeys;
-    case 'ampcode':
-      return config.ampcode;
     case 'gemini-api-key':
       return config.geminiApiKeys;
+    case 'interactions-api-key':
+      return config.interactionsApiKeys;
     case 'codex-api-key':
       return config.codexApiKeys;
     case 'claude-api-key':
@@ -309,9 +306,6 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         case 'ws-auth':
           nextConfig.wsAuth = value as Config['wsAuth'];
           break;
-        case 'enable-gemini-cli-endpoint':
-          nextConfig.enableGeminiCliEndpoint = value as Config['enableGeminiCliEndpoint'];
-          break;
         case 'force-model-prefix':
           nextConfig.forceModelPrefix = value as Config['forceModelPrefix'];
           break;
@@ -343,8 +337,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           nextConfig.routingFillFirstRange = value as Config['routingFillFirstRange'];
           break;
         case 'routing/fill-first-per-auth-rpm':
-          nextConfig.routingFillFirstPerAuthRpm =
-            value as Config['routingFillFirstPerAuthRpm'];
+          nextConfig.routingFillFirstPerAuthRpm = value as Config['routingFillFirstPerAuthRpm'];
           break;
         case 'routing/priority-overrides':
           nextConfig.routingPriorityOverrides = value as Config['routingPriorityOverrides'];
@@ -362,11 +355,11 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         case 'api-keys':
           nextConfig.apiKeys = value as Config['apiKeys'];
           break;
-        case 'ampcode':
-          nextConfig.ampcode = value as Config['ampcode'];
-          break;
         case 'gemini-api-key':
           nextConfig.geminiApiKeys = value as Config['geminiApiKeys'];
+          break;
+        case 'interactions-api-key':
+          nextConfig.interactionsApiKeys = value as Config['interactionsApiKeys'];
           break;
         case 'codex-api-key':
           nextConfig.codexApiKeys = value as Config['codexApiKeys'];

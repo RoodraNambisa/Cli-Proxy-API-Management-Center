@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { apiClient } from '@/services/api/client';
 import { authFilesApi, normalizeAuthFileEntry } from '@/services/api/authFiles';
 import { AuthFileCard, type AuthFileCardProps } from '@/features/authFiles/components/AuthFileCard';
+import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
+import type { PrefixProxyEditorState } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
 import {
   getAuthFileModelCapability,
   isXaiProvider,
@@ -115,6 +117,64 @@ describe('xAI auth file compatibility', () => {
     expect(getAuthFileModelCapability({ id: 'future-grok-video-model' }, 'xai')).toBe('video');
     expect(getAuthFileModelCapability({ id: 'future-grok-text-model' }, 'xai')).toBe('text');
     expect(getAuthFileModelCapability({ id: 'future-grok-image-model' }, 'codex')).toBeNull();
+  });
+
+  test('keeps retired Gemini CLI credentials viewable but not editable', () => {
+    const onOpen = vi.fn();
+    const card = render(
+      <AuthFileCard
+        {...createCardProps({ name: 'legacy.json', type: 'gemini-cli', runtime_only: true })}
+        onOpenPrefixProxyEditor={onOpen}
+      />
+    );
+
+    expect(screen.getByText('auth_files.gemini_cli_unsupported')).not.toBeNull();
+    fireEvent.click(screen.getByTitle('auth_files.view_button'));
+    expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'legacy.json' }));
+    expect(screen.getByTitle('auth_files.download_button')).not.toBeNull();
+    expect(screen.getByTitle('auth_files.delete_button')).not.toBeNull();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+
+    card.unmount();
+    const editor: PrefixProxyEditorState = {
+      fileName: 'legacy.json',
+      fileInfoText: '{"name":"legacy.json"}',
+      isCodexFile: false,
+      readOnly: true,
+      loading: false,
+      saving: false,
+      error: null,
+      originalText: '{"type":"gemini-cli"}',
+      rawText: '{"type":"gemini-cli"}',
+      json: { type: 'gemini-cli' },
+      prefix: '',
+      proxyUrl: '',
+      priority: '',
+      excludedModelsText: '',
+      disableCooling: '',
+      websockets: false,
+      note: '',
+      noteTouched: false,
+      headersText: '',
+      headersTouched: false,
+      headersError: null,
+    };
+    render(
+      <AuthFilesPrefixProxyEditorModal
+        disableControls={false}
+        editor={editor}
+        updatedText={editor.rawText}
+        dirty={false}
+        onClose={vi.fn()}
+        onCopyText={vi.fn()}
+        onSave={vi.fn()}
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByDisplayValue(/gemini-cli/)).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'common.save' })).toBeNull();
+    expect(screen.queryByText('auth_files.prefix_label')).toBeNull();
   });
 
   test('merges weekly usage and monthly credits for Grok quota display', () => {

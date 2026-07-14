@@ -1,4 +1,3 @@
-export { AmpcodeSection } from './AmpcodeSection';
 export { ClaudeSection } from './ClaudeSection';
 export { CodexSection } from './CodexSection';
 export { GeminiSection } from './GeminiSection';

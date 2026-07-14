@@ -1,18 +1,11 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Line } from 'react-chartjs-2';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import {
-  buildHourlyTokenBreakdown,
-  buildDailyTokenBreakdown,
-  type TokenBreakdownSeries,
-  type TokenCategory,
-} from '@/utils/usage';
-import { usageApi } from '@/services/api/usage';
-import type { UsageRangeQuery, UsageSeriesResponse } from '@/types';
+import type { UsageTokensResponse } from '@/types';
+import type { TokenBreakdownSeries, TokenCategory } from '@/utils/usage';
 import { buildChartOptions, getHourChartMinWidth } from '@/utils/usage/chartConfig';
-import type { UsagePayload } from './hooks/useUsageData';
+import type { UsageResource } from './hooks/useUsageData';
 import styles from '@/pages/UsagePage.module.scss';
 
 const TOKEN_COLORS: Record<TokenCategory, { border: string; bg: string }> = {
@@ -30,40 +23,30 @@ const toTokenNumber = (value: unknown): number => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
 
-const buildSeriesTokenBreakdown = (
-  response: UsageSeriesResponse,
-  period: 'hour' | 'day',
+const buildTokenBreakdown = (
+  response: UsageTokensResponse | null,
   locale: string
 ): TokenBreakdownSeries => {
-  const buckets = new Map<string, Record<TokenCategory, number>>();
-  (response.items ?? []).forEach((item) => {
-    const bucket = String(item.bucket ?? '').trim();
-    if (!bucket) return;
-    const values = buckets.get(bucket) ?? {
-      input: 0,
-      output: 0,
-      cached: 0,
-      cacheCreation: 0,
-      reasoning: 0,
-    };
-    const tokens = item.tokens ?? {};
-    values.input += toTokenNumber(tokens.input_tokens);
-    values.output += toTokenNumber(tokens.output_tokens);
-    values.cached += Math.max(
-      toTokenNumber(tokens.cached_tokens),
-      toTokenNumber(tokens.cache_tokens)
-    );
-    values.cacheCreation += toTokenNumber(tokens.cache_creation_tokens);
-    values.reasoning += toTokenNumber(tokens.reasoning_tokens);
-    buckets.set(bucket, values);
-  });
+  const period = response?.bucket === 'day' ? 'day' : 'hour';
+  const entries = (response?.items ?? [])
+    .map((item) => {
+      const bucket = String(item.bucket ?? '').trim();
+      const tokens = item.tokens ?? {};
+      return {
+        bucket,
+        input: toTokenNumber(tokens.input_tokens),
+        output: toTokenNumber(tokens.output_tokens),
+        cached: Math.max(toTokenNumber(tokens.cached_tokens), toTokenNumber(tokens.cache_tokens)),
+        cacheCreation: toTokenNumber(tokens.cache_creation_tokens),
+        reasoning: toTokenNumber(tokens.reasoning_tokens),
+      };
+    })
+    .filter((item) => item.bucket)
+    .sort((left, right) => new Date(left.bucket).getTime() - new Date(right.bucket).getTime());
 
-  const entries = Array.from(buckets.entries()).sort(
-    ([left], [right]) => new Date(left).getTime() - new Date(right).getTime()
-  );
-  const labels = entries.map(([bucket]) => {
-    const date = new Date(bucket);
-    if (Number.isNaN(date.getTime())) return bucket;
+  const labels = entries.map((item) => {
+    const date = new Date(item.bucket);
+    if (Number.isNaN(date.getTime())) return item.bucket;
     return period === 'hour'
       ? date.toLocaleString(locale, {
           month: '2-digit',
@@ -73,74 +56,33 @@ const buildSeriesTokenBreakdown = (
         })
       : date.toLocaleDateString(locale, { month: '2-digit', day: '2-digit' });
   });
-  const dataByCategory = Object.fromEntries(
-    CATEGORIES.map((category) => [category, entries.map(([, values]) => values[category])])
-  ) as Record<TokenCategory, number[]>;
-  const hasData = CATEGORIES.some((category) =>
-    dataByCategory[category].some((value) => value > 0)
-  );
+  const dataByCategory: Record<TokenCategory, number[]> = {
+    input: entries.map((item) => item.input),
+    output: entries.map((item) => item.output),
+    cached: entries.map((item) => item.cached),
+    cacheCreation: entries.map((item) => item.cacheCreation),
+    reasoning: entries.map((item) => item.reasoning),
+  };
 
-  return { labels, dataByCategory, hasData };
+  return {
+    labels,
+    dataByCategory,
+    hasData: CATEGORIES.some((category) => dataByCategory[category].some((value) => value > 0)),
+  };
 };
 
 export interface TokenBreakdownChartProps {
-  usage: UsagePayload | null;
-  loading: boolean;
+  resource: UsageResource<UsageTokensResponse>;
   isDark: boolean;
   isMobile: boolean;
-  hourWindowHours?: number;
-  range: UsageRangeQuery;
 }
 
-export function TokenBreakdownChart({
-  usage,
-  loading,
-  isDark,
-  isMobile,
-  hourWindowHours,
-  range,
-}: TokenBreakdownChartProps) {
+export function TokenBreakdownChart({ resource, isDark, isMobile }: TokenBreakdownChartProps) {
   const { t, i18n } = useTranslation();
-  const [period, setPeriod] = useState<'hour' | 'day'>('hour');
-  const [seriesResponse, setSeriesResponse] = useState<UsageSeriesResponse | null>(null);
-  const [seriesLoading, setSeriesLoading] = useState(false);
-  const rangeFrom = range.from;
-  const rangeTo = range.to;
+  const period = resource.data?.bucket === 'day' ? 'day' : 'hour';
 
-  useEffect(() => {
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (cancelled) return;
-      setSeriesLoading(true);
-      usageApi
-        .getUsageSeries({
-          from: rangeFrom,
-          to: rangeTo,
-          bucket: period,
-          group_by: 'model',
-        })
-        .then((response) => {
-          if (!cancelled) setSeriesResponse(response);
-        })
-        .catch(() => {
-          if (!cancelled) setSeriesResponse(null);
-        })
-        .finally(() => {
-          if (!cancelled) setSeriesLoading(false);
-        });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [period, rangeFrom, rangeTo]);
-
-  const { chartData, chartOptions } = useMemo(() => {
-    const series = seriesResponse
-      ? buildSeriesTokenBreakdown(seriesResponse, period, i18n.language)
-      : period === 'hour'
-        ? buildHourlyTokenBreakdown(usage, hourWindowHours)
-        : buildDailyTokenBreakdown(usage);
+  const { chartData, chartOptions, hasData } = useMemo(() => {
+    const series = buildTokenBreakdown(resource.data, i18n.language);
     const categoryLabels: Record<TokenCategory, string> = {
       input: t('usage_stats.input_tokens'),
       output: t('usage_stats.output_tokens'),
@@ -148,73 +90,56 @@ export function TokenBreakdownChart({
       cacheCreation: t('usage_stats.cache_creation_tokens'),
       reasoning: t('usage_stats.reasoning_tokens'),
     };
-
     const data = {
       labels: series.labels,
-      datasets: CATEGORIES.map((cat) => ({
-        label: categoryLabels[cat],
-        data: series.dataByCategory[cat],
-        borderColor: TOKEN_COLORS[cat].border,
-        backgroundColor: TOKEN_COLORS[cat].bg,
-        pointBackgroundColor: TOKEN_COLORS[cat].border,
-        pointBorderColor: TOKEN_COLORS[cat].border,
+      datasets: CATEGORIES.map((category) => ({
+        label: categoryLabels[category],
+        data: series.dataByCategory[category],
+        borderColor: TOKEN_COLORS[category].border,
+        backgroundColor: TOKEN_COLORS[category].bg,
+        pointBackgroundColor: TOKEN_COLORS[category].border,
+        pointBorderColor: TOKEN_COLORS[category].border,
         fill: true,
         tension: 0.35,
       })),
     };
-
     const baseOptions = buildChartOptions({ period, labels: series.labels, isDark, isMobile });
-    const options = {
-      ...baseOptions,
-      scales: {
-        ...baseOptions.scales,
-        y: {
-          ...baseOptions.scales?.y,
-          stacked: true,
-        },
-        x: {
-          ...baseOptions.scales?.x,
-          stacked: true,
+    return {
+      chartData: data,
+      hasData: series.hasData,
+      chartOptions: {
+        ...baseOptions,
+        scales: {
+          ...baseOptions.scales,
+          y: { ...baseOptions.scales?.y, stacked: true },
+          x: { ...baseOptions.scales?.x, stacked: true },
         },
       },
     };
+  }, [i18n.language, isDark, isMobile, period, resource.data, t]);
 
-    return { chartData: data, chartOptions: options };
-  }, [usage, seriesResponse, period, isDark, isMobile, hourWindowHours, i18n.language, t]);
+  const stateText =
+    resource.status === 'loading'
+      ? t('common.loading')
+      : resource.status === 'disabled'
+        ? t('usage_stats.state_disabled')
+        : resource.status === 'unsupported'
+          ? t('usage_stats.state_unsupported')
+          : resource.status === 'error'
+            ? resource.error || t('usage_stats.state_error')
+            : !hasData
+              ? t('usage_stats.no_data')
+              : '';
 
   return (
-    <Card
-      title={t('usage_stats.token_breakdown')}
-      extra={
-        <div className={styles.periodButtons}>
-          <Button
-            variant={period === 'hour' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setPeriod('hour')}
-          >
-            {t('usage_stats.by_hour')}
-          </Button>
-          <Button
-            variant={period === 'day' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setPeriod('day')}
-          >
-            {t('usage_stats.by_day')}
-          </Button>
-        </div>
-      }
-    >
-      {loading || seriesLoading ? (
-        <div className={styles.hint}>{t('common.loading')}</div>
-      ) : chartData.labels.length > 0 ? (
+    <Card title={t('usage_stats.token_breakdown')}>
+      {stateText ? (
+        <div className={styles.hint}>{stateText}</div>
+      ) : (
         <div className={styles.chartWrapper}>
-          <div className={styles.chartLegend} aria-label="Chart legend">
-            {chartData.datasets.map((dataset, index) => (
-              <div
-                key={`${dataset.label}-${index}`}
-                className={styles.legendItem}
-                title={dataset.label}
-              >
+          <div className={styles.chartLegend} aria-label={t('usage_stats.token_breakdown')}>
+            {chartData.datasets.map((dataset) => (
+              <div key={dataset.label} className={styles.legendItem} title={dataset.label}>
                 <span
                   className={styles.legendDot}
                   style={{ backgroundColor: dataset.borderColor }}
@@ -238,8 +163,6 @@ export function TokenBreakdownChart({
             </div>
           </div>
         </div>
-      ) : (
-        <div className={styles.hint}>{t('usage_stats.no_data')}</div>
       )}
     </Card>
   );

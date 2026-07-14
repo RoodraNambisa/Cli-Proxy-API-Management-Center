@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
-import { collectUsageDetails, extractTotalTokens } from '@/utils/usage';
-import type { UsagePayload } from './useUsageData';
+import type { UsageCostsResponse, UsageRatesResponse } from '@/types';
+import type { UsageResource } from './useUsageData';
 
 export interface SparklineData {
   labels: string[];
@@ -13,7 +13,7 @@ export interface SparklineData {
       tension: number;
       pointRadius: number;
       borderWidth: number;
-    }
+    },
   ];
 }
 
@@ -22,9 +22,8 @@ export interface SparklineBundle {
 }
 
 export interface UseSparklinesOptions {
-  usage: UsagePayload | null;
-  loading: boolean;
-  nowMs: number;
+  ratesResource: UsageResource<UsageRatesResponse>;
+  costsResource: UsageResource<UsageCostsResponse>;
 }
 
 export interface UseSparklinesReturn {
@@ -35,131 +34,90 @@ export interface UseSparklinesReturn {
   costSparkline: SparklineBundle | null;
 }
 
-export function useSparklines({ usage, loading, nowMs }: UseSparklinesOptions): UseSparklinesReturn {
-  const lastHourSeries = useMemo(() => {
-    if (!usage) return { labels: [], requests: [], tokens: [] };
-    if (!Number.isFinite(nowMs) || nowMs <= 0) {
-      return { labels: [], requests: [], tokens: [] };
-    }
-    const details = collectUsageDetails(usage);
-    if (!details.length) return { labels: [], requests: [], tokens: [] };
+const formatBucket = (value: string | undefined): string => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return value ?? '';
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
 
-    const windowMinutes = 60;
-    const now = nowMs;
-    const windowStart = now - windowMinutes * 60 * 1000;
-    const requestBuckets = new Array(windowMinutes).fill(0);
-    const tokenBuckets = new Array(windowMinutes).fill(0);
+const moneyAmount = (amountMicros: unknown, amount: unknown): number => {
+  const micros = Number(amountMicros);
+  if (Number.isFinite(micros)) return micros / 1_000_000;
+  const fallback = Number(amount);
+  return Number.isFinite(fallback) ? fallback : 0;
+};
 
-    details.forEach((detail) => {
-      const timestamp = detail.__timestampMs ?? 0;
-      if (!Number.isFinite(timestamp) || timestamp < windowStart || timestamp > now) {
-        return;
-      }
-      const minuteIndex = Math.min(
-        windowMinutes - 1,
-        Math.floor((timestamp - windowStart) / 60000)
-      );
-      requestBuckets[minuteIndex] += 1;
-      tokenBuckets[minuteIndex] += extractTotalTokens(detail);
-    });
-
-    const labels = requestBuckets.map((_, idx) => {
-      const date = new Date(windowStart + (idx + 1) * 60000);
-      const h = date.getHours().toString().padStart(2, '0');
-      const m = date.getMinutes().toString().padStart(2, '0');
-      return `${h}:${m}`;
-    });
-
-    return { labels, requests: requestBuckets, tokens: tokenBuckets };
-  }, [nowMs, usage]);
-
+export function useSparklines({
+  ratesResource,
+  costsResource,
+}: UseSparklinesOptions): UseSparklinesReturn {
   const buildSparkline = useCallback(
     (
       series: { labels: string[]; data: number[] },
       color: string,
       backgroundColor: string
     ): SparklineBundle | null => {
-      if (loading || !series?.data?.length) {
-        return null;
-      }
-      const sliceStart = Math.max(series.data.length - 60, 0);
-      const labels = series.labels.slice(sliceStart);
-      const points = series.data.slice(sliceStart);
+      if (!series.data.length) return null;
       return {
         data: {
-          labels,
+          labels: series.labels,
           datasets: [
             {
-              data: points,
+              data: series.data,
               borderColor: color,
               backgroundColor,
               fill: true,
               tension: 0.45,
               pointRadius: 0,
-              borderWidth: 2
-            }
-          ]
-        }
+              borderWidth: 2,
+            },
+          ],
+        },
       };
     },
-    [loading]
+    []
   );
 
-  const requestsSparkline = useMemo(
-    () =>
-      buildSparkline(
-        { labels: lastHourSeries.labels, data: lastHourSeries.requests },
-        '#8b8680',
-        'rgba(139, 134, 128, 0.18)'
-      ),
-    [buildSparkline, lastHourSeries.labels, lastHourSeries.requests]
-  );
+  const rateSeries = useMemo(() => {
+    const items = ratesResource.data?.items ?? [];
+    return {
+      labels: items.map((item) => formatBucket(item.bucket)),
+      requests: items.map((item) => Math.max(Number(item.requests) || 0, 0)),
+      tokens: items.map((item) => Math.max(Number(item.total_tokens) || 0, 0)),
+      rpm: items.map((item) => Math.max(Number(item.rpm) || 0, 0)),
+      tpm: items.map((item) => Math.max(Number(item.tpm) || 0, 0)),
+    };
+  }, [ratesResource.data]);
 
-  const tokensSparkline = useMemo(
-    () =>
-      buildSparkline(
-        { labels: lastHourSeries.labels, data: lastHourSeries.tokens },
-        '#8b5cf6',
-        'rgba(139, 92, 246, 0.18)'
-      ),
-    [buildSparkline, lastHourSeries.labels, lastHourSeries.tokens]
-  );
-
-  const rpmSparkline = useMemo(
-    () =>
-      buildSparkline(
-        { labels: lastHourSeries.labels, data: lastHourSeries.requests },
-        '#22c55e',
-        'rgba(34, 197, 94, 0.18)'
-      ),
-    [buildSparkline, lastHourSeries.labels, lastHourSeries.requests]
-  );
-
-  const tpmSparkline = useMemo(
-    () =>
-      buildSparkline(
-        { labels: lastHourSeries.labels, data: lastHourSeries.tokens },
-        '#f97316',
-        'rgba(249, 115, 22, 0.18)'
-      ),
-    [buildSparkline, lastHourSeries.labels, lastHourSeries.tokens]
-  );
-
-  const costSparkline = useMemo(
-    () =>
-      buildSparkline(
-        { labels: lastHourSeries.labels, data: lastHourSeries.tokens },
-        '#f59e0b',
-        'rgba(245, 158, 11, 0.18)'
-      ),
-    [buildSparkline, lastHourSeries.labels, lastHourSeries.tokens]
-  );
+  const costSeries = useMemo(() => {
+    const items = costsResource.data?.series ?? [];
+    return {
+      labels: items.map((item) => formatBucket(item.bucket)),
+      data: items.map((item) => moneyAmount(item.cost?.amount_micros, item.cost?.amount)),
+    };
+  }, [costsResource.data]);
 
   return {
-    requestsSparkline,
-    tokensSparkline,
-    rpmSparkline,
-    tpmSparkline,
-    costSparkline
+    requestsSparkline: buildSparkline(
+      { labels: rateSeries.labels, data: rateSeries.requests },
+      '#8b8680',
+      'rgba(139, 134, 128, 0.18)'
+    ),
+    tokensSparkline: buildSparkline(
+      { labels: rateSeries.labels, data: rateSeries.tokens },
+      '#8b5cf6',
+      'rgba(139, 92, 246, 0.18)'
+    ),
+    rpmSparkline: buildSparkline(
+      { labels: rateSeries.labels, data: rateSeries.rpm },
+      '#22c55e',
+      'rgba(34, 197, 94, 0.18)'
+    ),
+    tpmSparkline: buildSparkline(
+      { labels: rateSeries.labels, data: rateSeries.tpm },
+      '#f97316',
+      'rgba(249, 115, 22, 0.18)'
+    ),
+    costSparkline: buildSparkline(costSeries, '#f59e0b', 'rgba(245, 158, 11, 0.18)'),
   };
 }

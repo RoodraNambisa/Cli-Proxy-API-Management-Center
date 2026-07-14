@@ -18,19 +18,6 @@ export interface OpenAIFormState {
   apiKeyEntries: ApiKeyEntry[];
 }
 
-export interface AmpcodeUpstreamApiKeyEntry {
-  upstreamApiKey: string;
-  clientApiKeysText: string;
-}
-
-export interface AmpcodeFormState {
-  upstreamUrl: string;
-  upstreamApiKey: string;
-  forceModelMappings: boolean;
-  mappingEntries: ModelEntry[];
-  upstreamApiKeyEntries: AmpcodeUpstreamApiKeyEntry[];
-}
-
 export type GeminiFormState = Omit<GeminiKeyConfig, 'headers' | 'models'> & {
   headers: HeaderEntry[];
   modelEntries: ModelEntry[];

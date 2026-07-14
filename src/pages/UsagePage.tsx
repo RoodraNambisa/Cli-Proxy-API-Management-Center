@@ -36,7 +36,6 @@ import {
   useChartData,
 } from '@/components/usage';
 import {
-  buildUsageRangeForTimeRange,
   getModelNamesFromUsage,
   getApiStats,
   getModelStats,
@@ -67,12 +66,6 @@ const TIME_RANGE_OPTIONS: ReadonlyArray<{ value: UsageTimeRange; labelKey: strin
   { value: '24h', labelKey: 'usage_stats.range_24h' },
   { value: '7d', labelKey: 'usage_stats.range_7d' },
 ];
-const HOUR_WINDOW_BY_TIME_RANGE: Record<Exclude<UsageTimeRange, 'all'>, number> = {
-  '7h': 7,
-  '24h': 24,
-  '7d': 7 * 24,
-};
-
 const isUsageTimeRange = (value: unknown): value is UsageTimeRange =>
   value === '7h' || value === '24h' || value === '7d' || value === 'all';
 
@@ -132,8 +125,6 @@ export function UsagePage() {
   // Chart lines and time range state
   const [chartLines, setChartLines] = useState<string[]>(loadChartLines);
   const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadTimeRange);
-  const [initialRangeTime] = useState(() => Date.now());
-
   // Data hook
   const {
     usage,
@@ -143,7 +134,14 @@ export function UsagePage() {
     error,
     lastRefreshedAt,
     modelPrices,
-    setModelPrices,
+    summaryResource,
+    healthResource,
+    ratesResource,
+    tokensResource,
+    costsResource,
+    pricesResource,
+    querySnapshot,
+    legacyPriceImportAvailable,
     loadUsage,
     handleExport,
     handleImport,
@@ -193,12 +191,7 @@ export function UsagePage() {
   );
 
   const filteredUsage = usage;
-  const hourWindowHours = timeRange === 'all' ? undefined : HOUR_WINDOW_BY_TIME_RANGE[timeRange];
-  const rangeRefreshTime = lastRefreshedAt?.getTime() ?? 0;
-  const usageRange = useMemo(
-    () => buildUsageRangeForTimeRange(timeRange, rangeRefreshTime || initialRangeTime),
-    [initialRangeTime, rangeRefreshTime, timeRange]
-  );
+  const usageRange = querySnapshot.range;
 
   const handleChartLinesChange = useCallback((lines: string[]) => {
     setChartLines(normalizeChartLines(lines));
@@ -226,11 +219,9 @@ export function UsagePage() {
     }
   }, [timeRange]);
 
-  const nowMs = lastRefreshedAt?.getTime() ?? 0;
-
   // Sparklines hook
   const { requestsSparkline, tokensSparkline, rpmSparkline, tpmSparkline, costSparkline } =
-    useSparklines({ usage: filteredUsage, loading, nowMs });
+    useSparklines({ ratesResource, costsResource });
 
   // Chart data hook
   const {
@@ -243,26 +234,70 @@ export function UsagePage() {
     requestsChartOptions,
     tokensChartOptions,
     loading: chartLoading,
+    status: chartStatus,
+    error: chartError,
   } = useChartData({
-    usage: filteredUsage,
     chartLines,
     isDark,
     isMobile,
     range: usageRange,
-    hourWindowHours,
+    availabilityStatus: summaryResource.status,
+    availabilityError: summaryResource.error,
   });
 
   // Derived data
   const modelNames = useMemo(() => getModelNamesFromUsage(usage), [usage]);
-  const apiStats = useMemo(
-    () => getApiStats(filteredUsage, modelPrices),
-    [filteredUsage, modelPrices]
-  );
-  const modelStats = useMemo(
-    () => getModelStats(filteredUsage, modelPrices),
-    [filteredUsage, modelPrices]
-  );
+  const sourceNames = useMemo(() => {
+    const sources = usage?.sources;
+    return sources && typeof sources === 'object' && !Array.isArray(sources)
+      ? Object.keys(sources)
+      : [];
+  }, [usage]);
+  const apiStats = useMemo(() => {
+    const costs = new Map(
+      (costsResource.data?.by_api ?? []).map((item) => [
+        item.api ?? '',
+        Number.isFinite(Number(item.cost?.amount_micros))
+          ? Number(item.cost?.amount_micros) / 1_000_000
+          : Number(item.cost?.amount) || 0,
+      ])
+    );
+    return getApiStats(filteredUsage, {}).map((item) => ({
+      ...item,
+      totalCost: costs.get(item.endpoint) ?? 0,
+    }));
+  }, [costsResource.data, filteredUsage]);
+  const modelStats = useMemo(() => {
+    const costs = new Map(
+      (costsResource.data?.by_model ?? []).map((item) => [
+        item.model ?? '',
+        Number.isFinite(Number(item.cost?.amount_micros))
+          ? Number(item.cost?.amount_micros) / 1_000_000
+          : Number(item.cost?.amount) || 0,
+      ])
+    );
+    return getModelStats(filteredUsage, {}).map((item) => ({
+      ...item,
+      cost: costs.get(item.model) ?? 0,
+    }));
+  }, [costsResource.data, filteredUsage]);
   const hasPrices = Object.keys(modelPrices).length > 0;
+  const summaryStateText =
+    summaryResource.status === 'disabled'
+      ? t('usage_stats.state_disabled')
+      : summaryResource.status === 'unsupported'
+        ? t('usage_stats.state_unsupported')
+        : summaryResource.status === 'empty'
+          ? t('usage_stats.state_empty')
+          : '';
+  const chartEmptyText =
+    chartStatus === 'disabled'
+      ? t('usage_stats.state_disabled')
+      : chartStatus === 'unsupported'
+        ? t('usage_stats.state_unsupported')
+        : chartStatus === 'error'
+          ? chartError || t('usage_stats.state_error')
+          : t('usage_stats.no_data');
 
   return (
     <div className={styles.container}>
@@ -340,14 +375,15 @@ export function UsagePage() {
       </div>
 
       {error && <div className={styles.errorBox}>{error}</div>}
+      {summaryStateText && <div className={styles.usageStateBanner}>{summaryStateText}</div>}
 
       {/* Stats Overview Cards */}
       <StatCards
         usage={filteredUsage}
-        authUsage={authUsage}
         loading={loading}
-        modelPrices={modelPrices}
-        nowMs={nowMs}
+        ratesResource={ratesResource}
+        tokensResource={tokensResource}
+        costsResource={costsResource}
         sparklines={{
           requests: requestsSparkline,
           tokens: tokensSparkline,
@@ -366,7 +402,7 @@ export function UsagePage() {
       />
 
       {/* Service Health */}
-      <ServiceHealthCard usage={usage} loading={loading} />
+      <ServiceHealthCard resource={healthResource} />
 
       {/* Charts Grid */}
       <div className={styles.chartsGrid}>
@@ -378,7 +414,7 @@ export function UsagePage() {
           chartOptions={requestsChartOptions}
           loading={loading || chartLoading}
           isMobile={isMobile}
-          emptyText={t('usage_stats.no_data')}
+          emptyText={chartEmptyText}
         />
         <UsageChart
           title={t('usage_stats.tokens_trend')}
@@ -388,29 +424,15 @@ export function UsagePage() {
           chartOptions={tokensChartOptions}
           loading={loading || chartLoading}
           isMobile={isMobile}
-          emptyText={t('usage_stats.no_data')}
+          emptyText={chartEmptyText}
         />
       </div>
 
       {/* Token Breakdown Chart */}
-      <TokenBreakdownChart
-        usage={filteredUsage}
-        loading={loading}
-        isDark={isDark}
-        isMobile={isMobile}
-        hourWindowHours={hourWindowHours}
-        range={usageRange}
-      />
+      <TokenBreakdownChart resource={tokensResource} isDark={isDark} isMobile={isMobile} />
 
       {/* Cost Trend Chart */}
-      <CostTrendChart
-        usage={filteredUsage}
-        loading={loading}
-        isDark={isDark}
-        isMobile={isMobile}
-        modelPrices={modelPrices}
-        hourWindowHours={hourWindowHours}
-      />
+      <CostTrendChart resource={costsResource} isDark={isDark} isMobile={isMobile} />
 
       {/* Details Grid */}
       <div className={styles.detailsGrid}>
@@ -421,11 +443,17 @@ export function UsagePage() {
       <RequestEventsDetailsCard
         loading={loading}
         geminiKeys={config?.geminiApiKeys || []}
+        interactionsKeys={config?.interactionsApiKeys || []}
         claudeConfigs={config?.claudeApiKeys || []}
         codexConfigs={config?.codexApiKeys || []}
         vertexConfigs={config?.vertexApiKeys || []}
         openaiProviders={openaiProvidersForUsage}
         range={usageRange}
+        availableModels={modelNames}
+        availableSources={sourceNames}
+        authSummaries={authUsage}
+        availabilityStatus={summaryResource.status}
+        availabilityError={summaryResource.error}
       />
 
       {/* Credential Stats */}
@@ -435,7 +463,9 @@ export function UsagePage() {
       <PriceSettingsCard
         modelNames={modelNames}
         modelPrices={modelPrices}
-        onPricesChange={setModelPrices}
+        resource={pricesResource}
+        legacyImportAvailable={legacyPriceImportAvailable}
+        onChanged={loadUsage}
       />
     </div>
   );
