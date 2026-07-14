@@ -7,6 +7,7 @@ export type AuthFilesUiState = {
   planFilter?: string;
   priorityFilter?: string;
   problemOnly?: boolean;
+  enabledOnly?: boolean;
   disabledOnly?: boolean;
   compactMode?: boolean;
   search?: string;

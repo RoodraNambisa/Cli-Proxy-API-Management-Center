@@ -568,6 +568,7 @@
     "priority_filter_unset": "未设置优先级",
     "problem_filter_label": "问题筛选",
     "problem_filter_only": "仅显示有问题凭证",
+    "enabled_filter_only": "仅显示已启用凭证",
     "disabled_filter_only": "仅显示已停用凭证",
     "display_options_label": "显示选项",
     "compact_mode_label": "简略模式",

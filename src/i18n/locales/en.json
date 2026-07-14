@@ -568,6 +568,7 @@
     "priority_filter_unset": "Unset Priority",
     "problem_filter_label": "Problem Filter",
     "problem_filter_only": "Only show problematic credentials",
+    "enabled_filter_only": "Only show enabled credentials",
     "disabled_filter_only": "Only show disabled credentials",
     "display_options_label": "Display options",
     "compact_mode_label": "Compact mode",

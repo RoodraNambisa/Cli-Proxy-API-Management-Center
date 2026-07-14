@@ -568,6 +568,7 @@
     "priority_filter_unset": "Без приоритета",
     "problem_filter_label": "Фильтр проблем",
     "problem_filter_only": "Показывать только проблемные учётные данные",
+    "enabled_filter_only": "Показывать только включённые учётные данные",
     "disabled_filter_only": "Показывать только отключённые учётные данные",
     "display_options_label": "Параметры отображения",
     "compact_mode_label": "Компактный режим",
