@@ -96,6 +96,7 @@ type LoadFilesOptions = {
 
 export type UseAuthFilesDataResult = {
   files: AuthFileItem[];
+  filesLoadedAtMs: number;
   selectedFiles: Set<string>;
   selectionCount: number;
   loading: boolean;
@@ -131,6 +132,7 @@ export type UseAuthFilesDataResult = {
   selectAllVisible: (visibleFiles: AuthFileItem[]) => void;
   invertVisibleSelection: (visibleFiles: AuthFileItem[]) => void;
   deselectAll: () => void;
+  replaceSelection: (names: string[]) => void;
   batchDownload: (names: string[]) => Promise<void>;
   batchArchiveDownload: (names: string[]) => Promise<void>;
   downloadAllArchive: () => Promise<void>;
@@ -157,6 +159,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const { showNotification, showConfirmation } = useNotificationStore();
 
   const [files, setFiles] = useState<AuthFileItem[]>([]);
+  const [filesLoadedAtMs, setFilesLoadedAtMs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -232,6 +235,10 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     setSelectedFiles(new Set());
   }, []);
 
+  const replaceSelection = useCallback((names: string[]) => {
+    setSelectedFiles(new Set(names.map((name) => name.trim()).filter(Boolean)));
+  }, []);
+
   const applyDeletedFiles = useCallback((names: string[]) => {
     const deletedNames = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
     if (deletedNames.length === 0) return;
@@ -280,6 +287,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       try {
         const data = await authFilesApi.list();
         setFiles(data?.files || []);
+        setFilesLoadedAtMs(Date.now());
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : t('notification.refresh_failed');
         setError(errorMessage);
@@ -879,6 +887,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       try {
         const data = await authFilesApi.list();
         setFiles(data?.files || []);
+        setFilesLoadedAtMs(Date.now());
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : '';
         showNotification(`${t('notification.refresh_failed')}: ${errorMessage}`, 'warning');
@@ -1204,6 +1213,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
   return {
     files,
+    filesLoadedAtMs,
     selectedFiles,
     selectionCount,
     loading,
@@ -1235,6 +1245,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     selectAllVisible,
     invertVisibleSelection,
     deselectAll,
+    replaceSelection,
     batchDownload,
     batchArchiveDownload,
     downloadAllArchive,

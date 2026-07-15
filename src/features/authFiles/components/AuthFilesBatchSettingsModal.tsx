@@ -23,7 +23,7 @@ export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalPr
   const { t } = useTranslation();
   const { disableControls, state, dirty, onClose, onSave, onChange } = props;
 
-  const websocketOptions = useMemo(
+  const booleanOptions = useMemo(
     () => [
       { value: '', label: t('auth_files.batch_settings_websockets_skip') },
       { value: 'true', label: t('auth_files.batch_settings_websockets_enable') },
@@ -58,6 +58,21 @@ export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalPr
     >
       <div className={styles.prefixProxyEditor}>
         <div className="hint">{t('auth_files.batch_settings_hint')}</div>
+        {state.failures.length > 0 && (
+          <div className={styles.batchSettingsFailures} role="alert">
+            <div className={styles.batchSettingsFailuresTitle}>
+              {t('auth_files.batch_settings_failure_details')}
+            </div>
+            <div className={styles.batchSettingsFailureList}>
+              {state.failures.map((failure) => (
+                <div key={`${failure.name}-${failure.status ?? 'unknown'}`}>
+                  <strong>{failure.name}</strong>
+                  {failure.status ? ` (HTTP ${failure.status})` : ''}: {failure.error}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div className={styles.prefixProxyFields}>
           <Input
             label={t('auth_files.prefix_label')}
@@ -75,8 +90,8 @@ export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalPr
           <Input
             label={t('auth_files.priority_label')}
             value={state.priority}
-            placeholder={t('auth_files.priority_placeholder')}
-            hint={t('auth_files.priority_hint')}
+            placeholder={t('auth_files.batch_settings_priority_placeholder')}
+            hint={t('auth_files.batch_settings_priority_hint')}
             disabled={fieldDisabled}
             onChange={(e) => onChange('priority', e.target.value)}
           />
@@ -123,15 +138,26 @@ export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalPr
             onChange={(e) => onChange('note', e.target.value)}
           />
           <div className="form-group">
+            <label>{t('auth_files.batch_settings_using_api_label')}</label>
+            <Select
+              value={state.usingApi}
+              options={booleanOptions}
+              disabled={fieldDisabled}
+              ariaLabel={t('auth_files.batch_settings_using_api_label')}
+              onChange={(value) => onChange('usingApi', value)}
+            />
+            <div className="hint">{t('auth_files.batch_settings_using_api_hint')}</div>
+          </div>
+          <div className="form-group">
             <label>{t('auth_files.batch_settings_websockets_label')}</label>
             <Select
               value={state.websockets}
-              options={websocketOptions}
+              options={booleanOptions}
               disabled={fieldDisabled}
               ariaLabel={t('auth_files.batch_settings_websockets_label')}
               onChange={(value) => onChange('websockets', value)}
             />
-            <div className="hint">{t('ai_providers.codex_websockets_hint')}</div>
+            <div className="hint">{t('auth_files.batch_settings_websockets_hint')}</div>
           </div>
         </div>
       </div>

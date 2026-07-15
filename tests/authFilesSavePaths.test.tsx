@@ -21,105 +21,156 @@ describe('auth file save paths', () => {
     useNotificationStore.getState().clearAll();
   });
 
-  test('patches lightweight batch fields with bounded concurrency', async () => {
+  test('patches all selected auth files in one request and preserves priority zero', async () => {
     const files: AuthFileItem[] = Array.from({ length: 8 }, (_, index) => ({
       name: `auth-${index}.json`,
       type: 'codex',
     }));
-    let active = 0;
-    let maxActive = 0;
-    const patchFields = vi.spyOn(authFilesApi, 'patchFields').mockImplementation(async () => {
-      active += 1;
-      maxActive = Math.max(maxActive, active);
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      active -= 1;
-      return { status: 'ok' };
+    const patchFieldsBatch = vi.spyOn(authFilesApi, 'patchFieldsBatch').mockResolvedValue({
+      status: 'ok',
+      matched: files.length,
+      updated: files.length,
+      files: files.map((file) => file.name),
+      failed: [],
     });
     const downloadJsonObject = vi.spyOn(authFilesApi, 'downloadJsonObject');
     const saveText = vi.spyOn(authFilesApi, 'saveText');
-    let resolveLoadFiles: (() => void) | undefined;
-    const loadFiles = vi.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveLoadFiles = resolve;
-        })
-    );
+    const loadFiles = vi.fn().mockResolvedValue(undefined);
     const deselectAll = vi.fn();
+    const replaceSelection = vi.fn();
     const { result } = renderHook(() =>
       useAuthFilesBatchSettings({
         files,
         disableControls: false,
         loadFiles,
         deselectAll,
+        replaceSelection,
       })
     );
 
     act(() => result.current.openBatchSettings(files.map((file) => file.name)));
-    act(() => result.current.handleBatchSettingsChange('priority', '-1'));
+    act(() => result.current.handleBatchSettingsChange('priority', '0'));
     await act(async () => result.current.saveBatchSettings());
 
-    expect(patchFields).toHaveBeenCalledTimes(files.length);
-    expect(patchFields).toHaveBeenCalledWith('auth-0.json', { priority: -1 });
-    expect(maxActive).toBe(6);
+    expect(patchFieldsBatch).toHaveBeenCalledTimes(1);
+    expect(patchFieldsBatch).toHaveBeenCalledWith(
+      files.map((file) => file.name),
+      { priority: 0 }
+    );
     expect(downloadJsonObject).not.toHaveBeenCalled();
     expect(saveText).not.toHaveBeenCalled();
     expect(loadFiles).toHaveBeenCalledTimes(1);
     expect(deselectAll).toHaveBeenCalledTimes(1);
+    expect(replaceSelection).not.toHaveBeenCalled();
     expect(result.current.batchSettings.open).toBe(false);
-    resolveLoadFiles?.();
   });
 
-  test('uses bounded full-file updates for fields missing from the PATCH API', async () => {
+  test('keeps failed auth files selected when the batch endpoint returns 207', async () => {
     const files: AuthFileItem[] = [
       { name: 'first.json', type: 'codex' },
       { name: 'second.json', type: 'codex' },
     ];
-    const patchFields = vi.spyOn(authFilesApi, 'patchFields');
-    const downloadJsonObject = vi
-      .spyOn(authFilesApi, 'downloadJsonObject')
-      .mockResolvedValue({ type: 'codex' });
-    const saveText = vi.spyOn(authFilesApi, 'saveText').mockResolvedValue(undefined);
+    const patchFieldsBatch = vi.spyOn(authFilesApi, 'patchFieldsBatch').mockResolvedValue({
+      status: 'partial',
+      matched: 2,
+      updated: 1,
+      files: ['first.json'],
+      failed: [{ name: 'second.json', status: 400, error: 'using_api requires xai' }],
+    });
+    const loadFiles = vi.fn().mockResolvedValue(undefined);
+    const deselectAll = vi.fn();
+    const replaceSelection = vi.fn();
     const { result } = renderHook(() =>
       useAuthFilesBatchSettings({
         files,
         disableControls: false,
-        loadFiles: vi.fn().mockResolvedValue(undefined),
-        deselectAll: vi.fn(),
+        loadFiles,
+        deselectAll,
+        replaceSelection,
       })
     );
 
     act(() => result.current.openBatchSettings(files.map((file) => file.name)));
-    act(() => result.current.handleBatchSettingsChange('disableCooling', 'true'));
+    act(() => result.current.handleBatchSettingsChange('usingApi', 'true'));
     await act(async () => result.current.saveBatchSettings());
 
-    expect(patchFields).not.toHaveBeenCalled();
-    expect(downloadJsonObject).toHaveBeenCalledTimes(2);
-    expect(saveText).toHaveBeenCalledTimes(2);
-    saveText.mock.calls.forEach(([, payload]) => {
-      expect(JSON.parse(payload)).toMatchObject({ disable_cooling: true });
+    expect(patchFieldsBatch).toHaveBeenCalledWith(['first.json', 'second.json'], {
+      using_api: true,
     });
+    expect(replaceSelection).toHaveBeenCalledWith(['second.json']);
+    expect(deselectAll).not.toHaveBeenCalled();
+    expect(loadFiles).toHaveBeenCalledTimes(1);
+    expect(result.current.batchSettings.open).toBe(true);
+    expect(result.current.batchSettings.names).toEqual(['second.json']);
+    expect(result.current.batchSettings.failures).toEqual([
+      { name: 'second.json', status: 400, error: 'using_api requires xai' },
+    ]);
   });
 
-  test('keeps explicit priority zero on the full-file path', async () => {
+  test('sends explicit null to clear a batch priority', async () => {
     const files: AuthFileItem[] = [{ name: 'zero.json', type: 'codex' }];
-    const patchFields = vi.spyOn(authFilesApi, 'patchFields');
-    vi.spyOn(authFilesApi, 'downloadJsonObject').mockResolvedValue({ type: 'codex' });
-    const saveText = vi.spyOn(authFilesApi, 'saveText').mockResolvedValue(undefined);
+    const patchFieldsBatch = vi.spyOn(authFilesApi, 'patchFieldsBatch').mockResolvedValue({
+      status: 'ok',
+      matched: 1,
+      updated: 1,
+      files: ['zero.json'],
+      failed: [],
+    });
     const { result } = renderHook(() =>
       useAuthFilesBatchSettings({
         files,
         disableControls: false,
         loadFiles: vi.fn().mockResolvedValue(undefined),
         deselectAll: vi.fn(),
+        replaceSelection: vi.fn(),
       })
     );
 
     act(() => result.current.openBatchSettings(['zero.json']));
-    act(() => result.current.handleBatchSettingsChange('priority', '0'));
+    act(() => result.current.handleBatchSettingsChange('priority', 'null'));
     await act(async () => result.current.saveBatchSettings());
 
-    expect(patchFields).not.toHaveBeenCalled();
-    expect(JSON.parse(saveText.mock.calls[0][1])).toMatchObject({ priority: 0 });
+    expect(patchFieldsBatch).toHaveBeenCalledWith(['zero.json'], { priority: null });
+  });
+
+  test('accepts and normalizes a 207 batch fields response', async () => {
+    const requestRaw = vi.spyOn(apiClient, 'requestRaw').mockResolvedValue({
+      status: 207,
+      data: {
+        status: 'partial',
+        matched: 2,
+        updated: 1,
+        files: ['first.json'],
+        failed: [{ name: 'second.json', status: 404, error: 'not found' }],
+      },
+    } as never);
+
+    const result = await authFilesApi.patchFieldsBatch(['first.json', 'second.json'], {
+      priority: 0,
+      disable_cooling: false,
+    });
+
+    expect(requestRaw).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/auth-files/fields',
+        method: 'PATCH',
+        data: {
+          names: ['first.json', 'second.json'],
+          fields: { priority: 0, disable_cooling: false },
+        },
+      })
+    );
+    const validateStatus = requestRaw.mock.calls[0][0].validateStatus;
+    expect(validateStatus?.(200)).toBe(true);
+    expect(validateStatus?.(207)).toBe(true);
+    expect(validateStatus?.(400)).toBe(false);
+    expect(result).toEqual({
+      status: 'partial',
+      matched: 2,
+      updated: 1,
+      files: ['first.json'],
+      failed: [{ name: 'second.json', status: 404, error: 'not found' }],
+    });
   });
 
   test('patches a lightweight single-file edit without uploading the full credential', async () => {

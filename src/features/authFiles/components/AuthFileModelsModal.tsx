@@ -3,7 +3,13 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { AuthFileModelItem } from '@/features/authFiles/constants';
-import { getAuthFileModelCapability, isModelExcluded } from '@/features/authFiles/constants';
+import {
+  getAuthFileModelCapability,
+  isModelExcluded,
+  parseDisableCoolingValue,
+} from '@/features/authFiles/constants';
+import { formatDateTime } from '@/utils/format';
+import { parseTimestampMs } from '@/utils/timestamp';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
 export type AuthFileModelsModalProps = {
@@ -13,6 +19,7 @@ export type AuthFileModelsModalProps = {
   loading: boolean;
   error: 'unsupported' | null;
   models: AuthFileModelItem[];
+  loadedAtMs: number;
   excluded: Record<string, string[]>;
   onClose: () => void;
   onCopyText: (text: string) => void;
@@ -20,7 +27,18 @@ export type AuthFileModelsModalProps = {
 
 export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
   const { t } = useTranslation();
-  const { open, fileName, fileType, loading, error, models, excluded, onClose, onCopyText } = props;
+  const {
+    open,
+    fileName,
+    fileType,
+    loading,
+    error,
+    models,
+    loadedAtMs,
+    excluded,
+    onClose,
+    onCopyText,
+  } = props;
 
   return (
     <Modal
@@ -62,6 +80,12 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
             {models.map((model) => {
               const excludedModel = isModelExcluded(model.id, fileType, excluded);
               const capability = getAuthFileModelCapability(model, fileType);
+              const cooldownUntilMs = parseTimestampMs(model.until);
+              const cooldownActive =
+                (parseDisableCoolingValue(model.cooldownActive ?? model.cooldown_active) ?? false) &&
+                Number.isFinite(cooldownUntilMs) &&
+                cooldownUntilMs > loadedAtMs;
+              const cooldownScope = String(model.scope ?? '').trim().toLowerCase();
               return (
                 <div
                   key={model.id}
@@ -88,12 +112,32 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
                       {t(`auth_files.model_capability_${capability}`)}
                     </span>
                   )}
-                  {model.type && <span className={styles.modelType}>{model.type}</span>}
                   {excludedModel && (
                     <span className={styles.modelExcludedBadge}>
                       {t('auth_files.models_excluded_badge', { defaultValue: '已禁用' })}
                     </span>
                   )}
+                  {cooldownActive && (
+                    <>
+                      <span
+                        className={`${styles.modelCooldownBadge} ${
+                          cooldownScope === 'auth'
+                            ? styles.modelCooldownBadgeAuth
+                            : styles.modelCooldownBadgeModel
+                        }`}
+                      >
+                        {cooldownScope === 'auth'
+                          ? t('auth_files.models_cooldown_auth_badge')
+                          : t('auth_files.models_cooldown_model_badge')}
+                      </span>
+                      <span className={styles.modelCooldownUntil}>
+                        {t('auth_files.models_cooldown_until', {
+                          until: formatDateTime(new Date(cooldownUntilMs)),
+                        })}
+                      </span>
+                    </>
+                  )}
+                  {model.type && <span className={styles.modelType}>{model.type}</span>}
                 </div>
               );
             })}

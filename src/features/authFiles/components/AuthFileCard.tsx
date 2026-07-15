@@ -9,6 +9,7 @@ import {
   IconInfo,
   IconModelCluster,
   IconSettings,
+  IconTimer,
   IconTrash2,
 } from '@/components/ui/icons';
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
@@ -16,7 +17,8 @@ import type { XaiAuthFileField } from '@/services/api';
 import type { AuthFileItem } from '@/types';
 import { resolveAuthProvider, resolveCodexPlanType } from '@/utils/quota';
 import { calculateStatusBarData, normalizeAuthIndex, type KeyStats } from '@/utils/usage';
-import { formatFileSize } from '@/utils/format';
+import { formatDateTime, formatFileSize } from '@/utils/format';
+import { parseTimestampMs } from '@/utils/timestamp';
 import {
   QUOTA_PROVIDER_TYPES,
   formatModified,
@@ -27,6 +29,7 @@ import {
   isRuntimeOnlyAuthFile,
   isXaiProvider,
   normalizeProviderKey,
+  parseDisableCoolingValue,
   parsePriorityValue,
   readXaiAuthFileUsingApi,
   readXaiAuthFileWebsockets,
@@ -45,6 +48,7 @@ const PREMIUM_CODEX_PLAN_TYPES = new Set(['plus', 'team', 'pro', 'prolite']);
 
 export type AuthFileCardProps = {
   file: AuthFileItem;
+  cooldownAsOfMs: number;
   compact: boolean;
   selected: boolean;
   resolvedTheme: ResolvedTheme;
@@ -76,6 +80,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const { t } = useTranslation();
   const {
     file,
+    cooldownAsOfMs,
     compact,
     selected,
     resolvedTheme,
@@ -162,6 +167,22 @@ export function AuthFileCard(props: AuthFileCardProps) {
     .join(' ');
 
   const priorityValue = parsePriorityValue(file.priority ?? file['priority']);
+  const cooldownUntilMs = parseTimestampMs(file.cooldownUntil ?? file.cooldown_until);
+  const cooldownActive =
+    (parseDisableCoolingValue(file.cooldownActive ?? file.cooldown_active) ?? false) &&
+    Number.isFinite(cooldownUntilMs) &&
+    cooldownUntilMs > cooldownAsOfMs;
+  const cooldownScope = String(file.cooldownScope ?? file.cooldown_scope ?? '')
+    .trim()
+    .toLowerCase();
+  const cooldownModelCountRaw = file.cooldownModelCount ?? file.cooldown_model_count;
+  const cooldownModelCount =
+    typeof cooldownModelCountRaw === 'number'
+      ? cooldownModelCountRaw
+      : Number.parseInt(String(cooldownModelCountRaw ?? '0'), 10) || 0;
+  const cooldownUntilText = cooldownActive
+    ? formatDateTime(new Date(cooldownUntilMs))
+    : '';
   const noteValue = typeof file.note === 'string' ? file.note.trim() : '';
   const xaiUsingApi = readXaiAuthFileUsingApi(file);
   const xaiWebsockets = readXaiAuthFileWebsockets(file);
@@ -324,6 +345,20 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   onChange={(value) => onToggleXaiField(file, 'websockets', value)}
                 />
               </div>
+            </div>
+          )}
+
+          {cooldownActive && (
+            <div className={styles.cooldownStatusNotice}>
+              <IconTimer size={14} />
+              <span>
+                {cooldownScope === 'auth'
+                  ? t('auth_files.cooldown_auth_until', { until: cooldownUntilText })
+                  : t('auth_files.cooldown_models_until', {
+                      count: cooldownModelCount,
+                      until: cooldownUntilText,
+                    })}
+              </span>
             </div>
           )}
 

@@ -1102,6 +1102,69 @@
   }
 }
 
+.apiKeyHeaderActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.apiKeyItem {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.apiKeyItemTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.apiKeyProviderSection {
+  width: 100%;
+  padding-top: 10px;
+  border-top: 1px dashed color-mix(in srgb, var(--border-color) 76%, transparent);
+}
+
+.apiKeyProviderDisclosure {
+  width: 100%;
+
+  > summary {
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+}
+
+.apiKeyProviderOptions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding: 12px 0 10px;
+}
+
+.apiKeyProviderOptionLabel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text-primary);
+  font-size: 12px;
+
+  code {
+    color: var(--text-tertiary);
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+}
+
 @media (max-width: 900px) {
   .codexCustomModelFieldGrid,
   .fixedCooldownGrid,
@@ -1121,6 +1184,10 @@
     align-items: stretch;
   }
 
+  .apiKeyProviderOptions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .proxyCheckRow {
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
@@ -1137,6 +1204,16 @@
 }
 
 @include mobile {
+  .apiKeyHeaderActions,
+  .apiKeyItemTopRow {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .apiKeyProviderOptions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .overview {
     gap: 14px;
     padding: 18px;

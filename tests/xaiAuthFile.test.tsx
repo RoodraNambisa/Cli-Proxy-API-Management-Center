@@ -1,10 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { apiClient } from '@/services/api/client';
 import { authFilesApi, normalizeAuthFileEntry } from '@/services/api/authFiles';
 import { AuthFileCard, type AuthFileCardProps } from '@/features/authFiles/components/AuthFileCard';
+import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import type { PrefixProxyEditorState } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
+import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
 import {
   getAuthFileModelCapability,
   isXaiProvider,
@@ -24,6 +26,7 @@ vi.mock('react-i18next', async (importOriginal) => {
 
 const createCardProps = (file: AuthFileItem, onToggleXaiField = vi.fn()): AuthFileCardProps => ({
   file,
+  cooldownAsOfMs: Date.parse('2026-07-15T00:00:00Z'),
   compact: true,
   selected: false,
   resolvedTheme: 'light',
@@ -80,6 +83,104 @@ describe('xAI auth file compatibility', () => {
       using_api: true,
       websockets: false,
     });
+  });
+
+  test('normalizes auth cooldown fields from the list response', () => {
+    const entry = normalizeAuthFileEntry({
+      name: 'cooling.json',
+      type: 'codex',
+      cooldown_active: true,
+      cooldown_scope: 'model',
+      cooldown_until: '2999-01-01T00:00:00Z',
+      cooldown_model_count: 3,
+    });
+
+    expect(entry).toMatchObject({
+      cooldownActive: true,
+      cooldownScope: 'model',
+      cooldownUntil: '2999-01-01T00:00:00Z',
+      cooldownModelCount: 3,
+    });
+  });
+
+  test('keeps disabled as the primary card state while showing active cooldown details', () => {
+    render(
+      <AuthFileCard
+        {...createCardProps({
+          name: 'disabled.json',
+          type: 'codex',
+          disabled: true,
+          cooldown_active: true,
+          cooldown_scope: 'auth',
+          cooldown_until: '2999-01-01T00:00:00Z',
+        })}
+      />
+    );
+
+    expect(screen.getByText('auth_files.health_status_disabled')).not.toBeNull();
+    expect(screen.getByText('auth_files.cooldown_auth_until')).not.toBeNull();
+  });
+
+  test('shows only unexpired model cooldown badges', () => {
+    render(
+      <AuthFileModelsModal
+        open
+        fileName="codex.json"
+        fileType="codex"
+        loading={false}
+        error={null}
+        models={[
+          {
+            id: 'active-model',
+            cooldown_active: true,
+            scope: 'auth',
+            until: '2999-01-01T00:00:00Z',
+          },
+          {
+            id: 'expired-model',
+            cooldown_active: true,
+            scope: 'model',
+            until: '2000-01-01T00:00:00Z',
+          },
+        ]}
+        loadedAtMs={Date.parse('2026-07-15T00:00:00Z')}
+        excluded={{}}
+        onClose={vi.fn()}
+        onCopyText={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('auth_files.models_cooldown_auth_badge')).not.toBeNull();
+    expect(screen.queryByText('auth_files.models_cooldown_model_badge')).toBeNull();
+    expect(screen.getByText('auth_files.models_cooldown_until')).not.toBeNull();
+  });
+
+  test('ignores a stale model response after another credential is opened', async () => {
+    let resolveFirst: ((models: { id: string }[]) => void) | undefined;
+    const firstRequest = new Promise<{ id: string }[]>((resolve) => {
+      resolveFirst = resolve;
+    });
+    vi.spyOn(authFilesApi, 'getModelsForAuthFile')
+      .mockReturnValueOnce(firstRequest)
+      .mockResolvedValueOnce([{ id: 'second-model' }]);
+    const { result } = renderHook(() => useAuthFilesModels());
+
+    let firstOpen: Promise<void> | undefined;
+    act(() => {
+      firstOpen = result.current.showModels({ name: 'first.json', type: 'codex' });
+    });
+    await act(async () => {
+      await result.current.showModels({ name: 'second.json', type: 'codex' });
+    });
+    expect(result.current.modelsFileName).toBe('second.json');
+    expect(result.current.modelsList).toEqual([{ id: 'second-model' }]);
+
+    await act(async () => {
+      resolveFirst?.([{ id: 'first-model' }]);
+      await firstOpen;
+    });
+    expect(result.current.modelsFileName).toBe('second.json');
+    expect(result.current.modelsList).toEqual([{ id: 'second-model' }]);
   });
 
   test('shows xAI-only switches and never exposes them on other provider cards', () => {

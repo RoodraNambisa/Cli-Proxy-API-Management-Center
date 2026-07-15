@@ -230,6 +230,7 @@ export function AuthFilesPage() {
   }, [refreshKeyStats]);
   const {
     files,
+    filesLoadedAtMs,
     selectedFiles,
     selectionCount,
     loading,
@@ -261,6 +262,7 @@ export function AuthFilesPage() {
     selectAllVisible,
     invertVisibleSelection,
     deselectAll,
+    replaceSelection,
     batchDownload,
     batchArchiveDownload,
     downloadAllArchive,
@@ -303,6 +305,7 @@ export function AuthFilesPage() {
     modelsModalOpen,
     modelsLoading,
     modelsList,
+    modelsLoadedAtMs,
     modelsFileName,
     modelsFileType,
     modelsError,
@@ -335,6 +338,7 @@ export function AuthFilesPage() {
     disableControls,
     loadFiles: refreshFilesInBackground,
     deselectAll,
+    replaceSelection,
   });
 
   const normalizedFilter = normalizeProviderKey(String(filter));
@@ -1597,6 +1601,7 @@ export function AuthFilesPage() {
                   <AuthFileCard
                     key={file.name}
                     file={file}
+                    cooldownAsOfMs={filesLoadedAtMs}
                     compact={compactMode}
                     selected={selectedFiles.has(file.name)}
                     resolvedTheme={resolvedTheme}
@@ -1685,6 +1690,7 @@ export function AuthFilesPage() {
         loading={modelsLoading}
         error={modelsError}
         models={modelsList}
+        loadedAtMs={modelsLoadedAtMs}
         excluded={excluded}
         onClose={closeModelsModal}
         onCopyText={copyTextWithNotification}

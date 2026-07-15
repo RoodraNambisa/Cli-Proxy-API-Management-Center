@@ -12,6 +12,7 @@ export type UseAuthFilesModelsResult = {
   modelsModalOpen: boolean;
   modelsLoading: boolean;
   modelsList: AuthFileModelItem[];
+  modelsLoadedAtMs: number;
   modelsFileName: string;
   modelsFileType: string;
   modelsError: ModelsError;
@@ -26,36 +27,36 @@ export function useAuthFilesModels(): UseAuthFilesModelsResult {
   const [modelsModalOpen, setModelsModalOpen] = useState(false);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsList, setModelsList] = useState<AuthFileModelItem[]>([]);
+  const [modelsLoadedAtMs, setModelsLoadedAtMs] = useState(0);
   const [modelsFileName, setModelsFileName] = useState('');
   const [modelsFileType, setModelsFileType] = useState('');
   const [modelsError, setModelsError] = useState<ModelsError>(null);
-  const modelsCacheRef = useRef<Map<string, AuthFileModelItem[]>>(new Map());
+  const requestSequenceRef = useRef(0);
 
   const closeModelsModal = useCallback(() => {
+    requestSequenceRef.current += 1;
     setModelsModalOpen(false);
   }, []);
 
   const showModels = useCallback(
     async (item: AuthFileItem) => {
+      const requestSequence = requestSequenceRef.current + 1;
+      requestSequenceRef.current = requestSequence;
       setModelsFileName(item.name);
       setModelsFileType(normalizeProviderKey(String(item.provider ?? item.type ?? '')));
       setModelsList([]);
+      setModelsLoadedAtMs(0);
       setModelsError(null);
       setModelsModalOpen(true);
-
-      const cached = modelsCacheRef.current.get(item.name);
-      if (cached) {
-        setModelsList(cached);
-        setModelsLoading(false);
-        return;
-      }
 
       setModelsLoading(true);
       try {
         const models = await authFilesApi.getModelsForAuthFile(item.name);
-        modelsCacheRef.current.set(item.name, models);
+        if (requestSequenceRef.current !== requestSequence) return;
         setModelsList(models);
+        setModelsLoadedAtMs(Date.now());
       } catch (err) {
+        if (requestSequenceRef.current !== requestSequence) return;
         const errorMessage = err instanceof Error ? err.message : '';
         if (
           errorMessage.includes('404') ||
@@ -67,7 +68,9 @@ export function useAuthFilesModels(): UseAuthFilesModelsResult {
           showNotification(`${t('notification.load_failed')}: ${errorMessage}`, 'error');
         }
       } finally {
-        setModelsLoading(false);
+        if (requestSequenceRef.current === requestSequence) {
+          setModelsLoading(false);
+        }
       }
     },
     [showNotification, t]
@@ -77,6 +80,7 @@ export function useAuthFilesModels(): UseAuthFilesModelsResult {
     modelsModalOpen,
     modelsLoading,
     modelsList,
+    modelsLoadedAtMs,
     modelsFileName,
     modelsFileType,
     modelsError,

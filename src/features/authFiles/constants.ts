@@ -27,6 +27,10 @@ export type AuthFileModelItem = {
   display_name?: string;
   type?: string;
   owned_by?: string;
+  cooldown_active?: boolean;
+  cooldownActive?: boolean;
+  scope?: 'auth' | 'model' | string;
+  until?: string;
 };
 export type AuthFileIconAsset = string | { light: string; dark: string };
 

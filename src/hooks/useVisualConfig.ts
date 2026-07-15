@@ -78,6 +78,13 @@ function resolveApiKeysText(parsed: Record<string, unknown>): string {
   return parseApiKeysText(configApiKeyProvider['api-keys']);
 }
 
+function splitApiKeysText(value: string): string[] {
+  return value
+    .split('\n')
+    .map((key) => key.trim())
+    .filter(Boolean);
+}
+
 type YamlDocument = ReturnType<typeof parseDocument>;
 type YamlPath = string[];
 
@@ -117,6 +124,59 @@ function setStringInDoc(doc: YamlDocument, path: YamlPath, value: unknown): void
   // Only keep the key when it already exists in the YAML.
   if (docHas(doc, path)) {
     doc.setIn(path, '');
+  }
+}
+
+function syncApiKeyGroupsInDoc(
+  doc: YamlDocument,
+  currentYaml: string,
+  baselineKeys: string[],
+  nextKeys: string[]
+): void {
+  const parsed = asRecord(parseYaml(currentYaml));
+  const rawGroups = parsed?.['api-key-groups'];
+  if (!Array.isArray(rawGroups)) return;
+
+  const baselineSet = new Set(baselineKeys);
+  const nextSet = new Set(nextKeys);
+  const renameByKey = new Map<string, string>();
+
+  if (baselineKeys.length === nextKeys.length) {
+    baselineKeys.forEach((previousKey, index) => {
+      const nextKey = nextKeys[index];
+      if (
+        previousKey &&
+        nextKey &&
+        previousKey !== nextKey &&
+        !nextSet.has(previousKey) &&
+        !baselineSet.has(nextKey)
+      ) {
+        renameByKey.set(previousKey, nextKey);
+      }
+    });
+  }
+
+  const seen = new Set<string>();
+  const groups = rawGroups.flatMap((rawGroup) => {
+    const group = asRecord(rawGroup);
+    const previousKey = extractApiKeyValue(rawGroup);
+    if (!group || !previousKey) return [];
+
+    const apiKey = renameByKey.get(previousKey) ?? previousKey;
+    if (!nextSet.has(apiKey) || seen.has(apiKey)) return [];
+    seen.add(apiKey);
+
+    const normalized: Record<string, unknown> = { ...group, 'api-key': apiKey };
+    delete normalized.apiKey;
+    delete normalized.key;
+    delete normalized.Key;
+    return [normalized];
+  });
+
+  if (groups.length > 0) {
+    doc.setIn(['api-key-groups'], groups);
+  } else {
+    doc.deleteIn(['api-key-groups']);
   }
 }
 
@@ -2507,14 +2567,19 @@ export function useVisualConfig() {
         }
 
         setStringInDoc(doc, ['auth-dir'], values.authDir);
-        const apiKeys = values.apiKeysText
-          .split('\n')
-          .map((key) => key.trim())
-          .filter(Boolean);
+        const apiKeys = splitApiKeysText(values.apiKeysText);
         if (apiKeys.length > 0) {
           doc.setIn(['api-keys'], apiKeys);
         } else if (docHas(doc, ['api-keys'])) {
           doc.deleteIn(['api-keys']);
+        }
+        if (values.apiKeysText !== baselineValues.apiKeysText) {
+          syncApiKeyGroupsInDoc(
+            doc,
+            currentYaml,
+            splitApiKeysText(baselineValues.apiKeysText),
+            apiKeys
+          );
         }
         deleteLegacyApiKeysProvider(doc);
 
@@ -3006,7 +3071,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [visualValues]
+    [baselineValues.apiKeysText, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {

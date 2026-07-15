@@ -24,14 +24,23 @@ export type AuthFileFieldsPatch = {
   prefix?: string;
   proxy_url?: string;
   headers?: Record<string, string>;
-  priority?: number;
+  priority?: number | null;
   note?: string;
   using_api?: boolean;
   websockets?: boolean;
+  excluded_models?: string[];
+  disable_cooling?: boolean;
 };
 export type XaiAuthFileFieldsPatch = Partial<Pick<AuthFileFieldsPatch, XaiAuthFileField>>;
 export type AuthFileFieldsPatchResponse = { status: string };
-type AuthFileBatchFailure = { name: string; error: string };
+export type AuthFileBatchFailure = { name: string; status?: number; error: string };
+export type AuthFileFieldsBatchResult = {
+  status: string;
+  matched: number;
+  updated: number;
+  files: string[];
+  failed: AuthFileBatchFailure[];
+};
 type AuthFileArchiveRequest = { names: string[] } | { all: true };
 type AuthFileArchiveResult = {
   blob: Blob;
@@ -65,6 +74,13 @@ type AuthFileBatchUploadResponse = {
 type AuthFileBatchDeleteResponse = {
   status?: string;
   deleted?: number;
+  files?: unknown;
+  failed?: unknown;
+};
+type AuthFileFieldsBatchResponse = {
+  status?: unknown;
+  matched?: unknown;
+  updated?: unknown;
   files?: unknown;
   failed?: unknown;
 };
@@ -210,9 +226,14 @@ const normalizeBatchFailures = (value: unknown): AuthFileBatchFailure[] => {
         : typeof entry.message === 'string'
           ? entry.message.trim()
           : '';
+    const status = readNumberValue(entry.status);
 
     if (!name && !error) return result;
-    result.push({ name, error: error || 'Unknown error' });
+    result.push({
+      name,
+      ...(status !== undefined ? { status } : {}),
+      error: error || 'Unknown error',
+    });
     return result;
   }, []);
 };
@@ -298,6 +319,29 @@ const normalizeBatchDeleteResponse = (
       typeof payload?.status === 'string' ? payload.status : failed.length > 0 ? 'partial' : 'ok',
     deleted,
     files: deletedFiles,
+    failed,
+  };
+};
+
+const normalizeAuthFileFieldsBatchResponse = (
+  payload: AuthFileFieldsBatchResponse | undefined,
+  requestedNames: string[]
+): AuthFileFieldsBatchResult => {
+  const failed = normalizeBatchFailures(payload?.failed);
+  const filesFromPayload = normalizeBatchFileNames(payload?.files);
+  const files =
+    filesFromPayload.length > 0
+      ? filesFromPayload
+      : failed.length === 0
+        ? [...requestedNames]
+        : deriveSuccessfulFileNames(requestedNames, failed);
+
+  return {
+    status:
+      typeof payload?.status === 'string' ? payload.status : failed.length > 0 ? 'partial' : 'ok',
+    matched: readNumberValue(payload?.matched) ?? requestedNames.length,
+    updated: readNumberValue(payload?.updated) ?? files.length,
+    files,
     failed,
   };
 };
@@ -436,6 +480,24 @@ export const normalizeAuthFileEntry = (entry: AuthFileEntry): AuthFileEntry => {
   );
   if (lastErrorStatusCode !== undefined) {
     normalized.lastErrorStatusCode = lastErrorStatusCode;
+  }
+  const cooldownActive = readBooleanValue(entry.cooldownActive ?? entry['cooldown_active']);
+  if (cooldownActive !== undefined) {
+    normalized.cooldownActive = cooldownActive;
+  }
+  const cooldownScope = readStringValue(entry.cooldownScope ?? entry['cooldown_scope']);
+  if (cooldownScope) {
+    normalized.cooldownScope = cooldownScope;
+  }
+  const cooldownUntil = readStringValue(entry.cooldownUntil ?? entry['cooldown_until']);
+  if (cooldownUntil) {
+    normalized.cooldownUntil = cooldownUntil;
+  }
+  const cooldownModelCount = readNumberValue(
+    entry.cooldownModelCount ?? entry['cooldown_model_count']
+  );
+  if (cooldownModelCount !== undefined) {
+    normalized.cooldownModelCount = cooldownModelCount;
   }
   return normalized;
 };
@@ -704,6 +766,23 @@ export const authFilesApi = {
       ...fields,
     }),
 
+  patchFieldsBatch: async (
+    names: string[],
+    fields: AuthFileFieldsPatch
+  ): Promise<AuthFileFieldsBatchResult> => {
+    const requestedNames = normalizeRequestedAuthFileNames(names);
+    const response = await apiClient.requestRaw({
+      url: '/auth-files/fields',
+      method: 'PATCH',
+      data: { names: requestedNames, fields },
+      validateStatus: (status) => status === 200 || status === 207,
+    });
+    return normalizeAuthFileFieldsBatchResponse(
+      response.data as AuthFileFieldsBatchResponse | undefined,
+      requestedNames
+    );
+  },
+
   uploadFiles: async (files: File[]): Promise<AuthFileBatchUploadResult> => {
     const requestedNames = files.map((file) => file.name);
     if (requestedNames.length === 0) {
@@ -919,13 +998,33 @@ export const authFilesApi = {
   // 获取认证凭证支持的模型
   async getModelsForAuthFile(
     name: string
-  ): Promise<{ id: string; display_name?: string; type?: string; owned_by?: string }[]> {
+  ): Promise<
+    {
+      id: string;
+      display_name?: string;
+      type?: string;
+      owned_by?: string;
+      cooldown_active?: boolean;
+      cooldownActive?: boolean;
+      scope?: string;
+      until?: string;
+    }[]
+  > {
     const data = await apiClient.get<Record<string, unknown>>(
       `/auth-files/models?name=${encodeURIComponent(name)}`
     );
     const models = data.models ?? data['models'];
     return Array.isArray(models)
-      ? (models as { id: string; display_name?: string; type?: string; owned_by?: string }[])
+      ? (models as {
+          id: string;
+          display_name?: string;
+          type?: string;
+          owned_by?: string;
+          cooldown_active?: boolean;
+          cooldownActive?: boolean;
+          scope?: string;
+          until?: string;
+        }[])
       : [];
   },
 

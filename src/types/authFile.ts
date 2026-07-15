@@ -18,6 +18,8 @@ export type AuthFileType =
   | 'empty'
   | 'unknown';
 
+export type AuthCooldownScope = 'auth' | 'model';
+
 export interface AuthFileItem {
   name: string;
   type?: AuthFileType | string;
@@ -31,6 +33,14 @@ export interface AuthFileItem {
   status?: string;
   statusMessage?: string;
   lastErrorStatusCode?: number;
+  cooldown_active?: boolean;
+  cooldown_scope?: AuthCooldownScope | string;
+  cooldown_until?: string;
+  cooldown_model_count?: number;
+  cooldownActive?: boolean;
+  cooldownScope?: AuthCooldownScope | string;
+  cooldownUntil?: string;
+  cooldownModelCount?: number;
   lastRefresh?: string | number;
   modified?: number;
   [key: string]: unknown;

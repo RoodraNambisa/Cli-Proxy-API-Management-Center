@@ -3,12 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem } from '@/types';
-import { MAX_AUTH_FILE_SIZE } from '@/utils/constants';
-import { mapWithConcurrency } from '@/utils/concurrency';
-import { formatFileSize } from '@/utils/format';
-import type { AuthFileFieldsPatch } from '@/services/api/authFiles';
+import type { AuthFileBatchFailure, AuthFileFieldsPatch } from '@/services/api/authFiles';
 import {
-  applyCodexAuthFileWebsockets,
   isRuntimeOnlyAuthFile,
   parseDisableCoolingValue,
   parseExcludedModelsText,
@@ -20,7 +16,7 @@ import {
   type AuthFileHeadersErrorKey,
 } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
 
-export type AuthFilesBatchSettingsWebsocketsValue = '' | 'true' | 'false';
+export type AuthFilesBatchSettingsBooleanValue = '' | 'true' | 'false';
 
 export type AuthFilesBatchSettingsField =
   | 'prefix'
@@ -30,6 +26,7 @@ export type AuthFilesBatchSettingsField =
   | 'headersText'
   | 'disableCooling'
   | 'note'
+  | 'usingApi'
   | 'websockets';
 
 export type AuthFilesBatchSettingsState = {
@@ -44,7 +41,9 @@ export type AuthFilesBatchSettingsState = {
   headersError: string | null;
   disableCooling: string;
   note: string;
-  websockets: AuthFilesBatchSettingsWebsocketsValue;
+  usingApi: AuthFilesBatchSettingsBooleanValue;
+  websockets: AuthFilesBatchSettingsBooleanValue;
+  failures: AuthFileBatchFailure[];
 };
 
 export type UseAuthFilesBatchSettingsOptions = {
@@ -52,6 +51,7 @@ export type UseAuthFilesBatchSettingsOptions = {
   disableControls: boolean;
   loadFiles: () => Promise<void>;
   deselectAll: () => void;
+  replaceSelection: (names: string[]) => void;
 };
 
 export type UseAuthFilesBatchSettingsResult = {
@@ -63,18 +63,7 @@ export type UseAuthFilesBatchSettingsResult = {
   saveBatchSettings: () => Promise<void>;
 };
 
-type BatchSettingsPatch = {
-  prefix?: string;
-  proxy_url?: string;
-  priority?: number;
-  excluded_models?: string[];
-  headers?: AuthFileHeaders;
-  disable_cooling?: boolean;
-  note?: string;
-  websockets?: boolean;
-};
-
-const BATCH_SETTINGS_CONCURRENCY = 6;
+type BatchSettingsPatch = AuthFileFieldsPatch & { headers?: AuthFileHeaders };
 
 const createEmptyBatchSettingsState = (): AuthFilesBatchSettingsState => ({
   open: false,
@@ -88,18 +77,10 @@ const createEmptyBatchSettingsState = (): AuthFilesBatchSettingsState => ({
   headersError: null,
   disableCooling: '',
   note: '',
+  usingApi: '',
   websockets: '',
+  failures: [],
 });
-
-const isCodexAuthFile = (file: AuthFileItem): boolean => {
-  const normalizedType = String(file.type ?? '')
-    .trim()
-    .toLowerCase();
-  const normalizedProvider = String(file.provider ?? '')
-    .trim()
-    .toLowerCase();
-  return normalizedType === 'codex' || normalizedProvider === 'codex';
-};
 
 const resolveTargetFiles = (names: string[], files: AuthFileItem[]): AuthFileItem[] => {
   const fileMap = new Map(files.map((file) => [file.name, file]));
@@ -120,20 +101,6 @@ const resolveTargetFiles = (names: string[], files: AuthFileItem[]): AuthFileIte
 
 const hasPatchFields = (patch: BatchSettingsPatch): boolean => Object.keys(patch).length > 0;
 
-const requiresFullFileUpdate = (patch: BatchSettingsPatch): boolean =>
-  patch.excluded_models !== undefined ||
-  patch.headers !== undefined ||
-  patch.disable_cooling !== undefined ||
-  patch.websockets !== undefined ||
-  patch.priority === 0;
-
-const buildDirectFieldsPatch = (patch: BatchSettingsPatch): AuthFileFieldsPatch => ({
-  ...(patch.prefix !== undefined ? { prefix: patch.prefix } : {}),
-  ...(patch.proxy_url !== undefined ? { proxy_url: patch.proxy_url } : {}),
-  ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
-  ...(patch.note !== undefined ? { note: patch.note } : {}),
-});
-
 const buildBatchSettingsPatch = (
   state: AuthFilesBatchSettingsState
 ): { patch: BatchSettingsPatch; errorKey: AuthFileHeadersErrorKey | null } => {
@@ -147,9 +114,13 @@ const buildBatchSettingsPatch = (
   }
 
   if (state.priority.trim()) {
-    const parsedPriority = parsePriorityValue(state.priority);
-    if (parsedPriority !== undefined) {
-      patch.priority = parsedPriority;
+    if (state.priority.trim().toLowerCase() === 'null') {
+      patch.priority = null;
+    } else {
+      const parsedPriority = parsePriorityValue(state.priority);
+      if (parsedPriority !== undefined) {
+        patch.priority = parsedPriority;
+      }
     }
   }
 
@@ -181,6 +152,10 @@ const buildBatchSettingsPatch = (
     patch.note = state.note;
   }
 
+  if (state.usingApi !== '') {
+    patch.using_api = state.usingApi === 'true';
+  }
+
   if (state.websockets !== '') {
     patch.websockets = state.websockets === 'true';
   }
@@ -188,54 +163,10 @@ const buildBatchSettingsPatch = (
   return { patch, errorKey: null };
 };
 
-const applyBatchSettingsPatch = (
-  json: Record<string, unknown>,
-  patch: BatchSettingsPatch,
-  isCodexFile: boolean
-): { next: Record<string, unknown>; applied: boolean } => {
-  let next: Record<string, unknown> = { ...json };
-  let applied = false;
-
-  if (patch.prefix !== undefined) {
-    next.prefix = patch.prefix;
-    applied = true;
-  }
-  if (patch.proxy_url !== undefined) {
-    next.proxy_url = patch.proxy_url;
-    applied = true;
-  }
-  if (patch.priority !== undefined) {
-    next.priority = patch.priority;
-    applied = true;
-  }
-  if (patch.excluded_models !== undefined) {
-    next.excluded_models = patch.excluded_models;
-    applied = true;
-  }
-  if (patch.headers !== undefined) {
-    next.headers = patch.headers;
-    applied = true;
-  }
-  if (patch.disable_cooling !== undefined) {
-    next.disable_cooling = patch.disable_cooling;
-    applied = true;
-  }
-  if (patch.note !== undefined) {
-    next.note = patch.note;
-    applied = true;
-  }
-  if (patch.websockets !== undefined && isCodexFile) {
-    next = applyCodexAuthFileWebsockets(next, patch.websockets);
-    applied = true;
-  }
-
-  return { next, applied };
-};
-
 export function useAuthFilesBatchSettings(
   options: UseAuthFilesBatchSettingsOptions
 ): UseAuthFilesBatchSettingsResult {
-  const { files, disableControls, loadFiles, deselectAll } = options;
+  const { files, disableControls, loadFiles, deselectAll, replaceSelection } = options;
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
   const [batchSettings, setBatchSettings] = useState<AuthFilesBatchSettingsState>(
@@ -252,6 +183,7 @@ export function useAuthFilesBatchSettings(
         batchSettings.headersText.trim() ||
         batchSettings.disableCooling.trim() ||
         batchSettings.note.trim() ||
+        batchSettings.usingApi ||
         batchSettings.websockets
       ),
     [batchSettings]
@@ -284,9 +216,10 @@ export function useAuthFilesBatchSettings(
           ...prev,
           headersText,
           headersError: errorKey ? t(errorKey) : null,
+          failures: [],
         };
       }
-      return { ...prev, [field]: String(value) };
+      return { ...prev, [field]: String(value), failures: [] };
     });
   };
 
@@ -309,70 +242,55 @@ export function useAuthFilesBatchSettings(
       return;
     }
 
-    setBatchSettings((prev) => ({ ...prev, saving: true }));
+    setBatchSettings((prev) => ({ ...prev, saving: true, failures: [] }));
 
-    const fullFileUpdate = requiresFullFileUpdate(patch);
-    const directFieldsPatch = buildDirectFieldsPatch(patch);
-    const results = await mapWithConcurrency(targets, BATCH_SETTINGS_CONCURRENCY, async (file) => {
-      if (!fullFileUpdate) {
-        await authFilesApi.patchFields(file.name, directFieldsPatch);
-        return 'success' as const;
-      }
-
-      const json = await authFilesApi.downloadJsonObject(file.name);
-      const { next, applied } = applyBatchSettingsPatch(json, patch, isCodexAuthFile(file));
-      if (!applied) {
-        return 'skipped' as const;
-      }
-
-      const payload = JSON.stringify(next);
-      if (new Blob([payload]).size > MAX_AUTH_FILE_SIZE) {
-        throw new Error(
-          t('auth_files.upload_error_size', { maxSize: formatFileSize(MAX_AUTH_FILE_SIZE) })
-        );
-      }
-
-      await authFilesApi.saveText(file.name, payload);
-      return 'success' as const;
-    });
-
-    let successCount = 0;
-    let failedCount = 0;
-    let skippedCount = 0;
-    results.forEach((result) => {
-      if (result.status === 'rejected') {
-        failedCount += 1;
-      } else if (result.value === 'skipped') {
-        skippedCount += 1;
-      } else {
-        successCount += 1;
-      }
-    });
-
-    if (successCount > 0) {
-      deselectAll();
-      setBatchSettings(createEmptyBatchSettingsState());
-      void loadFiles().catch(() => {});
-    } else {
-      setBatchSettings((prev) => ({ ...prev, saving: false }));
-    }
-
-    if (successCount > 0 && failedCount === 0) {
-      showNotification(t('auth_files.batch_settings_success', { count: successCount }), 'success');
-      return;
-    }
-    if (successCount > 0 && failedCount > 0) {
-      showNotification(
-        t('auth_files.batch_settings_partial', { success: successCount, failed: failedCount }),
-        'warning'
+    try {
+      const result = await authFilesApi.patchFieldsBatch(
+        targets.map((file) => file.name),
+        patch
       );
-      return;
+      const failedNames = result.failed.map((failure) => failure.name).filter(Boolean);
+
+      if (result.failed.length === 0) {
+        deselectAll();
+        setBatchSettings(createEmptyBatchSettingsState());
+        void loadFiles().catch(() => {});
+        showNotification(
+          t('auth_files.batch_settings_success', { count: result.updated }),
+          'success'
+        );
+        return;
+      }
+
+      const retainedNames = failedNames.length > 0 ? failedNames : targets.map((file) => file.name);
+      replaceSelection(retainedNames);
+      setBatchSettings((prev) => ({
+        ...prev,
+        names: retainedNames,
+        saving: false,
+        failures: result.failed,
+      }));
+      if (result.updated > 0) {
+        void loadFiles().catch(() => {});
+      }
+
+      showNotification(
+        result.updated > 0
+          ? t('auth_files.batch_settings_partial', {
+              success: result.updated,
+              failed: result.failed.length,
+            })
+          : t('auth_files.batch_settings_failed', { failed: result.failed.length }),
+        result.updated > 0 ? 'warning' : 'error'
+      );
+    } catch (err: unknown) {
+      setBatchSettings((prev) => ({ ...prev, saving: false }));
+      const message = err instanceof Error ? err.message : '';
+      showNotification(
+        `${t('auth_files.batch_settings_failed', { failed: targets.length })}${message ? `: ${message}` : ''}`,
+        'error'
+      );
     }
-    if (skippedCount > 0 && failedCount === 0) {
-      showNotification(t('auth_files.batch_settings_no_applicable_files'), 'warning');
-      return;
-    }
-    showNotification(t('auth_files.batch_settings_failed', { failed: failedCount }), 'error');
   };
 
   return {

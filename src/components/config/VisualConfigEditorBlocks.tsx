@@ -1,10 +1,25 @@
-import { memo, useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
-import { IconChevronDown, IconChevronUp, IconPlus, IconTrash2 } from '@/components/ui/icons';
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconPlus,
+  IconRefreshCw,
+  IconTrash2,
+} from '@/components/ui/icons';
 import { useNotificationStore } from '@/stores';
 import styles from './VisualConfigEditor.module.scss';
 import { copyToClipboard } from '@/utils/clipboard';
@@ -29,6 +44,7 @@ import {
 } from '@/hooks/useVisualConfig';
 import { maskApiKey } from '@/utils/format';
 import { isValidApiKeyCharset } from '@/utils/validation';
+import { apiKeysApi } from '@/services/api/apiKeys';
 
 /** Minimum character count before the expand/collapse toggle appears. */
 const EXPAND_THRESHOLD = 30;
@@ -167,11 +183,15 @@ function buildProtocolOptions(
 
 export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   value,
+  savedValue = value,
   disabled,
+  active = true,
   onChange,
 }: {
   value: string;
+  savedValue?: string;
   disabled?: boolean;
+  active?: boolean;
   onChange: (nextValue: string) => void;
 }) {
   const { t } = useTranslation();
@@ -201,6 +221,75 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const [editingApiKeyId, setEditingApiKeyId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [formError, setFormError] = useState('');
+  const [serverKeys, setServerKeys] = useState<Set<string>>(new Set());
+  const [providerGroups, setProviderGroups] = useState<Record<string, string[]>>({});
+  const [providerGroupsLoading, setProviderGroupsLoading] = useState(false);
+  const [providerGroupsLoaded, setProviderGroupsLoaded] = useState(false);
+  const [providerGroupsLoadedFor, setProviderGroupsLoadedFor] = useState<string | null>(null);
+  const [providerGroupsUnsupported, setProviderGroupsUnsupported] = useState(false);
+  const [providerGroupsError, setProviderGroupsError] = useState('');
+  const [providerGroupUpdating, setProviderGroupUpdating] = useState<string | null>(null);
+
+  const baseProviderOptions = useMemo(
+    () => [
+      { value: 'codex', label: 'Codex' },
+      { value: 'xai', label: 'Grok' },
+      { value: 'claude', label: 'Claude' },
+      { value: 'antigravity', label: 'Antigravity' },
+      { value: 'gemini', label: 'Gemini API' },
+      { value: 'gemini-interactions', label: 'Google Interactions' },
+      { value: 'aistudio', label: 'AI Studio' },
+      { value: 'vertex', label: 'Vertex' },
+      { value: 'kimi', label: 'Kimi' },
+      { value: 'iflow', label: 'iFlow' },
+      { value: 'qwen', label: 'Qwen' },
+      { value: 'openai-compatibility', label: 'OpenAI Compatibility' },
+    ],
+    []
+  );
+
+  const providerOptions = useMemo(() => {
+    const options = [...baseProviderOptions];
+    const known = new Set(options.map((option) => option.value));
+    Object.values(providerGroups).forEach((providers) => {
+      providers.forEach((provider) => {
+        if (known.has(provider)) return;
+        known.add(provider);
+        options.push({ value: provider, label: provider });
+      });
+    });
+    return options;
+  }, [baseProviderOptions, providerGroups]);
+
+  const loadProviderGroups = useCallback(async () => {
+    setProviderGroupsLoading(true);
+    setProviderGroupsError('');
+    try {
+      const snapshot = await apiKeysApi.getAccessSnapshot();
+      setServerKeys(new Set(snapshot.keys));
+      setProviderGroups(
+        Object.fromEntries(snapshot.groups.map((group) => [group.apiKey, group.providers]))
+      );
+      setProviderGroupsUnsupported(false);
+      setProviderGroupsLoaded(true);
+    } catch (error: unknown) {
+      const status =
+        error && typeof error === 'object' && 'status' in error
+          ? Number((error as { status?: unknown }).status)
+          : 0;
+      setProviderGroupsUnsupported(status === 404);
+      setProviderGroupsError(error instanceof Error ? error.message : '');
+      setProviderGroupsLoaded(true);
+    } finally {
+      setProviderGroupsLoadedFor(savedValue);
+      setProviderGroupsLoading(false);
+    }
+  }, [savedValue]);
+
+  useEffect(() => {
+    if (!active || providerGroupsLoadedFor === savedValue || providerGroupsLoading) return;
+    void loadProviderGroups();
+  }, [active, loadProviderGroups, providerGroupsLoadedFor, providerGroupsLoading, savedValue]);
 
   function generateSecureApiKey(): string {
     const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -280,13 +369,49 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     setFormError('');
   };
 
+  const handleProviderToggle = async (apiKey: string, provider: string, checked: boolean) => {
+    if (providerGroupsLoading || providerGroupUpdating || !serverKeys.has(apiKey)) return;
+    const current = providerGroups[apiKey] ?? [];
+    const next = checked
+      ? Array.from(new Set([...current, provider]))
+      : current.filter((entry) => entry !== provider);
+
+    setProviderGroupUpdating(apiKey);
+    try {
+      await apiKeysApi.updateGroup(apiKey, next);
+      setProviderGroups((previous) => ({ ...previous, [apiKey]: next }));
+      showNotification(t('config_management.visual.api_keys.provider_saved'), 'success');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      showNotification(
+        t('config_management.visual.api_keys.provider_save_failed', { message }),
+        'error'
+      );
+    } finally {
+      setProviderGroupUpdating(null);
+    }
+  };
+
   return (
     <div className="form-group" style={{ marginBottom: 0 }}>
       <div className={styles.blockHeaderRow}>
         <label style={{ margin: 0 }}>{t('config_management.visual.api_keys.label')}</label>
-        <Button size="sm" onClick={openAddModal} disabled={disabled}>
-          {t('config_management.visual.api_keys.add')}
-        </Button>
+        <div className={styles.apiKeyHeaderActions}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void loadProviderGroups()}
+            loading={providerGroupsLoading}
+            disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null}
+            title={t('config_management.visual.api_keys.provider_refresh')}
+          >
+            <IconRefreshCw size={14} />
+            {t('config_management.visual.api_keys.provider_refresh')}
+          </Button>
+          <Button size="sm" onClick={openAddModal} disabled={disabled}>
+            {t('config_management.visual.api_keys.add')}
+          </Button>
+        </div>
       </div>
 
       {apiKeys.length === 0 ? (
@@ -294,39 +419,107 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       ) : (
         <div className="item-list" style={{ marginTop: 4 }}>
           {apiKeys.map((key, index) => (
-            <div key={renderApiKeyIds[index] ?? `${key}-${index}`} className="item-row">
-              <div className="item-meta">
-                <div className="pill">#{index + 1}</div>
-                <div className="item-title">
-                  {t('config_management.visual.api_keys.input_label')}
+            <div
+              key={renderApiKeyIds[index] ?? `${key}-${index}`}
+              className={`item-row ${styles.apiKeyItem}`}
+            >
+              <div className={styles.apiKeyItemTopRow}>
+                <div className="item-meta">
+                  <div className="pill">#{index + 1}</div>
+                  <div className="item-title">
+                    {t('config_management.visual.api_keys.input_label')}
+                  </div>
+                  <div className="item-subtitle">{maskApiKey(String(key || ''))}</div>
                 </div>
-                <div className="item-subtitle">{maskApiKey(String(key || ''))}</div>
+                <div className="item-actions">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleCopy(key)}
+                    disabled={disabled}
+                  >
+                    {t('common.copy')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => openEditModal(renderApiKeyIds[index] ?? '')}
+                    disabled={disabled}
+                  >
+                    {t('config_management.visual.common.edit')}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleDelete(renderApiKeyIds[index] ?? '')}
+                    disabled={disabled}
+                  >
+                    {t('config_management.visual.common.delete')}
+                  </Button>
+                </div>
               </div>
-              <div className="item-actions">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleCopy(key)}
-                  disabled={disabled}
-                >
-                  {t('common.copy')}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => openEditModal(renderApiKeyIds[index] ?? '')}
-                  disabled={disabled}
-                >
-                  {t('config_management.visual.common.edit')}
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => handleDelete(renderApiKeyIds[index] ?? '')}
-                  disabled={disabled}
-                >
-                  {t('config_management.visual.common.delete')}
-                </Button>
+
+              <div className={styles.apiKeyProviderSection}>
+                {providerGroupsLoading && !providerGroupsLoaded ? (
+                  <div className="hint">
+                    {t('config_management.visual.api_keys.provider_loading')}
+                  </div>
+                ) : providerGroupsUnsupported ? (
+                  <div className="hint">
+                    {t('config_management.visual.api_keys.provider_unsupported')}
+                  </div>
+                ) : providerGroupsError ? (
+                  <div className="error-box">
+                    {t('config_management.visual.api_keys.provider_load_failed', {
+                      message: providerGroupsError,
+                    })}
+                  </div>
+                ) : !serverKeys.has(key) ? (
+                  <div className="hint">
+                    {t('config_management.visual.api_keys.provider_save_key_first')}
+                  </div>
+                ) : (
+                  <details className={styles.apiKeyProviderDisclosure}>
+                    <summary>
+                      {t('config_management.visual.api_keys.provider_summary', {
+                        providers:
+                          (providerGroups[key] ?? []).length === 0
+                            ? t('config_management.visual.api_keys.provider_unrestricted')
+                            : (providerGroups[key] ?? [])
+                                .map(
+                                  (provider) =>
+                                    providerOptions.find((option) => option.value === provider)
+                                      ?.label ?? provider
+                                )
+                                .join(', '),
+                      })}
+                    </summary>
+                    <div className={styles.apiKeyProviderOptions}>
+                      {providerOptions.map((option) => (
+                        <SelectionCheckbox
+                          key={option.value}
+                          checked={(providerGroups[key] ?? []).includes(option.value)}
+                          disabled={
+                            disabled || providerGroupsLoading || providerGroupUpdating !== null
+                          }
+                          ariaLabel={`${option.label} (${option.value})`}
+                          label={
+                            <span className={styles.apiKeyProviderOptionLabel}>
+                              <span>{option.label}</span>
+                              <code>{option.value}</code>
+                            </span>
+                          }
+                          onChange={(checked) =>
+                            void handleProviderToggle(key, option.value, checked)
+                          }
+                        />
+                      ))}
+                    </div>
+                    <div className="hint">
+                      {t('config_management.visual.api_keys.provider_hint')}
+                    </div>
+                  </details>
+                )}
               </div>
             </div>
           ))}

@@ -1565,7 +1565,9 @@ export function VisualConfigEditor({
                   <div id="config-api-keys" className={styles.subsection}>
                     <ApiKeysCardEditor
                       value={values.apiKeysText}
+                      savedValue={baselineValues.apiKeysText}
                       disabled={disabled}
+                      active={activePageId === 'global-credentials'}
                       onChange={handleApiKeysTextChange}
                     />
                   </div>
