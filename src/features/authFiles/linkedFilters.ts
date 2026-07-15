@@ -34,15 +34,11 @@ export const getAvailablePlanFilters = (
   return Array.from(plans).sort((a, b) => a.localeCompare(b));
 };
 
-export const getAvailablePriorityFilters = (
-  files: readonly AuthFileItem[],
-  planFilter: string
-): string[] => {
+export const getAvailablePriorityFilters = (files: readonly AuthFileItem[]): string[] => {
   const priorities = new Set<number>();
   let hasUnsetPriority = false;
 
   files.forEach((file) => {
-    if (!matchesAuthFilePlanFilter(file, planFilter)) return;
     const priority = parsePriorityValue(file.priority ?? file['priority']);
     if (priority === undefined) {
       hasUnsetPriority = true;

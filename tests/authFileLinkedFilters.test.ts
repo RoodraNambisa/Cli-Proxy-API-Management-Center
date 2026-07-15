@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest';
 import {
-  ALL_PLAN_FILTER,
   ALL_PRIORITY_FILTER,
   UNSET_PRIORITY_FILTER,
   getAvailablePlanFilters,
@@ -27,14 +26,8 @@ describe('linked auth file filters', () => {
     expect(getAvailablePlanFilters(files, ALL_PRIORITY_FILTER)).toEqual(['free', 'pro', 'team']);
   });
 
-  test('limits priority choices to the selected plan', () => {
-    expect(getAvailablePriorityFilters(files, 'team')).toEqual(['4', '1']);
-    expect(getAvailablePriorityFilters(files, 'free')).toEqual(['1', UNSET_PRIORITY_FILTER]);
-    expect(getAvailablePriorityFilters(files, ALL_PLAN_FILTER)).toEqual([
-      '4',
-      '1',
-      UNSET_PRIORITY_FILTER,
-    ]);
+  test('keeps priority choices independent from the selected plan', () => {
+    expect(getAvailablePriorityFilters(files)).toEqual(['4', '1', UNSET_PRIORITY_FILTER]);
   });
 
   test('uses the same matching semantics for options and final filtering', () => {

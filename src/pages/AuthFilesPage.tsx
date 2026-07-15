@@ -582,8 +582,8 @@ export function AuthFilesPage() {
   }, [availablePlanFilters, t]);
 
   const availablePriorityFilters = useMemo(
-    () => getAvailablePriorityFilters(filesMatchingStatusFilters, planFilter),
-    [filesMatchingStatusFilters, planFilter]
+    () => getAvailablePriorityFilters(filesMatchingStatusFilters),
+    [filesMatchingStatusFilters]
   );
 
   const priorityFilterOptions = useMemo(() => {
@@ -603,15 +603,13 @@ export function AuthFilesPage() {
     ];
   }, [availablePriorityFilters, t]);
 
-  const allPriorityFilters = useMemo(
-    () => getAvailablePriorityFilters(filesMatchingStatusFilters, ALL_PLAN_FILTER),
-    [filesMatchingStatusFilters]
-  );
-
   useEffect(() => {
     if (loading) return;
 
-    if (priorityFilter !== ALL_PRIORITY_FILTER && !allPriorityFilters.includes(priorityFilter)) {
+    if (
+      priorityFilter !== ALL_PRIORITY_FILTER &&
+      !availablePriorityFilters.includes(priorityFilter)
+    ) {
       setPriorityFilter(ALL_PRIORITY_FILTER);
       setPage(1);
       return;
@@ -621,24 +619,12 @@ export function AuthFilesPage() {
       setPlanFilter(ALL_PLAN_FILTER);
       setPage(1);
     }
-  }, [allPriorityFilters, availablePlanFilters, loading, planFilter, priorityFilter]);
+  }, [availablePlanFilters, availablePriorityFilters, loading, planFilter, priorityFilter]);
 
-  const handlePlanFilterChange = useCallback(
-    (value: string) => {
-      const nextPlanFilter = value || ALL_PLAN_FILTER;
-      setPlanFilter(nextPlanFilter);
-      if (
-        priorityFilter !== ALL_PRIORITY_FILTER &&
-        !getAvailablePriorityFilters(filesMatchingStatusFilters, nextPlanFilter).includes(
-          priorityFilter
-        )
-      ) {
-        setPriorityFilter(ALL_PRIORITY_FILTER);
-      }
-      setPage(1);
-    },
-    [filesMatchingStatusFilters, priorityFilter]
-  );
+  const handlePlanFilterChange = useCallback((value: string) => {
+    setPlanFilter(value || ALL_PLAN_FILTER);
+    setPage(1);
+  }, []);
 
   const handlePriorityFilterChange = useCallback(
     (value: string) => {
