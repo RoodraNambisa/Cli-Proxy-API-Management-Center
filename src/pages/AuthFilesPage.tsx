@@ -248,6 +248,7 @@ export function AuthFilesPage() {
     codexPlanRefreshActionLoading,
     statusUpdating,
     xaiFieldsUpdating,
+    chatGptWebReloginUpdating,
     batchStatusUpdating,
     fileInputRef,
     loadFiles,
@@ -258,6 +259,7 @@ export function AuthFilesPage() {
     handleDownload,
     handleStatusToggle,
     handleXaiFieldToggle,
+    handleChatGptWebRelogin,
     toggleSelect,
     selectAllVisible,
     invertVisibleSelection,
@@ -1609,6 +1611,7 @@ export function AuthFilesPage() {
                     deleting={deleting}
                     statusUpdating={statusUpdating}
                     xaiFieldsUpdating={xaiFieldsUpdating}
+                    chatGptWebReloginUpdating={chatGptWebReloginUpdating}
                     quotaFilterType={quotaFilterType}
                     keyStats={keyStats}
                     statusBarCache={statusBarCache}
@@ -1620,6 +1623,7 @@ export function AuthFilesPage() {
                     onDelete={handleDelete}
                     onToggleStatus={handleStatusToggle}
                     onToggleXaiField={handleXaiFieldToggle}
+                    onChatGptWebRelogin={handleChatGptWebRelogin}
                     onToggleSelect={toggleSelect}
                   />
                 ))}

@@ -232,6 +232,7 @@ export type VisualConfigValues = {
   codexHeaderDefaultsUserAgent: string;
   codexHeaderDefaultsBetaFeatures: string;
   codexHeaderDefaultsOriginator: string;
+  chatgptWebAutoRelogin: boolean;
   requestRetry: string;
   maxRetryCredentials: string;
   maxRetryInterval: string;
@@ -299,6 +300,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexHeaderDefaultsUserAgent: '',
   codexHeaderDefaultsBetaFeatures: '',
   codexHeaderDefaultsOriginator: '',
+  chatgptWebAutoRelogin: false,
   requestRetry: '',
   maxRetryCredentials: '',
   maxRetryInterval: '',

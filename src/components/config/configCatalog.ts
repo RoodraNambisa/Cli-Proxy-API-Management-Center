@@ -9,6 +9,7 @@ export type ConfigPageId =
   | 'global-streaming'
   | 'provider-codex'
   | 'provider-antigravity'
+  | 'provider-chatgpt-web'
   | 'provider-grok'
   | 'advanced-payload';
 
@@ -124,6 +125,13 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     dirtyPrefixes: ['quotaAntigravityCredits'],
   },
   {
+    id: 'provider-chatgpt-web',
+    group: 'providers',
+    titleKey: 'config_management.settings_center.pages.provider_chatgpt_web.title',
+    descriptionKey: 'config_management.settings_center.pages.provider_chatgpt_web.description',
+    dirtyPrefixes: ['chatgptWebAutoRelogin'],
+  },
+  {
     id: 'provider-grok',
     group: 'providers',
     titleKey: 'config_management.settings_center.pages.provider_grok.title',
@@ -199,6 +207,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.proxy_url',
     yamlKeys: ['proxy-url'],
     aliases: ['proxy', '代理'],
+  },
+  {
+    id: 'config-proxy-pools',
+    pageId: 'global-network',
+    labelKey: 'proxy_pools.title',
+    yamlKeys: ['proxy-pools', 'proxy-rules'],
+    aliases: ['structured proxy', '结构化代理', '代理池'],
   },
   {
     id: 'config-request-retry',
@@ -434,6 +449,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     pageId: 'provider-antigravity',
     labelKey: 'config_management.visual.sections.quota.antigravity_credits',
     yamlKeys: ['quota-exceeded.antigravity-credits'],
+  },
+  {
+    id: 'config-chatgpt-web-auto-relogin',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.auto_relogin',
+    yamlKeys: ['chatgpt-web.auto-relogin'],
+    aliases: ['chatgpt web', '自动重登', 'auto relogin'],
   },
   {
     id: 'config-grok-auth',

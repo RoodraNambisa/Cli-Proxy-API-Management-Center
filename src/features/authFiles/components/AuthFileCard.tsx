@@ -8,6 +8,7 @@ import {
   IconEye,
   IconInfo,
   IconModelCluster,
+  IconRefreshCw,
   IconSettings,
   IconTimer,
   IconTrash2,
@@ -43,6 +44,12 @@ import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQu
 import { AuthFileUsageStatsPanel } from '@/features/authFiles/components/AuthFileUsageStatsPanel';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
+const CHATGPT_WEB_CRITICAL_LIFECYCLE_STATES = new Set([
+  'dead',
+  'interaction_required',
+  'reauth_required',
+]);
+
 const HEALTHY_STATUS_MESSAGES = new Set(['ok', 'healthy', 'ready', 'success', 'available']);
 const PREMIUM_CODEX_PLAN_TYPES = new Set(['plus', 'team', 'pro', 'prolite']);
 
@@ -56,6 +63,7 @@ export type AuthFileCardProps = {
   deleting: string | null;
   statusUpdating: Record<string, boolean>;
   xaiFieldsUpdating: Record<string, Partial<Record<XaiAuthFileField, boolean>>>;
+  chatGptWebReloginUpdating?: Record<string, boolean>;
   quotaFilterType: QuotaProviderType | null;
   keyStats: KeyStats;
   statusBarCache: Map<string, AuthFileStatusBarData>;
@@ -67,6 +75,7 @@ export type AuthFileCardProps = {
   onDelete: (name: string) => void;
   onToggleStatus: (file: AuthFileItem, enabled: boolean) => void;
   onToggleXaiField: (file: AuthFileItem, field: XaiAuthFileField, value: boolean) => void;
+  onChatGptWebRelogin?: (file: AuthFileItem) => void;
   onToggleSelect: (name: string) => void;
 };
 
@@ -88,6 +97,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     deleting,
     statusUpdating,
     xaiFieldsUpdating,
+    chatGptWebReloginUpdating = {},
     quotaFilterType,
     keyStats,
     statusBarCache,
@@ -99,6 +109,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     onDelete,
     onToggleStatus,
     onToggleXaiField,
+    onChatGptWebRelogin = () => {},
     onToggleSelect,
   } = props;
 
@@ -110,6 +121,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
   );
   const isAistudio = providerKey === 'aistudio';
   const isXai = isXaiProvider(providerKey);
+  const isChatGptWeb = providerKey === 'chatgpt-web';
   const showModelsButton = !isRetiredGeminiCli && (!isRuntimeOnly || isAistudio || isXai);
   const typeColor = getTypeColor(providerKey, resolvedTheme);
   const typeLabel = getTypeLabel(t, providerKey);
@@ -144,6 +156,20 @@ export function AuthFileCard(props: AuthFileCardProps) {
     (authIndexKey && statusBarCache.get(authIndexKey)) || calculateStatusBarData([]);
   const usageSummary = authIndexKey ? usageSummaryCache.get(authIndexKey) : undefined;
   const rawStatusMessage = getAuthFileStatusMessage(file);
+  const lifecycleState = String(file.lifecycle_state ?? '')
+    .trim()
+    .toLowerCase();
+  const lifecycleReason = String(file.lifecycle_reason ?? '').trim();
+  const criticalLifecycleState = CHATGPT_WEB_CRITICAL_LIFECYCLE_STATES.has(lifecycleState);
+  const lifecycleNeedsAttention = Boolean(lifecycleState && lifecycleState !== 'active');
+  const lifecycleLabelKey = lifecycleState
+    ? `auth_files.chatgpt_web_lifecycle_${lifecycleState}`
+    : '';
+  const translatedLifecycleLabel = lifecycleLabelKey ? t(lifecycleLabelKey) : '';
+  const lifecycleLabel =
+    translatedLifecycleLabel && translatedLifecycleLabel !== lifecycleLabelKey
+      ? translatedLifecycleLabel
+      : lifecycleState;
   const lastErrorStatusCodeRaw = file.lastErrorStatusCode ?? file['last_error_status_code'];
   const lastErrorStatusCode =
     typeof lastErrorStatusCodeRaw === 'number'
@@ -154,6 +180,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const hasLastErrorStatusCode = Number.isFinite(lastErrorStatusCode) && lastErrorStatusCode > 0;
   const hasStatusWarning =
     isRetiredGeminiCli ||
+    (isChatGptWeb && lifecycleNeedsAttention) ||
     hasLastErrorStatusCode ||
     (Boolean(rawStatusMessage) && !HEALTHY_STATUS_MESSAGES.has(rawStatusMessage.toLowerCase()));
   const displayStatusMessage = isRetiredGeminiCli
@@ -180,14 +207,23 @@ export function AuthFileCard(props: AuthFileCardProps) {
     typeof cooldownModelCountRaw === 'number'
       ? cooldownModelCountRaw
       : Number.parseInt(String(cooldownModelCountRaw ?? '0'), 10) || 0;
-  const cooldownUntilText = cooldownActive
-    ? formatDateTime(new Date(cooldownUntilMs))
-    : '';
+  const cooldownUntilText = cooldownActive ? formatDateTime(new Date(cooldownUntilMs)) : '';
   const noteValue = typeof file.note === 'string' ? file.note.trim() : '';
   const xaiUsingApi = readXaiAuthFileUsingApi(file);
   const xaiWebsockets = readXaiAuthFileWebsockets(file);
   const xaiUsingApiUpdating = xaiFieldsUpdating[file.name]?.using_api === true;
   const xaiWebsocketsUpdating = xaiFieldsUpdating[file.name]?.websockets === true;
+  const chatGptWebReloginBusy = chatGptWebReloginUpdating[file.name] === true;
+  const proxyBinding = file.proxy_binding;
+  const metadataTime = (value: unknown) => {
+    const timestamp = parseTimestampMs(value);
+    return Number.isFinite(timestamp) ? formatDateTime(new Date(timestamp)) : '-';
+  };
+  const lifecycleUpdatedAt = metadataTime(file.lifecycle_updated_at);
+  const tokenExpiresAt = metadataTime(file.token_expires_at);
+  const lastLoginAt = metadataTime(file.last_login_at);
+  const lastRefreshAt = metadataTime(file.last_refresh_at);
+  const lastReloginAt = metadataTime(file.last_relogin_at);
   const codexPlanType = resolveCodexPlanType(file);
   const codexPlanKey = codexPlanType ? `codex_quota.plan_${codexPlanType}` : '';
   const codexPlanLabel = codexPlanKey ? t(codexPlanKey) : '';
@@ -202,20 +238,24 @@ export function AuthFileCard(props: AuthFileCardProps) {
       ? t('auth_files.type_virtual') || '虚拟认证文件'
       : file.disabled
         ? t('auth_files.health_status_disabled')
-        : hasStatusWarning
-          ? t('auth_files.health_status_warning')
-          : rawStatusMessage
-            ? t('auth_files.health_status_healthy')
-            : t('auth_files.status_toggle_label');
+        : isChatGptWeb && lifecycleState
+          ? lifecycleLabel
+          : hasStatusWarning
+            ? t('auth_files.health_status_warning')
+            : rawStatusMessage
+              ? t('auth_files.health_status_healthy')
+              : t('auth_files.status_toggle_label');
   const stateBadgeClass = isRetiredGeminiCli
     ? styles.stateBadgeWarning
     : isRuntimeOnly
       ? styles.stateBadgeVirtual
       : file.disabled
         ? styles.stateBadgeDisabled
-        : hasStatusWarning
+        : isChatGptWeb && lifecycleNeedsAttention
           ? styles.stateBadgeWarning
-          : styles.stateBadgeActive;
+          : hasStatusWarning
+            ? styles.stateBadgeWarning
+            : styles.stateBadgeActive;
 
   return (
     <div
@@ -224,7 +264,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
       <div className={styles.fileCardLayout}>
         <div className={styles.fileCardMain}>
           <div className={styles.cardHeader}>
-            {!isRuntimeOnly && !isRetiredGeminiCli && (
+            {!isRuntimeOnly && !isRetiredGeminiCli && !isChatGptWeb && (
               <SelectionCheckbox
                 checked={selected}
                 onChange={() => onToggleSelect(file.name)}
@@ -348,7 +388,79 @@ export function AuthFileCard(props: AuthFileCardProps) {
             </div>
           )}
 
-          {cooldownActive && (
+          {isChatGptWeb && (
+            <div className={styles.chatGptWebLifecyclePanel}>
+              <div className={styles.chatGptWebLifecycleHeader}>
+                <div>
+                  <span className={styles.chatGptWebLifecycleLabel}>
+                    {t('auth_files.chatgpt_web_lifecycle_label')}
+                  </span>
+                  <strong>{lifecycleLabel || t('auth_files.chatgpt_web_lifecycle_unknown')}</strong>
+                </div>
+                {lifecycleReason ? <span>{lifecycleReason}</span> : null}
+              </div>
+              {!compact ? (
+                <div className={styles.chatGptWebLifecycleGrid}>
+                  <div>
+                    <span>{t('auth_files.chatgpt_web_lifecycle_updated')}</span>
+                    <strong>{lifecycleUpdatedAt}</strong>
+                  </div>
+                  <div>
+                    <span>{t('auth_files.chatgpt_web_token_expires')}</span>
+                    <strong>{tokenExpiresAt}</strong>
+                  </div>
+                  <div>
+                    <span>{t('auth_files.chatgpt_web_token_status')}</span>
+                    <strong>
+                      {typeof file.token_expired !== 'boolean' &&
+                      typeof file.token_refreshable !== 'boolean'
+                        ? t('auth_files.chatgpt_web_token_unknown')
+                        : file.token_expired
+                          ? t('auth_files.chatgpt_web_token_expired')
+                          : file.token_refreshable
+                            ? t('auth_files.chatgpt_web_token_refreshable')
+                            : t('auth_files.chatgpt_web_token_active')}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{t('auth_files.chatgpt_web_last_login')}</span>
+                    <strong>{lastLoginAt}</strong>
+                  </div>
+                  <div>
+                    <span>{t('auth_files.chatgpt_web_last_refresh')}</span>
+                    <strong>{lastRefreshAt}</strong>
+                  </div>
+                  <div>
+                    <span>{t('auth_files.chatgpt_web_last_relogin')}</span>
+                    <strong>{lastReloginAt}</strong>
+                  </div>
+                </div>
+              ) : null}
+              {proxyBinding ? (
+                <div className={styles.chatGptWebProxyBinding}>
+                  <span>{t('auth_files.chatgpt_web_proxy_binding')}</span>
+                  <strong>
+                    {[proxyBinding.pool, proxyBinding.entry, proxyBinding.port]
+                      .filter((value) => value !== undefined && value !== '')
+                      .join(' / ') || '-'}
+                  </strong>
+                  {!compact ? (
+                    <span>
+                      {[proxyBinding.ip, proxyBinding.loc].filter(Boolean).join(' / ') || '-'} ·{' '}
+                      {proxyBinding.elapsed_ms ?? '-'} ms ·{' '}
+                      {proxyBinding.healthy === true
+                        ? t('auth_files.chatgpt_web_proxy_healthy')
+                        : proxyBinding.healthy === false
+                          ? t('auth_files.chatgpt_web_proxy_unhealthy')
+                          : t('auth_files.chatgpt_web_proxy_unknown')}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {cooldownActive && !criticalLifecycleState && (
             <div className={styles.cooldownStatusNotice}>
               <IconTimer size={14} />
               <span>
@@ -431,34 +543,51 @@ export function AuthFileCard(props: AuthFileCardProps) {
               )}
               {(!isRuntimeOnly || isRetiredGeminiCli) && (
                 <div className={styles.cardUtilityActions}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => onDownload(file.name)}
-                    className={styles.iconButton}
-                    title={t('auth_files.download_button')}
-                    disabled={disableControls}
-                  >
-                    <IconDownload className={styles.actionIcon} size={16} />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => onOpenPrefixProxyEditor(file)}
-                    className={styles.iconButton}
-                    title={
-                      isRetiredGeminiCli
-                        ? t('auth_files.view_button')
-                        : t('auth_files.prefix_proxy_button')
-                    }
-                    disabled={disableControls}
-                  >
-                    {isRetiredGeminiCli ? (
-                      <IconEye className={styles.actionIcon} size={16} />
-                    ) : (
-                      <IconSettings className={styles.actionIcon} size={16} />
-                    )}
-                  </Button>
+                  {!isChatGptWeb ? (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onDownload(file.name)}
+                        className={styles.iconButton}
+                        title={t('auth_files.download_button')}
+                        disabled={disableControls}
+                      >
+                        <IconDownload className={styles.actionIcon} size={16} />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onOpenPrefixProxyEditor(file)}
+                        className={styles.iconButton}
+                        title={
+                          isRetiredGeminiCli
+                            ? t('auth_files.view_button')
+                            : t('auth_files.prefix_proxy_button')
+                        }
+                        disabled={disableControls}
+                      >
+                        {isRetiredGeminiCli ? (
+                          <IconEye className={styles.actionIcon} size={16} />
+                        ) : (
+                          <IconSettings className={styles.actionIcon} size={16} />
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onChatGptWebRelogin(file)}
+                      className={styles.reloginButton}
+                      title={t('auth_files.chatgpt_web_relogin')}
+                      disabled={disableControls || chatGptWebReloginBusy}
+                      loading={chatGptWebReloginBusy}
+                    >
+                      <IconRefreshCw className={styles.actionIcon} size={16} />
+                      {t('auth_files.chatgpt_web_relogin')}
+                    </Button>
+                  )}
                   <Button
                     variant="danger"
                     size="sm"

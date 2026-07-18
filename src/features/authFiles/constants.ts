@@ -10,6 +10,8 @@ import iconKimiDark from '@/assets/icons/kimi-dark.svg';
 import iconKimiLight from '@/assets/icons/kimi-light.svg';
 import iconQwen from '@/assets/icons/qwen.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
+import iconOpenaiLight from '@/assets/icons/openai-light.svg';
+import iconOpenaiDark from '@/assets/icons/openai-dark.svg';
 import type { AuthFileItem } from '@/types';
 import { parseTimestamp } from '@/utils/timestamp';
 import {
@@ -98,6 +100,10 @@ export const TYPE_COLORS: Record<string, TypeColorSet> = {
     light: { bg: '#f3f4f6', text: '#111827', border: '1px solid #d1d5db' },
     dark: { bg: '#111827', text: '#f9fafb', border: '1px solid #374151' },
   },
+  'chatgpt-web': {
+    light: { bg: '#e7f5ef', text: '#176b4d', border: '1px solid #b9dfcf' },
+    dark: { bg: '#143d30', text: '#9dd8c1', border: '1px solid #2c6954' },
+  },
   // iFlow logo: 品红紫渐变 #5C5CFF → #AE5CFF，偏品红以区别于 Qwen 的紫罗兰
   iflow: {
     light: { bg: '#f5e3fc', text: '#9025c8' },
@@ -126,6 +132,7 @@ export const AUTH_FILE_ICONS: Record<string, AuthFileIconAsset> = {
   gemini: iconGemini,
   'gemini-cli': iconGemini,
   xai: { light: iconGrok, dark: iconGrokDark },
+  'chatgpt-web': { light: iconOpenaiLight, dark: iconOpenaiDark },
   iflow: iconIflow,
   kimi: { light: iconKimiLight, dark: iconKimiDark },
   qwen: iconQwen,

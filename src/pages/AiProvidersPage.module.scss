@@ -40,6 +40,40 @@ $openai-toolbar-control-height: 36px;
   gap: $spacing-md;
 }
 
+.chatGptWebEntry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-lg;
+  padding: $spacing-lg 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+
+  h2 {
+    margin: 3px 0 6px;
+    font-size: 20px;
+    letter-spacing: 0;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  @include mobile {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.providerEyebrow {
+  color: var(--primary-color);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .sectionHeader {
   display: flex;
   justify-content: space-between;

@@ -13,12 +13,28 @@ export type AuthFileType =
   | 'codex'
   | 'antigravity'
   | 'xai'
+  | 'chatgpt-web'
   | 'iflow'
   | 'vertex'
   | 'empty'
   | 'unknown';
 
 export type AuthCooldownScope = 'auth' | 'model';
+
+export interface AuthFileProxyBinding {
+  pool?: string;
+  entry?: string;
+  port?: number;
+  binding_id?: string;
+  bound_at?: string;
+  healthy?: boolean | null;
+  last_check_at?: string;
+  ip?: string;
+  loc?: string;
+  elapsed_ms?: number;
+  error?: string;
+  error_message?: string;
+}
 
 export interface AuthFileItem {
   name: string;
@@ -41,6 +57,16 @@ export interface AuthFileItem {
   cooldownScope?: AuthCooldownScope | string;
   cooldownUntil?: string;
   cooldownModelCount?: number;
+  lifecycle_state?: string;
+  lifecycle_reason?: string;
+  lifecycle_updated_at?: string;
+  token_expires_at?: string;
+  token_expired?: boolean;
+  token_refreshable?: boolean;
+  last_login_at?: string;
+  last_refresh_at?: string;
+  last_relogin_at?: string;
+  proxy_binding?: AuthFileProxyBinding;
   lastRefresh?: string | number;
   modified?: number;
   [key: string]: unknown;

@@ -1740,6 +1740,12 @@ function getNextDirtyFields(
       nextValues.codexHeaderDefaultsOriginator === baselineValues.codexHeaderDefaultsOriginator
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAutoRelogin')) {
+    updateDirty(
+      'chatgptWebAutoRelogin',
+      nextValues.chatgptWebAutoRelogin === baselineValues.chatgptWebAutoRelogin
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'requestRetry')) {
     updateDirty('requestRetry', nextValues.requestRetry === baselineValues.requestRetry);
   }
@@ -2188,6 +2194,7 @@ export function useVisualConfig() {
       const codexHeaderDefaults = asRecord(
         parsed['codex-header-defaults'] ?? parsed.codexHeaderDefaults
       );
+      const chatgptWeb = asRecord(parsed['chatgpt-web'] ?? parsed.chatgptWeb);
       const quotaExceeded = asRecord(parsed['quota-exceeded']);
       const authMaintenance = asRecord(parsed['auth-maintenance']);
       const images = asRecord(parsed.images);
@@ -2323,6 +2330,7 @@ export function useVisualConfig() {
               : '',
         codexHeaderDefaultsOriginator:
           typeof codexHeaderDefaults?.originator === 'string' ? codexHeaderDefaults.originator : '',
+        chatgptWebAutoRelogin: Boolean(chatgptWeb?.['auto-relogin'] ?? chatgptWeb?.autoRelogin),
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryCredentials: String(parsed['max-retry-credentials'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
@@ -2678,6 +2686,11 @@ export function useVisualConfig() {
             values.codexHeaderDefaultsOriginator
           );
           deleteIfMapEmpty(doc, ['codex-header-defaults']);
+        }
+        if (docHas(doc, ['chatgpt-web']) || values.chatgptWebAutoRelogin) {
+          ensureMapInDoc(doc, ['chatgpt-web']);
+          doc.setIn(['chatgpt-web', 'auto-relogin'], values.chatgptWebAutoRelogin);
+          deleteIfMapEmpty(doc, ['chatgpt-web']);
         }
         if (docHas(doc, ['no-cooldown-status-codes']) || values.noCooldownStatusCodes.trim()) {
           setIntListFromTextInDoc(doc, ['no-cooldown-status-codes'], values.noCooldownStatusCodes, {

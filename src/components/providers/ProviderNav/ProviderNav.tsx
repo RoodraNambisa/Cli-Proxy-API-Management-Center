@@ -11,7 +11,14 @@ import iconClaude from '@/assets/icons/claude.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
 import styles from './ProviderNav.module.scss';
 
-export type ProviderId = 'gemini' | 'interactions' | 'codex' | 'claude' | 'vertex' | 'openai';
+export type ProviderId =
+  | 'gemini'
+  | 'interactions'
+  | 'chatgpt-web'
+  | 'codex'
+  | 'claude'
+  | 'vertex'
+  | 'openai';
 
 interface ProviderNavItem {
   id: ProviderId;
@@ -22,6 +29,11 @@ interface ProviderNavItem {
 const PROVIDERS: ProviderNavItem[] = [
   { id: 'gemini', label: 'Gemini', getIcon: () => iconGemini },
   { id: 'interactions', label: 'Interactions', getIcon: () => iconGemini },
+  {
+    id: 'chatgpt-web',
+    label: 'ChatGPT Web',
+    getIcon: (theme) => (theme === 'dark' ? iconOpenaiDark : iconOpenaiLight),
+  },
   { id: 'codex', label: 'Codex', getIcon: () => iconCodex },
   { id: 'claude', label: 'Claude', getIcon: () => iconClaude },
   { id: 'vertex', label: 'Vertex', getIcon: () => iconVertex },
@@ -47,6 +59,7 @@ export function ProviderNav() {
   const itemRefs = useRef<Record<ProviderId, HTMLButtonElement | null>>({
     gemini: null,
     interactions: null,
+    'chatgpt-web': null,
     codex: null,
     claude: null,
     vertex: null,

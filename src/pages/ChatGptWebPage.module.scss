@@ -1,0 +1,308 @@
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+
+.container {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xl;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-lg;
+  padding-bottom: $spacing-lg;
+  border-bottom: 1px solid var(--border-color);
+
+  h1 {
+    margin: 4px 0 6px;
+    font-size: 28px;
+    line-height: 1.25;
+    letter-spacing: 0;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+}
+
+.eyebrow {
+  color: var(--primary-color);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.headerActions,
+.taskActions,
+.uploadControls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.uploadSection,
+.taskSection {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: $spacing-lg;
+  background: var(--bg-primary);
+}
+
+.sectionHeading,
+.taskHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+}
+
+.formatNotice {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin: $spacing-lg 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--primary-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+
+  code {
+    color: var(--text-primary);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.filePicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 260px;
+  max-width: 520px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px dashed var(--border-primary);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+}
+
+.fileMeta,
+.securityHint,
+.resultsHeader span {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.securityHint {
+  margin: $spacing-sm 0 0;
+}
+
+.taskTitleRow,
+.resultsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+
+  h2,
+  h3 {
+    margin: 0;
+  }
+}
+
+.stateBadge,
+.resultStatus {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.state_completed,
+.resultStatus[data-status='success'] {
+  background: var(--success-badge-bg);
+  color: var(--success-badge-text);
+}
+
+.state_completed_with_errors,
+.resultStatus[data-status='failed'] {
+  background: var(--failure-badge-bg);
+  color: var(--failure-badge-text);
+}
+
+.state_canceled,
+.resultStatus[data-status='canceled'] {
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+}
+
+.progressTrack {
+  height: 6px;
+  margin: $spacing-lg 0 $spacing-md;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--bg-tertiary);
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--primary-color);
+    transition: width 180ms ease;
+  }
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  gap: $spacing-sm;
+  margin-bottom: $spacing-xl;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 12px;
+  }
+
+  strong {
+    font-size: 20px;
+  }
+}
+
+.resultsHeader {
+  margin-bottom: $spacing-sm;
+
+  h3 {
+    font-size: 15px;
+  }
+}
+
+.emptyState {
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  border: 1px dashed var(--border-color);
+  color: var(--text-tertiary);
+}
+
+.resultTableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.resultTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+
+  th,
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  td {
+    color: var(--text-primary);
+    font-size: 13px;
+  }
+
+  tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+.accountCell,
+.messageCell {
+  overflow-wrap: anywhere;
+}
+
+.messageCell {
+  max-width: 360px;
+  color: var(--text-secondary) !important;
+}
+
+@include mobile {
+  .pageHeader,
+  .taskHeader,
+  .formatNotice {
+    flex-direction: column;
+  }
+
+  .headerActions,
+  .uploadControls {
+    width: 100%;
+  }
+
+  .filePicker {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .uploadSection,
+  .taskSection {
+    padding: $spacing-md;
+  }
+}

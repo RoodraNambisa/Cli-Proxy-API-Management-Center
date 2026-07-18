@@ -90,6 +90,7 @@ const CONFIG_PAGE_ICONS: Record<ConfigPageId, ComponentType<IconProps>> = {
   'global-streaming': IconSatellite,
   'provider-codex': IconCode,
   'provider-antigravity': IconShield,
+  'provider-chatgpt-web': IconCode,
   'provider-grok': IconSatellite,
   'advanced-payload': IconCode,
 };
@@ -1104,6 +1105,7 @@ export function VisualConfigEditor({
           'images.native.edits.unsupportedModelStatusCode',
         ]),
       'provider-antigravity': 0,
+      'provider-chatgpt-web': 0,
       'provider-grok': 0,
       'advanced-payload': hasPayloadValidationErrors ? 1 : 0,
     }),
@@ -1368,6 +1370,57 @@ export function VisualConfigEditor({
             <div className={styles.requestBodyPanels} hidden={activePageId !== 'global-request'}>
               {renderRequestBodyPanels?.({ focusTarget })}
             </div>
+
+            <section
+              id="config-chatgpt-web-auto-relogin"
+              className={styles.providerHub}
+              hidden={activePageId !== 'provider-chatgpt-web'}
+              aria-labelledby="chatgpt-web-provider-hub-title"
+            >
+              <div className={styles.providerHubHeader}>
+                <div>
+                  <h3 id="chatgpt-web-provider-hub-title">
+                    {t('config_management.settings_center.chatgpt_web.title')}
+                  </h3>
+                  <p>{t('config_management.settings_center.chatgpt_web.description')}</p>
+                </div>
+              </div>
+              <ToggleRow
+                title={t('config_management.settings_center.chatgpt_web.auto_relogin')}
+                description={t(
+                  'config_management.settings_center.chatgpt_web.auto_relogin_description'
+                )}
+                checked={values.chatgptWebAutoRelogin}
+                disabled={disabled}
+                onChange={(chatgptWebAutoRelogin) => onChange({ chatgptWebAutoRelogin })}
+              />
+              <div className={styles.providerHubActions}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => navigate('/ai-providers/chatgpt-web')}
+                >
+                  {t('config_management.settings_center.chatgpt_web.login_tasks')}
+                  <IconExternalLink size={15} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => navigate('/auth-files?provider=chatgpt-web')}
+                >
+                  {t('config_management.settings_center.chatgpt_web.auth_files')}
+                  <IconExternalLink size={15} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => navigate('/config/proxy-pools')}
+                >
+                  {t('config_management.settings_center.chatgpt_web.proxy_pools')}
+                  <IconExternalLink size={15} />
+                </Button>
+              </div>
+            </section>
 
             <section
               id="config-grok-auth"
@@ -2076,6 +2129,17 @@ export function VisualConfigEditor({
                           )}
                         </div>
                       )}
+                      <div id="config-proxy-pools" className={styles.providerHubActions}>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => navigate('/config/proxy-pools')}
+                        >
+                          {t('proxy_pools.title')}
+                          <IconExternalLink size={14} />
+                        </Button>
+                      </div>
                     </div>
                     <Input
                       id="config-request-retry"

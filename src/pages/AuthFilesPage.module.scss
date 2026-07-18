@@ -738,6 +738,106 @@
   line-height: 1.45;
 }
 
+.chatGptWebLifecyclePanel {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, #18835e 28%, var(--border-color));
+  border-radius: 8px;
+  background: color-mix(in srgb, #18835e 5%, var(--bg-secondary));
+}
+
+.chatGptWebLifecycleHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-sm;
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 12px;
+  }
+
+  > span {
+    max-width: 65%;
+    color: var(--warning-text);
+    font-size: 11px;
+    overflow-wrap: anywhere;
+    text-align: right;
+  }
+}
+
+.chatGptWebLifecycleLabel {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.chatGptWebLifecycleGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+
+  > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 10px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.chatGptWebProxyBinding {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 10px;
+  }
+
+  strong {
+    min-width: 0;
+    color: var(--text-primary);
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
+
+  span:last-child {
+    grid-column: 2;
+    overflow-wrap: anywhere;
+  }
+}
+
+@include mobile {
+  .chatGptWebLifecycleGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .quotaSection {
   display: flex;
   flex-direction: column;
@@ -1993,6 +2093,12 @@
   box-sizing: border-box;
   border-radius: 8px;
   gap: 0;
+}
+
+.reloginButton:global(.btn.btn-sm) > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .actionIcon {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { authFilesApi, type XaiAuthFileField } from '@/services/api';
+import { authFilesApi, chatGptWebApi, type XaiAuthFileField } from '@/services/api';
 import { apiClient } from '@/services/api/client';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem, CodexPlanTypeRefreshMode, CodexPlanTypeRefreshTask } from '@/types';
@@ -18,6 +18,10 @@ import {
 
 const CODEX_PLAN_TYPE_REFRESH_POLL_INTERVAL_MS = 3000;
 const COOLDOWN_MISSING_PREVIEW_LIMIT = 5;
+const isChatGptWebAuthFile = (file: AuthFileItem) =>
+  String(file.provider ?? file.type ?? '')
+    .trim()
+    .toLowerCase() === 'chatgpt-web';
 
 const getArchiveDownloadErrorMeta = (
   err: unknown
@@ -114,6 +118,7 @@ export type UseAuthFilesDataResult = {
   codexPlanRefreshActionLoading: boolean;
   statusUpdating: Record<string, boolean>;
   xaiFieldsUpdating: Record<string, Partial<Record<XaiAuthFileField, boolean>>>;
+  chatGptWebReloginUpdating: Record<string, boolean>;
   batchStatusUpdating: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
   loadFiles: (options?: LoadFilesOptions) => Promise<void>;
@@ -128,6 +133,7 @@ export type UseAuthFilesDataResult = {
     field: XaiAuthFileField,
     value: boolean
   ) => Promise<void>;
+  handleChatGptWebRelogin: (item: AuthFileItem) => Promise<void>;
   toggleSelect: (name: string) => void;
   selectAllVisible: (visibleFiles: AuthFileItem[]) => void;
   invertVisibleSelection: (visibleFiles: AuthFileItem[]) => void;
@@ -180,6 +186,9 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const [xaiFieldsUpdating, setXaiFieldsUpdating] = useState<
     Record<string, Partial<Record<XaiAuthFileField, boolean>>>
   >({});
+  const [chatGptWebReloginUpdating, setChatGptWebReloginUpdating] = useState<
+    Record<string, boolean>
+  >({});
   const [batchStatusUpdating, setBatchStatusUpdating] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
@@ -202,7 +211,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
   const selectAllVisible = useCallback((visibleFiles: AuthFileItem[]) => {
     const nextSelected = visibleFiles
-      .filter((file) => !isRuntimeOnlyAuthFile(file))
+      .filter((file) => !isRuntimeOnlyAuthFile(file) && !isChatGptWebAuthFile(file))
       .map((file) => file.name);
     if (nextSelected.length === 0) return;
     setSelectedFiles((prev) => {
@@ -214,7 +223,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
   const invertVisibleSelection = useCallback((visibleFiles: AuthFileItem[]) => {
     const visibleNames = visibleFiles
-      .filter((file) => !isRuntimeOnlyAuthFile(file))
+      .filter((file) => !isRuntimeOnlyAuthFile(file) && !isChatGptWebAuthFile(file))
       .map((file) => file.name);
     if (visibleNames.length === 0) return;
 
@@ -903,6 +912,43 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     [showNotification, t, xaiFieldsUpdating]
   );
 
+  const handleChatGptWebRelogin = useCallback(
+    async (item: AuthFileItem) => {
+      const provider = String(item.provider ?? item.type ?? '')
+        .trim()
+        .toLowerCase();
+      if (provider !== 'chatgpt-web') return;
+      const name = item.name || String(item.id ?? '').trim();
+      if (!name || chatGptWebReloginUpdating[name]) return;
+
+      setChatGptWebReloginUpdating((current) => ({ ...current, [name]: true }));
+      try {
+        const response = await chatGptWebApi.relogin(name);
+        if (response.auth) {
+          setFiles((current) =>
+            current.map((file) => (file.name === item.name ? { ...file, ...response.auth } : file))
+          );
+        } else {
+          await loadFiles({ background: true });
+        }
+        showNotification(
+          response.warning || t('auth_files.chatgpt_web_relogin_success', { name: item.name }),
+          response.warning ? 'warning' : 'success'
+        );
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : '';
+        showNotification(`${t('auth_files.chatgpt_web_relogin_failed')}: ${errorMessage}`, 'error');
+      } finally {
+        setChatGptWebReloginUpdating((current) => {
+          const next = { ...current };
+          delete next[name];
+          return next;
+        });
+      }
+    },
+    [chatGptWebReloginUpdating, loadFiles, showNotification, t]
+  );
+
   const batchSetStatus = useCallback(
     async (names: string[], enabled: boolean) => {
       if (batchStatusPendingRef.current) return;
@@ -1231,6 +1277,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     codexPlanRefreshActionLoading,
     statusUpdating,
     xaiFieldsUpdating,
+    chatGptWebReloginUpdating,
     batchStatusUpdating,
     fileInputRef,
     loadFiles,
@@ -1241,6 +1288,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     handleDownload,
     handleStatusToggle,
     handleXaiFieldToggle,
+    handleChatGptWebRelogin,
     toggleSelect,
     selectAllVisible,
     invertVisibleSelection,

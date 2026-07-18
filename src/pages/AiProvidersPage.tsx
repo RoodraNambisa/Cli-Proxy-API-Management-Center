@@ -20,6 +20,8 @@ import { providersApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore, useThemeStore } from '@/stores';
 import type { GeminiKeyConfig, OpenAIProviderConfig, ProviderKeyConfig } from '@/types';
 import { indexUsageDetailsByAuthIndex, indexUsageDetailsBySource } from '@/utils/usageIndex';
+import { Button } from '@/components/ui/Button';
+import { IconExternalLink } from '@/components/ui/icons';
 import styles from './AiProvidersPage.module.scss';
 
 export function AiProvidersPage() {
@@ -490,6 +492,22 @@ export function AiProvidersPage() {
             onToggle={(index, enabled) => void setConfigEnabled('interactions', index, enabled)}
           />
         </div>
+
+        <section id="provider-chatgpt-web" className={styles.chatGptWebEntry}>
+          <div>
+            <span className={styles.providerEyebrow}>ChatGPT Web</span>
+            <h2>{t('chatgpt_web.provider_entry_title')}</h2>
+            <p>{t('chatgpt_web.provider_entry_description')}</p>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={() => openEditor('/ai-providers/chatgpt-web')}
+            disabled={disableControls}
+          >
+            {t('chatgpt_web.provider_entry_action')}
+            <IconExternalLink size={15} />
+          </Button>
+        </section>
 
         <div id="provider-codex">
           <CodexSection

@@ -10,6 +10,8 @@ import { AiProvidersOpenAIEditLayout } from '@/pages/AiProvidersOpenAIEditLayout
 import { AiProvidersOpenAIEditPage } from '@/pages/AiProvidersOpenAIEditPage';
 import { AiProvidersOpenAIModelsPage } from '@/pages/AiProvidersOpenAIModelsPage';
 import { AiProvidersVertexEditPage } from '@/pages/AiProvidersVertexEditPage';
+import { ChatGptWebPage } from '@/pages/ChatGptWebPage';
+import { ProxyPoolsPage } from '@/pages/ProxyPoolsPage';
 import { AuthFilesPage } from '@/pages/AuthFilesPage';
 import { AuthFilesOAuthExcludedEditPage } from '@/pages/AuthFilesOAuthExcludedEditPage';
 import { AuthFilesOAuthModelAliasEditPage } from '@/pages/AuthFilesOAuthModelAliasEditPage';
@@ -28,6 +30,8 @@ const mainRoutes = [
   { path: '/settings', element: <Navigate to="/config" replace /> },
   { path: '/api-keys', element: <Navigate to="/config" replace /> },
   { path: '/ai-providers/gemini/new', element: <AiProvidersGeminiEditPage /> },
+  { path: '/ai-providers/chatgpt-web', element: <ChatGptWebPage /> },
+  { path: '/config/proxy-pools', element: <ProxyPoolsPage /> },
   { path: '/ai-providers/gemini/:index', element: <AiProvidersGeminiEditPage /> },
   {
     path: '/ai-providers/interactions/new',

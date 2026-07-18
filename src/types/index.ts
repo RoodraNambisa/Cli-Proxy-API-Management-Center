@@ -14,3 +14,5 @@ export * from './codexAnalytics';
 export * from './log';
 export * from './quota';
 export * from './sourceInfo';
+export * from './chatgptWeb';
+export * from './proxyPool';
