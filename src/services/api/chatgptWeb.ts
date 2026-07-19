@@ -10,6 +10,14 @@ export const chatGptWebApi = {
     return apiClient.postForm('/chatgpt-web/login-tasks', formData);
   },
 
+  startLoginTaskText(accountText: string): Promise<ChatGptWebLoginTask> {
+    return apiClient.post('/chatgpt-web/login-tasks', accountText, {
+      headers: {
+        'Content-Type': 'text/plain;charset=UTF-8',
+      },
+    });
+  },
+
   getLoginTask(id: string): Promise<ChatGptWebLoginTask> {
     return apiClient.get(`/chatgpt-web/login-tasks/${encodeURIComponent(id)}`);
   },

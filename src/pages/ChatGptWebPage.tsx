@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import {
   IconFileText,
+  IconKey,
   IconRefreshCw,
   IconSettings,
   IconTrash2,
@@ -19,6 +20,8 @@ import styles from './ChatGptWebPage.module.scss';
 
 const POLL_INTERVAL_MS = 1500;
 
+type AccountInputMode = 'manual' | 'file';
+
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error ?? '');
 
@@ -28,6 +31,8 @@ export function ChatGptWebPage() {
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const { showNotification } = useNotificationStore();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [inputMode, setInputMode] = useState<AccountInputMode>('manual');
+  const [accountText, setAccountText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [task, setTask] = useState<ChatGptWebLoginTask | null>(null);
   const [starting, setStarting] = useState(false);
@@ -90,10 +95,24 @@ export function ChatGptWebPage() {
   };
 
   const handleStart = async () => {
-    if (!file || starting) return;
+    if (starting) return;
+
+    const startRequest = (() => {
+      if (inputMode === 'manual') {
+        if (!accountText.trim()) return null;
+        const submittedText = accountText;
+        return () => chatGptWebApi.startLoginTaskText(submittedText);
+      }
+      if (!file) return null;
+      const selectedFile = file;
+      return () => chatGptWebApi.startLoginTask(selectedFile);
+    })();
+
+    if (!startRequest) return;
     setStarting(true);
     try {
-      const nextTask = await chatGptWebApi.startLoginTask(file);
+      const nextTask: ChatGptWebLoginTask = await startRequest();
+      setAccountText('');
       clearFile();
       setTask(nextTask);
       showNotification(t('chatgpt_web.task_started'), 'success');
@@ -129,6 +148,9 @@ export function ChatGptWebPage() {
   };
 
   const progress = task?.total ? Math.min(100, Math.round((task.processed / task.total) * 100)) : 0;
+  const taskActive = Boolean(task && !isChatGptWebLoginTaskTerminal(task.state));
+  const hasInput = inputMode === 'manual' ? Boolean(accountText.trim()) : Boolean(file);
+  const inputDisabled = disabled || starting || taskActive;
   const stateLabel = task ? t(`chatgpt_web.states.${task.state as ChatGptWebLoginTaskState}`) : '';
   const sortedResults = useMemo(
     () => [...(task?.results ?? [])].sort((left, right) => left.line - right.line),
@@ -171,27 +193,84 @@ export function ChatGptWebPage() {
           <code>email---password---BASE32_TOTP_SECRET</code>
           <span>{t('chatgpt_web.upload_format_hint')}</span>
         </div>
-        <div className={styles.uploadControls}>
-          <label className={styles.filePicker}>
-            <IconFileText size={18} />
-            <span>{file ? file.name : t('chatgpt_web.choose_file')}</span>
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".txt,text/plain"
-              onChange={handleFileChange}
-              disabled={disabled || starting}
+        <div
+          className={styles.inputModeTabs}
+          role="group"
+          aria-label={t('chatgpt_web.input_mode_label')}
+        >
+          {(['manual', 'file'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              aria-pressed={inputMode === mode}
+              className={inputMode === mode ? styles.inputModeTabActive : ''}
+              onClick={() => setInputMode(mode)}
+            >
+              {mode === 'manual' ? <IconFileText size={16} /> : <IconUpload size={16} />}
+              {t(`chatgpt_web.input_modes.${mode}`)}
+            </button>
+          ))}
+        </div>
+
+        {inputMode === 'manual' ? (
+          <div className={styles.inputPanel}>
+            <label htmlFor="chatgpt-web-account-text" className={styles.manualInputLabel}>
+              {t('chatgpt_web.manual_input_label')}
+            </label>
+            <textarea
+              id="chatgpt-web-account-text"
+              className={styles.manualInput}
+              value={accountText}
+              placeholder={t('chatgpt_web.manual_input_placeholder')}
+              onChange={(event) => setAccountText(event.target.value)}
+              disabled={inputDisabled}
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              rows={7}
             />
-          </label>
-          {file ? <span className={styles.fileMeta}>{formatFileSize(file.size)}</span> : null}
-          {file ? (
+          </div>
+        ) : (
+          <div className={styles.inputPanel}>
+            <div className={styles.uploadControls}>
+              <label className={styles.filePicker}>
+                <IconFileText size={18} />
+                <span>{file ? file.name : t('chatgpt_web.choose_file')}</span>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept=".txt,text/plain"
+                  onChange={handleFileChange}
+                  disabled={inputDisabled}
+                />
+              </label>
+              {file ? <span className={styles.fileMeta}>{formatFileSize(file.size)}</span> : null}
+              {file ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFile}
+                  disabled={starting}
+                  title={t('chatgpt_web.clear_file')}
+                  aria-label={t('chatgpt_web.clear_file')}
+                >
+                  <IconTrash2 size={16} />
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        <div className={styles.submitRow}>
+          {inputMode === 'manual' && accountText ? (
             <Button
               variant="ghost"
               size="sm"
-              onClick={clearFile}
+              onClick={() => setAccountText('')}
               disabled={starting}
-              title={t('chatgpt_web.clear_file')}
-              aria-label={t('chatgpt_web.clear_file')}
+              title={t('chatgpt_web.clear_text')}
+              aria-label={t('chatgpt_web.clear_text')}
             >
               <IconTrash2 size={16} />
             </Button>
@@ -199,15 +278,19 @@ export function ChatGptWebPage() {
           <Button
             onClick={handleStart}
             loading={starting}
-            disabled={
-              disabled || !file || Boolean(task && !isChatGptWebLoginTaskTerminal(task.state))
-            }
+            disabled={disabled || !hasInput || taskActive}
           >
-            <IconUpload size={16} />
+            <IconKey size={16} />
             {t('chatgpt_web.start_task')}
           </Button>
         </div>
-        <p className={styles.securityHint}>{t('chatgpt_web.security_hint')}</p>
+        <p className={styles.securityHint}>
+          {t(
+            inputMode === 'manual'
+              ? 'chatgpt_web.manual_security_hint'
+              : 'chatgpt_web.file_security_hint'
+          )}
+        </p>
       </section>
 
       {task ? (

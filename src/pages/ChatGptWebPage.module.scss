@@ -92,6 +92,83 @@
   }
 }
 
+.inputModeTabs {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-weight: 600;
+  }
+}
+
+.inputModeTabActive {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 0 0 1px var(--border-color);
+}
+
+.inputPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: $spacing-md;
+}
+
+.manualInputLabel {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.manualInput {
+  width: 100%;
+  min-height: 168px;
+  padding: 11px 12px;
+  resize: vertical;
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  outline: none;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  letter-spacing: 0;
+
+  &:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 14%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.submitRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
 .filePicker {
   display: inline-flex;
   align-items: center;
@@ -290,6 +367,15 @@
   .headerActions,
   .uploadControls {
     width: 100%;
+  }
+
+  .inputModeTabs {
+    width: 100%;
+
+    button {
+      flex: 1;
+      min-width: 0;
+    }
   }
 
   .filePicker {

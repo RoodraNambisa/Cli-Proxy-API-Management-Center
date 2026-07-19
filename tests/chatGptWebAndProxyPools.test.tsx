@@ -1,13 +1,15 @@
-import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { parse } from 'yaml';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthFileCard, type AuthFileCardProps } from '@/features/authFiles/components/AuthFileCard';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
+import { ChatGptWebPage } from '@/pages/ChatGptWebPage';
 import { apiClient } from '@/services/api/client';
 import { chatGptWebApi } from '@/services/api/chatgptWeb';
 import { proxyPoolsApi } from '@/services/api/proxyPools';
-import type { AuthFileItem } from '@/types';
+import { useAuthStore, useNotificationStore } from '@/stores';
+import type { AuthFileItem, ChatGptWebLoginTask } from '@/types';
 import { normalizeModelList } from '@/utils/models';
 
 vi.mock('react-i18next', async (importOriginal) => {
@@ -44,23 +46,29 @@ const createCardProps = (file: AuthFileItem): AuthFileCardProps => ({
   onToggleSelect: vi.fn(),
 });
 
+const createLoginTask = (): ChatGptWebLoginTask => ({
+  id: 'task-1',
+  state: 'queued',
+  created_at: '2026-07-18T00:00:00Z',
+  total: 1,
+  processed: 0,
+  succeeded: 0,
+  failed: 0,
+  canceled: 0,
+  results: [],
+});
+
 describe('ChatGPT Web management compatibility', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    localStorage.clear();
+    sessionStorage.clear();
+    useAuthStore.setState({ connectionStatus: 'connected' });
+    useNotificationStore.setState({ showNotification: vi.fn() });
   });
 
   test('uploads the selected file directly without reading or converting its contents', async () => {
-    const postForm = vi.spyOn(apiClient, 'postForm').mockResolvedValue({
-      id: 'task-1',
-      state: 'queued',
-      created_at: '2026-07-18T00:00:00Z',
-      total: 1,
-      processed: 0,
-      succeeded: 0,
-      failed: 0,
-      canceled: 0,
-      results: [],
-    });
+    const postForm = vi.spyOn(apiClient, 'postForm').mockResolvedValue(createLoginTask());
     const file = new File(['account@example.com---secret---totp'], 'accounts.txt', {
       type: 'text/plain',
     });
@@ -80,6 +88,79 @@ describe('ChatGPT Web management compatibility', () => {
       size: file.size,
       type: file.type,
     });
+  });
+
+  test('submits pasted account text as an unmodified text/plain body', async () => {
+    const post = vi.spyOn(apiClient, 'post').mockResolvedValue(createLoginTask());
+    const accountText =
+      'first@example.com---password---JBSWY3DPEHPK3PXP\nsecond@example.com---password---';
+
+    await chatGptWebApi.startLoginTaskText(accountText);
+
+    expect(post).toHaveBeenCalledWith('/chatgpt-web/login-tasks', accountText, {
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    });
+  });
+
+  test('defaults to manual input and retains the existing file upload mode', () => {
+    render(
+      <MemoryRouter>
+        <ChatGptWebPage />
+      </MemoryRouter>
+    );
+
+    expect(
+      screen
+        .getByRole('button', { name: 'chatgpt_web.input_modes.manual' })
+        .getAttribute('aria-pressed')
+    ).toBe('true');
+    expect(screen.getByRole('textbox', { name: 'chatgpt_web.manual_input_label' })).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'chatgpt_web.input_modes.file' }));
+
+    expect(screen.queryByRole('textbox', { name: 'chatgpt_web.manual_input_label' })).toBeNull();
+    expect(screen.getByText('chatgpt_web.choose_file')).not.toBeNull();
+  });
+
+  test('clears pasted credentials after task creation without writing them to browser storage', async () => {
+    const accountText = 'private@example.com---private-password---JBSWY3DPEHPK3PXP';
+    const startLoginTaskText = vi
+      .spyOn(chatGptWebApi, 'startLoginTaskText')
+      .mockResolvedValue(createLoginTask());
+
+    render(
+      <MemoryRouter>
+        <ChatGptWebPage />
+      </MemoryRouter>
+    );
+
+    const input = screen.getByRole('textbox', {
+      name: 'chatgpt_web.manual_input_label',
+    }) as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: accountText } });
+
+    const storageBeforeSubmit = [localStorage, sessionStorage]
+      .flatMap((storage) =>
+        Array.from({ length: storage.length }, (_, index) =>
+          storage.getItem(storage.key(index) ?? '')
+        )
+      )
+      .join('\n');
+    expect(storageBeforeSubmit).not.toContain(accountText);
+
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web.start_task/ }));
+
+    await waitFor(() => expect(startLoginTaskText).toHaveBeenCalledWith(accountText));
+    await waitFor(() => expect(input.value).toBe(''));
+
+    const storageAfterSubmit = [localStorage, sessionStorage]
+      .flatMap((storage) =>
+        Array.from({ length: storage.length }, (_, index) =>
+          storage.getItem(storage.key(index) ?? '')
+        )
+      )
+      .join('\n');
+    expect(storageAfterSubmit).not.toContain(accountText);
   });
 
   test('uses the task and relogin management paths', async () => {
