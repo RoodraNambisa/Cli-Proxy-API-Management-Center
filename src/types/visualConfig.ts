@@ -17,7 +17,10 @@ export type VisualConfigFieldPath =
   | 'noCooldownStatusCodes'
   | 'routingFillFirstRange'
   | 'routingFillFirstPerAuthRpm'
+  | 'routingPerAuthRequestLimit'
+  | 'routingPerAuthRequestWindowMinutes'
   | 'fixedErrorCooldowns'
+  | 'errorResponseRewrites'
   | 'nonRetryableErrors'
   | 'authModelExclusions'
   | 'disabledImageGenerationToolError.statusCode'
@@ -50,6 +53,9 @@ export type VisualConfigValidationErrorCode =
   | 'fill_first_controls_conflict'
   | 'fixed_error_cooldown_match_required'
   | 'non_retryable_error_match_required'
+  | 'error_response_rewrite_match_required'
+  | 'error_response_rewrite_result_required'
+  | 'json_object'
   | 'auth_model_exclusion_models_required'
   | 'auth_model_exclusion_match_required'
   | 'integer_list'
@@ -162,6 +168,15 @@ export interface NonRetryableErrorVisualEntry {
   messageContains: string;
 }
 
+export interface ErrorResponseRewriteVisualEntry {
+  clientId: string;
+  statusCode: string;
+  messageContains: string;
+  responseStatusCode: string;
+  responseBodyEnabled: boolean;
+  responseBody: string;
+}
+
 export interface AuthModelExclusionVisualEntry {
   clientId: string;
   models: string[];
@@ -188,6 +203,8 @@ export interface RoutingPriorityOverrideVisualEntry {
   maxRetryCredentials: string;
   fillFirstRange: string;
   fillFirstPerAuthRpm: string;
+  perAuthRequestLimit: string;
+  perAuthRequestWindowMinutes: string;
 }
 
 export type CodexCustomModelValidationErrors = Record<
@@ -238,6 +255,7 @@ export type VisualConfigValues = {
   maxRetryInterval: string;
   noCooldownStatusCodes: string;
   fixedErrorCooldowns: FixedErrorCooldownVisualEntry[];
+  errorResponseRewrites: ErrorResponseRewriteVisualEntry[];
   nonRetryableErrors: NonRetryableErrorVisualEntry[];
   authModelExclusions: AuthModelExclusionVisualEntry[];
   disabledImageGenerationToolFallback: boolean;
@@ -251,6 +269,8 @@ export type VisualConfigValues = {
   routingStrategy: 'round-robin' | 'fill-first' | 'random';
   routingFillFirstRange: string;
   routingFillFirstPerAuthRpm: string;
+  routingPerAuthRequestLimit: string;
+  routingPerAuthRequestWindowMinutes: string;
   routingPriorityOverrides: RoutingPriorityOverrideVisualEntry[];
   routingSessionAffinity: boolean;
   routingSessionAffinityFailover: boolean;
@@ -306,6 +326,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   maxRetryInterval: '',
   noCooldownStatusCodes: '',
   fixedErrorCooldowns: [],
+  errorResponseRewrites: [],
   nonRetryableErrors: [
     {
       clientId: 'default-non-retryable-invalid-value',
@@ -377,6 +398,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   routingStrategy: 'round-robin',
   routingFillFirstRange: '1',
   routingFillFirstPerAuthRpm: '0',
+  routingPerAuthRequestLimit: '0',
+  routingPerAuthRequestWindowMinutes: '1',
   routingPriorityOverrides: [],
   routingSessionAffinity: false,
   routingSessionAffinityFailover: true,

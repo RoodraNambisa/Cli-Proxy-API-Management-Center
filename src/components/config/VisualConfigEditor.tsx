@@ -43,6 +43,7 @@ import {
 import type {
   AuthModelExclusionVisualEntry,
   CodexCustomModelValidationErrors,
+  ErrorResponseRewriteVisualEntry,
   FixedErrorCooldownScope,
   FixedErrorCooldownVisualEntry,
   NativeImageEndpointVisualConfig,
@@ -741,6 +742,14 @@ export function VisualConfigEditor({
     t,
     validationErrors?.routingFillFirstPerAuthRpm
   );
+  const routingPerAuthRequestLimitError = getValidationMessage(
+    t,
+    validationErrors?.routingPerAuthRequestLimit
+  );
+  const routingPerAuthRequestWindowMinutesError = getValidationMessage(
+    t,
+    validationErrors?.routingPerAuthRequestWindowMinutes
+  );
   const noCooldownStatusCodesError = getValidationMessage(
     t,
     validationErrors?.noCooldownStatusCodes
@@ -754,6 +763,12 @@ export function VisualConfigEditor({
   const nonRetryableErrorsErrorCount = useMemo(
     () =>
       Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('nonRetryableErrors.'))
+        .length,
+    [validationErrors]
+  );
+  const errorResponseRewritesErrorCount = useMemo(
+    () =>
+      Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('errorResponseRewrites.'))
         .length,
     [validationErrors]
   );
@@ -868,6 +883,11 @@ export function VisualConfigEditor({
     (nonRetryableErrors: NonRetryableErrorVisualEntry[]) => onChange({ nonRetryableErrors }),
     [onChange]
   );
+  const handleErrorResponseRewritesChange = useCallback(
+    (errorResponseRewrites: ErrorResponseRewriteVisualEntry[]) =>
+      onChange({ errorResponseRewrites }),
+    [onChange]
+  );
   const handleAuthModelExclusionsChange = useCallback(
     (authModelExclusions: AuthModelExclusionVisualEntry[]) => onChange({ authModelExclusions }),
     [onChange]
@@ -887,6 +907,8 @@ export function VisualConfigEditor({
         maxRetryCredentials: '',
         fillFirstRange: '',
         fillFirstPerAuthRpm: '',
+        perAuthRequestLimit: '',
+        perAuthRequestWindowMinutes: '',
       },
     ]);
   }, [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]);
@@ -911,7 +933,13 @@ export function VisualConfigEditor({
   const getRoutingPriorityOverrideError = useCallback(
     (
       clientId: string,
-      field: 'priority' | 'maxRetryCredentials' | 'fillFirstRange' | 'fillFirstPerAuthRpm'
+      field:
+        | 'priority'
+        | 'maxRetryCredentials'
+        | 'fillFirstRange'
+        | 'fillFirstPerAuthRpm'
+        | 'perAuthRequestLimit'
+        | 'perAuthRequestWindowMinutes'
     ) =>
       getValidationMessage(t, validationErrors?.[`routingPriorityOverrides.${clientId}.${field}`]),
     [t, validationErrors]
@@ -984,6 +1012,44 @@ export function VisualConfigEditor({
   const getNonRetryableError = useCallback(
     (clientId: string, field: 'statusCode' | 'match') =>
       getValidationMessage(t, validationErrors?.[`nonRetryableErrors.${clientId}.${field}`]),
+    [t, validationErrors]
+  );
+  const addErrorResponseRewrite = useCallback(() => {
+    handleErrorResponseRewritesChange([
+      ...values.errorResponseRewrites,
+      {
+        clientId: makeClientId(),
+        statusCode: '',
+        messageContains: '',
+        responseStatusCode: '',
+        responseBodyEnabled: false,
+        responseBody: '{}',
+      },
+    ]);
+  }, [handleErrorResponseRewritesChange, values.errorResponseRewrites]);
+  const updateErrorResponseRewrite = useCallback(
+    (clientId: string, patch: Partial<ErrorResponseRewriteVisualEntry>) => {
+      handleErrorResponseRewritesChange(
+        values.errorResponseRewrites.map((rule) =>
+          rule.clientId === clientId ? { ...rule, ...patch } : rule
+        )
+      );
+    },
+    [handleErrorResponseRewritesChange, values.errorResponseRewrites]
+  );
+  const removeErrorResponseRewrite = useCallback(
+    (clientId: string) => {
+      handleErrorResponseRewritesChange(
+        values.errorResponseRewrites.filter((rule) => rule.clientId !== clientId)
+      );
+    },
+    [handleErrorResponseRewritesChange, values.errorResponseRewrites]
+  );
+  const getErrorResponseRewriteError = useCallback(
+    (
+      clientId: string,
+      field: 'statusCode' | 'messageContains' | 'responseStatusCode' | 'responseBody'
+    ) => getValidationMessage(t, validationErrors?.[`errorResponseRewrites.${clientId}.${field}`]),
     [t, validationErrors]
   );
   const addAuthModelExclusion = useCallback(() => {
@@ -1072,9 +1138,12 @@ export function VisualConfigEditor({
           'maxRetryInterval',
           'routingFillFirstRange',
           'routingFillFirstPerAuthRpm',
+          'routingPerAuthRequestLimit',
+          'routingPerAuthRequestWindowMinutes',
         ]) + routingPriorityOverridesErrorCount,
       'global-request':
         nonRetryableErrorsErrorCount +
+        errorResponseRewritesErrorCount +
         fixedErrorCooldownsErrorCount +
         countErrors(['noCooldownStatusCodes']) +
         requestBodyErrorCount,
@@ -1113,6 +1182,7 @@ export function VisualConfigEditor({
       authModelExclusionsErrorCount,
       authSectionErrorCount,
       countErrors,
+      errorResponseRewritesErrorCount,
       fixedErrorCooldownsErrorCount,
       hasPayloadValidationErrors,
       nonRetryableErrorsErrorCount,
@@ -2215,6 +2285,42 @@ export function VisualConfigEditor({
                         />
                       </FieldShell>
                     </div>
+                    <Input
+                      id="config-routing-per-auth-request-limit"
+                      label={t(
+                        'config_management.visual.sections.network.routing_per_auth_request_limit'
+                      )}
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      value={values.routingPerAuthRequestLimit}
+                      onChange={(event) =>
+                        onChange({ routingPerAuthRequestLimit: event.target.value })
+                      }
+                      disabled={disabled}
+                      hint={t(
+                        'config_management.visual.sections.network.routing_per_auth_request_limit_hint'
+                      )}
+                      error={routingPerAuthRequestLimitError}
+                    />
+                    <Input
+                      id="config-routing-per-auth-request-window-minutes"
+                      label={t(
+                        'config_management.visual.sections.network.routing_per_auth_request_window_minutes'
+                      )}
+                      type="number"
+                      min={1}
+                      placeholder="1"
+                      value={values.routingPerAuthRequestWindowMinutes}
+                      onChange={(event) =>
+                        onChange({ routingPerAuthRequestWindowMinutes: event.target.value })
+                      }
+                      disabled={disabled}
+                      hint={t(
+                        'config_management.visual.sections.network.routing_per_auth_request_window_minutes_hint'
+                      )}
+                      error={routingPerAuthRequestWindowMinutesError}
+                    />
                     {values.routingStrategy === 'fill-first' && (
                       <>
                         <Input
@@ -2242,9 +2348,15 @@ export function VisualConfigEditor({
                           value={values.routingFillFirstPerAuthRpm}
                           onChange={(e) => onChange({ routingFillFirstPerAuthRpm: e.target.value })}
                           disabled={disabled}
-                          hint={t(
+                          hint={`${t(
                             'config_management.visual.sections.network.routing_fill_first_per_auth_rpm_hint'
-                          )}
+                          )}${
+                            Number(values.routingPerAuthRequestLimit) > 0
+                              ? ` ${t(
+                                  'config_management.visual.sections.network.routing_generic_limit_precedence'
+                                )}`
+                              : ''
+                          }`}
                           error={routingFillFirstPerAuthRpmError}
                         />
                       </>
@@ -2302,8 +2414,22 @@ export function VisualConfigEditor({
                               rule.clientId,
                               'fillFirstPerAuthRpm'
                             );
+                            const perAuthRequestLimitError = getRoutingPriorityOverrideError(
+                              rule.clientId,
+                              'perAuthRequestLimit'
+                            );
+                            const perAuthRequestWindowMinutesError =
+                              getRoutingPriorityOverrideError(
+                                rule.clientId,
+                                'perAuthRequestWindowMinutes'
+                              );
                             const strategyLabelId = `routing-priority-${rule.clientId}-strategy-label`;
                             const effectiveStrategy = rule.strategy || values.routingStrategy;
+                            const effectivePerAuthRequestLimit = Number(
+                              rule.perAuthRequestLimit.trim()
+                                ? rule.perAuthRequestLimit
+                                : values.routingPerAuthRequestLimit
+                            );
 
                             return (
                               <div key={rule.clientId} className={styles.ruleCard}>
@@ -2383,6 +2509,48 @@ export function VisualConfigEditor({
                                     disabled={disabled}
                                     error={maxRetryCredentialsError}
                                   />
+                                  <Input
+                                    label={t(
+                                      'config_management.visual.sections.network.priority_overrides_per_auth_request_limit'
+                                    )}
+                                    type="number"
+                                    min={0}
+                                    placeholder={t(
+                                      'config_management.visual.sections.network.priority_overrides_inherit_global'
+                                    )}
+                                    value={rule.perAuthRequestLimit}
+                                    onChange={(event) =>
+                                      updateRoutingPriorityOverride(rule.clientId, {
+                                        perAuthRequestLimit: event.target.value,
+                                      })
+                                    }
+                                    disabled={disabled}
+                                    hint={t(
+                                      'config_management.visual.sections.network.priority_overrides_per_auth_request_limit_hint'
+                                    )}
+                                    error={perAuthRequestLimitError}
+                                  />
+                                  <Input
+                                    label={t(
+                                      'config_management.visual.sections.network.priority_overrides_per_auth_request_window_minutes'
+                                    )}
+                                    type="number"
+                                    min={1}
+                                    placeholder={t(
+                                      'config_management.visual.sections.network.priority_overrides_inherit_global'
+                                    )}
+                                    value={rule.perAuthRequestWindowMinutes}
+                                    onChange={(event) =>
+                                      updateRoutingPriorityOverride(rule.clientId, {
+                                        perAuthRequestWindowMinutes: event.target.value,
+                                      })
+                                    }
+                                    disabled={disabled}
+                                    hint={t(
+                                      'config_management.visual.sections.network.priority_overrides_per_auth_request_window_minutes_hint'
+                                    )}
+                                    error={perAuthRequestWindowMinutesError}
+                                  />
                                   {effectiveStrategy === 'fill-first' && (
                                     <>
                                       <Input
@@ -2422,9 +2590,15 @@ export function VisualConfigEditor({
                                           })
                                         }
                                         disabled={disabled}
-                                        hint={t(
+                                        hint={`${t(
                                           'config_management.visual.sections.network.priority_overrides_fill_first_per_auth_rpm_hint'
-                                        )}
+                                        )}${
+                                          effectivePerAuthRequestLimit > 0
+                                            ? ` ${t(
+                                                'config_management.visual.sections.network.routing_generic_limit_precedence'
+                                              )}`
+                                            : ''
+                                        }`}
                                         error={fillFirstPerAuthRpmError}
                                       />
                                     </>
@@ -2559,6 +2733,220 @@ export function VisualConfigEditor({
                                 )}
                                 error={matchError}
                               />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </SectionSubsection>
+                </PageGroup>
+
+                <PageGroup
+                  id="config-error-response-rewrites"
+                  active={activePageId === 'global-request'}
+                >
+                  <SectionSubsection
+                    title={t('config_management.visual.sections.network.error_response_rewrites')}
+                    description={t(
+                      'config_management.visual.sections.network.error_response_rewrites_desc'
+                    )}
+                  >
+                    <div className={styles.blockHeaderRow}>
+                      <div className={styles.blockHeaderCopy}>
+                        <div className={styles.fieldHint}>
+                          {t(
+                            'config_management.visual.sections.network.error_response_rewrites_hint'
+                          )}
+                        </div>
+                        {errorResponseRewritesErrorCount > 0 ? (
+                          <span className={styles.sectionIssueBadge}>
+                            {errorResponseRewritesErrorCount}
+                          </span>
+                        ) : null}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={addErrorResponseRewrite}
+                        disabled={disabled}
+                      >
+                        {t('config_management.visual.sections.network.error_response_rewrites_add')}
+                      </Button>
+                    </div>
+
+                    <div className={styles.errorRewriteNotice} role="note">
+                      <div>
+                        {t(
+                          'config_management.visual.sections.network.error_response_rewrites_streaming_notice'
+                        )}
+                      </div>
+                      <div>
+                        {t(
+                          'config_management.visual.sections.network.error_response_rewrites_trust_sse_notice'
+                        )}
+                      </div>
+                    </div>
+
+                    {values.errorResponseRewrites.length === 0 ? (
+                      <div className={styles.emptyState}>
+                        {t(
+                          'config_management.visual.sections.network.error_response_rewrites_empty'
+                        )}
+                      </div>
+                    ) : (
+                      <div className={styles.blockStack}>
+                        {values.errorResponseRewrites.map((rule, index) => {
+                          const statusCodeError = getErrorResponseRewriteError(
+                            rule.clientId,
+                            'statusCode'
+                          );
+                          const messageContainsError = getErrorResponseRewriteError(
+                            rule.clientId,
+                            'messageContains'
+                          );
+                          const responseStatusCodeError = getErrorResponseRewriteError(
+                            rule.clientId,
+                            'responseStatusCode'
+                          );
+                          const responseBodyError = getErrorResponseRewriteError(
+                            rule.clientId,
+                            'responseBody'
+                          );
+                          const responseBodyId = `error-response-rewrite-body-${rule.clientId}`;
+                          const responseBodyHintId = `${responseBodyId}-hint`;
+                          const responseBodyErrorId = `${responseBodyId}-error`;
+
+                          return (
+                            <div key={rule.clientId} className={styles.ruleCard}>
+                              <div className={styles.ruleCardHeader}>
+                                <div className={styles.ruleCardTitle}>
+                                  {t(
+                                    'config_management.visual.sections.network.error_response_rewrites_rule',
+                                    { index: index + 1 }
+                                  )}
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeErrorResponseRewrite(rule.clientId)}
+                                  disabled={disabled}
+                                >
+                                  {t('config_management.visual.common.delete')}
+                                </Button>
+                              </div>
+
+                              <div className={styles.errorResponseRewriteGrid}>
+                                <Input
+                                  label={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_status_code'
+                                  )}
+                                  type="number"
+                                  min={0}
+                                  max={599}
+                                  placeholder="400"
+                                  value={rule.statusCode}
+                                  onChange={(event) =>
+                                    updateErrorResponseRewrite(rule.clientId, {
+                                      statusCode: event.target.value,
+                                    })
+                                  }
+                                  disabled={disabled}
+                                  hint={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_status_code_hint'
+                                  )}
+                                  error={statusCodeError}
+                                />
+                                <Input
+                                  label={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_message_contains'
+                                  )}
+                                  placeholder={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_message_placeholder'
+                                  )}
+                                  value={rule.messageContains}
+                                  onChange={(event) =>
+                                    updateErrorResponseRewrite(rule.clientId, {
+                                      messageContains: event.target.value,
+                                    })
+                                  }
+                                  disabled={disabled}
+                                  hint={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_message_hint'
+                                  )}
+                                  error={messageContainsError}
+                                />
+                                <Input
+                                  label={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_response_status_code'
+                                  )}
+                                  type="number"
+                                  min={0}
+                                  max={599}
+                                  placeholder="429"
+                                  value={rule.responseStatusCode}
+                                  onChange={(event) =>
+                                    updateErrorResponseRewrite(rule.clientId, {
+                                      responseStatusCode: event.target.value,
+                                    })
+                                  }
+                                  disabled={disabled}
+                                  hint={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_response_status_code_hint'
+                                  )}
+                                  error={responseStatusCodeError}
+                                />
+                              </div>
+
+                              <ToggleRow
+                                title={t(
+                                  'config_management.visual.sections.network.error_response_rewrites_response_body'
+                                )}
+                                description={t(
+                                  'config_management.visual.sections.network.error_response_rewrites_response_body_toggle_hint'
+                                )}
+                                checked={rule.responseBodyEnabled}
+                                onChange={(responseBodyEnabled) =>
+                                  updateErrorResponseRewrite(rule.clientId, { responseBodyEnabled })
+                                }
+                                disabled={disabled}
+                              />
+
+                              {rule.responseBodyEnabled ? (
+                                <FieldShell
+                                  label={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_response_body_json'
+                                  )}
+                                  htmlFor={responseBodyId}
+                                  hint={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_response_body_hint'
+                                  )}
+                                  hintId={responseBodyHintId}
+                                  error={responseBodyError}
+                                  errorId={responseBodyErrorId}
+                                >
+                                  <div className={styles.fieldControl}>
+                                    <textarea
+                                      id={responseBodyId}
+                                      className={`input ${styles.fieldTextarea} ${styles.errorResponseBodyEditor}`}
+                                      value={rule.responseBody}
+                                      onChange={(event) =>
+                                        updateErrorResponseRewrite(rule.clientId, {
+                                          responseBody: event.target.value,
+                                        })
+                                      }
+                                      disabled={disabled}
+                                      rows={5}
+                                      spellCheck={false}
+                                      aria-invalid={Boolean(responseBodyError)}
+                                      aria-describedby={`${responseBodyHintId} ${responseBodyError ? responseBodyErrorId : ''}`.trim()}
+                                    />
+                                  </div>
+                                </FieldShell>
+                              ) : responseBodyError ? (
+                                <div className="error-box">{responseBodyError}</div>
+                              ) : null}
                             </div>
                           );
                         })}

@@ -6,6 +6,7 @@ import type {
   AuthModelExclusionVisualEntry,
   DisabledImageGenerationToolAction,
   DisabledImageGenerationToolErrorVisualConfig,
+  ErrorResponseRewriteVisualEntry,
   FixedErrorCooldownScope,
   FixedErrorCooldownVisualEntry,
   NativeImageEndpointVisualConfig,
@@ -574,6 +575,14 @@ function parseOptionalNonRetryableStatusCode(value: string): number | null {
   return parseHttpStatusCodeString(trimmed);
 }
 
+function parseOptionalResponseStatusCode(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed === '0') return 0;
+  const parsed = parseHttpStatusCodeString(trimmed);
+  return parsed !== null && parsed >= 400 ? parsed : null;
+}
+
 function serializeNonRetryableErrorsForYaml(
   rules: NonRetryableErrorVisualEntry[]
 ): Array<Record<string, unknown>> {
@@ -615,6 +624,125 @@ function areNonRetryableErrorsEqual(
   });
 }
 
+function parseErrorResponseRewrites(raw: unknown): ErrorResponseRewriteVisualEntry[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.reduce<ErrorResponseRewriteVisualEntry[]>((result, item) => {
+    const record = asRecord(item);
+    if (!record) return result;
+    const responseBodyKey = Object.prototype.hasOwnProperty.call(record, 'response-body')
+      ? 'response-body'
+      : Object.prototype.hasOwnProperty.call(record, 'responseBody')
+        ? 'responseBody'
+        : null;
+    const responseBody = responseBodyKey ? record[responseBodyKey] : undefined;
+
+    result.push({
+      clientId: makeClientId(),
+      statusCode: formatOptionalStatusCode(record['status-code'] ?? record.statusCode),
+      messageContains: String(record['message-contains'] ?? record.messageContains ?? ''),
+      responseStatusCode: formatOptionalStatusCode(
+        record['response-status-code'] ?? record.responseStatusCode
+      ),
+      responseBodyEnabled: responseBodyKey !== null,
+      responseBody: responseBodyKey === null ? '{}' : stringifyJsonForEditor(responseBody ?? null),
+    });
+    return result;
+  }, []);
+}
+
+function stringifyJsonForEditor(value: unknown, depth = 0): string {
+  if (value === null) return 'null';
+  if (typeof value === 'string') return JSON.stringify(value);
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'null';
+  if (typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    const indent = '  '.repeat(depth);
+    const childIndent = '  '.repeat(depth + 1);
+    const items = value.map(
+      (item) => `${childIndent}${stringifyJsonForEditor(item ?? null, depth + 1)}`
+    );
+    return `[\n${items.join(',\n')}\n${indent}]`;
+  }
+
+  const record = asRecord(value);
+  if (!record) return 'null';
+  const entries = Object.entries(record).filter(
+    ([, item]) => item !== undefined && typeof item !== 'function' && typeof item !== 'symbol'
+  );
+  if (entries.length === 0) return '{}';
+  const indent = '  '.repeat(depth);
+  const childIndent = '  '.repeat(depth + 1);
+  const fields = entries.map(
+    ([key, item]) =>
+      `${childIndent}${JSON.stringify(key)}: ${stringifyJsonForEditor(item, depth + 1)}`
+  );
+  return `{\n${fields.join(',\n')}\n${indent}}`;
+}
+
+function parseJsonObject(value: string): Record<string, unknown> | null {
+  try {
+    // Keep JSON syntax strict, then reparse integers as BigInt so YAML saves do not round them.
+    const strictParsed: unknown = JSON.parse(value);
+    if (!asRecord(strictParsed)) return null;
+    const preciseParsed: unknown = parseYaml(value, {
+      schema: 'json',
+      intAsBigInt: true,
+    });
+    return asRecord(preciseParsed);
+  } catch {
+    return null;
+  }
+}
+
+function serializeErrorResponseRewritesForYaml(
+  rules: ErrorResponseRewriteVisualEntry[]
+): Array<Record<string, unknown>> {
+  return rules.reduce<Array<Record<string, unknown>>>((result, rule) => {
+    const statusCode = parseOptionalNonRetryableStatusCode(rule.statusCode);
+    const responseStatusCode = parseOptionalResponseStatusCode(rule.responseStatusCode);
+    const messageContains = rule.messageContains.trim();
+    const responseBody = rule.responseBodyEnabled ? parseJsonObject(rule.responseBody) : null;
+    if (rule.statusCode.trim() && statusCode === null) return result;
+    if (rule.responseStatusCode.trim() && responseStatusCode === null) return result;
+    if ((statusCode === null || statusCode === 0) && !messageContains) return result;
+    if ((responseStatusCode === null || responseStatusCode === 0) && !rule.responseBodyEnabled) {
+      return result;
+    }
+    if (rule.responseBodyEnabled && responseBody === null) return result;
+
+    const entry: Record<string, unknown> = {};
+    if (statusCode !== null && statusCode !== 0) entry['status-code'] = statusCode;
+    if (messageContains) entry['message-contains'] = messageContains;
+    if (responseStatusCode !== null && responseStatusCode !== 0) {
+      entry['response-status-code'] = responseStatusCode;
+    }
+    if (rule.responseBodyEnabled) entry['response-body'] = responseBody;
+    result.push(entry);
+    return result;
+  }, []);
+}
+
+function areErrorResponseRewritesEqual(
+  left: ErrorResponseRewriteVisualEntry[],
+  right: ErrorResponseRewriteVisualEntry[]
+): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((entry, index) => {
+    const other = right[index];
+    return (
+      Boolean(other) &&
+      entry.statusCode === other.statusCode &&
+      entry.messageContains === other.messageContains &&
+      entry.responseStatusCode === other.responseStatusCode &&
+      entry.responseBodyEnabled === other.responseBodyEnabled &&
+      entry.responseBody === other.responseBody
+    );
+  });
+}
+
 function normalizeRoutingPriorityOverrideStrategy(value: unknown): RoutingPriorityOverrideStrategy {
   return value === 'round-robin' || value === 'fill-first' || value === 'random' ? value : '';
 }
@@ -650,6 +778,17 @@ function parseRoutingPriorityOverrides(raw: unknown): RoutingPriorityOverrideVis
         record['fill-first-per-auth-rpm'] === undefined && record.fillFirstPerAuthRpm === undefined
           ? ''
           : String(record['fill-first-per-auth-rpm'] ?? record.fillFirstPerAuthRpm ?? ''),
+      perAuthRequestLimit:
+        record['per-auth-request-limit'] === undefined && record.perAuthRequestLimit === undefined
+          ? ''
+          : String(record['per-auth-request-limit'] ?? record.perAuthRequestLimit ?? ''),
+      perAuthRequestWindowMinutes:
+        record['per-auth-request-window-minutes'] === undefined &&
+        record.perAuthRequestWindowMinutes === undefined
+          ? ''
+          : String(
+              record['per-auth-request-window-minutes'] ?? record.perAuthRequestWindowMinutes ?? ''
+            ),
     });
     return result;
   }, []);
@@ -668,7 +807,9 @@ function areRoutingPriorityOverridesEqual(
       entry.strategy === other.strategy &&
       entry.maxRetryCredentials === other.maxRetryCredentials &&
       entry.fillFirstRange === other.fillFirstRange &&
-      entry.fillFirstPerAuthRpm === other.fillFirstPerAuthRpm
+      entry.fillFirstPerAuthRpm === other.fillFirstPerAuthRpm &&
+      entry.perAuthRequestLimit === other.perAuthRequestLimit &&
+      entry.perAuthRequestWindowMinutes === other.perAuthRequestWindowMinutes
     );
   });
 }
@@ -838,6 +979,18 @@ function serializeRoutingPriorityOverridesForYaml(
       if (fillFirstPerAuthRpm === null) return result;
       entry['fill-first-per-auth-rpm'] = fillFirstPerAuthRpm;
     }
+    if (rule.perAuthRequestLimit.trim()) {
+      const perAuthRequestLimit = parseNonNegativeIntegerString(rule.perAuthRequestLimit);
+      if (perAuthRequestLimit === null) return result;
+      entry['per-auth-request-limit'] = perAuthRequestLimit;
+    }
+    if (rule.perAuthRequestWindowMinutes.trim()) {
+      const perAuthRequestWindowMinutes = parsePositiveIntegerString(
+        rule.perAuthRequestWindowMinutes
+      );
+      if (perAuthRequestWindowMinutes === null) return result;
+      entry['per-auth-request-window-minutes'] = perAuthRequestWindowMinutes;
+    }
 
     result.push(entry);
     return result;
@@ -902,6 +1055,12 @@ function getOptionalNonRetryableStatusCodeError(value: string): 'http_status_cod
   return getOptionalHttpStatusCodeError(value);
 }
 
+function getOptionalResponseStatusCodeError(value: string): 'http_status_range' | undefined {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '0') return undefined;
+  return getHttpStatusRangeError(value);
+}
+
 function getIntegerStringListError(values: string[]): 'integer_list' | undefined {
   return values.every((value) => {
     const trimmed = value.trim();
@@ -953,6 +1112,12 @@ export function getVisualConfigValidationErrors(
   const routingFillFirstPerAuthRpmError = routingFillFirstControlsConflict
     ? 'fill_first_controls_conflict'
     : routingFillFirstPerAuthRpmBaseError;
+  const routingPerAuthRequestLimitError = getNonNegativeIntegerError(
+    values.routingPerAuthRequestLimit
+  );
+  const routingPerAuthRequestWindowMinutesError = getPositiveIntegerError(
+    values.routingPerAuthRequestWindowMinutes
+  );
   const priorityCounts = values.routingPriorityOverrides.reduce<Map<number, number>>(
     (result, rule) => {
       const priority = parseIntegerString(rule.priority);
@@ -992,6 +1157,20 @@ export function getVisualConfigValidationErrors(
       if (fillFirstPerAuthRpmError) {
         result[`routingPriorityOverrides.${rule.clientId}.fillFirstPerAuthRpm`] =
           fillFirstPerAuthRpmError;
+      }
+      const perAuthRequestLimitError = rule.perAuthRequestLimit.trim()
+        ? getNonNegativeIntegerError(rule.perAuthRequestLimit)
+        : undefined;
+      if (perAuthRequestLimitError) {
+        result[`routingPriorityOverrides.${rule.clientId}.perAuthRequestLimit`] =
+          perAuthRequestLimitError;
+      }
+      const perAuthRequestWindowMinutesError = rule.perAuthRequestWindowMinutes.trim()
+        ? getPositiveIntegerError(rule.perAuthRequestWindowMinutes)
+        : undefined;
+      if (perAuthRequestWindowMinutesError) {
+        result[`routingPriorityOverrides.${rule.clientId}.perAuthRequestWindowMinutes`] =
+          perAuthRequestWindowMinutesError;
       }
       const hasOverrideFillControl =
         Boolean(rule.fillFirstRange.trim()) || Boolean(rule.fillFirstPerAuthRpm.trim());
@@ -1055,6 +1234,38 @@ export function getVisualConfigValidationErrors(
     },
     {}
   );
+  const errorResponseRewriteErrors =
+    values.errorResponseRewrites.reduce<VisualConfigValidationErrors>((result, rule) => {
+      const statusCodeError = getOptionalNonRetryableStatusCodeError(rule.statusCode);
+      if (statusCodeError) {
+        result[`errorResponseRewrites.${rule.clientId}.statusCode`] = statusCodeError;
+      }
+      const hasStatusMatcher = Boolean(rule.statusCode.trim() && rule.statusCode.trim() !== '0');
+      if (!hasStatusMatcher && !rule.messageContains.trim()) {
+        result[`errorResponseRewrites.${rule.clientId}.statusCode`] =
+          'error_response_rewrite_match_required';
+        result[`errorResponseRewrites.${rule.clientId}.messageContains`] =
+          'error_response_rewrite_match_required';
+      }
+
+      const responseStatusCodeError = getOptionalResponseStatusCodeError(rule.responseStatusCode);
+      if (responseStatusCodeError) {
+        result[`errorResponseRewrites.${rule.clientId}.responseStatusCode`] =
+          responseStatusCodeError;
+      }
+      const hasResponseStatus = Boolean(
+        rule.responseStatusCode.trim() && rule.responseStatusCode.trim() !== '0'
+      );
+      if (!hasResponseStatus && !rule.responseBodyEnabled) {
+        result[`errorResponseRewrites.${rule.clientId}.responseStatusCode`] =
+          'error_response_rewrite_result_required';
+        result[`errorResponseRewrites.${rule.clientId}.responseBody`] =
+          'error_response_rewrite_result_required';
+      } else if (rule.responseBodyEnabled && parseJsonObject(rule.responseBody) === null) {
+        result[`errorResponseRewrites.${rule.clientId}.responseBody`] = 'json_object';
+      }
+      return result;
+    }, {});
   const authModelExclusionErrors = values.authModelExclusions.reduce<VisualConfigValidationErrors>(
     (result, rule) => {
       if (normalizeStringListItems(rule.models).length === 0 && !rule.disableImageGeneration) {
@@ -1094,8 +1305,11 @@ export function getVisualConfigValidationErrors(
     noCooldownStatusCodes: getHttpStatusListError(values.noCooldownStatusCodes),
     routingFillFirstRange: routingFillFirstRangeError,
     routingFillFirstPerAuthRpm: routingFillFirstPerAuthRpmError,
+    routingPerAuthRequestLimit: routingPerAuthRequestLimitError,
+    routingPerAuthRequestWindowMinutes: routingPerAuthRequestWindowMinutesError,
     ...routingPriorityOverrideErrors,
     ...fixedErrorCooldownErrors,
+    ...errorResponseRewriteErrors,
     ...nonRetryableErrorErrors,
     ...authModelExclusionErrors,
     'disabledImageGenerationToolError.statusCode': disabledImageGenerationToolStatusCodeError,
@@ -1776,6 +1990,15 @@ function getNextDirtyFields(
       )
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'errorResponseRewrites')) {
+    updateDirty(
+      'errorResponseRewrites',
+      areErrorResponseRewritesEqual(
+        nextValues.errorResponseRewrites,
+        baselineValues.errorResponseRewrites
+      )
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'nonRetryableErrors')) {
     updateDirty(
       'nonRetryableErrors',
@@ -1993,6 +2216,19 @@ function getNextDirtyFields(
       nextValues.routingFillFirstPerAuthRpm === baselineValues.routingFillFirstPerAuthRpm
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'routingPerAuthRequestLimit')) {
+    updateDirty(
+      'routingPerAuthRequestLimit',
+      nextValues.routingPerAuthRequestLimit === baselineValues.routingPerAuthRequestLimit
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'routingPerAuthRequestWindowMinutes')) {
+    updateDirty(
+      'routingPerAuthRequestWindowMinutes',
+      nextValues.routingPerAuthRequestWindowMinutes ===
+        baselineValues.routingPerAuthRequestWindowMinutes
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingPriorityOverrides')) {
     updateDirty(
       'routingPriorityOverrides',
@@ -2186,7 +2422,9 @@ export function useVisualConfig() {
       }
 
       const parsedRaw: unknown = parseYaml(yamlContent) || {};
+      const preciseParsedRaw: unknown = parseYaml(yamlContent, { intAsBigInt: true }) || {};
       const parsed = asRecord(parsedRaw) ?? {};
+      const preciseParsed = asRecord(preciseParsedRaw) ?? parsed;
       const tls = asRecord(parsed.tls);
       const remoteManagement = asRecord(parsed['remote-management']);
       const codex = asRecord(parsed.codex);
@@ -2341,6 +2579,9 @@ export function useVisualConfig() {
         fixedErrorCooldowns: parseFixedErrorCooldowns(
           parsed['fixed-error-cooldowns'] ?? parsed.fixedErrorCooldowns
         ),
+        errorResponseRewrites: parseErrorResponseRewrites(
+          preciseParsed['error-response-rewrites'] ?? preciseParsed.errorResponseRewrites
+        ),
         nonRetryableErrors: Object.prototype.hasOwnProperty.call(parsed, 'non-retryable-errors')
           ? parseNonRetryableErrors(parsed['non-retryable-errors'])
           : Object.prototype.hasOwnProperty.call(parsed, 'nonRetryableErrors')
@@ -2455,6 +2696,16 @@ export function useVisualConfig() {
           routing?.['fill-first-per-auth-rpm'] ??
             routing?.fillFirstPerAuthRpm ??
             DEFAULT_VISUAL_VALUES.routingFillFirstPerAuthRpm
+        ),
+        routingPerAuthRequestLimit: String(
+          routing?.['per-auth-request-limit'] ??
+            routing?.perAuthRequestLimit ??
+            DEFAULT_VISUAL_VALUES.routingPerAuthRequestLimit
+        ),
+        routingPerAuthRequestWindowMinutes: String(
+          routing?.['per-auth-request-window-minutes'] ??
+            routing?.perAuthRequestWindowMinutes ??
+            DEFAULT_VISUAL_VALUES.routingPerAuthRequestWindowMinutes
         ),
         routingPriorityOverrides: parseRoutingPriorityOverrides(
           routing?.['priority-overrides'] ?? routing?.priorityOverrides
@@ -2706,6 +2957,21 @@ export function useVisualConfig() {
           doc.deleteIn(['fixed-error-cooldowns']);
         }
         if (
+          !areErrorResponseRewritesEqual(
+            values.errorResponseRewrites,
+            baselineValues.errorResponseRewrites
+          )
+        ) {
+          if (values.errorResponseRewrites.length > 0) {
+            doc.setIn(
+              ['error-response-rewrites'],
+              serializeErrorResponseRewritesForYaml(values.errorResponseRewrites)
+            );
+          } else if (docHas(doc, ['error-response-rewrites'])) {
+            doc.deleteIn(['error-response-rewrites']);
+          }
+        }
+        if (
           docHas(doc, ['non-retryable-errors']) ||
           !areNonRetryableErrorsEqual(
             values.nonRetryableErrors,
@@ -2927,6 +3193,9 @@ export function useVisualConfig() {
         if (
           docHas(doc, ['routing']) ||
           values.routingStrategy !== 'round-robin' ||
+          values.routingPerAuthRequestLimit !== DEFAULT_VISUAL_VALUES.routingPerAuthRequestLimit ||
+          values.routingPerAuthRequestWindowMinutes !==
+            DEFAULT_VISUAL_VALUES.routingPerAuthRequestWindowMinutes ||
           values.routingPriorityOverrides.length > 0 ||
           values.routingSessionAffinity ||
           values.routingSessionAffinityFailover !==
@@ -2945,6 +3214,16 @@ export function useVisualConfig() {
             doc.setIn(['routing', 'fill-first-range'], fillFirstRange);
             doc.setIn(['routing', 'fill-first-per-auth-rpm'], fillFirstPerAuthRpm);
           }
+          doc.setIn(
+            ['routing', 'per-auth-request-limit'],
+            parseNonNegativeIntegerString(values.routingPerAuthRequestLimit) ??
+              Number(DEFAULT_VISUAL_VALUES.routingPerAuthRequestLimit)
+          );
+          doc.setIn(
+            ['routing', 'per-auth-request-window-minutes'],
+            parsePositiveIntegerString(values.routingPerAuthRequestWindowMinutes) ??
+              Number(DEFAULT_VISUAL_VALUES.routingPerAuthRequestWindowMinutes)
+          );
           if (values.routingPriorityOverrides.length > 0) {
             doc.setIn(
               ['routing', 'priority-overrides'],
@@ -3084,7 +3363,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [baselineValues.apiKeysText, visualValues]
+    [baselineValues.apiKeysText, baselineValues.errorResponseRewrites, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {

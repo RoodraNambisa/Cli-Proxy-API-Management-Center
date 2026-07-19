@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import {
   IconCheck,
   IconChevronDown,
@@ -57,8 +58,16 @@ const createPool = (): ProxyPool => ({
   'placeholder-charset': '',
   'check-interval-seconds': 300,
   'bind-attempts': 3,
+  'spread-bindings': false,
   entries: [createEntry()],
 });
+
+const normalizeCheckSample = (value?: string): number => {
+  const parsed = Math.trunc(Number(value));
+  if (!value?.trim() || !Number.isFinite(parsed)) return 10;
+  return Math.min(100, Math.max(1, parsed));
+};
+
 const clonePool = (pool: ProxyPool): ProxyPool => ({
   ...pool,
   entries: pool.entries.map((entry) => ({ ...entry })),
@@ -166,6 +175,7 @@ export function ProxyPoolsPage() {
   const [selectedAuthIds, setSelectedAuthIds] = useState<Set<string>>(new Set());
   const [checkResults, setCheckResults] = useState<Record<string, ProxyCheckResult[]>>({});
   const [checkingPool, setCheckingPool] = useState('');
+  const [checkSamples, setCheckSamples] = useState<Record<string, string>>({});
   const [editor, setEditor] = useState<PoolEditorState | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingPool, setSavingPool] = useState(false);
@@ -291,6 +301,7 @@ export function ProxyPoolsPage() {
           'placeholder-charset': draft['placeholder-charset'] ?? '',
           'check-interval-seconds': draft['check-interval-seconds'] ?? 0,
           'bind-attempts': draft['bind-attempts'] ?? 0,
+          'spread-bindings': Boolean(draft['spread-bindings']),
           entries: draft.entries,
           'delete-entry-ids': editor.original.entries
             .filter((entry) => !nextIds.has(entry.id.toLowerCase()))
@@ -340,7 +351,10 @@ export function ProxyPoolsPage() {
   const checkPool = async (pool: ProxyPool) => {
     setCheckingPool(pool.name);
     try {
-      const results = await proxyPoolsApi.checkPool(pool.name);
+      const results = await proxyPoolsApi.checkPool(
+        pool.name,
+        normalizeCheckSample(checkSamples[pool.name])
+      );
       setCheckResults((current) => ({ ...current, [pool.name]: results }));
       const status = await proxyPoolsApi.getPoolStatus(pool.name);
       setStatuses((current) => ({ ...current, [pool.name]: status }));
@@ -507,6 +521,33 @@ export function ProxyPoolsPage() {
                         </span>
                       </div>
                       <div className={styles.rowActions}>
+                        <div className={styles.checkSampleField}>
+                          <label htmlFor={`proxy-check-sample-${pool.name}`}>
+                            {t('proxy_pools.unbound_sample_label')}
+                          </label>
+                          <input
+                            id={`proxy-check-sample-${pool.name}`}
+                            className="input"
+                            type="number"
+                            min="1"
+                            max="100"
+                            step="1"
+                            value={checkSamples[pool.name] ?? '10'}
+                            onChange={(event) =>
+                              setCheckSamples((current) => ({
+                                ...current,
+                                [pool.name]: event.target.value,
+                              }))
+                            }
+                            onBlur={() =>
+                              setCheckSamples((current) => ({
+                                ...current,
+                                [pool.name]: String(normalizeCheckSample(current[pool.name])),
+                              }))
+                            }
+                            disabled={disabled || checkingPool === pool.name}
+                          />
+                        </div>
                         <Button
                           variant="secondary"
                           size="sm"
@@ -559,6 +600,16 @@ export function ProxyPoolsPage() {
                       <span>
                         {t('proxy_pools.bind_attempts', { count: pool['bind-attempts'] ?? 3 })}
                       </span>
+                      <span>
+                        {t('proxy_pools.check_scope', {
+                          count: normalizeCheckSample(checkSamples[pool.name]),
+                        })}
+                      </span>
+                      {pool['spread-bindings'] ? (
+                        <span className={styles.spreadBindingsBadge}>
+                          {t('proxy_pools.spread_bindings_enabled')}
+                        </span>
+                      ) : null}
                     </div>
                     {results.length > 0 ? (
                       <div className={styles.checkResults}>
@@ -875,6 +926,19 @@ export function ProxyPoolsPage() {
                   })
                 }
               />
+              <div className={styles.toggleField}>
+                <div>
+                  <strong>{t('proxy_pools.spread_bindings')}</strong>
+                  <p>{t('proxy_pools.spread_bindings_hint')}</p>
+                </div>
+                <ToggleSwitch
+                  checked={Boolean(editor.draft['spread-bindings'])}
+                  onChange={(spreadBindings) =>
+                    updatePoolDraft({ 'spread-bindings': spreadBindings })
+                  }
+                  ariaLabel={t('proxy_pools.spread_bindings')}
+                />
+              </div>
             </div>
             <div className={styles.entryHeader}>
               <div>

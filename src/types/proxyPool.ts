@@ -9,6 +9,7 @@ export interface ProxyPool {
   'placeholder-charset'?: string;
   'check-interval-seconds'?: number;
   'bind-attempts'?: number;
+  'spread-bindings'?: boolean;
   entries: ProxyPoolEntry[];
 }
 
@@ -17,6 +18,7 @@ export interface ProxyPoolPatch {
   'placeholder-charset'?: string;
   'check-interval-seconds'?: number;
   'bind-attempts'?: number;
+  'spread-bindings'?: boolean;
   entries?: ProxyPoolEntry[];
   'delete-entry-ids'?: string[];
 }

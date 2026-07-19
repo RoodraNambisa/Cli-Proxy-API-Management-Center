@@ -27,6 +27,13 @@ export interface NonRetryableErrorConfig {
   messageContains?: string;
 }
 
+export interface ErrorResponseRewriteConfig {
+  statusCode?: number;
+  messageContains?: string;
+  responseStatusCode?: number;
+  responseBody?: Record<string, unknown>;
+}
+
 export interface AuthModelExclusionConfig {
   models?: string[];
   priorities?: number[];
@@ -58,6 +65,8 @@ export interface RoutingPriorityOverrideConfig {
   maxRetryCredentials?: number | null;
   fillFirstRange?: number | null;
   fillFirstPerAuthRpm?: number | null;
+  perAuthRequestLimit?: number | null;
+  perAuthRequestWindowMinutes?: number | null;
 }
 
 export interface RequestBodyAuditErrorConfig {
@@ -183,6 +192,7 @@ export interface Config {
   maxRetryInterval?: number;
   noCooldownStatusCodes?: number[];
   fixedErrorCooldowns?: FixedErrorCooldownConfig[];
+  errorResponseRewrites?: ErrorResponseRewriteConfig[];
   nonRetryableErrors?: NonRetryableErrorConfig[];
   authModelExclusions?: AuthModelExclusionConfig[];
   disabledImageGenerationToolFallback?: boolean;
@@ -209,6 +219,8 @@ export interface Config {
   routingStrategy?: string;
   routingFillFirstRange?: number;
   routingFillFirstPerAuthRpm?: number;
+  routingPerAuthRequestLimit?: number;
+  routingPerAuthRequestWindowMinutes?: number;
   routingPriorityOverrides?: RoutingPriorityOverrideConfig[];
   routingSessionAffinity?: boolean;
   routingSessionAffinityFailover?: boolean;
@@ -233,6 +245,7 @@ export type RawConfigSection =
   | 'max-retry-interval'
   | 'no-cooldown-status-codes'
   | 'fixed-error-cooldowns'
+  | 'error-response-rewrites'
   | 'quota-exceeded'
   | 'usage-statistics-enabled'
   | 'usage-statistics-persist-interval-seconds'
@@ -254,6 +267,8 @@ export type RawConfigSection =
   | 'routing/strategy'
   | 'routing/fill-first-range'
   | 'routing/fill-first-per-auth-rpm'
+  | 'routing/per-auth-request-limit'
+  | 'routing/per-auth-request-window-minutes'
   | 'routing/priority-overrides'
   | 'routing/session-affinity'
   | 'routing/session-affinity-failover'

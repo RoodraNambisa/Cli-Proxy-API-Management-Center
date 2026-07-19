@@ -111,6 +111,29 @@ const normalizeNonRetryableErrors = (value: unknown): Config['nonRetryableErrors
   return normalized.length > 0 ? normalized : [];
 };
 
+const normalizeErrorResponseRewrites = (
+  value: unknown
+): Config['errorResponseRewrites'] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+
+  const normalized = value.reduce<NonNullable<Config['errorResponseRewrites']>>((result, item) => {
+    if (!isRecord(item)) return result;
+    const responseBodyRaw = Object.prototype.hasOwnProperty.call(item, 'response-body')
+      ? item['response-body']
+      : item.responseBody;
+    const entry: NonNullable<Config['errorResponseRewrites']>[number] = {
+      statusCode: normalizeNumber(item['status-code'] ?? item.statusCode),
+      messageContains: normalizeString(item['message-contains'] ?? item.messageContains),
+      responseStatusCode: normalizeNumber(item['response-status-code'] ?? item.responseStatusCode),
+    };
+    if (isRecord(responseBodyRaw)) entry.responseBody = responseBodyRaw;
+    result.push(entry);
+    return result;
+  }, []);
+
+  return normalized.length > 0 ? normalized : [];
+};
+
 const normalizeAuthModelExclusions = (
   value: unknown
 ): Config['authModelExclusions'] | undefined => {
@@ -159,6 +182,18 @@ const normalizeRoutingPriorityOverrides = (
       )
         ? item['fill-first-per-auth-rpm']
         : item.fillFirstPerAuthRpm;
+      const perAuthRequestLimitRaw = Object.prototype.hasOwnProperty.call(
+        item,
+        'per-auth-request-limit'
+      )
+        ? item['per-auth-request-limit']
+        : item.perAuthRequestLimit;
+      const perAuthRequestWindowMinutesRaw = Object.prototype.hasOwnProperty.call(
+        item,
+        'per-auth-request-window-minutes'
+      )
+        ? item['per-auth-request-window-minutes']
+        : item.perAuthRequestWindowMinutes;
       const entry: NonNullable<Config['routingPriorityOverrides']>[number] = { priority };
 
       if (strategy) {
@@ -198,6 +233,30 @@ const normalizeRoutingPriorityOverrides = (
           fillFirstPerAuthRpm >= 0
         ) {
           entry.fillFirstPerAuthRpm = fillFirstPerAuthRpm;
+        }
+      }
+      if (perAuthRequestLimitRaw === null) {
+        entry.perAuthRequestLimit = null;
+      } else {
+        const perAuthRequestLimit = normalizeNumber(perAuthRequestLimitRaw);
+        if (
+          perAuthRequestLimit !== undefined &&
+          Number.isSafeInteger(perAuthRequestLimit) &&
+          perAuthRequestLimit >= 0
+        ) {
+          entry.perAuthRequestLimit = perAuthRequestLimit;
+        }
+      }
+      if (perAuthRequestWindowMinutesRaw === null) {
+        entry.perAuthRequestWindowMinutes = null;
+      } else {
+        const perAuthRequestWindowMinutes = normalizeNumber(perAuthRequestWindowMinutesRaw);
+        if (
+          perAuthRequestWindowMinutes !== undefined &&
+          Number.isSafeInteger(perAuthRequestWindowMinutes) &&
+          perAuthRequestWindowMinutes >= 1
+        ) {
+          entry.perAuthRequestWindowMinutes = perAuthRequestWindowMinutes;
         }
       }
 
@@ -657,6 +716,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   config.fixedErrorCooldowns = normalizeFixedErrorCooldowns(
     raw['fixed-error-cooldowns'] ?? raw.fixedErrorCooldowns
   );
+  config.errorResponseRewrites = normalizeErrorResponseRewrites(
+    raw['error-response-rewrites'] ?? raw.errorResponseRewrites
+  );
   config.nonRetryableErrors = normalizeNonRetryableErrors(
     raw['non-retryable-errors'] ?? raw.nonRetryableErrors
   );
@@ -902,6 +964,26 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       fillFirstPerAuthRpm >= 0
     ) {
       config.routingFillFirstPerAuthRpm = fillFirstPerAuthRpm;
+    }
+    const perAuthRequestLimit = normalizeNumber(
+      routing['per-auth-request-limit'] ?? routing.perAuthRequestLimit
+    );
+    if (
+      perAuthRequestLimit !== undefined &&
+      Number.isSafeInteger(perAuthRequestLimit) &&
+      perAuthRequestLimit >= 0
+    ) {
+      config.routingPerAuthRequestLimit = perAuthRequestLimit;
+    }
+    const perAuthRequestWindowMinutes = normalizeNumber(
+      routing['per-auth-request-window-minutes'] ?? routing.perAuthRequestWindowMinutes
+    );
+    if (
+      perAuthRequestWindowMinutes !== undefined &&
+      Number.isSafeInteger(perAuthRequestWindowMinutes) &&
+      perAuthRequestWindowMinutes >= 1
+    ) {
+      config.routingPerAuthRequestWindowMinutes = perAuthRequestWindowMinutes;
     }
     config.routingPriorityOverrides = normalizeRoutingPriorityOverrides(
       routing['priority-overrides'] ?? routing.priorityOverrides

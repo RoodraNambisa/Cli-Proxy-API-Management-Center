@@ -178,6 +178,7 @@ describe('structured proxy management API', () => {
         'proxy-pools': [
           {
             name: 'primary',
+            'spread-bindings': true,
             entries: [{ id: 'a', 'url-template': 'socks5://user:********@host:1080' }],
           },
         ],
@@ -192,6 +193,7 @@ describe('structured proxy management API', () => {
     const rules = await proxyPoolsApi.getRules();
 
     expect(pools[0].entries[0]['url-template']).toContain('********');
+    expect(pools[0]['spread-bindings']).toBe(true);
     expect(rules[0]).toMatchObject({ providers: ['chatgpt-web'], priorities: [4] });
 
     const put = vi.spyOn(apiClient, 'put').mockResolvedValue({ status: 'ok' });
@@ -210,5 +212,13 @@ describe('structured proxy management API', () => {
     expect(post).toHaveBeenCalledWith('/proxy-bindings/rebind', {
       auth_ids: ['auth-a', 'auth-b'],
     });
+  });
+
+  test('checks all bound nodes with a bounded unbound-node sample', async () => {
+    const post = vi.spyOn(apiClient, 'post').mockResolvedValue({ results: [] });
+
+    await proxyPoolsApi.checkPool('residential pool', 25);
+
+    expect(post).toHaveBeenCalledWith('/proxy-pools/residential%20pool/check', { sample: 25 });
   });
 });

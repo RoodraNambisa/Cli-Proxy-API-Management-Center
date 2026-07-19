@@ -41,6 +41,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'max-retry-interval',
   'no-cooldown-status-codes',
   'fixed-error-cooldowns',
+  'error-response-rewrites',
   'quota-exceeded',
   'usage-statistics-enabled',
   'usage-statistics-persist-interval-seconds',
@@ -61,6 +62,8 @@ const SECTION_KEYS: RawConfigSection[] = [
   'routing/strategy',
   'routing/fill-first-range',
   'routing/fill-first-per-auth-rpm',
+  'routing/per-auth-request-limit',
+  'routing/per-auth-request-window-minutes',
   'routing/priority-overrides',
   'routing/session-affinity',
   'routing/session-affinity-failover',
@@ -93,6 +96,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.noCooldownStatusCodes;
     case 'fixed-error-cooldowns':
       return config.fixedErrorCooldowns;
+    case 'error-response-rewrites':
+      return config.errorResponseRewrites;
     case 'quota-exceeded':
       return config.quotaExceeded;
     case 'usage-statistics-enabled':
@@ -133,6 +138,10 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.routingFillFirstRange;
     case 'routing/fill-first-per-auth-rpm':
       return config.routingFillFirstPerAuthRpm;
+    case 'routing/per-auth-request-limit':
+      return config.routingPerAuthRequestLimit;
+    case 'routing/per-auth-request-window-minutes':
+      return config.routingPerAuthRequestWindowMinutes;
     case 'routing/priority-overrides':
       return config.routingPriorityOverrides;
     case 'routing/session-affinity':
@@ -278,6 +287,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         case 'fixed-error-cooldowns':
           nextConfig.fixedErrorCooldowns = value as Config['fixedErrorCooldowns'];
           break;
+        case 'error-response-rewrites':
+          nextConfig.errorResponseRewrites = value as Config['errorResponseRewrites'];
+          break;
         case 'quota-exceeded':
           nextConfig.quotaExceeded = value as Config['quotaExceeded'];
           break;
@@ -338,6 +350,13 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'routing/fill-first-per-auth-rpm':
           nextConfig.routingFillFirstPerAuthRpm = value as Config['routingFillFirstPerAuthRpm'];
+          break;
+        case 'routing/per-auth-request-limit':
+          nextConfig.routingPerAuthRequestLimit = value as Config['routingPerAuthRequestLimit'];
+          break;
+        case 'routing/per-auth-request-window-minutes':
+          nextConfig.routingPerAuthRequestWindowMinutes =
+            value as Config['routingPerAuthRequestWindowMinutes'];
           break;
         case 'routing/priority-overrides':
           nextConfig.routingPriorityOverrides = value as Config['routingPriorityOverrides'];

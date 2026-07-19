@@ -75,6 +75,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     descriptionKey: 'config_management.settings_center.pages.global_request.description',
     dirtyPrefixes: [
       'nonRetryableErrors',
+      'errorResponseRewrites',
       'fixedErrorCooldowns',
       'noCooldownStatusCodes',
       'quotaSwitchProject',
@@ -246,6 +247,20 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['route', '路由', '填充范围', 'fill first'],
   },
   {
+    id: 'config-routing-per-auth-request-limit',
+    pageId: 'global-network',
+    labelKey: 'config_management.visual.sections.network.routing_per_auth_request_limit',
+    yamlKeys: ['routing.per-auth-request-limit'],
+    aliases: ['per auth request limit', '每凭证限速', '每憑證限速'],
+  },
+  {
+    id: 'config-routing-per-auth-request-window-minutes',
+    pageId: 'global-network',
+    labelKey: 'config_management.visual.sections.network.routing_per_auth_request_window_minutes',
+    yamlKeys: ['routing.per-auth-request-window-minutes'],
+    aliases: ['request limit window', '限速窗口', '限速視窗'],
+  },
+  {
     id: 'config-routing-priority-overrides',
     pageId: 'global-network',
     labelKey: 'config_management.visual.sections.network.priority_overrides',
@@ -256,6 +271,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'routing.priority-overrides[].max-retry-credentials',
       'routing.priority-overrides[].fill-first-range',
       'routing.priority-overrides[].fill-first-per-auth-rpm',
+      'routing.priority-overrides[].per-auth-request-limit',
+      'routing.priority-overrides[].per-auth-request-window-minutes',
     ],
   },
   {
@@ -313,6 +330,19 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     pageId: 'global-request',
     labelKey: 'config_management.visual.sections.network.non_retryable_errors',
     yamlKeys: ['non-retryable-errors'],
+  },
+  {
+    id: 'config-error-response-rewrites',
+    pageId: 'global-request',
+    labelKey: 'config_management.visual.sections.network.error_response_rewrites',
+    yamlKeys: [
+      'error-response-rewrites',
+      'error-response-rewrites[].status-code',
+      'error-response-rewrites[].message-contains',
+      'error-response-rewrites[].response-status-code',
+      'error-response-rewrites[].response-body',
+    ],
+    aliases: ['error rewrite', 'response rewrite', '错误响应改写', '响应改写'],
   },
   {
     id: 'config-fixed-error-cooldowns',

@@ -810,6 +810,13 @@
   flex-wrap: wrap;
 }
 
+.blockHeaderCopy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .blockStack {
   display: flex;
   flex-direction: column;
@@ -996,6 +1003,28 @@
   gap: 12px;
 }
 
+.errorResponseRewriteGrid {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.7fr) minmax(220px, 1.4fr) minmax(180px, 0.9fr);
+  gap: 12px;
+}
+
+.errorRewriteNotice {
+  display: grid;
+  gap: 5px;
+  padding: 11px 13px;
+  border-left: 3px solid var(--warning-border);
+  background: color-mix(in srgb, var(--warning-bg) 72%, transparent);
+  color: var(--warning-text);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.errorResponseBodyEditor {
+  min-height: 118px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+}
+
 .authModelExclusionGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1005,7 +1034,7 @@
 
 .priorityOverrideGrid {
   display: grid;
-  grid-template-columns: minmax(120px, 0.7fr) minmax(180px, 1fr) minmax(220px, 1.1fr);
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 12px;
   align-items: start;
 
@@ -1019,12 +1048,7 @@
 }
 
 .priorityOverrideGridWithFill {
-  grid-template-columns:
-    minmax(96px, 0.55fr)
-    minmax(150px, 0.95fr)
-    minmax(170px, 1fr)
-    minmax(170px, 1fr)
-    minmax(170px, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
 .codexCustomModelGroups {
@@ -1169,6 +1193,7 @@
   .codexCustomModelFieldGrid,
   .fixedCooldownGrid,
   .nonRetryableErrorGrid,
+  .errorResponseRewriteGrid,
   .authModelExclusionGrid,
   .priorityOverrideGrid,
   .codexCustomModelGroups,

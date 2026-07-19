@@ -97,6 +97,25 @@
   flex-wrap: wrap;
 }
 
+.checkSampleField {
+  display: grid;
+  grid-template-columns: auto 64px;
+  align-items: center;
+  gap: 8px;
+
+  label {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  input {
+    min-height: 34px;
+    padding: 6px 8px;
+  }
+}
+
 .emptyState {
   min-height: 150px;
   display: flex;
@@ -148,6 +167,11 @@
   border-top: 1px solid var(--border-color);
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+.spreadBindingsBadge {
+  color: var(--success-color, #18864b) !important;
+  font-weight: 700;
 }
 
 .healthyText,
@@ -274,6 +298,28 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.toggleField {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: $spacing-md;
+  padding: 12px 0;
+  border-top: 1px solid var(--border-color);
+
+  strong {
+    display: block;
+    font-size: 13px;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
 }
 
 .priorityInputRow {
@@ -430,6 +476,15 @@
   .editorGrid,
   .entryItem {
     grid-template-columns: 1fr;
+  }
+
+  .checkSampleField {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) 72px;
+  }
+
+  .toggleField {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .checkResults > div {

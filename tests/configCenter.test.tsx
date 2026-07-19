@@ -26,6 +26,10 @@ const translations: Record<string, string> = {
   'config_management.settings_center.pages.provider_antigravity.title': 'Antigravity',
   'config_management.settings_center.pages.provider_grok.title': 'Grok',
   'config_management.settings_center.pages.advanced_payload.title': 'Payload Rules',
+  'config_management.visual.sections.network.routing_per_auth_request_limit':
+    'Request limit per credential',
+  'config_management.visual.sections.network.routing_per_auth_request_window_minutes':
+    'Request limit window',
   'config_management.settings_center.search_placeholder': 'Search configuration',
   'config_management.status_dirty_short': 'Unsaved',
   'config_management.visual.validation_blocked_short': 'Fix errors',
@@ -120,6 +124,34 @@ describe('configuration settings center', () => {
     expect(screen.getByTestId('location').textContent).toBe('/config?section=config-routing');
   });
 
+  test('finds the error response rewrite editor by its nested YAML key', () => {
+    renderEditor('/config?section=global-basics');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'error-response-rewrites[].response-body' },
+    });
+    fireEvent.click(
+      screen.getByText('config_management.visual.sections.network.error_response_rewrites')
+    );
+
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-error-response-rewrites'
+    );
+  });
+
+  test('searches the generic request limiter by its displayed label', () => {
+    renderEditor('/config?section=global-basics');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'Request limit per credential' },
+    });
+    fireEvent.click(screen.getByText('Request limit per credential'));
+
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-routing-per-auth-request-limit'
+    );
+  });
+
   test('uses a catalog parent key to find newly added nested keys', () => {
     renderEditor('/config?section=global-basics');
 
@@ -164,6 +196,18 @@ describe('configuration settings center', () => {
     expect(screen.getAllByLabelText('modified').length).toBeGreaterThan(0);
     const basicsButton = screen.getByRole('button', { name: /Basics & Access/ });
     expect(basicsButton.textContent).toContain('1');
+  });
+
+  test('assigns new routing and response rewrite errors to their owning pages', () => {
+    renderEditor('/config?section=global-basics', {
+      validationErrors: {
+        routingPerAuthRequestLimit: 'non_negative_integer',
+        'errorResponseRewrites.rule-1.responseBody': 'json_object',
+      },
+    });
+
+    expect(screen.getByRole('button', { name: /Network & Routing/ }).textContent).toContain('1');
+    expect(screen.getByRole('button', { name: /Requests & Errors/ }).textContent).toContain('1');
   });
 
   test('keeps dirty and validation indicators in one navigation status cell', () => {
@@ -252,6 +296,9 @@ describe('configuration settings center', () => {
 
     expect(configPageHasDirtyFields(byId.get('global-basics')!, ['tlsEnable'])).toBe(true);
     expect(configPageHasDirtyFields(byId.get('global-network')!, ['routingStrategy'])).toBe(true);
+    expect(configPageHasDirtyFields(byId.get('global-request')!, ['errorResponseRewrites'])).toBe(
+      true
+    );
     expect(configPageHasDirtyFields(byId.get('advanced-payload')!, ['payloadDefaultRules'])).toBe(
       true
     );

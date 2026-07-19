@@ -304,6 +304,34 @@ const normalizeRoutingPriorityOverrides = (value: unknown): RoutingPriorityOverr
         entry.fillFirstPerAuthRpm = parsed;
       }
     }
+    const perAuthRequestLimitRaw = Object.prototype.hasOwnProperty.call(
+      source,
+      'per-auth-request-limit'
+    )
+      ? source['per-auth-request-limit']
+      : source.perAuthRequestLimit;
+    if (perAuthRequestLimitRaw === null) {
+      entry.perAuthRequestLimit = null;
+    } else if (perAuthRequestLimitRaw !== undefined) {
+      const parsed = Number(perAuthRequestLimitRaw);
+      if (Number.isSafeInteger(parsed) && parsed >= 0) {
+        entry.perAuthRequestLimit = parsed;
+      }
+    }
+    const perAuthRequestWindowMinutesRaw = Object.prototype.hasOwnProperty.call(
+      source,
+      'per-auth-request-window-minutes'
+    )
+      ? source['per-auth-request-window-minutes']
+      : source.perAuthRequestWindowMinutes;
+    if (perAuthRequestWindowMinutesRaw === null) {
+      entry.perAuthRequestWindowMinutes = null;
+    } else if (perAuthRequestWindowMinutesRaw !== undefined) {
+      const parsed = Number(perAuthRequestWindowMinutesRaw);
+      if (Number.isSafeInteger(parsed) && parsed >= 1) {
+        entry.perAuthRequestWindowMinutes = parsed;
+      }
+    }
 
     result.push(entry);
     return result;
@@ -336,6 +364,12 @@ const serializeRoutingPriorityOverrides = (
     }
     if (override.fillFirstPerAuthRpm !== undefined) {
       entry['fill-first-per-auth-rpm'] = override.fillFirstPerAuthRpm;
+    }
+    if (override.perAuthRequestLimit !== undefined) {
+      entry['per-auth-request-limit'] = override.perAuthRequestLimit;
+    }
+    if (override.perAuthRequestWindowMinutes !== undefined) {
+      entry['per-auth-request-window-minutes'] = override.perAuthRequestWindowMinutes;
     }
     return entry;
   });
@@ -598,6 +632,30 @@ export const configApi = {
    */
   patchRoutingFillFirstPerAuthRpm: (value: number) =>
     apiClient.patch('/routing/fill-first-per-auth-rpm', { value }),
+
+  async getRoutingPerAuthRequestLimit(): Promise<number> {
+    const data = await apiClient.get<Record<string, unknown>>('/routing/per-auth-request-limit');
+    return readNamedNumericConfigValue(data, 'per-auth-request-limit', 0);
+  },
+
+  updateRoutingPerAuthRequestLimit: (value: number) =>
+    apiClient.put('/routing/per-auth-request-limit', { value }),
+
+  patchRoutingPerAuthRequestLimit: (value: number) =>
+    apiClient.patch('/routing/per-auth-request-limit', { value }),
+
+  async getRoutingPerAuthRequestWindowMinutes(): Promise<number> {
+    const data = await apiClient.get<Record<string, unknown>>(
+      '/routing/per-auth-request-window-minutes'
+    );
+    return readNamedNumericConfigValue(data, 'per-auth-request-window-minutes', 1);
+  },
+
+  updateRoutingPerAuthRequestWindowMinutes: (value: number) =>
+    apiClient.put('/routing/per-auth-request-window-minutes', { value }),
+
+  patchRoutingPerAuthRequestWindowMinutes: (value: number) =>
+    apiClient.patch('/routing/per-auth-request-window-minutes', { value }),
 
   /**
    * 获取优先级覆盖规则
