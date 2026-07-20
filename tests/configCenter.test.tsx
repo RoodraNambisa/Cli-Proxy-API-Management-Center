@@ -1,13 +1,15 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { parse as parseYaml } from 'yaml';
 import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { VisualConfigEditor } from '@/components/config/VisualConfigEditor';
 import {
   CONFIG_PAGE_DEFINITIONS,
   configPageHasDirtyFields,
 } from '@/components/config/configCatalog';
+import { useVisualConfig } from '@/hooks/useVisualConfig';
 import { DEFAULT_VISUAL_VALUES, type VisualConfigValues } from '@/types/visualConfig';
 
 const translations: Record<string, string> = {
@@ -304,6 +306,26 @@ describe('configuration settings center', () => {
     );
     expect(configPageHasDirtyFields(byId.get('provider-codex')!, ['routingStrategy'])).toBe(false);
   });
+
+  test('removes retired Gemini CLI quota controls without hiding Antigravity credits', () => {
+    const globalView = renderEditor('/config?section=global-request');
+
+    expect(
+      screen.queryByText('config_management.visual.sections.quota.switch_project')
+    ).toBeNull();
+    expect(
+      screen.queryByText('config_management.visual.sections.quota.switch_preview_model')
+    ).toBeNull();
+
+    globalView.unmount();
+    renderEditor('/config?section=provider-antigravity');
+
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'config_management.visual.sections.quota.antigravity_credits',
+      })
+    ).not.toBeNull();
+  });
 });
 
 describe('ConfigDisclosure', () => {
@@ -323,6 +345,7 @@ describe('ConfigDisclosure', () => {
 
     const toggle = screen.getByRole('button', { name: /Sample settings/ });
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.querySelector('path')?.getAttribute('d')).toBe('m9 18 6-6-6-6');
     expect(screen.queryByText('Hidden fields')).toBeNull();
     fireEvent.click(toggle);
     expect(onExpandedChange).toHaveBeenCalledWith(true);
@@ -338,6 +361,61 @@ describe('ConfigDisclosure', () => {
         <div>Hidden fields</div>
       </ConfigDisclosure>
     );
+    expect(toggle.querySelector('path')?.getAttribute('d')).toBe('m6 9 6 6 6-6');
     expect(screen.getByText('Hidden fields')).not.toBeNull();
+  });
+});
+
+describe('legacy quota fallback config', () => {
+  test('preserves retired Gemini CLI fields without injecting active settings', () => {
+    const yaml = [
+      'quota-exceeded:',
+      '  switch-project: false',
+      '  switch-preview-model: true',
+      '',
+    ].join('\n');
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => {
+      expect(result.current.loadVisualValuesFromYaml(yaml)).toEqual({ ok: true });
+    });
+
+    const merged = parseYaml(result.current.applyVisualChangesToYaml(yaml)) as Record<
+      string,
+      Record<string, unknown>
+    >;
+    expect(merged['quota-exceeded']).toEqual({
+      'switch-project': false,
+      'switch-preview-model': true,
+    });
+  });
+
+  test('updates Antigravity credits independently of retired fields', () => {
+    const yaml = [
+      'quota-exceeded:',
+      '  switch-project: false',
+      '  switch-preview-model: true',
+      '  antigravity-credits: false',
+      '',
+    ].join('\n');
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => {
+      result.current.loadVisualValuesFromYaml(yaml);
+    });
+    act(() => {
+      result.current.setVisualValues({ quotaAntigravityCredits: true });
+    });
+
+    const merged = parseYaml(result.current.applyVisualChangesToYaml(yaml)) as Record<
+      string,
+      Record<string, unknown>
+    >;
+    expect(merged['quota-exceeded']).toEqual({
+      'switch-project': false,
+      'switch-preview-model': true,
+      'antigravity-credits': true,
+    });
+    expect(result.current.visualDirtyFields).toEqual(['quotaAntigravityCredits']);
   });
 });

@@ -682,10 +682,6 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   const quota = raw['quota-exceeded'] ?? raw.quotaExceeded;
   if (isRecord(quota)) {
     config.quotaExceeded = {
-      switchProject: normalizeBoolean(quota['switch-project'] ?? quota.switchProject),
-      switchPreviewModel: normalizeBoolean(
-        quota['switch-preview-model'] ?? quota.switchPreviewModel
-      ),
       antigravityCredits: normalizeBoolean(
         quota['antigravity-credits'] ?? quota.antigravityCredits
       ),

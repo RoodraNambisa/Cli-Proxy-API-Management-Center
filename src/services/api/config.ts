@@ -481,18 +481,6 @@ export const configApi = {
   patchMaxRetryInterval: (value: number) => patchNumericConfig('max-retry-interval', value),
 
   /**
-   * 配额回退：切换项目
-   */
-  updateSwitchProject: (enabled: boolean) =>
-    apiClient.put('/quota-exceeded/switch-project', { value: enabled }),
-
-  /**
-   * 配额回退：切换预览模型
-   */
-  updateSwitchPreviewModel: (enabled: boolean) =>
-    apiClient.put('/quota-exceeded/switch-preview-model', { value: enabled }),
-
-  /**
    * 使用统计开关
    */
   updateUsageStatistics: (enabled: boolean) =>

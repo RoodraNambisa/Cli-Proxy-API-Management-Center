@@ -180,8 +180,6 @@
     "max_retry_interval_label": "Лимит ожидания cooldown (сек):",
     "retry_update": "Обновить",
     "quota_title": "Поведение при превышении квоты",
-    "quota_switch_project": "Автоматически переключать проект",
-    "quota_switch_preview": "Переключаться на preview-модель",
     "usage_statistics_title": "Статистика использования",
     "usage_statistics_enable": "Включить статистику использования",
     "logging_title": "Журналирование",
@@ -1466,7 +1464,7 @@
         },
         "global_request": {
           "title": "Запросы и ошибки",
-          "description": "Обработка тела запроса, прямой возврат ошибок, cooldown и quota fallback."
+          "description": "Обработка тела запроса, прямой возврат ошибок и правила cooldown."
         },
         "global_observability": {
           "title": "Обслуживание и наблюдение",
@@ -1842,12 +1840,8 @@
           "stream_flush_min_bytes_hint": "Flush image stream после накопления N байт. 0 использует глобальные пороги streaming."
         },
         "quota": {
-          "title": "Резерв по квоте",
-          "description": "Стратегия при превышении квоты",
-          "switch_project": "Переключить проект",
-          "switch_project_desc": "Автоматически переходить на другой проект при превышении квоты",
-          "switch_preview_model": "Переключить на preview-модель",
-          "switch_preview_model_desc": "Переключаться на preview-версию модели при превышении квоты",
+          "title": "Правила cooldown",
+          "description": "Управление фиксированным cooldown и его пропуском для ошибок upstream",
           "antigravity_credits": "Повтор Antigravity Credits",
           "antigravity_credits_desc": "При ответе Antigravity quota_exhausted 429 повторять запрос один раз с enabledCreditTypes=[\"GOOGLE_ONE_AI\"]",
           "fixed_error_cooldowns": "Фиксированные cooldown для ошибок",
@@ -2225,8 +2219,6 @@
     "proxy_updated": "Настройки прокси обновлены",
     "proxy_cleared": "Настройки прокси очищены",
     "retry_updated": "Настройки повторов обновлены",
-    "quota_switch_project_updated": "Настройки переключения проектов обновлены",
-    "quota_switch_preview_updated": "Настройки переключения на preview-модель обновлены",
     "usage_statistics_updated": "Настройки статистики использования обновлены",
     "logging_to_file_updated": "Настройки журналирования обновлены",
     "logs_max_total_size_updated": "Лимит размера журналов обновлён",

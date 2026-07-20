@@ -178,8 +178,6 @@
     "max_retry_interval_label": "冷卻等待上限（秒）:",
     "retry_update": "更新",
     "quota_title": "配額超出行為",
-    "quota_switch_project": "自動切換專案",
-    "quota_switch_preview": "切換到預覽模型",
     "usage_statistics_title": "使用統計",
     "usage_statistics_enable": "啟用使用統計",
     "logging_title": "記錄",
@@ -1492,7 +1490,7 @@
         },
         "global_request": {
           "title": "請求與錯誤",
-          "description": "請求本文處理、錯誤直接回傳、固定冷卻和配額回退。"
+          "description": "請求本文處理、錯誤直接回傳、固定冷卻和略過冷卻規則。"
         },
         "global_observability": {
           "title": "維護與觀測",
@@ -1816,12 +1814,8 @@
           "codex_header_defaults_originator": "Codex Originator 預設值"
         },
         "quota": {
-          "title": "配額回退",
-          "description": "配額耗盡時的回退策略",
-          "switch_project": "切換專案",
-          "switch_project_desc": "配額耗盡時自動切換到其他專案",
-          "switch_preview_model": "切換預覽模型",
-          "switch_preview_model_desc": "配額耗盡時切換到預覽版本模型",
+          "title": "冷卻規則",
+          "description": "依上游錯誤控制固定冷卻和略過冷卻行為",
           "antigravity_credits": "Antigravity Credits 重試",
           "antigravity_credits_desc": "Antigravity 回傳 quota_exhausted 429 時，使用 enabledCreditTypes=[\"GOOGLE_ONE_AI\"] 重試一次",
           "fixed_error_cooldowns": "固定錯誤冷卻",
@@ -2249,8 +2243,6 @@
     "proxy_updated": "代理設定已更新",
     "proxy_cleared": "代理設定已清空",
     "retry_updated": "重試設定已更新",
-    "quota_switch_project_updated": "專案切換設定已更新",
-    "quota_switch_preview_updated": "預覽模型切換設定已更新",
     "usage_statistics_updated": "使用統計設定已更新",
     "logging_to_file_updated": "記錄設定已更新",
     "logs_max_total_size_updated": "記錄容量設定已更新",

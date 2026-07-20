@@ -180,8 +180,6 @@
     "max_retry_interval_label": "Cooldown wait limit (seconds):",
     "retry_update": "Update",
     "quota_title": "Quota Exceeded Behavior",
-    "quota_switch_project": "Auto Switch Project",
-    "quota_switch_preview": "Switch to Preview Model",
     "usage_statistics_title": "Usage Statistics",
     "usage_statistics_enable": "Enable usage statistics",
     "logging_title": "Logging",
@@ -1469,7 +1467,7 @@
         },
         "global_request": {
           "title": "Requests & Errors",
-          "description": "Request body handling, direct error returns, fixed cooldowns, and quota fallback."
+          "description": "Request body handling, direct error returns, and error cooldown rules."
         },
         "global_observability": {
           "title": "Maintenance & Observability",
@@ -1843,12 +1841,8 @@
           "stream_flush_min_bytes_hint": "Flush image streams once N pending bytes are buffered. 0 falls back to global streaming thresholds."
         },
         "quota": {
-          "title": "Quota Fallback",
-          "description": "Fallback strategy when quota is exceeded",
-          "switch_project": "Switch Project",
-          "switch_project_desc": "Automatically switch to another project when quota is exceeded",
-          "switch_preview_model": "Switch to Preview Model",
-          "switch_preview_model_desc": "Switch to preview model version when quota is exceeded",
+          "title": "Cooldown Rules",
+          "description": "Control fixed and skipped cooldown behavior for upstream errors",
           "antigravity_credits": "Antigravity Credits Retry",
           "antigravity_credits_desc": "Retry once with enabledCreditTypes=[\"GOOGLE_ONE_AI\"] when Antigravity returns quota_exhausted 429",
           "fixed_error_cooldowns": "Fixed Error Cooldowns",
@@ -2226,8 +2220,6 @@
     "proxy_updated": "Proxy settings updated",
     "proxy_cleared": "Proxy settings cleared",
     "retry_updated": "Retry settings updated",
-    "quota_switch_project_updated": "Project switch settings updated",
-    "quota_switch_preview_updated": "Preview model switch settings updated",
     "usage_statistics_updated": "Usage statistics settings updated",
     "logging_to_file_updated": "Logging settings updated",
     "logs_max_total_size_updated": "Log size limit updated",

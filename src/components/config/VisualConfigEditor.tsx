@@ -3234,29 +3234,11 @@ export function VisualConfigEditor({
               )}
             >
               <SectionStack>
-                <SectionGrid>
-                  <PageGroup id="config-quota-fallback" active={activePageId === 'global-request'}>
-                    <ToggleRow
-                      title={t('config_management.visual.sections.quota.switch_project')}
-                      description={t('config_management.visual.sections.quota.switch_project_desc')}
-                      checked={values.quotaSwitchProject}
-                      disabled={disabled}
-                      onChange={(quotaSwitchProject) => onChange({ quotaSwitchProject })}
-                    />
-                    <ToggleRow
-                      title={t('config_management.visual.sections.quota.switch_preview_model')}
-                      description={t(
-                        'config_management.visual.sections.quota.switch_preview_model_desc'
-                      )}
-                      checked={values.quotaSwitchPreviewModel}
-                      disabled={disabled}
-                      onChange={(quotaSwitchPreviewModel) => onChange({ quotaSwitchPreviewModel })}
-                    />
-                  </PageGroup>
-                  <PageGroup
-                    id="config-antigravity-credits"
-                    active={activePageId === 'provider-antigravity'}
-                  >
+                <PageGroup
+                  id="config-antigravity-credits"
+                  active={activePageId === 'provider-antigravity'}
+                >
+                  <SectionGrid>
                     <ToggleRow
                       title={t('config_management.visual.sections.quota.antigravity_credits')}
                       description={t(
@@ -3266,8 +3248,8 @@ export function VisualConfigEditor({
                       disabled={disabled}
                       onChange={(quotaAntigravityCredits) => onChange({ quotaAntigravityCredits })}
                     />
-                  </PageGroup>
-                </SectionGrid>
+                  </SectionGrid>
+                </PageGroup>
                 <PageGroup
                   id="config-fixed-error-cooldowns"
                   active={activePageId === 'global-request'}

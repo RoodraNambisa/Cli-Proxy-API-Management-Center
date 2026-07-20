@@ -2040,18 +2040,6 @@ function getNextDirtyFields(
   if (Object.prototype.hasOwnProperty.call(patch, 'wsAuth')) {
     updateDirty('wsAuth', nextValues.wsAuth === baselineValues.wsAuth);
   }
-  if (Object.prototype.hasOwnProperty.call(patch, 'quotaSwitchProject')) {
-    updateDirty(
-      'quotaSwitchProject',
-      nextValues.quotaSwitchProject === baselineValues.quotaSwitchProject
-    );
-  }
-  if (Object.prototype.hasOwnProperty.call(patch, 'quotaSwitchPreviewModel')) {
-    updateDirty(
-      'quotaSwitchPreviewModel',
-      nextValues.quotaSwitchPreviewModel === baselineValues.quotaSwitchPreviewModel
-    );
-  }
   if (Object.prototype.hasOwnProperty.call(patch, 'quotaAntigravityCredits')) {
     updateDirty(
       'quotaAntigravityCredits',
@@ -2603,8 +2591,6 @@ export function useVisualConfig() {
         ),
         wsAuth: Boolean(parsed['ws-auth']),
 
-        quotaSwitchProject: Boolean(quotaExceeded?.['switch-project'] ?? true),
-        quotaSwitchPreviewModel: Boolean(quotaExceeded?.['switch-preview-model'] ?? true),
         quotaAntigravityCredits: Boolean(quotaExceeded?.['antigravity-credits'] ?? true),
 
         authMaintenance: {
@@ -3044,14 +3030,10 @@ export function useVisualConfig() {
         setBooleanInDoc(doc, ['ws-auth'], values.wsAuth);
 
         if (
-          docHas(doc, ['quota-exceeded']) ||
-          !values.quotaSwitchProject ||
-          !values.quotaSwitchPreviewModel ||
+          docHas(doc, ['quota-exceeded', 'antigravity-credits']) ||
           !values.quotaAntigravityCredits
         ) {
           ensureMapInDoc(doc, ['quota-exceeded']);
-          doc.setIn(['quota-exceeded', 'switch-project'], values.quotaSwitchProject);
-          doc.setIn(['quota-exceeded', 'switch-preview-model'], values.quotaSwitchPreviewModel);
           doc.setIn(['quota-exceeded', 'antigravity-credits'], values.quotaAntigravityCredits);
           deleteIfMapEmpty(doc, ['quota-exceeded']);
         }

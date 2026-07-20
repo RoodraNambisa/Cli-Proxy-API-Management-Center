@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { IconChevronDown, IconChevronUp } from '@/components/ui/icons';
+import { IconChevronDown, IconChevronRight } from '@/components/ui/icons';
 import styles from './ConfigDisclosure.module.scss';
 
 type ConfigDisclosureProps = {
@@ -40,7 +40,7 @@ export function ConfigDisclosure({
           onClick={() => onExpandedChange(!expanded)}
         >
           <span className={styles.chevron} aria-hidden="true">
-            {expanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+            {expanded ? <IconChevronDown size={16} /> : <IconChevronRight size={16} />}
           </span>
           <span className={styles.copy}>
             <span className={styles.titleRow}>

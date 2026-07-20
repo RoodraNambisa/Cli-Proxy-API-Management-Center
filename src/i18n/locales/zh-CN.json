@@ -180,8 +180,6 @@
     "max_retry_interval_label": "冷却等待上限（秒）:",
     "retry_update": "更新",
     "quota_title": "配额超出行为",
-    "quota_switch_project": "自动切换项目",
-    "quota_switch_preview": "切换到预览模型",
     "usage_statistics_title": "使用统计",
     "usage_statistics_enable": "启用使用统计",
     "logging_title": "日志记录",
@@ -1473,7 +1471,7 @@
         },
         "global_request": {
           "title": "请求与错误",
-          "description": "请求体处理、错误直返、固定冷却和配额回退。"
+          "description": "请求体处理、错误直返、固定冷却和跳过冷却规则。"
         },
         "global_observability": {
           "title": "维护与观测",
@@ -1847,12 +1845,8 @@
           "stream_flush_min_bytes_hint": "图片流式输出累计到 N 字节后立即 flush，0 表示使用全局流式阈值"
         },
         "quota": {
-          "title": "配额回退",
-          "description": "配额耗尽时的回退策略",
-          "switch_project": "切换项目",
-          "switch_project_desc": "配额耗尽时自动切换到其他项目",
-          "switch_preview_model": "切换预览模型",
-          "switch_preview_model_desc": "配额耗尽时切换到预览版本模型",
+          "title": "冷却规则",
+          "description": "按上游错误控制固定冷却和跳过冷却行为",
           "antigravity_credits": "Antigravity Credits 重试",
           "antigravity_credits_desc": "Antigravity 返回 quota_exhausted 429 时，使用 enabledCreditTypes=[\"GOOGLE_ONE_AI\"] 重试一次",
           "fixed_error_cooldowns": "固定错误冷却",
@@ -2230,8 +2224,6 @@
     "proxy_updated": "代理设置已更新",
     "proxy_cleared": "代理设置已清空",
     "retry_updated": "重试设置已更新",
-    "quota_switch_project_updated": "项目切换设置已更新",
-    "quota_switch_preview_updated": "预览模型切换设置已更新",
     "usage_statistics_updated": "使用统计设置已更新",
     "logging_to_file_updated": "日志记录设置已更新",
     "logs_max_total_size_updated": "日志容量设置已更新",

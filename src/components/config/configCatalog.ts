@@ -78,8 +78,6 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'errorResponseRewrites',
       'fixedErrorCooldowns',
       'noCooldownStatusCodes',
-      'quotaSwitchProject',
-      'quotaSwitchPreviewModel',
     ],
   },
   {
@@ -355,13 +353,6 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     pageId: 'global-request',
     labelKey: 'config_management.visual.sections.quota.no_cooldown_status_codes',
     yamlKeys: ['no-cooldown-status-codes'],
-  },
-  {
-    id: 'config-quota-fallback',
-    pageId: 'global-request',
-    labelKey: 'config_management.visual.sections.quota.switch_project',
-    yamlKeys: ['quota-exceeded.switch-project', 'quota-exceeded.switch-preview-model'],
-    aliases: ['quota fallback', '配额回退'],
   },
   {
     id: 'config-system-mode',

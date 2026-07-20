@@ -261,8 +261,6 @@ export type VisualConfigValues = {
   disabledImageGenerationToolFallback: boolean;
   disabledImageGenerationToolAction: DisabledImageGenerationToolAction;
   disabledImageGenerationToolError: DisabledImageGenerationToolErrorVisualConfig;
-  quotaSwitchProject: boolean;
-  quotaSwitchPreviewModel: boolean;
   quotaAntigravityCredits: boolean;
   authMaintenance: AuthMaintenanceVisualConfig;
   images: ImagesVisualConfig;
@@ -352,8 +350,6 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     type: 'image_generation_disabled',
     code: 'image_generation_disabled',
   },
-  quotaSwitchProject: true,
-  quotaSwitchPreviewModel: true,
   quotaAntigravityCredits: true,
   authMaintenance: {
     enable: false,
