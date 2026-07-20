@@ -33,6 +33,7 @@ export interface ErrorResponseRewriteConfig {
 }
 
 export interface AuthModelExclusionConfig {
+  providers?: string[];
   models?: string[];
   priorities?: number[];
   keywordContains?: string[];

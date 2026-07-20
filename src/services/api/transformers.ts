@@ -13,6 +13,7 @@ import {
   type Config,
   type NativeImageEndpointConfig,
 } from '@/types/config';
+import { normalizeAuthModelExclusionProviders } from '@/utils/authModelExclusions';
 import { buildHeaderObject } from '@/utils/headers';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -141,14 +142,19 @@ const normalizeAuthModelExclusions = (
 
   const normalized = value.reduce<NonNullable<Config['authModelExclusions']>>((result, item) => {
     if (!isRecord(item)) return result;
-    result.push({
+    const providers = normalizeStringArray(item.providers);
+    const entry: NonNullable<Config['authModelExclusions']>[number] = {
       models: normalizeStringArray(item.models),
       priorities: normalizeIntegerArray(item.priorities),
       keywordContains: normalizeStringArray(item['keyword-contains'] ?? item.keywordContains),
       disableImageGeneration: normalizeBoolean(
         item['disable-image-generation'] ?? item.disableImageGeneration
       ),
-    });
+    };
+    if (providers !== undefined) {
+      entry.providers = normalizeAuthModelExclusionProviders(providers);
+    }
+    result.push(entry);
     return result;
   }, []);
 

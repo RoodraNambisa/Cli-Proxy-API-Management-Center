@@ -179,6 +179,7 @@ export interface ErrorResponseRewriteVisualEntry {
 
 export interface AuthModelExclusionVisualEntry {
   clientId: string;
+  providers: string[];
   models: string[];
   priorities: string[];
   keywordContains: string[];

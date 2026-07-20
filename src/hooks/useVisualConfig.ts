@@ -24,7 +24,10 @@ import type {
 } from '@/types/visualConfig';
 import { DEFAULT_VISUAL_VALUES, makeClientId } from '@/types/visualConfig';
 import { CODEX_CUSTOM_MODEL_GROUPS, type CodexCustomModelGroup } from '@/types/config';
-import { normalizeAuthModelExclusionModels } from '@/utils/authModelExclusions';
+import {
+  normalizeAuthModelExclusionModels,
+  normalizeAuthModelExclusionProviders,
+} from '@/utils/authModelExclusions';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -827,6 +830,7 @@ function parseAuthModelExclusions(raw: unknown): AuthModelExclusionVisualEntry[]
     if (!record) return result;
     result.push({
       clientId: makeClientId(),
+      providers: normalizeAuthModelExclusionProviders(parseStringList(record.providers)),
       models: normalizeAuthModelExclusionModels(parseStringList(record.models)),
       priorities: parseStringList(record.priorities),
       keywordContains: normalizeStringListItems(
@@ -871,6 +875,7 @@ function serializeAuthModelExclusionsForYaml(
   rules: AuthModelExclusionVisualEntry[]
 ): Array<Record<string, unknown>> {
   return rules.reduce<Array<Record<string, unknown>>>((result, rule) => {
+    const providers = normalizeAuthModelExclusionProviders(rule.providers);
     const models = normalizeAuthModelExclusionModels(rule.models);
     if (models.length === 0 && !rule.disableImageGeneration) return result;
 
@@ -880,9 +885,12 @@ function serializeAuthModelExclusionsForYaml(
       return list;
     }, []);
     const keywordContains = normalizeStringListItems(rule.keywordContains);
-    if (priorities.length === 0 && keywordContains.length === 0) return result;
+    if (providers.length === 0 && priorities.length === 0 && keywordContains.length === 0) {
+      return result;
+    }
 
     const entry: Record<string, unknown> = {};
+    if (providers.length > 0) entry.providers = providers;
     if (models.length > 0) entry.models = models;
     if (priorities.length > 0) entry.priorities = Array.from(new Set(priorities));
     if (keywordContains.length > 0) entry['keyword-contains'] = keywordContains;
@@ -901,6 +909,7 @@ function areAuthModelExclusionsEqual(
     const other = right[index];
     return (
       Boolean(other) &&
+      areStringArraysEqual(entry.providers, other.providers) &&
       areStringArraysEqual(entry.models, other.models) &&
       areStringArraysEqual(entry.priorities, other.priorities) &&
       areStringArraysEqual(entry.keywordContains, other.keywordContains) &&
@@ -1277,6 +1286,7 @@ export function getVisualConfigValidationErrors(
         result[`authModelExclusions.${rule.clientId}.priorities`] = prioritiesError;
       }
       if (
+        normalizeAuthModelExclusionProviders(rule.providers).length === 0 &&
         normalizeStringListItems(rule.priorities).length === 0 &&
         normalizeStringListItems(rule.keywordContains).length === 0
       ) {

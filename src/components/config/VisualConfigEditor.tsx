@@ -1057,6 +1057,7 @@ export function VisualConfigEditor({
       ...values.authModelExclusions,
       {
         clientId: makeClientId(),
+        providers: [],
         models: [''],
         priorities: [],
         keywordContains: [],
@@ -1820,6 +1821,29 @@ export function VisualConfigEditor({
                                   </div>
                                 ) : null}
                               </FieldShell>
+                              <FieldShell
+                                label={t(
+                                  'config_management.visual.sections.auth.auth_model_exclusions_providers'
+                                )}
+                                hint={t(
+                                  'config_management.visual.sections.auth.auth_model_exclusions_providers_hint'
+                                )}
+                                error={matchError}
+                              >
+                                <TagListEditor
+                                  value={rule.providers}
+                                  disabled={disabled}
+                                  placeholder={t(
+                                    'config_management.visual.sections.auth.auth_model_exclusions_providers_placeholder'
+                                  )}
+                                  emptyLabel={t(
+                                    'config_management.visual.sections.auth.auth_model_exclusions_providers_empty'
+                                  )}
+                                  onChange={(providers) =>
+                                    updateAuthModelExclusion(rule.clientId, { providers })
+                                  }
+                                />
+                              </FieldShell>
                               <div className={styles.authModelExclusionGrid}>
                                 <FieldShell
                                   label={t(
@@ -1851,7 +1875,6 @@ export function VisualConfigEditor({
                                   hint={t(
                                     'config_management.visual.sections.auth.auth_model_exclusions_keyword_contains_hint'
                                   )}
-                                  error={matchError}
                                 >
                                   <TagListEditor
                                     value={rule.keywordContains}

@@ -1,3 +1,17 @@
+export function normalizeAuthModelExclusionProviders(providers: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  providers.forEach((provider) => {
+    const normalized = provider.trim().toLowerCase();
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    result.push(normalized);
+  });
+
+  return result;
+}
+
 export function normalizeAuthModelExclusionModels(models: string[]): string[] {
   const items = models.map((item) => item.trim()).filter(Boolean);
   if (items.length === 0) return [];
