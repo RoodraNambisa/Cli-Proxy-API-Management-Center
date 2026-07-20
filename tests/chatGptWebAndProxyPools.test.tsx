@@ -275,7 +275,7 @@ describe('ChatGPT Web management compatibility', () => {
     );
   });
 
-  test('renders terminal lifecycle separately from cooldown and hides raw credential actions', () => {
+  test('renders lifecycle separately from cooldown and exposes all Web credential actions', () => {
     const onRelogin = vi.fn();
     const props = createCardProps({
       name: 'chatgpt-web.json',
@@ -308,11 +308,31 @@ describe('ChatGPT Web management compatibility', () => {
 
     expect(screen.getAllByText('interaction_required').length).toBeGreaterThan(0);
     expect(screen.queryByText('auth_files.cooldown_auth_until')).toBeNull();
-    expect(screen.queryByTitle('auth_files.download_button')).toBeNull();
-    expect(screen.queryByTitle('auth_files.prefix_proxy_button')).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'auth_files.batch_select_all' })).not.toBeNull();
+    expect(screen.getByTitle('auth_files.models_button')).not.toBeNull();
+    expect(screen.getByTitle('auth_files.download_button')).not.toBeNull();
+    expect(screen.getByTitle('auth_files.prefix_proxy_button')).not.toBeNull();
+    expect(screen.getByTitle('auth_files.delete_button')).not.toBeNull();
+    expect(screen.getByLabelText('auth_files.status_toggle_label')).not.toBeNull();
     expect(screen.queryByText('socks5://user:secret@proxy.example:1080')).toBeNull();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'auth_files.batch_select_all' }));
+    fireEvent.click(screen.getByTitle('auth_files.models_button'));
+    fireEvent.click(screen.getByTitle('auth_files.download_button'));
+    fireEvent.click(screen.getByTitle('auth_files.prefix_proxy_button'));
     fireEvent.click(screen.getByTitle('auth_files.chatgpt_web_relogin'));
+    fireEvent.click(screen.getByTitle('auth_files.delete_button'));
+
+    expect(props.onToggleSelect).toHaveBeenCalledWith('chatgpt-web.json');
+    expect(props.onShowModels).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'chatgpt-web.json' })
+    );
+    expect(props.onDownload).toHaveBeenCalledWith('chatgpt-web.json');
+    expect(props.onOpenPrefixProxyEditor).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'chatgpt-web.json' })
+    );
     expect(onRelogin).toHaveBeenCalledWith(expect.objectContaining({ name: 'chatgpt-web.json' }));
+    expect(props.onDelete).toHaveBeenCalledWith('chatgpt-web.json');
   });
 
   test('distinguishes token-only and missing-source Web credentials from cooldown', () => {

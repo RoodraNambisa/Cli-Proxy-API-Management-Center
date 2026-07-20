@@ -98,6 +98,7 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                   className={styles.prefixProxyTextarea}
                   rows={8}
                   readOnly
+                  aria-label={t('auth_files.prefix_proxy_info_label')}
                   value={editor.fileInfoText}
                 />
               </div>
@@ -109,6 +110,7 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                   className={styles.prefixProxyTextarea}
                   rows={10}
                   readOnly
+                  aria-label={t('auth_files.prefix_proxy_source_label')}
                   value={previewText}
                 />
               </div>

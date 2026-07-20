@@ -23,10 +23,6 @@ import {
 
 const CODEX_PLAN_TYPE_REFRESH_POLL_INTERVAL_MS = 3000;
 const COOLDOWN_MISSING_PREVIEW_LIMIT = 5;
-const isChatGptWebAuthFile = (file: AuthFileItem) =>
-  String(file.provider ?? file.type ?? '')
-    .trim()
-    .toLowerCase() === 'chatgpt-web';
 
 const isRetainedCodexAuthFile = (file: AuthFileItem): boolean =>
   String(file.provider ?? file.type ?? '')
@@ -250,7 +246,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
   const selectAllVisible = useCallback((visibleFiles: AuthFileItem[]) => {
     const nextSelected = visibleFiles
-      .filter((file) => !isRuntimeOnlyAuthFile(file) && !isChatGptWebAuthFile(file))
+      .filter((file) => !isRuntimeOnlyAuthFile(file))
       .map((file) => file.name);
     if (nextSelected.length === 0) return;
     setSelectedFiles((prev) => {
@@ -262,7 +258,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
   const invertVisibleSelection = useCallback((visibleFiles: AuthFileItem[]) => {
     const visibleNames = visibleFiles
-      .filter((file) => !isRuntimeOnlyAuthFile(file) && !isChatGptWebAuthFile(file))
+      .filter((file) => !isRuntimeOnlyAuthFile(file))
       .map((file) => file.name);
     if (visibleNames.length === 0) return;
 

@@ -1,10 +1,12 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { apiClient } from '@/services/api/client';
 import { authFilesApi } from '@/services/api/authFiles';
 import { chatGptWebApi } from '@/services/api/chatgptWeb';
 import { useAuthFilesBatchSettings } from '@/features/authFiles/hooks/useAuthFilesBatchSettings';
+import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
 import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
+import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem } from '@/types';
 
@@ -19,6 +21,8 @@ vi.mock('react-i18next', async (importOriginal) => {
 describe('auth file save paths', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    localStorage.clear();
+    sessionStorage.clear();
     useNotificationStore.getState().clearAll();
   });
 
@@ -375,7 +379,13 @@ describe('auth file save paths', () => {
     vi.spyOn(authFilesApi, 'downloadText').mockResolvedValue(
       JSON.stringify({ type: 'codex', priority: 1, websockets: false })
     );
-    const patchFields = vi.spyOn(authFilesApi, 'patchFields').mockResolvedValue({ status: 'ok' });
+    const patchFieldsBatch = vi.spyOn(authFilesApi, 'patchFieldsBatch').mockResolvedValue({
+      status: 'ok',
+      matched: 1,
+      updated: 1,
+      files: ['codex.json'],
+      failed: [],
+    });
     const saveText = vi.spyOn(authFilesApi, 'saveText');
     let resolveLoadFiles: (() => void) | undefined;
     const loadFiles = vi.fn(
@@ -394,7 +404,7 @@ describe('auth file save paths', () => {
     act(() => result.current.handlePrefixProxyChange('priority', '-1'));
     await act(async () => result.current.handlePrefixProxySave());
 
-    expect(patchFields).toHaveBeenCalledWith('codex.json', { priority: -1 });
+    expect(patchFieldsBatch).toHaveBeenCalledWith(['codex.json'], { priority: -1 });
     expect(saveText).not.toHaveBeenCalled();
     expect(loadFiles).toHaveBeenCalledTimes(1);
     expect(result.current.prefixProxyEditor).toBeNull();
@@ -408,7 +418,13 @@ describe('auth file save paths', () => {
         headers: { 'X-Keep': 'old', 'X-Remove': 'gone' },
       })
     );
-    const patchFields = vi.spyOn(authFilesApi, 'patchFields').mockResolvedValue({ status: 'ok' });
+    const patchFieldsBatch = vi.spyOn(authFilesApi, 'patchFieldsBatch').mockResolvedValue({
+      status: 'ok',
+      matched: 1,
+      updated: 1,
+      files: ['claude.json'],
+      failed: [],
+    });
     const saveText = vi.spyOn(authFilesApi, 'saveText');
     const { result } = renderHook(() =>
       useAuthFilesPrefixProxyEditor({
@@ -428,10 +444,205 @@ describe('auth file save paths', () => {
     );
     await act(async () => result.current.handlePrefixProxySave());
 
-    expect(patchFields).toHaveBeenCalledWith('claude.json', {
-      headers: { 'X-Keep': 'new', 'X-Remove': '', 'X-New': 'value' },
+    expect(patchFieldsBatch).toHaveBeenCalledWith(['claude.json'], {
+      headers: { 'X-Keep': 'new', 'X-New': 'value' },
     });
     expect(saveText).not.toHaveBeenCalled();
+  });
+
+  test('previews and copies the complete ChatGPT Web JSON without storing it', async () => {
+    const rawCredential = {
+      type: 'chatgpt-web',
+      access_token: 'test-access-token',
+      refresh_token: 'test-refresh-token',
+      id_token: 'test-id-token',
+      cookies: [{ name: 'session', value: 'test-cookie' }],
+      cookie_header: 'session=test-cookie',
+      session_token: 'test-session-token',
+      password: 'test-password',
+      totp_secret: 'TESTTOTPSECRET',
+      source_auth_id: 'codex-source.json',
+      source_credential_uid: 'source-credential-uid',
+      priority: 1,
+    };
+    const downloadText = vi
+      .spyOn(authFilesApi, 'downloadText')
+      .mockResolvedValue(JSON.stringify(rawCredential));
+    const onCopyText = vi.fn();
+    const { result } = renderHook(() =>
+      useAuthFilesPrefixProxyEditor({
+        disableControls: false,
+        loadFiles: vi.fn().mockResolvedValue(undefined),
+      })
+    );
+
+    await act(async () =>
+      result.current.openPrefixProxyEditor({ name: 'chatgpt-web.json', type: 'chatgpt-web' })
+    );
+
+    expect(downloadText).toHaveBeenCalledWith('chatgpt-web.json');
+    render(
+      <AuthFilesPrefixProxyEditorModal
+        disableControls={false}
+        editor={result.current.prefixProxyEditor}
+        updatedText={result.current.prefixProxyUpdatedText}
+        dirty={result.current.prefixProxyDirty}
+        onClose={vi.fn()}
+        onCopyText={onCopyText}
+        onSave={vi.fn()}
+        onChange={vi.fn()}
+      />
+    );
+
+    const preview = screen.getByRole('textbox', {
+      name: 'auth_files.prefix_proxy_source_label',
+    }) as HTMLTextAreaElement;
+    for (const value of [
+      'test-access-token',
+      'test-refresh-token',
+      'test-id-token',
+      'test-cookie',
+      'test-session-token',
+      'test-password',
+      'TESTTOTPSECRET',
+      'codex-source.json',
+      'source-credential-uid',
+    ]) {
+      expect(preview.value).toContain(value);
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.copy' }));
+    expect(onCopyText).toHaveBeenCalledTimes(1);
+    const copied = JSON.parse(String(onCopyText.mock.calls[0][0])) as Record<string, unknown>;
+    expect(copied.access_token).toBe(rawCredential.access_token);
+    expect(copied.password).toBe(rawCredential.password);
+    expect(copied.totp_secret).toBe(rawCredential.totp_secret);
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+  });
+
+  test('saves ChatGPT Web priority zero and note through fields PATCH only', async () => {
+    vi.spyOn(authFilesApi, 'downloadText').mockResolvedValue(
+      JSON.stringify({
+        type: 'chatgpt-web',
+        access_token: 'test-access-token',
+        refresh_token: 'test-refresh-token',
+        cookies: [{ name: 'session', value: 'test-cookie' }],
+        password: 'test-password',
+        totp: 'TESTTOTPSECRET',
+        source_auth_id: 'codex-source.json',
+        source_credential_uid: 'source-credential-uid',
+        priority: 4,
+      })
+    );
+    const patchFieldsBatch = vi.spyOn(authFilesApi, 'patchFieldsBatch').mockResolvedValue({
+      status: 'ok',
+      matched: 1,
+      updated: 1,
+      files: ['chatgpt-web.json'],
+      failed: [],
+    });
+    const saveText = vi.spyOn(authFilesApi, 'saveText');
+    const { result } = renderHook(() =>
+      useAuthFilesPrefixProxyEditor({
+        disableControls: false,
+        loadFiles: vi.fn().mockResolvedValue(undefined),
+      })
+    );
+
+    await act(async () =>
+      result.current.openPrefixProxyEditor({ name: 'chatgpt-web.json', type: 'chatgpt-web' })
+    );
+    act(() => {
+      result.current.handlePrefixProxyChange('priority', '0');
+      result.current.handlePrefixProxyChange('note', 'updated note');
+    });
+    await act(async () => result.current.handlePrefixProxySave());
+
+    expect(patchFieldsBatch).toHaveBeenCalledWith(['chatgpt-web.json'], {
+      priority: 0,
+      note: 'updated note',
+    });
+    expect(saveText).not.toHaveBeenCalled();
+  });
+
+  test('clears a ChatGPT Web priority with null instead of zero', async () => {
+    vi.spyOn(authFilesApi, 'downloadText').mockResolvedValue(
+      JSON.stringify({ type: 'chatgpt-web', priority: 4 })
+    );
+    const patchFieldsBatch = vi.spyOn(authFilesApi, 'patchFieldsBatch').mockResolvedValue({
+      status: 'ok',
+      matched: 1,
+      updated: 1,
+      files: ['chatgpt-web.json'],
+      failed: [],
+    });
+    const { result } = renderHook(() =>
+      useAuthFilesPrefixProxyEditor({
+        disableControls: false,
+        loadFiles: vi.fn().mockResolvedValue(undefined),
+      })
+    );
+
+    await act(async () =>
+      result.current.openPrefixProxyEditor({ name: 'chatgpt-web.json', type: 'chatgpt-web' })
+    );
+    act(() => result.current.handlePrefixProxyChange('priority', ''));
+    await act(async () => result.current.handlePrefixProxySave());
+
+    expect(patchFieldsBatch).toHaveBeenCalledWith(['chatgpt-web.json'], { priority: null });
+  });
+
+  test('includes ChatGPT Web files in select-all and invert-selection actions', async () => {
+    const files: AuthFileItem[] = [
+      { name: 'chatgpt-web-a.json', type: 'chatgpt-web' },
+      { name: 'chatgpt-web-b.json', provider: 'chatgpt-web' },
+      { name: 'runtime-only.json', type: 'chatgpt-web', runtime_only: true },
+    ];
+    vi.spyOn(authFilesApi, 'list').mockResolvedValue({ files });
+    const { result } = renderHook(() =>
+      useAuthFilesData({ refreshKeyStats: vi.fn().mockResolvedValue(undefined), active: false })
+    );
+
+    await act(async () => result.current.loadFiles());
+    act(() => result.current.selectAllVisible(result.current.files));
+    expect(Array.from(result.current.selectedFiles).sort()).toEqual([
+      'chatgpt-web-a.json',
+      'chatgpt-web-b.json',
+    ]);
+
+    act(() => result.current.invertVisibleSelection(result.current.files));
+    expect(result.current.selectedFiles.size).toBe(0);
+  });
+
+  test('downloads ChatGPT Web files individually and as selected or complete archives', async () => {
+    const getRaw = vi.spyOn(apiClient, 'getRaw').mockResolvedValue({
+      data: new Blob(['{"type":"chatgpt-web"}'], { type: 'application/json' }),
+    } as never);
+    const requestRaw = vi.spyOn(apiClient, 'requestRaw').mockResolvedValue({
+      data: new Blob(['zip'], { type: 'application/zip' }),
+      headers: {},
+    } as never);
+
+    await authFilesApi.downloadText('chatgpt-web-a.json');
+    await authFilesApi.downloadArchiveByNames(['chatgpt-web-a.json', 'chatgpt-web-b.json']);
+    await authFilesApi.downloadArchiveAll();
+
+    expect(getRaw).toHaveBeenCalledWith('/auth-files/download?name=chatgpt-web-a.json', {
+      responseType: 'blob',
+    });
+    expect(requestRaw).toHaveBeenNthCalledWith(1, {
+      url: '/auth-files/archive',
+      method: 'POST',
+      data: { names: ['chatgpt-web-a.json', 'chatgpt-web-b.json'] },
+      responseType: 'blob',
+    });
+    expect(requestRaw).toHaveBeenNthCalledWith(2, {
+      url: '/auth-files/archive',
+      method: 'POST',
+      data: { all: true },
+      responseType: 'blob',
+    });
   });
 
   test('uploads distinct files concurrently and combines their results', async () => {

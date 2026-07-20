@@ -325,12 +325,12 @@ export function AuthFileCard(props: AuthFileCardProps) {
       <div className={styles.fileCardLayout}>
         <div className={styles.fileCardMain}>
           <div className={styles.cardHeader}>
-            {!isRuntimeOnly && !isRetiredGeminiCli && !isChatGptWeb && (
+            {!isRuntimeOnly && !isRetiredGeminiCli && (
               <SelectionCheckbox
                 checked={selected}
                 onChange={() => onToggleSelect(file.name)}
                 className={styles.cardSelection}
-                aria-label={
+                ariaLabel={
                   selected ? t('auth_files.batch_deselect') : t('auth_files.batch_select_all')
                 }
                 title={selected ? t('auth_files.batch_deselect') : t('auth_files.batch_select_all')}
@@ -646,38 +646,35 @@ export function AuthFileCard(props: AuthFileCardProps) {
               )}
               {(!isRuntimeOnly || isRetiredGeminiCli) && (
                 <div className={styles.cardUtilityActions}>
-                  {!isChatGptWeb ? (
-                    <>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onDownload(file.name)}
-                        className={styles.iconButton}
-                        title={t('auth_files.download_button')}
-                        disabled={disableControls}
-                      >
-                        <IconDownload className={styles.actionIcon} size={16} />
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onOpenPrefixProxyEditor(file)}
-                        className={styles.iconButton}
-                        title={
-                          isRetiredGeminiCli
-                            ? t('auth_files.view_button')
-                            : t('auth_files.prefix_proxy_button')
-                        }
-                        disabled={disableControls}
-                      >
-                        {isRetiredGeminiCli ? (
-                          <IconEye className={styles.actionIcon} size={16} />
-                        ) : (
-                          <IconSettings className={styles.actionIcon} size={16} />
-                        )}
-                      </Button>
-                    </>
-                  ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onDownload(file.name)}
+                    className={styles.iconButton}
+                    title={t('auth_files.download_button')}
+                    disabled={disableControls}
+                  >
+                    <IconDownload className={styles.actionIcon} size={16} />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onOpenPrefixProxyEditor(file)}
+                    className={styles.iconButton}
+                    title={
+                      isRetiredGeminiCli
+                        ? t('auth_files.view_button')
+                        : t('auth_files.prefix_proxy_button')
+                    }
+                    disabled={disableControls}
+                  >
+                    {isRetiredGeminiCli ? (
+                      <IconEye className={styles.actionIcon} size={16} />
+                    ) : (
+                      <IconSettings className={styles.actionIcon} size={16} />
+                    )}
+                  </Button>
+                  {isChatGptWeb && (
                     <Button
                       variant="secondary"
                       size="sm"

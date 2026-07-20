@@ -79,6 +79,28 @@ describe('API Key provider groups', () => {
     });
   });
 
+  test('uses chatgpt-web for the ChatGPT Web provider checkbox', async () => {
+    vi.spyOn(apiKeysApi, 'getAccessSnapshot').mockResolvedValue({
+      keys: ['client-key'],
+      groups: [],
+    });
+    const patch = vi.spyOn(apiClient, 'patch').mockResolvedValue({ status: 'ok' });
+
+    render(<ApiKeysCardEditor value="client-key" active onChange={vi.fn()} disabled={false} />);
+
+    const checkbox = await screen.findByRole('checkbox', {
+      name: 'ChatGPT Web (chatgpt-web)',
+    });
+    fireEvent.click(checkbox);
+
+    await waitFor(() => {
+      expect(patch).toHaveBeenCalledWith('/api-key-groups', {
+        'api-key': 'client-key',
+        providers: ['chatgpt-web'],
+      });
+    });
+  });
+
   test('reloads provider groups after the saved API Key list changes', async () => {
     const getAccessSnapshot = vi.spyOn(apiKeysApi, 'getAccessSnapshot').mockResolvedValue({
       keys: ['client-key'],

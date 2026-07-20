@@ -233,6 +233,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const baseProviderOptions = useMemo(
     () => [
       { value: 'codex', label: 'Codex' },
+      { value: 'chatgpt-web', label: 'ChatGPT Web' },
       { value: 'xai', label: 'Grok' },
       { value: 'claude', label: 'Claude' },
       { value: 'antigravity', label: 'Antigravity' },

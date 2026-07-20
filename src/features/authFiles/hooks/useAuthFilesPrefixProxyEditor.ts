@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
 import type { AuthFileItem } from '@/types';
 import { useNotificationStore } from '@/stores';
-import { formatFileSize } from '@/utils/format';
-import { MAX_AUTH_FILE_SIZE } from '@/utils/constants';
 import type { AuthFileFieldsPatch } from '@/services/api/authFiles';
 import {
   applyCodexAuthFileWebsockets,
@@ -90,21 +88,10 @@ const validateHeadersValue = (value: unknown): AuthFileHeadersErrorKey | null =>
 const jsonValuesEqual = (left: unknown, right: unknown): boolean =>
   JSON.stringify(left) === JSON.stringify(right);
 
-const buildHeadersPatch = (previous: unknown, next: unknown): AuthFileHeaders => {
-  const previousHeaders = isRecordObject(previous) ? previous : {};
-  const nextHeaders = isRecordObject(next) ? next : {};
-  const patch: AuthFileHeaders = {};
-
-  new Set([...Object.keys(previousHeaders), ...Object.keys(nextHeaders)]).forEach((key) => {
-    patch[key] = typeof nextHeaders[key] === 'string' ? nextHeaders[key] : '';
-  });
-
-  return patch;
-};
-
 const buildAuthFileFieldsPatch = (
   previous: Record<string, unknown>,
-  next: Record<string, unknown>
+  next: Record<string, unknown>,
+  isCodexFile: boolean
 ): AuthFileFieldsPatch => {
   const patch: AuthFileFieldsPatch = {};
 
@@ -115,34 +102,27 @@ const buildAuthFileFieldsPatch = (
     patch.proxy_url = typeof next.proxy_url === 'string' ? next.proxy_url : '';
   }
   if (!jsonValuesEqual(previous.priority, next.priority)) {
-    patch.priority = parsePriorityValue(next.priority) ?? 0;
+    patch.priority = Object.prototype.hasOwnProperty.call(next, 'priority')
+      ? (parsePriorityValue(next.priority) ?? null)
+      : null;
   }
   if (!jsonValuesEqual(previous.note, next.note)) {
     patch.note = typeof next.note === 'string' ? next.note : '';
   }
   if (!jsonValuesEqual(previous.headers, next.headers)) {
-    patch.headers = buildHeadersPatch(previous.headers, next.headers);
+    patch.headers = isRecordObject(next.headers) ? (next.headers as AuthFileHeaders) : {};
+  }
+  if (!jsonValuesEqual(previous.excluded_models, next.excluded_models)) {
+    patch.excluded_models = normalizeExcludedModels(next.excluded_models);
+  }
+  if (!jsonValuesEqual(previous.disable_cooling, next.disable_cooling)) {
+    patch.disable_cooling = parseDisableCoolingValue(next.disable_cooling) ?? false;
+  }
+  if (isCodexFile && !jsonValuesEqual(previous.websockets, next.websockets)) {
+    patch.websockets = readCodexAuthFileWebsockets(next);
   }
 
   return patch;
-};
-
-const requiresFullFileUpdate = (
-  previous: Record<string, unknown>,
-  next: Record<string, unknown>,
-  isCodexFile: boolean
-): boolean => {
-  const explicitlySetsZeroPriority =
-    Object.prototype.hasOwnProperty.call(next, 'priority') &&
-    parsePriorityValue(next.priority) === 0 &&
-    !jsonValuesEqual(previous.priority, next.priority);
-
-  return (
-    !jsonValuesEqual(previous.excluded_models, next.excluded_models) ||
-    !jsonValuesEqual(previous.disable_cooling, next.disable_cooling) ||
-    (isCodexFile && !jsonValuesEqual(previous.websockets, next.websockets)) ||
-    explicitlySetsZeroPriority
-  );
 };
 
 export const parseHeadersText = (
@@ -426,15 +406,6 @@ export function useAuthFilesPrefixProxyEditor(
       return;
     }
 
-    const fileSize = new Blob([payload]).size;
-    if (fileSize > MAX_AUTH_FILE_SIZE) {
-      showNotification(
-        t('auth_files.upload_error_size', { maxSize: formatFileSize(MAX_AUTH_FILE_SIZE) }),
-        'error'
-      );
-      return;
-    }
-
     setPrefixProxyEditor((prev) => {
       if (!prev || prev.fileName !== name) return prev;
       return { ...prev, saving: true };
@@ -442,17 +413,14 @@ export function useAuthFilesPrefixProxyEditor(
 
     try {
       const nextJson = JSON.parse(payload) as Record<string, unknown>;
-      if (requiresFullFileUpdate(prefixProxyEditor.json, nextJson, prefixProxyEditor.isCodexFile)) {
-        await authFilesApi.saveText(name, payload);
-      } else {
-        const fieldsPatch = buildAuthFileFieldsPatch(prefixProxyEditor.json, nextJson);
-        const headersPatchSupported =
-          fieldsPatch.headers === undefined || Object.keys(fieldsPatch.headers).length > 0;
-        if (Object.keys(fieldsPatch).length > 0 && headersPatchSupported) {
-          await authFilesApi.patchFields(name, fieldsPatch);
-        } else {
-          await authFilesApi.saveText(name, payload);
-        }
+      const fieldsPatch = buildAuthFileFieldsPatch(
+        prefixProxyEditor.json,
+        nextJson,
+        prefixProxyEditor.isCodexFile
+      );
+      const result = await authFilesApi.patchFieldsBatch([name], fieldsPatch);
+      if (result.failed.length > 0 || result.updated !== 1) {
+        throw new Error(result.failed[0]?.error || t('notification.upload_failed'));
       }
       showNotification(t('auth_files.prefix_proxy_saved_success', { name }), 'success');
       setPrefixProxyEditor(null);
