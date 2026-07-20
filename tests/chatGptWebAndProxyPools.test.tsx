@@ -316,11 +316,16 @@ describe('ChatGPT Web management compatibility', () => {
     expect(screen.getByLabelText('auth_files.status_toggle_label')).not.toBeNull();
     expect(screen.queryByText('socks5://user:secret@proxy.example:1080')).toBeNull();
 
+    const reloginButton = screen.getByRole('button', {
+      name: 'auth_files.chatgpt_web_relogin',
+    });
+    expect(reloginButton.textContent).toBe('');
+
     fireEvent.click(screen.getByRole('checkbox', { name: 'auth_files.batch_select_all' }));
     fireEvent.click(screen.getByTitle('auth_files.models_button'));
     fireEvent.click(screen.getByTitle('auth_files.download_button'));
     fireEvent.click(screen.getByTitle('auth_files.prefix_proxy_button'));
-    fireEvent.click(screen.getByTitle('auth_files.chatgpt_web_relogin'));
+    fireEvent.click(reloginButton);
     fireEvent.click(screen.getByTitle('auth_files.delete_button'));
 
     expect(props.onToggleSelect).toHaveBeenCalledWith('chatgpt-web.json');

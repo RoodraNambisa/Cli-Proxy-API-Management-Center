@@ -679,13 +679,15 @@ export function AuthFileCard(props: AuthFileCardProps) {
                       variant="secondary"
                       size="sm"
                       onClick={() => onChatGptWebRelogin(file)}
-                      className={styles.reloginButton}
+                      className={styles.iconButton}
                       title={t('auth_files.chatgpt_web_relogin')}
+                      aria-label={t('auth_files.chatgpt_web_relogin')}
                       disabled={disableControls || chatGptWebReloginBusy}
                       loading={chatGptWebReloginBusy}
                     >
-                      <IconRefreshCw className={styles.actionIcon} size={16} />
-                      {t('auth_files.chatgpt_web_relogin')}
+                      {!chatGptWebReloginBusy && (
+                        <IconRefreshCw className={styles.actionIcon} size={16} />
+                      )}
                     </Button>
                   )}
                   <Button
