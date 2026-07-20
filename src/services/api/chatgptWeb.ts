@@ -1,5 +1,10 @@
-import type { ChatGptWebLoginTask, ChatGptWebReloginResponse } from '@/types';
+import type {
+  ChatGptWebLoginTask,
+  ChatGptWebMutationTask,
+  ChatGptWebReloginResponse,
+} from '@/types';
 import { apiClient } from './client';
+import { AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
 
 const CHATGPT_WEB_RELOGIN_TIMEOUT_MS = 2 * 60 * 1000;
 
@@ -24,6 +29,39 @@ export const chatGptWebApi = {
 
   cancelLoginTask(id: string): Promise<ChatGptWebLoginTask> {
     return apiClient.delete(`/chatgpt-web/login-tasks/${encodeURIComponent(id)}`);
+  },
+
+  startImportTask(files: File[]): Promise<ChatGptWebMutationTask> {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file, file.name));
+    return apiClient.postForm('/chatgpt-web/import-tasks', formData, {
+      timeout: AUTH_FILE_UPLOAD_TIMEOUT_MS,
+    });
+  },
+
+  getImportTask(id: string): Promise<ChatGptWebMutationTask> {
+    return apiClient.get(`/chatgpt-web/import-tasks/${encodeURIComponent(id)}`);
+  },
+
+  cancelImportTask(id: string): Promise<ChatGptWebMutationTask> {
+    return apiClient.delete(`/chatgpt-web/import-tasks/${encodeURIComponent(id)}`);
+  },
+
+  startConversionTask(names: string[]): Promise<ChatGptWebMutationTask> {
+    return apiClient.post('/chatgpt-web/conversion-tasks', {
+      names,
+      target_provider: 'chatgpt-web',
+      mode: 'copy',
+      validate: true,
+    });
+  },
+
+  getConversionTask(id: string): Promise<ChatGptWebMutationTask> {
+    return apiClient.get(`/chatgpt-web/conversion-tasks/${encodeURIComponent(id)}`);
+  },
+
+  cancelConversionTask(id: string): Promise<ChatGptWebMutationTask> {
+    return apiClient.delete(`/chatgpt-web/conversion-tasks/${encodeURIComponent(id)}`);
   },
 
   relogin(name: string): Promise<ChatGptWebReloginResponse> {

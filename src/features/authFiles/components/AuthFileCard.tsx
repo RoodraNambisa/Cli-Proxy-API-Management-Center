@@ -64,6 +64,7 @@ export type AuthFileCardProps = {
   statusUpdating: Record<string, boolean>;
   xaiFieldsUpdating: Record<string, Partial<Record<XaiAuthFileField, boolean>>>;
   chatGptWebReloginUpdating?: Record<string, boolean>;
+  restoring?: Record<string, boolean>;
   quotaFilterType: QuotaProviderType | null;
   keyStats: KeyStats;
   statusBarCache: Map<string, AuthFileStatusBarData>;
@@ -76,6 +77,7 @@ export type AuthFileCardProps = {
   onToggleStatus: (file: AuthFileItem, enabled: boolean) => void;
   onToggleXaiField: (file: AuthFileItem, field: XaiAuthFileField, value: boolean) => void;
   onChatGptWebRelogin?: (file: AuthFileItem) => void;
+  onRestore?: (file: AuthFileItem) => void;
   onToggleSelect: (name: string) => void;
 };
 
@@ -98,6 +100,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     statusUpdating,
     xaiFieldsUpdating,
     chatGptWebReloginUpdating = {},
+    restoring = {},
     quotaFilterType,
     keyStats,
     statusBarCache,
@@ -110,6 +113,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     onToggleStatus,
     onToggleXaiField,
     onChatGptWebRelogin = () => {},
+    onRestore = () => {},
     onToggleSelect,
   } = props;
 
@@ -122,6 +126,9 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const isAistudio = providerKey === 'aistudio';
   const isXai = isXaiProvider(providerKey);
   const isChatGptWeb = providerKey === 'chatgpt-web';
+  const isRetainedCodex =
+    providerKey === 'codex' &&
+    (file.retained_for_dependents === true || file.deletion_state === 'retained_for_dependents');
   const showModelsButton = !isRetiredGeminiCli && (!isRuntimeOnly || isAistudio || isXai);
   const typeColor = getTypeColor(providerKey, resolvedTheme);
   const typeLabel = getTypeLabel(t, providerKey);
@@ -162,6 +169,23 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const lifecycleReason = String(file.lifecycle_reason ?? '').trim();
   const criticalLifecycleState = CHATGPT_WEB_CRITICAL_LIFECYCLE_STATES.has(lifecycleState);
   const lifecycleNeedsAttention = Boolean(lifecycleState && lifecycleState !== 'active');
+  const credentialMode = String(file.credential_mode ?? '')
+    .trim()
+    .toLowerCase();
+  const refreshStrategy = String(file.refresh_strategy ?? '')
+    .trim()
+    .toLowerCase();
+  const tokenOnly = file.token_only === true || credentialMode === 'token_only';
+  const sourceMissing = file.source_missing === true;
+  const sourceAuthId = String(file.source_auth_id ?? '').trim();
+  const dependentCountRaw = file.dependent_count;
+  const dependentCount =
+    typeof dependentCountRaw === 'number'
+      ? Math.max(0, dependentCountRaw)
+      : Math.max(0, Number.parseInt(String(dependentCountRaw ?? '0'), 10) || 0);
+  const dependentNames = Array.isArray(file.dependent_names)
+    ? file.dependent_names.map((name) => String(name).trim()).filter(Boolean)
+    : [];
   const lifecycleLabelKey = lifecycleState
     ? `auth_files.chatgpt_web_lifecycle_${lifecycleState}`
     : '';
@@ -170,6 +194,29 @@ export function AuthFileCard(props: AuthFileCardProps) {
     translatedLifecycleLabel && translatedLifecycleLabel !== lifecycleLabelKey
       ? translatedLifecycleLabel
       : lifecycleState;
+  const credentialModeKey = credentialMode
+    ? `auth_files.chatgpt_web_credential_modes.${credentialMode}`
+    : '';
+  const translatedCredentialMode = credentialModeKey ? t(credentialModeKey) : '';
+  const credentialModeLabel =
+    translatedCredentialMode && translatedCredentialMode !== credentialModeKey
+      ? translatedCredentialMode
+      : credentialMode || '-';
+  const refreshStrategyKey = refreshStrategy
+    ? `auth_files.chatgpt_web_refresh_strategies.${refreshStrategy}`
+    : '';
+  const translatedRefreshStrategy = refreshStrategyKey ? t(refreshStrategyKey) : '';
+  const refreshStrategyLabel =
+    translatedRefreshStrategy && translatedRefreshStrategy !== refreshStrategyKey
+      ? translatedRefreshStrategy
+      : refreshStrategy || '-';
+  const chatGptWebStateLabel = criticalLifecycleState
+    ? lifecycleLabel
+    : sourceMissing
+      ? t('auth_files.chatgpt_web_source_missing_state')
+      : tokenOnly
+        ? t('auth_files.chatgpt_web_token_only_state')
+        : lifecycleLabel || t('auth_files.chatgpt_web_lifecycle_unknown');
   const lastErrorStatusCodeRaw = file.lastErrorStatusCode ?? file['last_error_status_code'];
   const lastErrorStatusCode =
     typeof lastErrorStatusCodeRaw === 'number'
@@ -180,6 +227,8 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const hasLastErrorStatusCode = Number.isFinite(lastErrorStatusCode) && lastErrorStatusCode > 0;
   const hasStatusWarning =
     isRetiredGeminiCli ||
+    isRetainedCodex ||
+    (isChatGptWeb && (sourceMissing || tokenOnly)) ||
     (isChatGptWeb && lifecycleNeedsAttention) ||
     hasLastErrorStatusCode ||
     (Boolean(rawStatusMessage) && !HEALTHY_STATUS_MESSAGES.has(rawStatusMessage.toLowerCase()));
@@ -214,6 +263,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const xaiUsingApiUpdating = xaiFieldsUpdating[file.name]?.using_api === true;
   const xaiWebsocketsUpdating = xaiFieldsUpdating[file.name]?.websockets === true;
   const chatGptWebReloginBusy = chatGptWebReloginUpdating[file.name] === true;
+  const restoreBusy = restoring[file.name] === true;
   const proxyBinding = file.proxy_binding;
   const metadataTime = (value: unknown) => {
     const timestamp = parseTimestampMs(value);
@@ -236,26 +286,37 @@ export function AuthFileCard(props: AuthFileCardProps) {
     ? t('auth_files.health_status_unsupported')
     : isRuntimeOnly
       ? t('auth_files.type_virtual') || '虚拟认证文件'
-      : file.disabled
-        ? t('auth_files.health_status_disabled')
-        : isChatGptWeb && lifecycleState
-          ? lifecycleLabel
-          : hasStatusWarning
-            ? t('auth_files.health_status_warning')
-            : rawStatusMessage
-              ? t('auth_files.health_status_healthy')
-              : t('auth_files.status_toggle_label');
+      : isRetainedCodex
+        ? t('auth_files.retained_codex_state')
+        : file.disabled
+          ? t('auth_files.health_status_disabled')
+          : isChatGptWeb && criticalLifecycleState
+            ? lifecycleLabel
+            : isChatGptWeb && sourceMissing
+              ? t('auth_files.chatgpt_web_source_missing_state')
+              : isChatGptWeb && tokenOnly
+                ? t('auth_files.chatgpt_web_token_only_state')
+                : isChatGptWeb && lifecycleState
+                  ? lifecycleLabel
+                  : hasStatusWarning
+                    ? t('auth_files.health_status_warning')
+                    : rawStatusMessage
+                      ? t('auth_files.health_status_healthy')
+                      : t('auth_files.status_toggle_label');
   const stateBadgeClass = isRetiredGeminiCli
     ? styles.stateBadgeWarning
     : isRuntimeOnly
       ? styles.stateBadgeVirtual
-      : file.disabled
-        ? styles.stateBadgeDisabled
-        : isChatGptWeb && lifecycleNeedsAttention
-          ? styles.stateBadgeWarning
-          : hasStatusWarning
+      : isRetainedCodex
+        ? styles.stateBadgeWarning
+        : file.disabled
+          ? styles.stateBadgeDisabled
+          : isChatGptWeb &&
+              (criticalLifecycleState || sourceMissing || tokenOnly || lifecycleNeedsAttention)
             ? styles.stateBadgeWarning
-            : styles.stateBadgeActive;
+            : hasStatusWarning
+              ? styles.stateBadgeWarning
+              : styles.stateBadgeActive;
 
   return (
     <div
@@ -345,6 +406,20 @@ export function AuthFileCard(props: AuthFileCardProps) {
             </div>
           )}
 
+          {isRetainedCodex ? (
+            <div
+              className={styles.retainedCodexNotice}
+              title={dependentNames.length > 0 ? dependentNames.join(', ') : undefined}
+            >
+              <IconInfo size={14} />
+              <span>
+                {t('auth_files.retained_codex_notice', {
+                  count: dependentCount,
+                })}
+              </span>
+            </div>
+          ) : null}
+
           {isXai && (
             <div
               className={`${styles.xaiCredentialSettings} ${compact ? styles.xaiCredentialSettingsCompact : ''}`}
@@ -395,12 +470,24 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   <span className={styles.chatGptWebLifecycleLabel}>
                     {t('auth_files.chatgpt_web_lifecycle_label')}
                   </span>
-                  <strong>{lifecycleLabel || t('auth_files.chatgpt_web_lifecycle_unknown')}</strong>
+                  <strong>{chatGptWebStateLabel}</strong>
                 </div>
                 {lifecycleReason ? <span>{lifecycleReason}</span> : null}
               </div>
               {!compact ? (
                 <div className={styles.chatGptWebLifecycleGrid}>
+                  <div>
+                    <span>{t('auth_files.chatgpt_web_credential_mode')}</span>
+                    <strong>{credentialModeLabel}</strong>
+                  </div>
+                  <div>
+                    <span>{t('auth_files.chatgpt_web_refresh_strategy')}</span>
+                    <strong>{refreshStrategyLabel}</strong>
+                  </div>
+                  <div>
+                    <span>{t('auth_files.chatgpt_web_source_auth')}</span>
+                    <strong>{sourceAuthId || '-'}</strong>
+                  </div>
                   <div>
                     <span>{t('auth_files.chatgpt_web_lifecycle_updated')}</span>
                     <strong>{lifecycleUpdatedAt}</strong>
@@ -460,19 +547,35 @@ export function AuthFileCard(props: AuthFileCardProps) {
             </div>
           )}
 
-          {cooldownActive && !criticalLifecycleState && (
-            <div className={styles.cooldownStatusNotice}>
-              <IconTimer size={14} />
-              <span>
-                {cooldownScope === 'auth'
-                  ? t('auth_files.cooldown_auth_until', { until: cooldownUntilText })
-                  : t('auth_files.cooldown_models_until', {
-                      count: cooldownModelCount,
-                      until: cooldownUntilText,
-                    })}
-              </span>
+          {isChatGptWeb && sourceMissing ? (
+            <div className={styles.chatGptWebCredentialNotice} role="status">
+              <IconInfo size={14} />
+              <span>{t('auth_files.chatgpt_web_source_missing_hint')}</span>
             </div>
-          )}
+          ) : isChatGptWeb && tokenOnly ? (
+            <div className={styles.chatGptWebCredentialNotice} role="status">
+              <IconInfo size={14} />
+              <span>{t('auth_files.chatgpt_web_token_only_hint')}</span>
+            </div>
+          ) : null}
+
+          {cooldownActive &&
+            !criticalLifecycleState &&
+            !sourceMissing &&
+            !tokenOnly &&
+            !isRetainedCodex && (
+              <div className={styles.cooldownStatusNotice}>
+                <IconTimer size={14} />
+                <span>
+                  {cooldownScope === 'auth'
+                    ? t('auth_files.cooldown_auth_until', { until: cooldownUntilText })
+                    : t('auth_files.cooldown_models_until', {
+                        count: cooldownModelCount,
+                        until: cooldownUntilText,
+                      })}
+                </span>
+              </div>
+            )}
 
           {hasStatusWarning && (displayStatusMessage || hasLastErrorStatusCode) && (
             <div className={styles.healthStatusMessage} title={healthStatusTitle}>
@@ -605,7 +708,19 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 </div>
               )}
             </div>
-            {!isRuntimeOnly && !isRetiredGeminiCli && (
+            {!isRuntimeOnly && !isRetiredGeminiCli && isRetainedCodex ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onRestore(file)}
+                loading={restoreBusy}
+                disabled={disableControls || restoreBusy}
+                className={styles.restoreCodexButton}
+              >
+                <IconRefreshCw className={styles.actionIcon} size={16} />
+                {t('auth_files.retained_codex_restore')}
+              </Button>
+            ) : !isRuntimeOnly && !isRetiredGeminiCli ? (
               <div className={styles.statusToggle}>
                 <span className={styles.statusToggleLabel}>
                   {t('auth_files.status_toggle_label')}
@@ -617,7 +732,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   onChange={(value) => onToggleStatus(file, value)}
                 />
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

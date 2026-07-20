@@ -751,6 +751,7 @@
     "chatgpt_web_lifecycle_label": "账号生命周期",
     "chatgpt_web_lifecycle_unknown": "未知",
     "chatgpt_web_lifecycle_active": "正常",
+    "chatgpt_web_lifecycle_refreshing": "正在刷新",
     "chatgpt_web_lifecycle_login_pending": "等待登录",
     "chatgpt_web_lifecycle_relogin_pending": "等待重新登录",
     "chatgpt_web_lifecycle_dead": "账号已死亡",
@@ -772,7 +773,55 @@
     "chatgpt_web_proxy_unknown": "尚未检测",
     "chatgpt_web_relogin": "手动重登",
     "chatgpt_web_relogin_success": "已重新登录 \"{{name}}\"",
-    "chatgpt_web_relogin_failed": "重新登录失败"
+    "chatgpt_web_relogin_failed": "重新登录失败",
+    "chatgpt_web_credential_mode": "凭证模式",
+    "chatgpt_web_refresh_strategy": "刷新方式",
+    "chatgpt_web_source_auth": "来源 Codex",
+    "chatgpt_web_token_only_state": "仅 Token",
+    "chatgpt_web_token_only_hint": "该凭证只有当前 Token，无法自动刷新；Token 失效后需要重新导入或登录。",
+    "chatgpt_web_source_missing_state": "来源缺失",
+    "chatgpt_web_source_missing_hint": "关联的 Codex 来源凭证不存在，当前 Web 副本无法通过来源刷新。",
+    "chatgpt_web_credential_modes": {
+      "native": "原生 Web 凭证",
+      "linked_codex": "Codex 关联副本",
+      "token_only": "仅 Token"
+    },
+    "chatgpt_web_refresh_strategies": {
+      "web_oauth_rt": "Web OAuth 刷新",
+      "chatgpt_session": "ChatGPT Session",
+      "codex_source": "跟随 Codex 来源",
+      "token_only": "不可自动刷新"
+    },
+    "retained_codex_state": "保留中",
+    "retained_codex_notice": "已停止 Codex 使用，保留用于 {{count}} 个 Web 副本刷新。",
+    "retained_codex_restore": "恢复 Codex",
+    "retained_codex_restore_success": "已恢复 Codex 凭证“{{name}}”",
+    "retained_codex_restore_failed": "恢复 Codex 凭证失败：{{message}}",
+    "retained_codex_toggle_blocked": "保留中的 Codex 凭证不能通过普通开关启用，请使用“恢复 Codex”。",
+    "retained_codex_batch_status_blocked": "所选凭证均处于 Web 副本依赖保留状态，不能批量切换。",
+    "retained_codex_batch_status_skipped": "已跳过 {{count}} 个用于 Web 副本刷新的保留凭证。",
+    "delete_dependency_title": "删除关联凭证",
+    "delete_dependency_summary": "所选 {{selected}} 个凭证中，{{sources}} 个 Codex 来源关联 {{dependents}} 个 ChatGPT Web 副本。请选择如何处理这些副本。",
+    "delete_dependency_web_files": "关联的 Web 副本",
+    "delete_dependency_more": "另有 {{count}} 个",
+    "delete_dependency_retain": "保留来源",
+    "delete_dependency_retain_hint": "停止 Codex 使用，但保留来源凭证用于 Web 副本刷新；之后可恢复。",
+    "delete_dependency_cascade": "级联删除",
+    "delete_dependency_cascade_hint": "同时删除来源 Codex 和所有关联 Web 副本，此操作不可撤销。",
+    "delete_dependency_partial": "删除完成：已删除 {{deleted}} 个，保留 {{retained}} 个，失败 {{failed}} 个。",
+    "delete_retained_success": "已删除 {{deleted}} 个；{{retained}} 个 Codex 来源已停止使用，并为 {{dependents}} 个 Web 副本保留。",
+    "delete_cascade_success": "已级联删除 {{count}} 个凭证",
+    "chatgpt_web_conversion_toggle": "创建 ChatGPT Web 副本",
+    "chatgpt_web_conversion_hint": "将为选中的 {{count}} 个可用 Codex 凭证创建关联 Web 副本。",
+    "chatgpt_web_conversion_no_codex": "当前选择中没有可转换的 Codex 凭证。",
+    "chatgpt_web_conversion_no_sources": "批量字段更新后没有可转换的 Codex 来源，失败项仍保持选中。",
+    "chatgpt_web_conversion_started": "已为 {{count}} 个 Codex 凭证创建转换任务",
+    "chatgpt_web_conversion_start_failed": "创建转换任务失败：{{message}}",
+    "chatgpt_web_conversion_refresh_failed": "刷新转换任务失败：{{message}}",
+    "chatgpt_web_conversion_cancel_requested": "已请求取消转换任务",
+    "chatgpt_web_conversion_cancel_failed": "取消转换任务失败：{{message}}",
+    "chatgpt_web_conversion_completed": "转换完成，已处理 {{count}} 个 Web 副本",
+    "chatgpt_web_conversion_completed_with_errors": "转换完成：成功 {{succeeded}} 个，失败 {{failed}} 个，取消 {{canceled}} 个"
   },
   "antigravity_quota": {
     "title": "Antigravity 额度",
@@ -2273,7 +2322,7 @@
   },
   "chatgpt_web": {
     "title": "ChatGPT Web",
-    "description": "批量登录 ChatGPT Web 账号，并跟踪每一行账号的处理结果。",
+    "description": "登录 ChatGPT Web 账号或导入 Web JSON，并跟踪每个账号与文件的处理结果。",
     "provider_entry_title": "ChatGPT Web 账号与登录任务",
     "provider_entry_description": "手动输入或上传账号文本、查看登录进度，并进入凭证和代理管理。",
     "provider_entry_action": "打开 ChatGPT Web",
@@ -2296,6 +2345,30 @@
     "start_task": "开始登录",
     "manual_security_hint": "内容仅暂存在当前页面内存，不会写入浏览器存储；任务创建成功后会立即清空。",
     "file_security_hint": "文件内容不会在页面中读取、预览或持久化；任务创建成功后会立即清除本地文件引用。",
+    "page_mode_label": "ChatGPT Web 凭证添加方式",
+    "page_modes": {
+      "login": {
+        "label": "账号登录",
+        "hint": "使用账号、密码和可选 2FA 登录"
+      },
+      "import": {
+        "label": "Web JSON 导入",
+        "hint": "导入已有 ChatGPT Web 凭证文件"
+      }
+    },
+    "import_title": "导入 Web JSON",
+    "import_description": "可同时选择多个 ChatGPT Web JSON 凭证文件；每个文件的创建、更新或失败结果会单独展示。",
+    "import_format_hint": "仅上传 ChatGPT Web 凭证 JSON。文件内容不会在页面中预览或写入浏览器存储。",
+    "choose_json_files": "选择 JSON 文件",
+    "import_files_selected": "已选择 {{count}} 个文件",
+    "clear_import_files": "清除所选文件",
+    "start_import_task": "开始导入",
+    "import_security_hint": "页面仅保留文件引用；导入任务创建成功后会立即清除，不展示 Token、Cookie 或其他敏感字段。",
+    "import_task_started": "Web JSON 导入任务已创建",
+    "import_task_start_failed": "创建 Web JSON 导入任务失败",
+    "import_task_refresh_failed": "刷新 Web JSON 导入任务失败",
+    "import_task_cancel_requested": "已请求取消 Web JSON 导入任务",
+    "import_task_cancel_failed": "取消 Web JSON 导入任务失败",
     "task_title": "登录任务",
     "task_created_at": "创建于 {{time}}",
     "progress": "登录进度",
@@ -2335,6 +2408,86 @@
       "success": "成功",
       "failed": "失败",
       "canceled": "已取消"
+    },
+    "mutation_progress": "任务进度",
+    "mutation_phases_label": "当前处理阶段",
+    "mutation_target": "目标文件",
+    "mutation_credential_mode": "凭证模式",
+    "mutation_metrics": {
+      "total": "总数",
+      "processed": "已处理",
+      "created": "已创建",
+      "updated": "已更新",
+      "unchanged": "未变化",
+      "failed": "失败",
+      "canceled": "已取消"
+    },
+    "mutation_tasks": {
+      "import": {
+        "title": "Web JSON 导入任务",
+        "results_title": "逐文件结果",
+        "source": "源文件",
+        "phases": {
+          "queued": "等待导入",
+          "running": "解析与校验",
+          "committing": "写入凭证"
+        }
+      },
+      "conversion": {
+        "title": "ChatGPT Web 副本转换任务",
+        "results_title": "逐凭证结果",
+        "source": "Codex 来源",
+        "phases": {
+          "queued": "等待转换",
+          "running": "刷新与探测",
+          "committing": "创建副本"
+        }
+      }
+    },
+    "mutation_result_states": {
+      "queued": "排队中",
+      "running": "处理中",
+      "committing": "正在写入",
+      "created": "已创建",
+      "updated": "已更新",
+      "unchanged": "未变化",
+      "failed": "失败",
+      "canceled": "已取消"
+    },
+    "credential_modes": {
+      "native": "原生 Web 凭证",
+      "linked_codex": "Codex 关联副本",
+      "token_only": "仅 Token"
+    },
+    "mutation_error_categories": {
+      "canceled": "已取消",
+      "invalid_credential": "凭证格式无效",
+      "identity_missing": "缺少账号身份",
+      "identity_conflict": "账号身份冲突",
+      "credential_ambiguous": "匹配到多个凭证",
+      "credential_changed": "处理期间凭证已变化",
+      "credential_id_conflict": "凭证 ID 冲突",
+      "credential_lookup_failed": "查询凭证失败",
+      "login_failed": "登录失败",
+      "persist_failed": "保存凭证失败",
+      "persist_uncertain": "凭证保存结果不确定",
+      "probe_failed": "Token 探测失败",
+      "probe_unavailable": "Token 探测暂不可用",
+      "source_not_found": "未找到来源凭证",
+      "source_not_managed": "来源不是受管凭证",
+      "source_provider_invalid": "来源不是 Codex 凭证",
+      "source_pending_deletion": "来源凭证正等待删除",
+      "source_disabled": "来源凭证已禁用",
+      "source_identity_missing": "来源缺少账号身份",
+      "source_token_missing": "来源缺少可用 Token",
+      "source_refresh_unavailable": "来源刷新暂不可用",
+      "source_persist_failed": "保存来源身份失败",
+      "source_persist_uncertain": "来源保存结果不确定",
+      "source_changed": "转换期间来源已变化",
+      "target_conflict": "目标 Web 副本冲突",
+      "target_initialization_failed": "初始化目标副本失败",
+      "token_incompatible": "Token 与 ChatGPT Web 不兼容",
+      "temporary_failure": "临时失败，请稍后重试"
     }
   },
   "proxy_pools": {

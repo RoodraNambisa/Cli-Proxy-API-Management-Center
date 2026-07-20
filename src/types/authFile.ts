@@ -66,6 +66,16 @@ export interface AuthFileItem {
   last_login_at?: string;
   last_refresh_at?: string;
   last_relogin_at?: string;
+  credential_mode?: string;
+  refresh_strategy?: string;
+  token_only?: boolean;
+  source_auth_id?: string;
+  source_missing?: boolean;
+  deletion_state?: string;
+  retained_for_dependents?: boolean;
+  dependent_count?: number;
+  dependent_names?: string[];
+  deletion_requested_at?: string;
   proxy_binding?: AuthFileProxyBinding;
   lastRefresh?: string | number;
   modified?: number;

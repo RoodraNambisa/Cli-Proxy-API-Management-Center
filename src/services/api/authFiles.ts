@@ -72,9 +72,14 @@ type AuthFileBatchUploadResponse = {
   failed?: unknown;
 };
 type AuthFileBatchDeleteResponse = {
-  status?: string;
-  deleted?: number;
+  status?: unknown;
+  deleted?: unknown;
   files?: unknown;
+  retained?: unknown;
+  retained_files?: unknown;
+  name?: unknown;
+  dependent_count?: unknown;
+  dependent_names?: unknown;
   failed?: unknown;
 };
 type AuthFileFieldsBatchResponse = {
@@ -101,11 +106,24 @@ type AuthFileBatchUploadResult = {
   files: string[];
   failed: AuthFileBatchFailure[];
 };
-type AuthFileBatchDeleteResult = {
+export type AuthFileDependencyAction = 'retain' | 'cascade';
+export type AuthFileRetainedResult = {
+  name: string;
+  dependentCount: number;
+  dependentNames: string[];
+};
+export type AuthFileBatchDeleteResult = {
   status: string;
   deleted: number;
   files: string[];
+  retained: number;
+  retainedFiles: AuthFileRetainedResult[];
   failed: AuthFileBatchFailure[];
+};
+export type AuthFileRestoreResult = {
+  status: string;
+  name: string;
+  disabled: boolean;
 };
 type RawCodexPlanTypeRefreshSummary = Partial<Record<keyof CodexPlanTypeRefreshSummary, unknown>>;
 type RawCodexPlanTypeRefreshResult = Record<string, unknown>;
@@ -287,18 +305,58 @@ const normalizeBatchUploadResponse = (
   };
 };
 
+const normalizeRetainedAuthFile = (value: unknown): AuthFileRetainedResult | null => {
+  if (!isRecord(value)) return null;
+  const name = readStringValue(value.name);
+  if (!name) return null;
+  return {
+    name,
+    dependentCount: readNumberValue(value.dependent_count) ?? 0,
+    dependentNames: normalizeBatchFileNames(value.dependent_names),
+  };
+};
+
+const normalizeRetainedAuthFiles = (
+  payload: AuthFileBatchDeleteResponse | undefined,
+  isSingleRetained: boolean
+): AuthFileRetainedResult[] => {
+  const retainedFiles = Array.isArray(payload?.retained_files)
+    ? payload.retained_files
+        .map((value) => normalizeRetainedAuthFile(value))
+        .filter((value): value is AuthFileRetainedResult => value !== null)
+    : [];
+  if (retainedFiles.length > 0 || !isSingleRetained) return retainedFiles;
+
+  const single = normalizeRetainedAuthFile({
+    name: payload?.name,
+    dependent_count: payload?.dependent_count,
+    dependent_names: payload?.dependent_names,
+  });
+  return single ? [single] : [];
+};
+
 const normalizeBatchDeleteResponse = (
   payload: AuthFileBatchDeleteResponse | undefined,
-  requestedNames: string[]
+  requestedNames: string[],
+  httpStatus: number
 ): AuthFileBatchDeleteResult => {
   const failed = normalizeBatchFailures(payload?.failed);
   const deletedFilesFromPayload = normalizeBatchFileNames(payload?.files);
+  const isSingleRetained =
+    httpStatus === 202 || payload?.status === 'retained' || payload?.retained === true;
+  const retainedFiles = normalizeRetainedAuthFiles(payload, isSingleRetained);
+  const retained =
+    typeof payload?.retained === 'number'
+      ? payload.retained
+      : retainedFiles.length > 0
+        ? retainedFiles.length
+        : 0;
   const deleted =
     typeof payload?.deleted === 'number'
       ? payload.deleted
       : deletedFilesFromPayload.length > 0
         ? deletedFilesFromPayload.length
-        : requestedNames.length === 1 && failed.length === 0
+        : requestedNames.length === 1 && failed.length === 0 && !isSingleRetained
           ? 1
           : 0;
 
@@ -316,9 +374,17 @@ const normalizeBatchDeleteResponse = (
 
   return {
     status:
-      typeof payload?.status === 'string' ? payload.status : failed.length > 0 ? 'partial' : 'ok',
+      typeof payload?.status === 'string'
+        ? payload.status
+        : failed.length > 0
+          ? 'partial'
+          : isSingleRetained
+            ? 'retained'
+            : 'ok',
     deleted,
     files: deletedFiles,
+    retained,
+    retainedFiles,
     failed,
   };
 };
@@ -821,19 +887,41 @@ export const authFilesApi = {
 
   upload: (file: File) => authFilesApi.uploadFiles([file]),
 
-  deleteFiles: async (names: string[]): Promise<AuthFileBatchDeleteResult> => {
+  deleteFiles: async (
+    names: string[],
+    dependencyAction: AuthFileDependencyAction = 'retain'
+  ): Promise<AuthFileBatchDeleteResult> => {
     const requestedNames = normalizeRequestedAuthFileNames(names);
     if (requestedNames.length === 0) {
-      return { status: 'ok', deleted: 0, files: [], failed: [] };
+      return {
+        status: 'ok',
+        deleted: 0,
+        files: [],
+        retained: 0,
+        retainedFiles: [],
+        failed: [],
+      };
     }
 
-    const payload = await apiClient.delete<AuthFileBatchDeleteResponse>('/auth-files', {
+    const response = await apiClient.requestRaw({
+      url: '/auth-files',
+      method: 'DELETE',
+      params: { dependency_action: dependencyAction },
       data: { names: requestedNames },
+      validateStatus: (status) => status === 200 || status === 202 || status === 207,
     });
-    return normalizeBatchDeleteResponse(payload, requestedNames);
+    return normalizeBatchDeleteResponse(
+      response.data as AuthFileBatchDeleteResponse | undefined,
+      requestedNames,
+      response.status
+    );
   },
 
-  deleteFile: (name: string) => authFilesApi.deleteFiles([name]),
+  deleteFile: (name: string, dependencyAction: AuthFileDependencyAction = 'retain') =>
+    authFilesApi.deleteFiles([name], dependencyAction),
+
+  restoreFile: (name: string): Promise<AuthFileRestoreResult> =>
+    apiClient.post('/auth-files/restore', { name }),
 
   deleteAll: () => apiClient.delete('/auth-files', { params: { all: true } }),
 
@@ -996,9 +1084,7 @@ export const authFilesApi = {
   },
 
   // 获取认证凭证支持的模型
-  async getModelsForAuthFile(
-    name: string
-  ): Promise<
+  async getModelsForAuthFile(name: string): Promise<
     {
       id: string;
       display_name?: string;

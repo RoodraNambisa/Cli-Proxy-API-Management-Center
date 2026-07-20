@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { authFilesApi, chatGptWebApi, type XaiAuthFileField } from '@/services/api';
+import {
+  authFilesApi,
+  chatGptWebApi,
+  type AuthFileDependencyAction,
+  type XaiAuthFileField,
+} from '@/services/api';
 import { apiClient } from '@/services/api/client';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem, CodexPlanTypeRefreshMode, CodexPlanTypeRefreshTask } from '@/types';
@@ -22,6 +27,26 @@ const isChatGptWebAuthFile = (file: AuthFileItem) =>
   String(file.provider ?? file.type ?? '')
     .trim()
     .toLowerCase() === 'chatgpt-web';
+
+const isRetainedCodexAuthFile = (file: AuthFileItem): boolean =>
+  String(file.provider ?? file.type ?? '')
+    .trim()
+    .toLowerCase() === 'codex' &&
+  (file.retained_for_dependents === true || file.deletion_state === 'retained_for_dependents');
+
+const readDependentCount = (file: AuthFileItem): number => {
+  const value = file.dependent_count;
+  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0;
+};
+
+export type AuthFileDependencyDeleteState = {
+  open: boolean;
+  names: string[];
+  sourceCount: number;
+  dependentCount: number;
+  dependentNames: string[];
+  submitting: boolean;
+};
 
 const getArchiveDownloadErrorMeta = (
   err: unknown
@@ -119,6 +144,8 @@ export type UseAuthFilesDataResult = {
   statusUpdating: Record<string, boolean>;
   xaiFieldsUpdating: Record<string, Partial<Record<XaiAuthFileField, boolean>>>;
   chatGptWebReloginUpdating: Record<string, boolean>;
+  restoring: Record<string, boolean>;
+  dependencyDelete: AuthFileDependencyDeleteState;
   batchStatusUpdating: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
   loadFiles: (options?: LoadFilesOptions) => Promise<void>;
@@ -134,6 +161,7 @@ export type UseAuthFilesDataResult = {
     value: boolean
   ) => Promise<void>;
   handleChatGptWebRelogin: (item: AuthFileItem) => Promise<void>;
+  handleRestore: (item: AuthFileItem) => Promise<void>;
   toggleSelect: (name: string) => void;
   selectAllVisible: (visibleFiles: AuthFileItem[]) => void;
   invertVisibleSelection: (visibleFiles: AuthFileItem[]) => void;
@@ -152,6 +180,8 @@ export type UseAuthFilesDataResult = {
   retryFailedCodexPlanTypeRefresh: () => Promise<void>;
   batchSetStatus: (names: string[], enabled: boolean) => Promise<void>;
   batchDelete: (names: string[]) => void;
+  closeDependencyDelete: () => void;
+  confirmDependencyDelete: (action: AuthFileDependencyAction) => Promise<void>;
 };
 
 export type UseAuthFilesDataOptions = {
@@ -189,6 +219,15 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const [chatGptWebReloginUpdating, setChatGptWebReloginUpdating] = useState<
     Record<string, boolean>
   >({});
+  const [restoring, setRestoring] = useState<Record<string, boolean>>({});
+  const [dependencyDelete, setDependencyDelete] = useState<AuthFileDependencyDeleteState>({
+    open: false,
+    names: [],
+    sourceCount: 0,
+    dependentCount: 0,
+    dependentNames: [],
+    submitting: false,
+  });
   const [batchStatusUpdating, setBatchStatusUpdating] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
@@ -613,29 +652,157 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     [loadFiles, showNotification, t]
   );
 
+  const dependencyDeleteDetails = useCallback(
+    (names: string[]) => {
+      const nameSet = new Set(names);
+      const sources = files.filter(
+        (file) =>
+          nameSet.has(file.name) &&
+          String(file.provider ?? file.type ?? '')
+            .trim()
+            .toLowerCase() === 'codex' &&
+          readDependentCount(file) > 0
+      );
+      return {
+        sourceCount: sources.length,
+        dependentCount: sources.reduce((total, file) => total + readDependentCount(file), 0),
+        dependentNames: Array.from(
+          new Set(
+            sources.flatMap((file) =>
+              Array.isArray(file.dependent_names)
+                ? file.dependent_names.map((name) => String(name).trim()).filter(Boolean)
+                : []
+            )
+          )
+        ).sort(),
+      };
+    },
+    [files]
+  );
+
+  const performDelete = useCallback(
+    async (names: string[], action: AuthFileDependencyAction): Promise<boolean> => {
+      const uniqueNames = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
+      if (uniqueNames.length === 0) return false;
+      if (uniqueNames.length === 1) setDeleting(uniqueNames[0]);
+
+      try {
+        const result = await authFilesApi.deleteFiles(uniqueNames, action);
+        applyDeletedFiles(result.files);
+        if (result.retained > 0) {
+          await loadFiles({ background: true });
+        }
+
+        if (result.failed.length > 0) {
+          showNotification(
+            t('auth_files.delete_dependency_partial', {
+              deleted: result.deleted,
+              retained: result.retained,
+              failed: result.failed.length,
+            }),
+            'warning'
+          );
+        } else if (result.retained > 0) {
+          const dependentCount = result.retainedFiles.reduce(
+            (total, retained) => total + retained.dependentCount,
+            0
+          );
+          showNotification(
+            t('auth_files.delete_retained_success', {
+              retained: result.retained,
+              dependents: dependentCount,
+              deleted: result.deleted,
+            }),
+            'warning'
+          );
+        } else {
+          showNotification(
+            action === 'cascade'
+              ? t('auth_files.delete_cascade_success', { count: result.deleted })
+              : t('auth_files.delete_success'),
+            'success'
+          );
+        }
+        return true;
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : '';
+        showNotification(`${t('notification.delete_failed')}: ${errorMessage}`, 'error');
+        return false;
+      } finally {
+        if (uniqueNames.length === 1) setDeleting(null);
+      }
+    },
+    [applyDeletedFiles, loadFiles, showNotification, t]
+  );
+
+  const openDependencyDelete = useCallback(
+    (names: string[]): boolean => {
+      const uniqueNames = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
+      const details = dependencyDeleteDetails(uniqueNames);
+      if (details.dependentCount === 0) return false;
+      setDependencyDelete({
+        open: true,
+        names: uniqueNames,
+        sourceCount: details.sourceCount,
+        dependentCount: details.dependentCount,
+        dependentNames: details.dependentNames,
+        submitting: false,
+      });
+      return true;
+    },
+    [dependencyDeleteDetails]
+  );
+
+  const closeDependencyDelete = useCallback(() => {
+    setDependencyDelete((previous) =>
+      previous.submitting
+        ? previous
+        : {
+            open: false,
+            names: [],
+            sourceCount: 0,
+            dependentCount: 0,
+            dependentNames: [],
+            submitting: false,
+          }
+    );
+  }, []);
+
+  const confirmDependencyDelete = useCallback(
+    async (action: AuthFileDependencyAction) => {
+      if (!dependencyDelete.open || dependencyDelete.submitting) return;
+      setDependencyDelete((previous) => ({ ...previous, submitting: true }));
+      const completed = await performDelete(dependencyDelete.names, action);
+      setDependencyDelete((previous) =>
+        completed
+          ? {
+              open: false,
+              names: [],
+              sourceCount: 0,
+              dependentCount: 0,
+              dependentNames: [],
+              submitting: false,
+            }
+          : { ...previous, submitting: false }
+      );
+    },
+    [dependencyDelete, performDelete]
+  );
+
   const handleDelete = useCallback(
     (name: string) => {
+      if (openDependencyDelete([name])) return;
       showConfirmation({
         title: t('auth_files.delete_title', { defaultValue: 'Delete File' }),
         message: `${t('auth_files.delete_confirm')} "${name}" ?`,
         variant: 'danger',
         confirmText: t('common.confirm'),
         onConfirm: async () => {
-          setDeleting(name);
-          try {
-            const result = await authFilesApi.deleteFile(name);
-            showNotification(t('auth_files.delete_success'), 'success');
-            applyDeletedFiles(result.files.length > 0 ? result.files : [name]);
-          } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : '';
-            showNotification(`${t('notification.delete_failed')}: ${errorMessage}`, 'error');
-          } finally {
-            setDeleting(null);
-          }
+          await performDelete([name], 'retain');
         },
       });
     },
-    [applyDeletedFiles, showConfirmation, showNotification, t]
+    [openDependencyDelete, performDelete, showConfirmation, t]
   );
 
   const handleDeleteAll = useCallback(
@@ -656,6 +823,19 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       const isDisabledOnly = disabledOnly === true;
       const isStatusFiltered = isEnabledOnly || isDisabledOnly;
       const typeLabel = isFiltered ? getTypeLabel(t, filter) : t('auth_files.filter_all');
+      if (isFiltered || isProblemOnly || isStatusFiltered) {
+        const names = files
+          .filter((file) => {
+            if (isRuntimeOnlyAuthFile(file)) return false;
+            if (isFiltered && file.type !== filter) return false;
+            if (isProblemOnly && !hasAuthFileStatusMessage(file)) return false;
+            if (isEnabledOnly && file.disabled === true) return false;
+            if (isDisabledOnly && file.disabled !== true) return false;
+            return true;
+          })
+          .map((file) => file.name);
+        if (openDependencyDelete(names)) return;
+      }
       let confirmMessage = t('auth_files.delete_all_confirm');
       if (isStatusFiltered) {
         confirmMessage = t('auth_files.delete_filtered_result_confirm');
@@ -709,8 +889,23 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
               const failed = result.failed.length;
 
               applyDeletedFiles(result.files);
+              if (result.retained > 0) {
+                await loadFiles({ background: true });
+              }
 
-              if (failed === 0 && isStatusFiltered) {
+              if (failed === 0 && result.retained > 0) {
+                showNotification(
+                  t('auth_files.delete_retained_success', {
+                    retained: result.retained,
+                    dependents: result.retainedFiles.reduce(
+                      (total, retained) => total + retained.dependentCount,
+                      0
+                    ),
+                    deleted: result.deleted,
+                  }),
+                  'warning'
+                );
+              } else if (failed === 0 && isStatusFiltered) {
                 showNotification(
                   t('auth_files.delete_filtered_result_success', { count: success }),
                   'success'
@@ -775,7 +970,16 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         },
       });
     },
-    [applyDeletedFiles, deselectAll, files, showConfirmation, showNotification, t]
+    [
+      applyDeletedFiles,
+      deselectAll,
+      files,
+      loadFiles,
+      openDependencyDelete,
+      showConfirmation,
+      showNotification,
+      t,
+    ]
   );
 
   const handleDownload = useCallback(
@@ -798,6 +1002,10 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
   const handleStatusToggle = useCallback(
     async (item: AuthFileItem, enabled: boolean) => {
+      if (isRetainedCodexAuthFile(item)) {
+        showNotification(t('auth_files.retained_codex_toggle_blocked'), 'warning');
+        return;
+      }
       const name = item.name;
       const nextDisabled = !enabled;
       const previousDisabled = item.disabled === true;
@@ -949,6 +1157,31 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     [chatGptWebReloginUpdating, loadFiles, showNotification, t]
   );
 
+  const handleRestore = useCallback(
+    async (item: AuthFileItem) => {
+      if (!isRetainedCodexAuthFile(item) || restoring[item.name]) return;
+      setRestoring((current) => ({ ...current, [item.name]: true }));
+      try {
+        await authFilesApi.restoreFile(item.name);
+        await loadFiles({ background: true });
+        showNotification(
+          t('auth_files.retained_codex_restore_success', { name: item.name }),
+          'success'
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '';
+        showNotification(t('auth_files.retained_codex_restore_failed', { message }), 'error');
+      } finally {
+        setRestoring((current) => {
+          const next = { ...current };
+          delete next[item.name];
+          return next;
+        });
+      }
+    },
+    [loadFiles, restoring, showNotification, t]
+  );
+
   const batchSetStatus = useCallback(
     async (names: string[], enabled: boolean) => {
       if (batchStatusPendingRef.current) return;
@@ -957,14 +1190,23 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       if (uniqueNames.length === 0) return;
       if (uniqueNames.some((name) => statusUpdating[name] === true)) return;
 
+      const retainedSkipped = files.filter(
+        (file) => uniqueNames.includes(file.name) && isRetainedCodexAuthFile(file)
+      ).length;
+
       const originalDisabled = new Map(
         files
-          .filter((file) => uniqueNames.includes(file.name))
+          .filter((file) => uniqueNames.includes(file.name) && !isRetainedCodexAuthFile(file))
           .map((file) => [file.name, file.disabled === true])
       );
       const targetNames = new Set(originalDisabled.keys());
       const targetNameList = Array.from(targetNames);
-      if (targetNameList.length === 0) return;
+      if (targetNameList.length === 0) {
+        if (retainedSkipped > 0) {
+          showNotification(t('auth_files.retained_codex_batch_status_blocked'), 'warning');
+        }
+        return;
+      }
 
       const nextDisabled = !enabled;
 
@@ -1024,6 +1266,13 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         } else {
           showNotification(
             t('auth_files.batch_status_partial', { success: successCount, failed: failCount }),
+            'warning'
+          );
+        }
+
+        if (retainedSkipped > 0) {
+          showNotification(
+            t('auth_files.retained_codex_batch_status_skipped', { count: retainedSkipped }),
             'warning'
           );
         }
@@ -1219,8 +1468,9 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
   const batchDelete = useCallback(
     (names: string[]) => {
-      const uniqueNames = Array.from(new Set(names));
+      const uniqueNames = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
       if (uniqueNames.length === 0) return;
+      if (openDependencyDelete(uniqueNames)) return;
 
       showConfirmation({
         title: t('auth_files.batch_delete_title'),
@@ -1228,33 +1478,11 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         variant: 'danger',
         confirmText: t('common.confirm'),
         onConfirm: async () => {
-          try {
-            const result = await authFilesApi.deleteFiles(uniqueNames);
-            applyDeletedFiles(result.files);
-
-            if (result.failed.length === 0) {
-              showNotification(
-                `${t('auth_files.delete_all_success')} (${result.deleted})`,
-                'success'
-              );
-            } else {
-              showNotification(
-                t('auth_files.delete_filtered_partial', {
-                  success: result.deleted,
-                  failed: result.failed.length,
-                  type: t('auth_files.filter_all'),
-                }),
-                'warning'
-              );
-            }
-          } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : '';
-            showNotification(`${t('notification.delete_failed')}: ${errorMessage}`, 'error');
-          }
+          await performDelete(uniqueNames, 'retain');
         },
       });
     },
-    [applyDeletedFiles, showConfirmation, showNotification, t]
+    [openDependencyDelete, performDelete, showConfirmation, t]
   );
 
   return {
@@ -1278,6 +1506,8 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     statusUpdating,
     xaiFieldsUpdating,
     chatGptWebReloginUpdating,
+    restoring,
+    dependencyDelete,
     batchStatusUpdating,
     fileInputRef,
     loadFiles,
@@ -1289,6 +1519,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     handleStatusToggle,
     handleXaiFieldToggle,
     handleChatGptWebRelogin,
+    handleRestore,
     toggleSelect,
     selectAllVisible,
     invertVisibleSelection,
@@ -1307,5 +1538,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     retryFailedCodexPlanTypeRefresh,
     batchSetStatus,
     batchDelete,
+    closeDependencyDelete,
+    confirmDependencyDelete,
   };
 }

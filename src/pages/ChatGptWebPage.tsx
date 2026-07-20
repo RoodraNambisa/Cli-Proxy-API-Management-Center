@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ChatGptWebMutationTaskPanel } from '@/features/chatgptWeb/components/ChatGptWebMutationTaskPanel';
 import {
   IconFileText,
   IconKey,
@@ -13,14 +14,19 @@ import {
 } from '@/components/ui/icons';
 import { chatGptWebApi } from '@/services/api';
 import { useAuthStore, useNotificationStore } from '@/stores';
-import type { ChatGptWebLoginTask, ChatGptWebLoginTaskState } from '@/types';
-import { isChatGptWebLoginTaskTerminal } from '@/types';
+import type {
+  ChatGptWebLoginTask,
+  ChatGptWebLoginTaskState,
+  ChatGptWebMutationTask,
+} from '@/types';
+import { isChatGptWebLoginTaskTerminal, isChatGptWebMutationTaskTerminal } from '@/types';
 import { formatDateTime, formatFileSize } from '@/utils/format';
 import styles from './ChatGptWebPage.module.scss';
 
 const POLL_INTERVAL_MS = 1500;
 
 type AccountInputMode = 'manual' | 'file';
+type ChatGptWebPageMode = 'login' | 'import';
 
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error ?? '');
@@ -31,18 +37,31 @@ export function ChatGptWebPage() {
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const { showNotification } = useNotificationStore();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const importPollErrorNotifiedRef = useRef(false);
+  const [pageMode, setPageMode] = useState<ChatGptWebPageMode>('login');
   const [inputMode, setInputMode] = useState<AccountInputMode>('manual');
   const [accountText, setAccountText] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [importFiles, setImportFiles] = useState<File[]>([]);
   const [task, setTask] = useState<ChatGptWebLoginTask | null>(null);
+  const [importTask, setImportTask] = useState<ChatGptWebMutationTask | null>(null);
   const [starting, setStarting] = useState(false);
+  const [importStarting, setImportStarting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [importRefreshing, setImportRefreshing] = useState(false);
   const [canceling, setCanceling] = useState(false);
+  const [importCanceling, setImportCanceling] = useState(false);
   const disabled = connectionStatus !== 'connected';
 
   const clearFile = useCallback(() => {
     setFile(null);
     if (inputRef.current) inputRef.current.value = '';
+  }, []);
+
+  const clearImportFiles = useCallback(() => {
+    setImportFiles([]);
+    if (importInputRef.current) importInputRef.current.value = '';
   }, []);
 
   const refreshTask = useCallback(
@@ -90,8 +109,63 @@ export function ChatGptWebPage() {
     };
   }, [activeTaskId, activeTaskState, refreshTask]);
 
+  const refreshImportTask = useCallback(
+    async (taskId: string, quiet = false) => {
+      if (!quiet) setImportRefreshing(true);
+      try {
+        const nextTask = await chatGptWebApi.getImportTask(taskId);
+        importPollErrorNotifiedRef.current = false;
+        setImportTask(nextTask);
+        return nextTask;
+      } catch (error) {
+        if (!quiet || !importPollErrorNotifiedRef.current) {
+          showNotification(
+            `${t('chatgpt_web.import_task_refresh_failed')}: ${getErrorMessage(error)}`,
+            'error'
+          );
+          importPollErrorNotifiedRef.current = true;
+        }
+        return null;
+      } finally {
+        if (!quiet) setImportRefreshing(false);
+      }
+    },
+    [showNotification, t]
+  );
+
+  const activeImportTaskId = importTask?.id ?? '';
+  const activeImportTaskState = importTask?.state;
+
+  useEffect(() => {
+    if (
+      !activeImportTaskId ||
+      !activeImportTaskState ||
+      isChatGptWebMutationTaskTerminal(activeImportTaskState)
+    ) {
+      return undefined;
+    }
+    let disposed = false;
+    let timer: number | undefined;
+
+    const poll = async () => {
+      const nextTask = await refreshImportTask(activeImportTaskId, true);
+      if (disposed || (nextTask && isChatGptWebMutationTaskTerminal(nextTask.state))) return;
+      timer = window.setTimeout(poll, POLL_INTERVAL_MS);
+    };
+
+    timer = window.setTimeout(poll, POLL_INTERVAL_MS);
+    return () => {
+      disposed = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [activeImportTaskId, activeImportTaskState, refreshImportTask]);
+
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFile(event.target.files?.[0] ?? null);
+  };
+
+  const handleImportFilesChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setImportFiles(Array.from(event.target.files ?? []));
   };
 
   const handleStart = async () => {
@@ -147,10 +221,58 @@ export function ChatGptWebPage() {
     }
   };
 
+  const handleImportStart = async () => {
+    if (importStarting || importFiles.length === 0) return;
+    const selectedFiles = [...importFiles];
+    setImportStarting(true);
+    try {
+      const nextTask = await chatGptWebApi.startImportTask(selectedFiles);
+      importPollErrorNotifiedRef.current = false;
+      clearImportFiles();
+      setImportTask(nextTask);
+      showNotification(t('chatgpt_web.import_task_started'), 'success');
+    } catch (error) {
+      showNotification(
+        `${t('chatgpt_web.import_task_start_failed')}: ${getErrorMessage(error)}`,
+        'error'
+      );
+    } finally {
+      setImportStarting(false);
+    }
+  };
+
+  const handleImportCancel = async () => {
+    if (
+      !importTask ||
+      importTask.state === 'canceling' ||
+      isChatGptWebMutationTaskTerminal(importTask.state) ||
+      importCanceling
+    ) {
+      return;
+    }
+    setImportCanceling(true);
+    try {
+      const nextTask = await chatGptWebApi.cancelImportTask(importTask.id);
+      setImportTask(nextTask);
+      showNotification(t('chatgpt_web.import_task_cancel_requested'), 'info');
+    } catch (error) {
+      showNotification(
+        `${t('chatgpt_web.import_task_cancel_failed')}: ${getErrorMessage(error)}`,
+        'error'
+      );
+    } finally {
+      setImportCanceling(false);
+    }
+  };
+
   const progress = task?.total ? Math.min(100, Math.round((task.processed / task.total) * 100)) : 0;
   const taskActive = Boolean(task && !isChatGptWebLoginTaskTerminal(task.state));
+  const importTaskActive = Boolean(
+    importTask && !isChatGptWebMutationTaskTerminal(importTask.state)
+  );
+  const anyTaskActive = taskActive || importTaskActive;
   const hasInput = inputMode === 'manual' ? Boolean(accountText.trim()) : Boolean(file);
-  const inputDisabled = disabled || starting || taskActive;
+  const inputDisabled = disabled || starting || anyTaskActive;
   const stateLabel = task ? t(`chatgpt_web.states.${task.state as ChatGptWebLoginTaskState}`) : '';
   const sortedResults = useMemo(
     () => [...(task?.results ?? [])].sort((left, right) => left.line - right.line),
@@ -182,118 +304,210 @@ export function ChatGptWebPage() {
         </div>
       </header>
 
-      <section className={styles.uploadSection} aria-labelledby="chatgpt-web-upload-title">
-        <div className={styles.sectionHeading}>
-          <div>
-            <h2 id="chatgpt-web-upload-title">{t('chatgpt_web.upload_title')}</h2>
-            <p>{t('chatgpt_web.upload_description')}</p>
-          </div>
-        </div>
-        <div className={styles.formatNotice}>
-          <code>email---password---BASE32_TOTP_SECRET</code>
-          <span>{t('chatgpt_web.upload_format_hint')}</span>
-        </div>
-        <div
-          className={styles.inputModeTabs}
-          role="group"
-          aria-label={t('chatgpt_web.input_mode_label')}
-        >
-          {(['manual', 'file'] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              aria-pressed={inputMode === mode}
-              className={inputMode === mode ? styles.inputModeTabActive : ''}
-              onClick={() => setInputMode(mode)}
-            >
-              {mode === 'manual' ? <IconFileText size={16} /> : <IconUpload size={16} />}
-              {t(`chatgpt_web.input_modes.${mode}`)}
-            </button>
-          ))}
-        </div>
+      <div
+        className={styles.operationTabs}
+        role="group"
+        aria-label={t('chatgpt_web.page_mode_label')}
+      >
+        {(['login', 'import'] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            aria-pressed={pageMode === mode}
+            disabled={anyTaskActive}
+            className={pageMode === mode ? styles.operationTabActive : ''}
+            onClick={() => setPageMode(mode)}
+          >
+            {mode === 'login' ? <IconKey size={17} /> : <IconUpload size={17} />}
+            <span>
+              <strong>{t(`chatgpt_web.page_modes.${mode}.label`)}</strong>
+              <small>{t(`chatgpt_web.page_modes.${mode}.hint`)}</small>
+            </span>
+          </button>
+        ))}
+      </div>
 
-        {inputMode === 'manual' ? (
-          <div className={styles.inputPanel}>
-            <label htmlFor="chatgpt-web-account-text" className={styles.manualInputLabel}>
-              {t('chatgpt_web.manual_input_label')}
-            </label>
-            <textarea
-              id="chatgpt-web-account-text"
-              className={styles.manualInput}
-              value={accountText}
-              placeholder={t('chatgpt_web.manual_input_placeholder')}
-              onChange={(event) => setAccountText(event.target.value)}
-              disabled={inputDisabled}
-              autoComplete="off"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              rows={7}
-            />
+      {pageMode === 'login' ? (
+        <section className={styles.uploadSection} aria-labelledby="chatgpt-web-upload-title">
+          <div className={styles.sectionHeading}>
+            <div>
+              <h2 id="chatgpt-web-upload-title">{t('chatgpt_web.upload_title')}</h2>
+              <p>{t('chatgpt_web.upload_description')}</p>
+            </div>
           </div>
-        ) : (
+          <div className={styles.formatNotice}>
+            <code>email---password---BASE32_TOTP_SECRET</code>
+            <span>{t('chatgpt_web.upload_format_hint')}</span>
+          </div>
+          <div
+            className={styles.inputModeTabs}
+            role="group"
+            aria-label={t('chatgpt_web.input_mode_label')}
+          >
+            {(['manual', 'file'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={inputMode === mode}
+                disabled={inputDisabled}
+                className={inputMode === mode ? styles.inputModeTabActive : ''}
+                onClick={() => setInputMode(mode)}
+              >
+                {mode === 'manual' ? <IconFileText size={16} /> : <IconUpload size={16} />}
+                {t(`chatgpt_web.input_modes.${mode}`)}
+              </button>
+            ))}
+          </div>
+
+          {inputMode === 'manual' ? (
+            <div className={styles.inputPanel}>
+              <label htmlFor="chatgpt-web-account-text" className={styles.manualInputLabel}>
+                {t('chatgpt_web.manual_input_label')}
+              </label>
+              <textarea
+                id="chatgpt-web-account-text"
+                className={styles.manualInput}
+                value={accountText}
+                placeholder={t('chatgpt_web.manual_input_placeholder')}
+                onChange={(event) => setAccountText(event.target.value)}
+                disabled={inputDisabled}
+                autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                rows={7}
+              />
+            </div>
+          ) : (
+            <div className={styles.inputPanel}>
+              <div className={styles.uploadControls}>
+                <label className={styles.filePicker}>
+                  <IconFileText size={18} />
+                  <span>{file ? file.name : t('chatgpt_web.choose_file')}</span>
+                  <input
+                    ref={inputRef}
+                    type="file"
+                    accept=".txt,text/plain"
+                    onChange={handleFileChange}
+                    disabled={inputDisabled}
+                  />
+                </label>
+                {file ? <span className={styles.fileMeta}>{formatFileSize(file.size)}</span> : null}
+                {file ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFile}
+                    disabled={starting}
+                    title={t('chatgpt_web.clear_file')}
+                    aria-label={t('chatgpt_web.clear_file')}
+                  >
+                    <IconTrash2 size={16} />
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          <div className={styles.submitRow}>
+            {inputMode === 'manual' && accountText ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAccountText('')}
+                disabled={starting}
+                title={t('chatgpt_web.clear_text')}
+                aria-label={t('chatgpt_web.clear_text')}
+              >
+                <IconTrash2 size={16} />
+              </Button>
+            ) : null}
+            <Button
+              onClick={handleStart}
+              loading={starting}
+              disabled={disabled || !hasInput || anyTaskActive}
+            >
+              <IconKey size={16} />
+              {t('chatgpt_web.start_task')}
+            </Button>
+          </div>
+          <p className={styles.securityHint}>
+            {t(
+              inputMode === 'manual'
+                ? 'chatgpt_web.manual_security_hint'
+                : 'chatgpt_web.file_security_hint'
+            )}
+          </p>
+        </section>
+      ) : (
+        <section className={styles.uploadSection} aria-labelledby="chatgpt-web-import-title">
+          <div className={styles.sectionHeading}>
+            <div>
+              <h2 id="chatgpt-web-import-title">{t('chatgpt_web.import_title')}</h2>
+              <p>{t('chatgpt_web.import_description')}</p>
+            </div>
+          </div>
+          <div className={styles.formatNotice}>
+            <code>*.json</code>
+            <span>{t('chatgpt_web.import_format_hint')}</span>
+          </div>
           <div className={styles.inputPanel}>
             <div className={styles.uploadControls}>
               <label className={styles.filePicker}>
                 <IconFileText size={18} />
-                <span>{file ? file.name : t('chatgpt_web.choose_file')}</span>
+                <span>
+                  {importFiles.length > 0
+                    ? t('chatgpt_web.import_files_selected', { count: importFiles.length })
+                    : t('chatgpt_web.choose_json_files')}
+                </span>
                 <input
-                  ref={inputRef}
+                  ref={importInputRef}
                   type="file"
-                  accept=".txt,text/plain"
-                  onChange={handleFileChange}
-                  disabled={inputDisabled}
+                  accept=".json,application/json"
+                  multiple
+                  onChange={handleImportFilesChange}
+                  disabled={disabled || importStarting || anyTaskActive}
                 />
               </label>
-              {file ? <span className={styles.fileMeta}>{formatFileSize(file.size)}</span> : null}
-              {file ? (
+              {importFiles.length > 0 ? (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={clearFile}
-                  disabled={starting}
-                  title={t('chatgpt_web.clear_file')}
-                  aria-label={t('chatgpt_web.clear_file')}
+                  onClick={clearImportFiles}
+                  disabled={importStarting}
+                  title={t('chatgpt_web.clear_import_files')}
+                  aria-label={t('chatgpt_web.clear_import_files')}
                 >
                   <IconTrash2 size={16} />
                 </Button>
               ) : null}
             </div>
+            {importFiles.length > 0 ? (
+              <div className={styles.selectedFileList}>
+                {importFiles.map((selectedFile, index) => (
+                  <div key={`${selectedFile.name}-${selectedFile.size}-${index}`}>
+                    <span title={selectedFile.name}>{selectedFile.name}</span>
+                    <small>{formatFileSize(selectedFile.size)}</small>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
-        )}
-
-        <div className={styles.submitRow}>
-          {inputMode === 'manual' && accountText ? (
+          <div className={styles.submitRow}>
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setAccountText('')}
-              disabled={starting}
-              title={t('chatgpt_web.clear_text')}
-              aria-label={t('chatgpt_web.clear_text')}
+              onClick={handleImportStart}
+              loading={importStarting}
+              disabled={disabled || importFiles.length === 0 || anyTaskActive}
             >
-              <IconTrash2 size={16} />
+              <IconUpload size={16} />
+              {t('chatgpt_web.start_import_task')}
             </Button>
-          ) : null}
-          <Button
-            onClick={handleStart}
-            loading={starting}
-            disabled={disabled || !hasInput || taskActive}
-          >
-            <IconKey size={16} />
-            {t('chatgpt_web.start_task')}
-          </Button>
-        </div>
-        <p className={styles.securityHint}>
-          {t(
-            inputMode === 'manual'
-              ? 'chatgpt_web.manual_security_hint'
-              : 'chatgpt_web.file_security_hint'
-          )}
-        </p>
-      </section>
+          </div>
+          <p className={styles.securityHint}>{t('chatgpt_web.import_security_hint')}</p>
+        </section>
+      )}
 
-      {task ? (
+      {pageMode === 'login' && task ? (
         <section className={styles.taskSection} aria-labelledby="chatgpt-web-task-title">
           <div className={styles.taskHeader}>
             <div>
@@ -384,6 +598,19 @@ export function ChatGptWebPage() {
               </table>
             </div>
           )}
+        </section>
+      ) : null}
+
+      {pageMode === 'import' && importTask ? (
+        <section className={styles.taskSection}>
+          <ChatGptWebMutationTaskPanel
+            task={importTask}
+            kind="import"
+            refreshing={importRefreshing}
+            canceling={importCanceling}
+            onRefresh={() => void refreshImportTask(importTask.id)}
+            onCancel={() => void handleImportCancel()}
+          />
         </section>
       ) : null}
     </div>

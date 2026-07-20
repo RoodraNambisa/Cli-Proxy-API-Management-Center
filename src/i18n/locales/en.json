@@ -751,6 +751,7 @@
     "chatgpt_web_lifecycle_label": "Account lifecycle",
     "chatgpt_web_lifecycle_unknown": "Unknown",
     "chatgpt_web_lifecycle_active": "Active",
+    "chatgpt_web_lifecycle_refreshing": "Refreshing",
     "chatgpt_web_lifecycle_login_pending": "Login pending",
     "chatgpt_web_lifecycle_relogin_pending": "Relogin pending",
     "chatgpt_web_lifecycle_dead": "Account is dead",
@@ -772,7 +773,55 @@
     "chatgpt_web_proxy_unknown": "Not checked",
     "chatgpt_web_relogin": "Relogin",
     "chatgpt_web_relogin_success": "Relogged \"{{name}}\" successfully",
-    "chatgpt_web_relogin_failed": "Relogin failed"
+    "chatgpt_web_relogin_failed": "Relogin failed",
+    "chatgpt_web_credential_mode": "Credential mode",
+    "chatgpt_web_refresh_strategy": "Refresh strategy",
+    "chatgpt_web_source_auth": "Source Codex",
+    "chatgpt_web_token_only_state": "Token only",
+    "chatgpt_web_token_only_hint": "This credential has only its current token and cannot refresh automatically. Import or log in again after it expires.",
+    "chatgpt_web_source_missing_state": "Source missing",
+    "chatgpt_web_source_missing_hint": "The linked Codex source no longer exists, so this Web copy cannot refresh from its source.",
+    "chatgpt_web_credential_modes": {
+      "native": "Native Web credential",
+      "linked_codex": "Linked Codex copy",
+      "token_only": "Token only"
+    },
+    "chatgpt_web_refresh_strategies": {
+      "web_oauth_rt": "Web OAuth refresh",
+      "chatgpt_session": "ChatGPT session",
+      "codex_source": "Follow Codex source",
+      "token_only": "No automatic refresh"
+    },
+    "retained_codex_state": "Retained",
+    "retained_codex_notice": "Codex use is stopped. Retained to refresh {{count}} Web copies.",
+    "retained_codex_restore": "Restore Codex",
+    "retained_codex_restore_success": "Restored Codex credential “{{name}}”",
+    "retained_codex_restore_failed": "Failed to restore Codex credential: {{message}}",
+    "retained_codex_toggle_blocked": "A retained Codex credential cannot be enabled with the normal switch. Use Restore Codex.",
+    "retained_codex_batch_status_blocked": "All selected credentials are retained for Web copy dependencies and cannot be toggled.",
+    "retained_codex_batch_status_skipped": "Skipped {{count}} credentials retained to refresh Web copies.",
+    "delete_dependency_title": "Delete linked credentials",
+    "delete_dependency_summary": "Among {{selected}} selected credentials, {{sources}} Codex sources have {{dependents}} linked ChatGPT Web copies. Choose how to handle them.",
+    "delete_dependency_web_files": "Linked Web copies",
+    "delete_dependency_more": "{{count}} more",
+    "delete_dependency_retain": "Retain source",
+    "delete_dependency_retain_hint": "Stop Codex use but retain the source credential for Web copy refresh. It can be restored later.",
+    "delete_dependency_cascade": "Cascade delete",
+    "delete_dependency_cascade_hint": "Delete the source Codex credentials and every linked Web copy. This cannot be undone.",
+    "delete_dependency_partial": "Delete finished: {{deleted}} deleted, {{retained}} retained, {{failed}} failed.",
+    "delete_retained_success": "Deleted {{deleted}}; {{retained}} Codex sources were stopped and retained for {{dependents}} Web copies.",
+    "delete_cascade_success": "Cascade deleted {{count}} credentials",
+    "chatgpt_web_conversion_toggle": "Create ChatGPT Web copies",
+    "chatgpt_web_conversion_hint": "Create linked Web copies for {{count}} selected, eligible Codex credentials.",
+    "chatgpt_web_conversion_no_codex": "The current selection has no eligible Codex credentials.",
+    "chatgpt_web_conversion_no_sources": "No Codex sources remained eligible after the field update. Failed items remain selected.",
+    "chatgpt_web_conversion_started": "Created a conversion task for {{count}} Codex credentials",
+    "chatgpt_web_conversion_start_failed": "Failed to create conversion task: {{message}}",
+    "chatgpt_web_conversion_refresh_failed": "Failed to refresh conversion task: {{message}}",
+    "chatgpt_web_conversion_cancel_requested": "Conversion task cancellation requested",
+    "chatgpt_web_conversion_cancel_failed": "Failed to cancel conversion task: {{message}}",
+    "chatgpt_web_conversion_completed": "Conversion completed for {{count}} Web copies",
+    "chatgpt_web_conversion_completed_with_errors": "Conversion completed: {{succeeded}} succeeded, {{failed}} failed, {{canceled}} canceled"
   },
   "antigravity_quota": {
     "title": "Antigravity Quota",
@@ -2269,7 +2318,7 @@
   },
   "chatgpt_web": {
     "title": "ChatGPT Web",
-    "description": "Log in ChatGPT Web accounts in batches and track the result for every input line.",
+    "description": "Log in to ChatGPT Web accounts or import Web JSON, with per-account and per-file results.",
     "provider_entry_title": "ChatGPT Web accounts and login tasks",
     "provider_entry_description": "Enter or upload account text, follow login progress, and open credential or proxy management.",
     "provider_entry_action": "Open ChatGPT Web",
@@ -2292,6 +2341,30 @@
     "start_task": "Start login",
     "manual_security_hint": "Content is held only in this page's memory and is never written to browser storage. It is cleared immediately after the task is created successfully.",
     "file_security_hint": "The page never reads, previews, or persists file contents. The local file reference is cleared immediately after the task is created successfully.",
+    "page_mode_label": "ChatGPT Web credential input",
+    "page_modes": {
+      "login": {
+        "label": "Account login",
+        "hint": "Log in with account, password, and optional 2FA"
+      },
+      "import": {
+        "label": "Import Web JSON",
+        "hint": "Import existing ChatGPT Web credential files"
+      }
+    },
+    "import_title": "Import Web JSON",
+    "import_description": "Select multiple ChatGPT Web JSON credential files. Created, updated, unchanged, and failed results are reported per file.",
+    "import_format_hint": "Upload only ChatGPT Web credential JSON. File contents are never previewed or written to browser storage.",
+    "choose_json_files": "Choose JSON files",
+    "import_files_selected": "{{count}} files selected",
+    "clear_import_files": "Clear selected files",
+    "start_import_task": "Start import",
+    "import_security_hint": "The page retains only file references and clears them when the task is created. Tokens, cookies, and other secrets are never displayed.",
+    "import_task_started": "Web JSON import task created",
+    "import_task_start_failed": "Failed to create Web JSON import task",
+    "import_task_refresh_failed": "Failed to refresh Web JSON import task",
+    "import_task_cancel_requested": "Web JSON import task cancellation requested",
+    "import_task_cancel_failed": "Failed to cancel Web JSON import task",
     "task_title": "Login task",
     "task_created_at": "Created {{time}}",
     "progress": "Login progress",
@@ -2331,6 +2404,86 @@
       "success": "Success",
       "failed": "Failed",
       "canceled": "Canceled"
+    },
+    "mutation_progress": "Task progress",
+    "mutation_phases_label": "Current processing phases",
+    "mutation_target": "Target file",
+    "mutation_credential_mode": "Credential mode",
+    "mutation_metrics": {
+      "total": "Total",
+      "processed": "Processed",
+      "created": "Created",
+      "updated": "Updated",
+      "unchanged": "Unchanged",
+      "failed": "Failed",
+      "canceled": "Canceled"
+    },
+    "mutation_tasks": {
+      "import": {
+        "title": "Web JSON import task",
+        "results_title": "Per-file results",
+        "source": "Source file",
+        "phases": {
+          "queued": "Waiting to import",
+          "running": "Parsing and validating",
+          "committing": "Writing credential"
+        }
+      },
+      "conversion": {
+        "title": "ChatGPT Web copy conversion",
+        "results_title": "Per-credential results",
+        "source": "Codex source",
+        "phases": {
+          "queued": "Waiting to convert",
+          "running": "Refreshing and probing",
+          "committing": "Creating copy"
+        }
+      }
+    },
+    "mutation_result_states": {
+      "queued": "Queued",
+      "running": "Running",
+      "committing": "Committing",
+      "created": "Created",
+      "updated": "Updated",
+      "unchanged": "Unchanged",
+      "failed": "Failed",
+      "canceled": "Canceled"
+    },
+    "credential_modes": {
+      "native": "Native Web credential",
+      "linked_codex": "Linked Codex copy",
+      "token_only": "Token only"
+    },
+    "mutation_error_categories": {
+      "canceled": "Canceled",
+      "invalid_credential": "Invalid credential format",
+      "identity_missing": "Account identity is missing",
+      "identity_conflict": "Account identity conflict",
+      "credential_ambiguous": "Multiple credentials matched",
+      "credential_changed": "Credential changed during processing",
+      "credential_id_conflict": "Credential ID conflict",
+      "credential_lookup_failed": "Credential lookup failed",
+      "login_failed": "Login failed",
+      "persist_failed": "Credential save failed",
+      "persist_uncertain": "Credential save outcome is uncertain",
+      "probe_failed": "Token probe failed",
+      "probe_unavailable": "Token probe is temporarily unavailable",
+      "source_not_found": "Source credential was not found",
+      "source_not_managed": "Source is not a managed credential",
+      "source_provider_invalid": "Source is not a Codex credential",
+      "source_pending_deletion": "Source credential is pending deletion",
+      "source_disabled": "Source credential is disabled",
+      "source_identity_missing": "Source account identity is missing",
+      "source_token_missing": "Source has no usable token",
+      "source_refresh_unavailable": "Source refresh is temporarily unavailable",
+      "source_persist_failed": "Failed to save source identity",
+      "source_persist_uncertain": "Source save outcome is uncertain",
+      "source_changed": "Source changed during conversion",
+      "target_conflict": "Target Web copy conflicts with an existing credential",
+      "target_initialization_failed": "Failed to initialize target copy",
+      "token_incompatible": "Token is incompatible with ChatGPT Web",
+      "temporary_failure": "Temporary failure; try again later"
     }
   },
   "proxy_pools": {

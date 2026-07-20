@@ -4,24 +4,45 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { ChatGptWebMutationTaskPanel } from '@/features/chatgptWeb/components/ChatGptWebMutationTaskPanel';
 import type {
   AuthFilesBatchSettingsField,
   AuthFilesBatchSettingsState,
 } from '@/features/authFiles/hooks/useAuthFilesBatchSettings';
+import type { ChatGptWebMutationTask } from '@/types';
+import { isChatGptWebMutationTaskTerminal } from '@/types';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
 export type AuthFilesBatchSettingsModalProps = {
   disableControls: boolean;
   state: AuthFilesBatchSettingsState;
   dirty: boolean;
+  conversionTask: ChatGptWebMutationTask | null;
+  conversionRefreshing: boolean;
+  conversionCanceling: boolean;
   onClose: () => void;
   onSave: () => void | Promise<void>;
   onChange: (field: AuthFilesBatchSettingsField, value: string) => void;
+  onRefreshConversionTask: () => void;
+  onCancelConversionTask: () => void;
 };
 
 export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalProps) {
   const { t } = useTranslation();
-  const { disableControls, state, dirty, onClose, onSave, onChange } = props;
+  const {
+    disableControls,
+    state,
+    dirty,
+    conversionTask,
+    conversionRefreshing,
+    conversionCanceling,
+    onClose,
+    onSave,
+    onChange,
+    onRefreshConversionTask,
+    onCancelConversionTask,
+  } = props;
 
   const booleanOptions = useMemo(
     () => [
@@ -32,18 +53,21 @@ export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalPr
     [t]
   );
 
-  const fieldDisabled = disableControls || state.saving;
+  const conversionActive = Boolean(
+    conversionTask && !isChatGptWebMutationTaskTerminal(conversionTask.state)
+  );
+  const fieldDisabled = disableControls || state.saving || conversionActive;
 
   return (
     <Modal
       open={state.open}
       onClose={onClose}
-      closeDisabled={state.saving}
-      width={720}
+      closeDisabled={state.saving || conversionActive}
+      width={conversionTask ? 980 : 720}
       title={t('auth_files.batch_settings_title', { count: state.names.length })}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={state.saving}>
+          <Button variant="secondary" onClick={onClose} disabled={state.saving || conversionActive}>
             {dirty ? t('common.cancel') : t('common.close')}
           </Button>
           <Button
@@ -159,7 +183,37 @@ export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalPr
             />
             <div className="hint">{t('auth_files.batch_settings_websockets_hint')}</div>
           </div>
+          <div className={styles.batchConversionOption}>
+            <div>
+              <strong>{t('auth_files.chatgpt_web_conversion_toggle')}</strong>
+              <span>
+                {state.codexNames.length > 0
+                  ? t('auth_files.chatgpt_web_conversion_hint', {
+                      count: state.codexNames.length,
+                    })
+                  : t('auth_files.chatgpt_web_conversion_no_codex')}
+              </span>
+            </div>
+            <ToggleSwitch
+              checked={state.createChatGptWebCopy}
+              ariaLabel={t('auth_files.chatgpt_web_conversion_toggle')}
+              disabled={fieldDisabled || state.codexNames.length === 0 || Boolean(conversionTask)}
+              onChange={(value) => onChange('createChatGptWebCopy', String(value))}
+            />
+          </div>
         </div>
+        {conversionTask ? (
+          <div className={styles.batchConversionTask}>
+            <ChatGptWebMutationTaskPanel
+              task={conversionTask}
+              kind="conversion"
+              refreshing={conversionRefreshing}
+              canceling={conversionCanceling}
+              onRefresh={onRefreshConversionTask}
+              onCancel={onCancelConversionTask}
+            />
+          </div>
+        ) : null}
       </div>
     </Modal>
   );

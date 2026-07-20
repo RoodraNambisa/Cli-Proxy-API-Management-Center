@@ -9,7 +9,7 @@ import { apiClient } from '@/services/api/client';
 import { chatGptWebApi } from '@/services/api/chatgptWeb';
 import { proxyPoolsApi } from '@/services/api/proxyPools';
 import { useAuthStore, useNotificationStore } from '@/stores';
-import type { AuthFileItem, ChatGptWebLoginTask } from '@/types';
+import type { AuthFileItem, ChatGptWebLoginTask, ChatGptWebMutationTask } from '@/types';
 import { normalizeModelList } from '@/utils/models';
 
 vi.mock('react-i18next', async (importOriginal) => {
@@ -58,6 +58,25 @@ const createLoginTask = (): ChatGptWebLoginTask => ({
   results: [],
 });
 
+const createMutationTask = (
+  overrides: Partial<ChatGptWebMutationTask> = {}
+): ChatGptWebMutationTask => ({
+  id: 'mutation-1',
+  kind: 'import',
+  state: 'queued',
+  created_at: '2026-07-18T00:00:00Z',
+  total: 2,
+  processed: 0,
+  succeeded: 0,
+  failed: 0,
+  canceled: 0,
+  results: [
+    { file: 'first.json', status: 'queued' },
+    { file: 'second.json', status: 'queued' },
+  ],
+  ...overrides,
+});
+
 describe('ChatGPT Web management compatibility', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -102,6 +121,47 @@ describe('ChatGPT Web management compatibility', () => {
     });
   });
 
+  test('uploads multiple Web JSON files and uses the dedicated task endpoints', async () => {
+    const task = createMutationTask();
+    const postForm = vi.spyOn(apiClient, 'postForm').mockResolvedValue(task);
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue(task);
+    const remove = vi.spyOn(apiClient, 'delete').mockResolvedValue(task);
+    const files = [
+      new File(['{}'], 'first.json', { type: 'application/json' }),
+      new File(['{}'], 'second.json', { type: 'application/json' }),
+    ];
+
+    await chatGptWebApi.startImportTask(files);
+    await chatGptWebApi.getImportTask('task id');
+    await chatGptWebApi.cancelImportTask('task id');
+
+    expect(postForm).toHaveBeenCalledTimes(1);
+    const [path, body] = postForm.mock.calls[0];
+    expect(path).toBe('/chatgpt-web/import-tasks');
+    expect((body as FormData).getAll('files')).toHaveLength(2);
+    expect((body as FormData).getAll('files').map((entry) => (entry as File).name)).toEqual([
+      'first.json',
+      'second.json',
+    ]);
+    expect(get).toHaveBeenCalledWith('/chatgpt-web/import-tasks/task%20id');
+    expect(remove).toHaveBeenCalledWith('/chatgpt-web/import-tasks/task%20id');
+  });
+
+  test('starts Codex conversion as a validated copy task', async () => {
+    const post = vi
+      .spyOn(apiClient, 'post')
+      .mockResolvedValue(createMutationTask({ kind: 'conversion' }));
+
+    await chatGptWebApi.startConversionTask(['a.json', 'b.json']);
+
+    expect(post).toHaveBeenCalledWith('/chatgpt-web/conversion-tasks', {
+      names: ['a.json', 'b.json'],
+      target_provider: 'chatgpt-web',
+      mode: 'copy',
+      validate: true,
+    });
+  });
+
   test('defaults to manual input and retains the existing file upload mode', () => {
     render(
       <MemoryRouter>
@@ -120,6 +180,40 @@ describe('ChatGPT Web management compatibility', () => {
 
     expect(screen.queryByRole('textbox', { name: 'chatgpt_web.manual_input_label' })).toBeNull();
     expect(screen.getByText('chatgpt_web.choose_file')).not.toBeNull();
+  });
+
+  test('switches to multi-file Web JSON import and clears file references after creation', async () => {
+    const startImportTask = vi
+      .spyOn(chatGptWebApi, 'startImportTask')
+      .mockResolvedValue(createMutationTask());
+    const files = [
+      new File(['{"access_token":"secret-a"}'], 'first.json', {
+        type: 'application/json',
+      }),
+      new File(['{"cookies":["secret-b"]}'], 'second.json', {
+        type: 'application/json',
+      }),
+    ];
+    const view = render(
+      <MemoryRouter>
+        <ChatGptWebPage />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.page_modes\.import\.label/ }));
+    const input = view.container.querySelector('input[type="file"][multiple]');
+    expect(input).not.toBeNull();
+    fireEvent.change(input as HTMLInputElement, { target: { files } });
+    expect(screen.getByText('first.json')).not.toBeNull();
+    expect(screen.getByText('second.json')).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.start_import_task/ }));
+
+    await waitFor(() => expect(startImportTask).toHaveBeenCalledWith(files));
+    await waitFor(() => expect(screen.queryByText('chatgpt_web.import_files_selected')).toBeNull());
+    expect(screen.getByText('chatgpt_web.choose_json_files')).not.toBeNull();
+    expect(document.body.textContent).not.toContain('secret-a');
+    expect(document.body.textContent).not.toContain('secret-b');
   });
 
   test('clears pasted credentials after task creation without writing them to browser storage', async () => {
@@ -219,6 +313,99 @@ describe('ChatGPT Web management compatibility', () => {
     expect(screen.queryByText('socks5://user:secret@proxy.example:1080')).toBeNull();
     fireEvent.click(screen.getByTitle('auth_files.chatgpt_web_relogin'));
     expect(onRelogin).toHaveBeenCalledWith(expect.objectContaining({ name: 'chatgpt-web.json' }));
+  });
+
+  test('distinguishes token-only and missing-source Web credentials from cooldown', () => {
+    const view = render(
+      <MemoryRouter>
+        <AuthFileCard
+          {...createCardProps({
+            name: 'token-only.json',
+            type: 'chatgpt-web',
+            lifecycle_state: 'active',
+            credential_mode: 'token_only',
+            refresh_strategy: 'token_only',
+            token_only: true,
+            cooldown_active: true,
+            cooldown_until: '2999-01-01T00:00:00Z',
+          })}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByText('auth_files.chatgpt_web_token_only_state').length).toBeGreaterThan(
+      0
+    );
+    expect(screen.getByText('auth_files.chatgpt_web_token_only_hint')).not.toBeNull();
+    expect(screen.queryByText('auth_files.cooldown_models_until')).toBeNull();
+
+    view.rerender(
+      <MemoryRouter>
+        <AuthFileCard
+          {...createCardProps({
+            name: 'missing-source.json',
+            type: 'chatgpt-web',
+            lifecycle_state: 'active',
+            credential_mode: 'linked_codex',
+            refresh_strategy: 'codex_source',
+            source_auth_id: 'codex-source.json',
+            source_missing: true,
+          })}
+        />
+      </MemoryRouter>
+    );
+
+    expect(
+      screen.getAllByText('auth_files.chatgpt_web_source_missing_state').length
+    ).toBeGreaterThan(0);
+    expect(screen.getByText('auth_files.chatgpt_web_source_missing_hint')).not.toBeNull();
+    expect(screen.getByText('codex-source.json')).not.toBeNull();
+  });
+
+  test('keeps critical Web lifecycle states above credential mode hints', () => {
+    render(
+      <MemoryRouter>
+        <AuthFileCard
+          {...createCardProps({
+            name: 'dead-token-only.json',
+            type: 'chatgpt-web',
+            lifecycle_state: 'dead',
+            credential_mode: 'token_only',
+            refresh_strategy: 'token_only',
+            token_only: true,
+          })}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByText('dead').length).toBeGreaterThan(0);
+    expect(screen.queryByText('auth_files.chatgpt_web_token_only_state')).toBeNull();
+    expect(screen.getByText('auth_files.chatgpt_web_token_only_hint')).not.toBeNull();
+  });
+
+  test('shows restore instead of the normal enable switch for a retained Codex source', () => {
+    const onRestore = vi.fn();
+    render(
+      <MemoryRouter>
+        <AuthFileCard
+          {...createCardProps({
+            name: 'codex-source.json',
+            type: 'codex',
+            disabled: true,
+            deletion_state: 'retained_for_dependents',
+            retained_for_dependents: true,
+            dependent_count: 2,
+            dependent_names: ['web-a.json', 'web-b.json'],
+          })}
+          onRestore={onRestore}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('auth_files.retained_codex_notice')).not.toBeNull();
+    expect(screen.queryByLabelText('auth_files.status_toggle_label')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /auth_files\.retained_codex_restore/ }));
+    expect(onRestore).toHaveBeenCalledWith(expect.objectContaining({ name: 'codex-source.json' }));
   });
 
   test('reads and writes chatgpt-web.auto-relogin through the existing YAML pipeline', () => {

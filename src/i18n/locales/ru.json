@@ -748,6 +748,7 @@
     "chatgpt_web_lifecycle_label": "Жизненный цикл аккаунта",
     "chatgpt_web_lifecycle_unknown": "Неизвестно",
     "chatgpt_web_lifecycle_active": "Активен",
+    "chatgpt_web_lifecycle_refreshing": "Обновление",
     "chatgpt_web_lifecycle_login_pending": "Ожидает входа",
     "chatgpt_web_lifecycle_relogin_pending": "Ожидает повторного входа",
     "chatgpt_web_lifecycle_dead": "Аккаунт мёртв",
@@ -769,7 +770,55 @@
     "chatgpt_web_proxy_unknown": "Не проверен",
     "chatgpt_web_relogin": "Повторный вход",
     "chatgpt_web_relogin_success": "Повторный вход для \"{{name}}\" выполнен",
-    "chatgpt_web_relogin_failed": "Не удалось выполнить повторный вход"
+    "chatgpt_web_relogin_failed": "Не удалось выполнить повторный вход",
+    "chatgpt_web_credential_mode": "Режим учётных данных",
+    "chatgpt_web_refresh_strategy": "Способ обновления",
+    "chatgpt_web_source_auth": "Источник Codex",
+    "chatgpt_web_token_only_state": "Только токен",
+    "chatgpt_web_token_only_hint": "У этих учётных данных есть только текущий токен без автоматического обновления. После истечения импортируйте их заново или войдите снова.",
+    "chatgpt_web_source_missing_state": "Источник отсутствует",
+    "chatgpt_web_source_missing_hint": "Связанный источник Codex отсутствует, поэтому Web-копия не может обновляться из него.",
+    "chatgpt_web_credential_modes": {
+      "native": "Собственные Web-данные",
+      "linked_codex": "Связанная копия Codex",
+      "token_only": "Только токен"
+    },
+    "chatgpt_web_refresh_strategies": {
+      "web_oauth_rt": "Обновление Web OAuth",
+      "chatgpt_session": "Сессия ChatGPT",
+      "codex_source": "Из источника Codex",
+      "token_only": "Без автообновления"
+    },
+    "retained_codex_state": "Сохранён",
+    "retained_codex_notice": "Использование Codex остановлено. Учётные данные сохранены для обновления {{count}} Web-копий.",
+    "retained_codex_restore": "Восстановить Codex",
+    "retained_codex_restore_success": "Учётные данные Codex «{{name}}» восстановлены",
+    "retained_codex_restore_failed": "Не удалось восстановить учётные данные Codex: {{message}}",
+    "retained_codex_toggle_blocked": "Сохранённые учётные данные Codex нельзя включить обычным переключателем. Используйте восстановление Codex.",
+    "retained_codex_batch_status_blocked": "Все выбранные данные сохранены для зависимых Web-копий и не могут быть переключены.",
+    "retained_codex_batch_status_skipped": "Пропущено сохранённых для Web-копий учётных данных: {{count}}.",
+    "delete_dependency_title": "Удаление связанных данных",
+    "delete_dependency_summary": "Среди {{selected}} выбранных данных источников Codex: {{sources}}; связанных копий ChatGPT Web: {{dependents}}. Выберите способ обработки.",
+    "delete_dependency_web_files": "Связанные Web-копии",
+    "delete_dependency_more": "Ещё {{count}}",
+    "delete_dependency_retain": "Сохранить источник",
+    "delete_dependency_retain_hint": "Остановить использование Codex, но сохранить источник для обновления Web-копий. Его можно восстановить позже.",
+    "delete_dependency_cascade": "Удалить каскадно",
+    "delete_dependency_cascade_hint": "Удалить источники Codex и все связанные Web-копии. Действие необратимо.",
+    "delete_dependency_partial": "Удаление завершено: удалено {{deleted}}, сохранено {{retained}}, ошибок {{failed}}.",
+    "delete_retained_success": "Удалено {{deleted}}; источников Codex остановлено и сохранено: {{retained}} для {{dependents}} Web-копий.",
+    "delete_cascade_success": "Каскадно удалено учётных данных: {{count}}",
+    "chatgpt_web_conversion_toggle": "Создать копии ChatGPT Web",
+    "chatgpt_web_conversion_hint": "Создать связанные Web-копии для подходящих выбранных учётных данных Codex: {{count}}.",
+    "chatgpt_web_conversion_no_codex": "Среди выбранных нет подходящих учётных данных Codex.",
+    "chatgpt_web_conversion_no_sources": "После изменения полей не осталось подходящих источников Codex. Ошибочные элементы остаются выбранными.",
+    "chatgpt_web_conversion_started": "Создана задача преобразования для {{count}} учётных данных Codex",
+    "chatgpt_web_conversion_start_failed": "Не удалось создать задачу преобразования: {{message}}",
+    "chatgpt_web_conversion_refresh_failed": "Не удалось обновить задачу преобразования: {{message}}",
+    "chatgpt_web_conversion_cancel_requested": "Запрошена отмена задачи преобразования",
+    "chatgpt_web_conversion_cancel_failed": "Не удалось отменить задачу преобразования: {{message}}",
+    "chatgpt_web_conversion_completed": "Преобразование {{count}} Web-копий завершено",
+    "chatgpt_web_conversion_completed_with_errors": "Преобразование завершено: успешно {{succeeded}}, ошибок {{failed}}, отменено {{canceled}}"
   },
   "antigravity_quota": {
     "title": "Квота Antigravity",
@@ -2268,7 +2317,7 @@
   },
   "chatgpt_web": {
     "title": "ChatGPT Web",
-    "description": "Пакетный вход в аккаунты ChatGPT Web с результатом для каждой строки.",
+    "description": "Вход в ChatGPT Web или импорт Web JSON с результатами по аккаунтам и файлам.",
     "provider_entry_title": "Аккаунты и задачи входа ChatGPT Web",
     "provider_entry_description": "Введите или загрузите текст с аккаунтами, следите за входом и управляйте учётными данными и прокси.",
     "provider_entry_action": "Открыть ChatGPT Web",
@@ -2291,6 +2340,30 @@
     "start_task": "Начать вход",
     "manual_security_hint": "Содержимое хранится только в памяти текущей страницы и не записывается в хранилище браузера. После успешного создания задачи оно сразу очищается.",
     "file_security_hint": "Страница не читает, не показывает и не сохраняет содержимое файла. Ссылка на файл удаляется сразу после успешного создания задачи.",
+    "page_mode_label": "Способ добавления ChatGPT Web",
+    "page_modes": {
+      "login": {
+        "label": "Вход в аккаунт",
+        "hint": "Аккаунт, пароль и необязательная 2FA"
+      },
+      "import": {
+        "label": "Импорт Web JSON",
+        "hint": "Импорт существующих файлов ChatGPT Web"
+      }
+    },
+    "import_title": "Импорт Web JSON",
+    "import_description": "Выберите несколько JSON-файлов ChatGPT Web. Создание, обновление, отсутствие изменений и ошибки показываются для каждого файла.",
+    "import_format_hint": "Загружайте только JSON учётных данных ChatGPT Web. Содержимое не показывается и не записывается в хранилище браузера.",
+    "choose_json_files": "Выбрать JSON-файлы",
+    "import_files_selected": "Выбрано файлов: {{count}}",
+    "clear_import_files": "Очистить выбранные файлы",
+    "start_import_task": "Начать импорт",
+    "import_security_hint": "Страница хранит только ссылки на файлы и удаляет их после создания задачи. Токены, Cookie и другие секреты не отображаются.",
+    "import_task_started": "Задача импорта Web JSON создана",
+    "import_task_start_failed": "Не удалось создать задачу импорта Web JSON",
+    "import_task_refresh_failed": "Не удалось обновить задачу импорта Web JSON",
+    "import_task_cancel_requested": "Запрошена отмена импорта Web JSON",
+    "import_task_cancel_failed": "Не удалось отменить импорт Web JSON",
     "task_title": "Задача входа",
     "task_created_at": "Создано {{time}}",
     "progress": "Ход входа",
@@ -2330,6 +2403,86 @@
       "success": "Успешно",
       "failed": "Ошибка",
       "canceled": "Отменено"
+    },
+    "mutation_progress": "Ход задачи",
+    "mutation_phases_label": "Текущие этапы обработки",
+    "mutation_target": "Целевой файл",
+    "mutation_credential_mode": "Режим учётных данных",
+    "mutation_metrics": {
+      "total": "Всего",
+      "processed": "Обработано",
+      "created": "Создано",
+      "updated": "Обновлено",
+      "unchanged": "Без изменений",
+      "failed": "Ошибки",
+      "canceled": "Отменено"
+    },
+    "mutation_tasks": {
+      "import": {
+        "title": "Задача импорта Web JSON",
+        "results_title": "Результаты по файлам",
+        "source": "Исходный файл",
+        "phases": {
+          "queued": "Ожидание импорта",
+          "running": "Разбор и проверка",
+          "committing": "Запись данных"
+        }
+      },
+      "conversion": {
+        "title": "Преобразование копий ChatGPT Web",
+        "results_title": "Результаты по учётным данным",
+        "source": "Источник Codex",
+        "phases": {
+          "queued": "Ожидание преобразования",
+          "running": "Обновление и проверка",
+          "committing": "Создание копии"
+        }
+      }
+    },
+    "mutation_result_states": {
+      "queued": "В очереди",
+      "running": "Обработка",
+      "committing": "Сохранение",
+      "created": "Создано",
+      "updated": "Обновлено",
+      "unchanged": "Без изменений",
+      "failed": "Ошибка",
+      "canceled": "Отменено"
+    },
+    "credential_modes": {
+      "native": "Собственные Web-данные",
+      "linked_codex": "Связанная копия Codex",
+      "token_only": "Только токен"
+    },
+    "mutation_error_categories": {
+      "canceled": "Отменено",
+      "invalid_credential": "Неверный формат учётных данных",
+      "identity_missing": "Нет идентификатора аккаунта",
+      "identity_conflict": "Конфликт идентификатора аккаунта",
+      "credential_ambiguous": "Найдено несколько учётных данных",
+      "credential_changed": "Учётные данные изменились во время обработки",
+      "credential_id_conflict": "Конфликт ID учётных данных",
+      "credential_lookup_failed": "Ошибка поиска учётных данных",
+      "login_failed": "Ошибка входа",
+      "persist_failed": "Ошибка сохранения учётных данных",
+      "persist_uncertain": "Результат сохранения неизвестен",
+      "probe_failed": "Ошибка проверки токена",
+      "probe_unavailable": "Проверка токена временно недоступна",
+      "source_not_found": "Источник не найден",
+      "source_not_managed": "Источник не управляется системой",
+      "source_provider_invalid": "Источник не является Codex",
+      "source_pending_deletion": "Источник ожидает удаления",
+      "source_disabled": "Источник отключён",
+      "source_identity_missing": "В источнике нет идентификатора аккаунта",
+      "source_token_missing": "В источнике нет рабочего токена",
+      "source_refresh_unavailable": "Обновление источника временно недоступно",
+      "source_persist_failed": "Не удалось сохранить идентификатор источника",
+      "source_persist_uncertain": "Результат сохранения источника неизвестен",
+      "source_changed": "Источник изменился при преобразовании",
+      "target_conflict": "Конфликт целевой Web-копии",
+      "target_initialization_failed": "Не удалось создать целевую копию",
+      "token_incompatible": "Токен несовместим с ChatGPT Web",
+      "temporary_failure": "Временная ошибка; повторите позже"
     }
   },
   "proxy_pools": {

@@ -45,6 +45,7 @@ import {
 import { resolveCodexPlanType } from '@/utils/quota';
 import { AuthFileCard } from '@/features/authFiles/components/AuthFileCard';
 import { AuthFilesBatchSettingsModal } from '@/features/authFiles/components/AuthFilesBatchSettingsModal';
+import { AuthFilesDependencyDeleteModal } from '@/features/authFiles/components/AuthFilesDependencyDeleteModal';
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
@@ -249,6 +250,8 @@ export function AuthFilesPage() {
     statusUpdating,
     xaiFieldsUpdating,
     chatGptWebReloginUpdating,
+    restoring,
+    dependencyDelete,
     batchStatusUpdating,
     fileInputRef,
     loadFiles,
@@ -260,6 +263,7 @@ export function AuthFilesPage() {
     handleStatusToggle,
     handleXaiFieldToggle,
     handleChatGptWebRelogin,
+    handleRestore,
     toggleSelect,
     selectAllVisible,
     invertVisibleSelection,
@@ -278,6 +282,8 @@ export function AuthFilesPage() {
     retryFailedCodexPlanTypeRefresh,
     batchSetStatus,
     batchDelete,
+    closeDependencyDelete,
+    confirmDependencyDelete,
   } = useAuthFilesData({ refreshKeyStats: refreshVisibleKeyStats, active: isCurrentLayer });
 
   const refreshFilesInBackground = useCallback(() => loadFiles({ background: true }), [loadFiles]);
@@ -331,10 +337,15 @@ export function AuthFilesPage() {
   const {
     batchSettings,
     batchSettingsDirty,
+    conversionTask,
+    conversionRefreshing,
+    conversionCanceling,
     openBatchSettings,
     closeBatchSettings,
     handleBatchSettingsChange,
     saveBatchSettings,
+    refreshConversionTask,
+    cancelConversionTask,
   } = useAuthFilesBatchSettings({
     files,
     disableControls,
@@ -1612,6 +1623,7 @@ export function AuthFilesPage() {
                     statusUpdating={statusUpdating}
                     xaiFieldsUpdating={xaiFieldsUpdating}
                     chatGptWebReloginUpdating={chatGptWebReloginUpdating}
+                    restoring={restoring}
                     quotaFilterType={quotaFilterType}
                     keyStats={keyStats}
                     statusBarCache={statusBarCache}
@@ -1624,6 +1636,7 @@ export function AuthFilesPage() {
                     onToggleStatus={handleStatusToggle}
                     onToggleXaiField={handleXaiFieldToggle}
                     onChatGptWebRelogin={handleChatGptWebRelogin}
+                    onRestore={handleRestore}
                     onToggleSelect={toggleSelect}
                   />
                 ))}
@@ -1715,9 +1728,20 @@ export function AuthFilesPage() {
         disableControls={disableControls}
         state={batchSettings}
         dirty={batchSettingsDirty}
+        conversionTask={conversionTask}
+        conversionRefreshing={conversionRefreshing}
+        conversionCanceling={conversionCanceling}
         onClose={closeBatchSettings}
         onSave={saveBatchSettings}
         onChange={handleBatchSettingsChange}
+        onRefreshConversionTask={() => void refreshConversionTask()}
+        onCancelConversionTask={() => void cancelConversionTask()}
+      />
+
+      <AuthFilesDependencyDeleteModal
+        state={dependencyDelete}
+        onClose={closeDependencyDelete}
+        onConfirm={confirmDependencyDelete}
       />
 
       {batchActionBarVisible && typeof document !== 'undefined'

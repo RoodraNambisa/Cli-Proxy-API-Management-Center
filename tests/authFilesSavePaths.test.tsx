@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { apiClient } from '@/services/api/client';
 import { authFilesApi } from '@/services/api/authFiles';
+import { chatGptWebApi } from '@/services/api/chatgptWeb';
 import { useAuthFilesBatchSettings } from '@/features/authFiles/hooks/useAuthFilesBatchSettings';
 import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
 import { useNotificationStore } from '@/stores';
@@ -133,6 +134,146 @@ describe('auth file save paths', () => {
     expect(patchFieldsBatch).toHaveBeenCalledWith(['zero.json'], { priority: null });
   });
 
+  test('creates Web copies only from eligible selected Codex credentials', async () => {
+    const files: AuthFileItem[] = [
+      { name: 'codex.json', type: 'codex' },
+      {
+        name: 'retained.json',
+        type: 'codex',
+        retained_for_dependents: true,
+        deletion_state: 'retained_for_dependents',
+      },
+      { name: 'xai.json', type: 'xai' },
+    ];
+    const startConversionTask = vi.spyOn(chatGptWebApi, 'startConversionTask').mockResolvedValue({
+      id: 'conversion-1',
+      kind: 'conversion',
+      state: 'completed',
+      created_at: '2026-07-18T00:00:00Z',
+      total: 1,
+      processed: 1,
+      succeeded: 1,
+      failed: 0,
+      canceled: 0,
+      results: [
+        {
+          source_name: 'codex.json',
+          target_name: 'chatgpt-web.json',
+          credential_mode: 'linked_codex',
+          status: 'created',
+        },
+      ],
+    });
+    const { result } = renderHook(() =>
+      useAuthFilesBatchSettings({
+        files,
+        disableControls: false,
+        loadFiles: vi.fn().mockResolvedValue(undefined),
+        deselectAll: vi.fn(),
+        replaceSelection: vi.fn(),
+      })
+    );
+
+    act(() => result.current.openBatchSettings(files.map((file) => file.name)));
+    expect(result.current.batchSettings.codexNames).toEqual(['codex.json']);
+    act(() => result.current.handleBatchSettingsChange('createChatGptWebCopy', 'true'));
+    await act(async () => result.current.saveBatchSettings());
+
+    expect(startConversionTask).toHaveBeenCalledWith(['codex.json']);
+    expect(result.current.conversionTask?.kind).toBe('conversion');
+  });
+
+  test('preserves field and conversion failures while converting every eligible Codex source', async () => {
+    const files: AuthFileItem[] = [
+      { name: 'codex.json', type: 'codex' },
+      { name: 'xai.json', type: 'xai' },
+    ];
+    vi.spyOn(authFilesApi, 'patchFieldsBatch').mockResolvedValue({
+      status: 'partial',
+      matched: 2,
+      updated: 1,
+      files: ['xai.json'],
+      failed: [{ name: 'codex.json', status: 400, error: 'field update failed' }],
+    });
+    const startConversionTask = vi.spyOn(chatGptWebApi, 'startConversionTask').mockResolvedValue({
+      id: 'conversion-partial',
+      kind: 'conversion',
+      state: 'completed_with_errors',
+      created_at: '2026-07-18T00:00:00Z',
+      total: 1,
+      processed: 1,
+      succeeded: 0,
+      failed: 1,
+      canceled: 0,
+      results: [
+        {
+          source_name: 'codex.json',
+          status: 'failed',
+          error_category: 'temporary_failure',
+          error: 'conversion failed',
+        },
+      ],
+    });
+    const replaceSelection = vi.fn();
+    const { result } = renderHook(() =>
+      useAuthFilesBatchSettings({
+        files,
+        disableControls: false,
+        loadFiles: vi.fn().mockResolvedValue(undefined),
+        deselectAll: vi.fn(),
+        replaceSelection,
+      })
+    );
+
+    act(() => result.current.openBatchSettings(files.map((file) => file.name)));
+    act(() => result.current.handleBatchSettingsChange('note', 'batch note'));
+    act(() => result.current.handleBatchSettingsChange('createChatGptWebCopy', 'true'));
+    await act(async () => result.current.saveBatchSettings());
+
+    expect(startConversionTask).toHaveBeenCalledWith(['codex.json']);
+    expect(replaceSelection).toHaveBeenLastCalledWith(['codex.json']);
+    expect(result.current.conversionTask?.state).toBe('completed_with_errors');
+    expect(result.current.batchSettings.failures).toEqual([
+      { name: 'codex.json', status: 400, error: 'field update failed' },
+    ]);
+  });
+
+  test('keeps patched data and selects Codex sources when conversion task creation fails', async () => {
+    const files: AuthFileItem[] = [{ name: 'codex.json', type: 'codex' }];
+    vi.spyOn(authFilesApi, 'patchFieldsBatch').mockResolvedValue({
+      status: 'ok',
+      matched: 1,
+      updated: 1,
+      files: ['codex.json'],
+      failed: [],
+    });
+    vi.spyOn(chatGptWebApi, 'startConversionTask').mockRejectedValue(
+      new Error('conversion unavailable')
+    );
+    const loadFiles = vi.fn().mockResolvedValue(undefined);
+    const replaceSelection = vi.fn();
+    const { result } = renderHook(() =>
+      useAuthFilesBatchSettings({
+        files,
+        disableControls: false,
+        loadFiles,
+        deselectAll: vi.fn(),
+        replaceSelection,
+      })
+    );
+
+    act(() => result.current.openBatchSettings(['codex.json']));
+    act(() => result.current.handleBatchSettingsChange('note', 'saved note'));
+    act(() => result.current.handleBatchSettingsChange('createChatGptWebCopy', 'true'));
+    await act(async () => result.current.saveBatchSettings());
+
+    expect(loadFiles).toHaveBeenCalledTimes(1);
+    expect(replaceSelection).toHaveBeenCalledWith(['codex.json']);
+    expect(result.current.batchSettings.open).toBe(true);
+    expect(result.current.batchSettings.saving).toBe(false);
+    expect(result.current.conversionTask).toBeNull();
+  });
+
   test('accepts and normalizes a 207 batch fields response', async () => {
     const requestRaw = vi.spyOn(apiClient, 'requestRaw').mockResolvedValue({
       status: 207,
@@ -171,6 +312,63 @@ describe('auth file save paths', () => {
       files: ['first.json'],
       failed: [{ name: 'second.json', status: 404, error: 'not found' }],
     });
+  });
+
+  test('keeps a 202 retained Codex source out of the deleted file list', async () => {
+    const requestRaw = vi.spyOn(apiClient, 'requestRaw').mockResolvedValue({
+      status: 202,
+      data: {
+        status: 'retained',
+        deleted: false,
+        retained: true,
+        name: 'codex-source.json',
+        dependent_count: 2,
+        dependent_names: ['web-a.json', 'web-b.json'],
+      },
+    } as never);
+
+    const result = await authFilesApi.deleteFile('codex-source.json', 'retain');
+
+    expect(requestRaw).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/auth-files',
+        method: 'DELETE',
+        params: { dependency_action: 'retain' },
+        data: { names: ['codex-source.json'] },
+      })
+    );
+    expect(result).toEqual({
+      status: 'retained',
+      deleted: 0,
+      files: [],
+      retained: 1,
+      retainedFiles: [
+        {
+          name: 'codex-source.json',
+          dependentCount: 2,
+          dependentNames: ['web-a.json', 'web-b.json'],
+        },
+      ],
+      failed: [],
+    });
+  });
+
+  test('supports cascade deletion and restoring a retained Codex source', async () => {
+    const requestRaw = vi.spyOn(apiClient, 'requestRaw').mockResolvedValue({
+      status: 200,
+      data: { status: 'ok', deleted: 1, files: ['codex-source.json'], retained: 0 },
+    } as never);
+    const post = vi
+      .spyOn(apiClient, 'post')
+      .mockResolvedValue({ status: 'ok', name: 'codex-source.json', disabled: false });
+
+    await authFilesApi.deleteFile('codex-source.json', 'cascade');
+    await authFilesApi.restoreFile('codex-source.json');
+
+    expect(requestRaw).toHaveBeenCalledWith(
+      expect.objectContaining({ params: { dependency_action: 'cascade' } })
+    );
+    expect(post).toHaveBeenCalledWith('/auth-files/restore', { name: 'codex-source.json' });
   });
 
   test('patches a lightweight single-file edit without uploading the full credential', async () => {

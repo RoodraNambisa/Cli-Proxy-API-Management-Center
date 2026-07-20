@@ -1,14 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { authFilesApi } from '@/services/api';
+import { authFilesApi, chatGptWebApi } from '@/services/api';
 import { useNotificationStore } from '@/stores';
-import type { AuthFileItem } from '@/types';
+import type { AuthFileItem, ChatGptWebMutationTask } from '@/types';
+import { isChatGptWebMutationTaskTerminal } from '@/types';
 import type { AuthFileBatchFailure, AuthFileFieldsPatch } from '@/services/api/authFiles';
 import {
   isRuntimeOnlyAuthFile,
   parseDisableCoolingValue,
   parseExcludedModelsText,
   parsePriorityValue,
+  normalizeProviderKey,
 } from '@/features/authFiles/constants';
 import {
   parseHeadersText,
@@ -27,7 +29,8 @@ export type AuthFilesBatchSettingsField =
   | 'disableCooling'
   | 'note'
   | 'usingApi'
-  | 'websockets';
+  | 'websockets'
+  | 'createChatGptWebCopy';
 
 export type AuthFilesBatchSettingsState = {
   open: boolean;
@@ -43,6 +46,8 @@ export type AuthFilesBatchSettingsState = {
   note: string;
   usingApi: AuthFilesBatchSettingsBooleanValue;
   websockets: AuthFilesBatchSettingsBooleanValue;
+  codexNames: string[];
+  createChatGptWebCopy: boolean;
   failures: AuthFileBatchFailure[];
 };
 
@@ -57,13 +62,20 @@ export type UseAuthFilesBatchSettingsOptions = {
 export type UseAuthFilesBatchSettingsResult = {
   batchSettings: AuthFilesBatchSettingsState;
   batchSettingsDirty: boolean;
+  conversionTask: ChatGptWebMutationTask | null;
+  conversionRefreshing: boolean;
+  conversionCanceling: boolean;
   openBatchSettings: (names: string[]) => void;
   closeBatchSettings: () => void;
   handleBatchSettingsChange: (field: AuthFilesBatchSettingsField, value: string) => void;
   saveBatchSettings: () => Promise<void>;
+  refreshConversionTask: () => Promise<void>;
+  cancelConversionTask: () => Promise<void>;
 };
 
 type BatchSettingsPatch = AuthFileFieldsPatch & { headers?: AuthFileHeaders };
+
+const CONVERSION_TASK_POLL_INTERVAL_MS = 1500;
 
 const createEmptyBatchSettingsState = (): AuthFilesBatchSettingsState => ({
   open: false,
@@ -79,6 +91,8 @@ const createEmptyBatchSettingsState = (): AuthFilesBatchSettingsState => ({
   note: '',
   usingApi: '',
   websockets: '',
+  codexNames: [],
+  createChatGptWebCopy: false,
   failures: [],
 });
 
@@ -100,6 +114,11 @@ const resolveTargetFiles = (names: string[], files: AuthFileItem[]): AuthFileIte
 };
 
 const hasPatchFields = (patch: BatchSettingsPatch): boolean => Object.keys(patch).length > 0;
+
+const isCodexAuthFile = (file: AuthFileItem): boolean =>
+  normalizeProviderKey(String(file.provider ?? file.type ?? '')) === 'codex' &&
+  file.retained_for_dependents !== true &&
+  file.deletion_state !== 'retained_for_dependents';
 
 const buildBatchSettingsPatch = (
   state: AuthFilesBatchSettingsState
@@ -172,6 +191,12 @@ export function useAuthFilesBatchSettings(
   const [batchSettings, setBatchSettings] = useState<AuthFilesBatchSettingsState>(
     createEmptyBatchSettingsState
   );
+  const [conversionTask, setConversionTask] = useState<ChatGptWebMutationTask | null>(null);
+  const [conversionRefreshing, setConversionRefreshing] = useState(false);
+  const [conversionCanceling, setConversionCanceling] = useState(false);
+  const handledConversionTaskIdRef = useRef('');
+  const conversionPollErrorNotifiedRef = useRef(false);
+  const conversionFieldFailureNamesRef = useRef<string[]>([]);
 
   const batchSettingsDirty = useMemo(
     () =>
@@ -184,13 +209,23 @@ export function useAuthFilesBatchSettings(
         batchSettings.disableCooling.trim() ||
         batchSettings.note.trim() ||
         batchSettings.usingApi ||
-        batchSettings.websockets
+        batchSettings.websockets ||
+        batchSettings.createChatGptWebCopy
       ),
     [batchSettings]
   );
 
   const closeBatchSettings = () => {
-    setBatchSettings((prev) => (prev.saving ? prev : createEmptyBatchSettingsState()));
+    if (
+      batchSettings.saving ||
+      (conversionTask && !isChatGptWebMutationTaskTerminal(conversionTask.state))
+    ) {
+      return;
+    }
+    setBatchSettings(createEmptyBatchSettingsState());
+    setConversionTask(null);
+    handledConversionTaskIdRef.current = '';
+    conversionFieldFailureNamesRef.current = [];
   };
 
   const openBatchSettings = (names: string[]) => {
@@ -204,11 +239,23 @@ export function useAuthFilesBatchSettings(
       ...createEmptyBatchSettingsState(),
       open: true,
       names: targets.map((file) => file.name),
+      codexNames: targets.filter(isCodexAuthFile).map((file) => file.name),
     });
+    setConversionTask(null);
+    handledConversionTaskIdRef.current = '';
+    conversionPollErrorNotifiedRef.current = false;
+    conversionFieldFailureNamesRef.current = [];
   };
 
   const handleBatchSettingsChange = (field: AuthFilesBatchSettingsField, value: string) => {
     setBatchSettings((prev) => {
+      if (field === 'createChatGptWebCopy') {
+        return {
+          ...prev,
+          createChatGptWebCopy: value === 'true',
+          failures: [],
+        };
+      }
       if (field === 'headersText') {
         const headersText = String(value);
         const { errorKey } = parseHeadersText(headersText);
@@ -222,6 +269,133 @@ export function useAuthFilesBatchSettings(
       return { ...prev, [field]: String(value), failures: [] };
     });
   };
+
+  const applyConversionTask = useCallback(
+    (nextTask: ChatGptWebMutationTask) => {
+      setConversionTask(nextTask);
+      conversionPollErrorNotifiedRef.current = false;
+      if (
+        !isChatGptWebMutationTaskTerminal(nextTask.state) ||
+        handledConversionTaskIdRef.current === nextTask.id
+      ) {
+        return;
+      }
+
+      handledConversionTaskIdRef.current = nextTask.id;
+      const failedNames = Array.from(
+        new Set([
+          ...conversionFieldFailureNamesRef.current,
+          ...nextTask.results
+            .filter((result) => result.status === 'failed' || result.status === 'canceled')
+            .map((result) => String(result.source_name ?? '').trim())
+            .filter(Boolean),
+        ])
+      );
+      if (failedNames.length > 0) {
+        replaceSelection(failedNames);
+      } else {
+        deselectAll();
+      }
+      void loadFiles().catch(() => {});
+
+      if (nextTask.failed > 0 || nextTask.canceled > 0) {
+        showNotification(
+          t('auth_files.chatgpt_web_conversion_completed_with_errors', {
+            succeeded: nextTask.succeeded,
+            failed: nextTask.failed,
+            canceled: nextTask.canceled,
+          }),
+          'warning'
+        );
+      } else {
+        showNotification(
+          t('auth_files.chatgpt_web_conversion_completed', {
+            count: nextTask.succeeded,
+          }),
+          'success'
+        );
+      }
+    },
+    [deselectAll, loadFiles, replaceSelection, showNotification, t]
+  );
+
+  const fetchConversionTask = useCallback(
+    async (taskId: string, quiet = false): Promise<ChatGptWebMutationTask | null> => {
+      if (!quiet) setConversionRefreshing(true);
+      try {
+        const nextTask = await chatGptWebApi.getConversionTask(taskId);
+        applyConversionTask(nextTask);
+        return nextTask;
+      } catch (error) {
+        if (!quiet || !conversionPollErrorNotifiedRef.current) {
+          const message = error instanceof Error ? error.message : '';
+          showNotification(
+            t('auth_files.chatgpt_web_conversion_refresh_failed', { message }),
+            'error'
+          );
+          conversionPollErrorNotifiedRef.current = true;
+        }
+        return null;
+      } finally {
+        if (!quiet) setConversionRefreshing(false);
+      }
+    },
+    [applyConversionTask, showNotification, t]
+  );
+
+  const conversionTaskId = conversionTask?.id ?? '';
+  const conversionTaskState = conversionTask?.state;
+
+  useEffect(() => {
+    if (
+      !conversionTaskId ||
+      !conversionTaskState ||
+      isChatGptWebMutationTaskTerminal(conversionTaskState)
+    ) {
+      return undefined;
+    }
+    let disposed = false;
+    let timer: number | undefined;
+
+    const poll = async () => {
+      const nextTask = await fetchConversionTask(conversionTaskId, true);
+      if (disposed || (nextTask && isChatGptWebMutationTaskTerminal(nextTask.state))) return;
+      timer = window.setTimeout(poll, CONVERSION_TASK_POLL_INTERVAL_MS);
+    };
+
+    timer = window.setTimeout(poll, CONVERSION_TASK_POLL_INTERVAL_MS);
+    return () => {
+      disposed = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [conversionTaskId, conversionTaskState, fetchConversionTask]);
+
+  const refreshConversionTask = useCallback(async () => {
+    if (!conversionTaskId) return;
+    await fetchConversionTask(conversionTaskId);
+  }, [conversionTaskId, fetchConversionTask]);
+
+  const cancelConversionTask = useCallback(async () => {
+    if (
+      !conversionTask ||
+      conversionCanceling ||
+      conversionTask.state === 'canceling' ||
+      isChatGptWebMutationTaskTerminal(conversionTask.state)
+    ) {
+      return;
+    }
+    setConversionCanceling(true);
+    try {
+      const nextTask = await chatGptWebApi.cancelConversionTask(conversionTask.id);
+      applyConversionTask(nextTask);
+      showNotification(t('auth_files.chatgpt_web_conversion_cancel_requested'), 'info');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      showNotification(t('auth_files.chatgpt_web_conversion_cancel_failed', { message }), 'error');
+    } finally {
+      setConversionCanceling(false);
+    }
+  }, [applyConversionTask, conversionCanceling, conversionTask, showNotification, t]);
 
   const saveBatchSettings = async () => {
     if (disableControls || batchSettings.saving) return;
@@ -237,7 +411,10 @@ export function useAuthFilesBatchSettings(
       showNotification(t(errorKey), 'error');
       return;
     }
-    if (!hasPatchFields(patch)) {
+    const shouldCreateWebCopies =
+      batchSettings.createChatGptWebCopy && batchSettings.codexNames.length > 0;
+    const shouldPatchFields = hasPatchFields(patch);
+    if (!shouldPatchFields && !shouldCreateWebCopies) {
       showNotification(t('auth_files.batch_settings_no_fields'), 'warning');
       return;
     }
@@ -245,11 +422,87 @@ export function useAuthFilesBatchSettings(
     setBatchSettings((prev) => ({ ...prev, saving: true, failures: [] }));
 
     try {
-      const result = await authFilesApi.patchFieldsBatch(
-        targets.map((file) => file.name),
-        patch
-      );
+      const targetNames = targets.map((file) => file.name);
+      const result = shouldPatchFields
+        ? await authFilesApi.patchFieldsBatch(targetNames, patch)
+        : {
+            status: 'ok',
+            matched: targetNames.length,
+            updated: 0,
+            files: targetNames,
+            failed: [] as AuthFileBatchFailure[],
+          };
       const failedNames = result.failed.map((failure) => failure.name).filter(Boolean);
+
+      if (shouldCreateWebCopies) {
+        const conversionNames = targets.filter(isCodexAuthFile).map((file) => file.name);
+        if (conversionNames.length === 0) {
+          const retainedNames =
+            failedNames.length > 0 ? failedNames : targets.map((file) => file.name);
+          replaceSelection(retainedNames);
+          setBatchSettings((prev) => ({
+            ...prev,
+            names: retainedNames,
+            saving: false,
+            failures: result.failed,
+          }));
+          if (result.updated > 0) void loadFiles().catch(() => {});
+          showNotification(t('auth_files.chatgpt_web_conversion_no_sources'), 'warning');
+          return;
+        }
+
+        let nextTask: ChatGptWebMutationTask;
+        try {
+          nextTask = await chatGptWebApi.startConversionTask(conversionNames);
+        } catch (error) {
+          const retryNames = Array.from(new Set([...conversionNames, ...failedNames]));
+          replaceSelection(retryNames);
+          setBatchSettings((prev) => ({
+            ...prev,
+            names: retryNames,
+            saving: false,
+            failures: result.failed,
+          }));
+          if (result.updated > 0) void loadFiles().catch(() => {});
+          const message = error instanceof Error ? error.message : '';
+          showNotification(
+            t('auth_files.chatgpt_web_conversion_start_failed', { message }),
+            'error'
+          );
+          return;
+        }
+        handledConversionTaskIdRef.current = '';
+        conversionPollErrorNotifiedRef.current = false;
+        conversionFieldFailureNamesRef.current = failedNames;
+        setConversionTask(nextTask);
+        setBatchSettings({
+          ...createEmptyBatchSettingsState(),
+          open: true,
+          names: Array.from(new Set([...conversionNames, ...failedNames])),
+          codexNames: conversionNames,
+          failures: result.failed,
+        });
+        deselectAll();
+        if (isChatGptWebMutationTaskTerminal(nextTask.state)) {
+          applyConversionTask(nextTask);
+        }
+        if (result.updated > 0) void loadFiles().catch(() => {});
+
+        if (result.failed.length > 0) {
+          showNotification(
+            t('auth_files.batch_settings_partial', {
+              success: result.updated,
+              failed: result.failed.length,
+            }),
+            'warning'
+          );
+        }
+        showNotification(
+          t('auth_files.chatgpt_web_conversion_started', { count: conversionNames.length }),
+          'success'
+        );
+        return;
+      }
 
       if (result.failed.length === 0) {
         deselectAll();
@@ -296,9 +549,14 @@ export function useAuthFilesBatchSettings(
   return {
     batchSettings,
     batchSettingsDirty,
+    conversionTask,
+    conversionRefreshing,
+    conversionCanceling,
     openBatchSettings,
     closeBatchSettings,
     handleBatchSettingsChange,
     saveBatchSettings,
+    refreshConversionTask,
+    cancelConversionTask,
   };
 }

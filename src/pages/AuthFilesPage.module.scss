@@ -832,6 +832,30 @@
   }
 }
 
+.chatGptWebCredentialNotice,
+.retainedCodexNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--warning-border) 68%, var(--border-color));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--warning-bg) 66%, var(--bg-secondary));
+  color: var(--warning-text);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  svg {
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
+}
+
+.retainedCodexNotice {
+  border-color: color-mix(in srgb, #b67814 42%, var(--border-color));
+}
+
 @include mobile {
   .chatGptWebLifecycleGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2000,6 +2024,125 @@
   :global(.form-group) {
     margin: 0;
   }
+}
+
+.batchConversionOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+
+  > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 13px;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
+.batchConversionTask {
+  padding-top: $spacing-md;
+  border-top: 1px solid var(--border-color);
+}
+
+.dependencyDeleteContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  > p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+}
+
+.dependencyDeleteNames {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--warning-color);
+  background: color-mix(in srgb, var(--warning-bg) 52%, var(--bg-secondary));
+
+  > span {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  ul {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text-primary);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  small {
+    color: var(--text-tertiary);
+    font-size: 11px;
+  }
+}
+
+.dependencyDeleteChoices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm;
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--bg-secondary);
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 12px;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dependencyDeleteDangerChoice {
+  border-color: color-mix(in srgb, var(--danger-color) 36%, var(--border-color)) !important;
+}
+
+.restoreCodexButton:global(.btn.btn-sm) {
+  flex: 0 0 auto;
+  color: var(--warning-text);
+  border-color: color-mix(in srgb, var(--warning-border) 72%, var(--border-color));
 }
 
 .prefixProxyTextareaInvalid {
