@@ -1520,6 +1520,43 @@
   }
 }
 
+.cooldownStatusText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cooldownStatusButton {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--warning-border);
+    background: color-mix(in srgb, var(--warning-bg) 82%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--warning-border);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+}
+
+.cooldownStatusChevron {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: auto;
+}
+
 .messageIcon {
   flex-shrink: 0;
   margin-top: 1px;

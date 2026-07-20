@@ -4,6 +4,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import {
+  IconChevronRight,
   IconDownload,
   IconEye,
   IconInfo,
@@ -317,6 +318,14 @@ export function AuthFileCard(props: AuthFileCardProps) {
             : hasStatusWarning
               ? styles.stateBadgeWarning
               : styles.stateBadgeActive;
+  const cooldownStatusText =
+    cooldownScope === 'auth'
+      ? t('auth_files.cooldown_auth_until', { until: cooldownUntilText })
+      : t('auth_files.cooldown_models_until', {
+          count: cooldownModelCount,
+          until: cooldownUntilText,
+        });
+  const canOpenModelCooldownDetails = cooldownScope === 'model' && showModelsButton;
 
   return (
     <div
@@ -563,19 +572,25 @@ export function AuthFileCard(props: AuthFileCardProps) {
             !criticalLifecycleState &&
             !sourceMissing &&
             !tokenOnly &&
-            !isRetainedCodex && (
+            !isRetainedCodex &&
+            (canOpenModelCooldownDetails ? (
+              <button
+                type="button"
+                className={`${styles.cooldownStatusNotice} ${styles.cooldownStatusButton}`}
+                onClick={() => onShowModels(file)}
+                disabled={disableControls}
+                title={t('auth_files.cooldown_models_view_details')}
+              >
+                <IconTimer size={14} />
+                <span className={styles.cooldownStatusText}>{cooldownStatusText}</span>
+                <IconChevronRight className={styles.cooldownStatusChevron} size={15} />
+              </button>
+            ) : (
               <div className={styles.cooldownStatusNotice}>
                 <IconTimer size={14} />
-                <span>
-                  {cooldownScope === 'auth'
-                    ? t('auth_files.cooldown_auth_until', { until: cooldownUntilText })
-                    : t('auth_files.cooldown_models_until', {
-                        count: cooldownModelCount,
-                        until: cooldownUntilText,
-                      })}
-                </span>
+                <span className={styles.cooldownStatusText}>{cooldownStatusText}</span>
               </div>
-            )}
+            ))}
 
           {hasStatusWarning && (displayStatusMessage || hasLastErrorStatusCode) && (
             <div className={styles.healthStatusMessage} title={healthStatusTitle}>

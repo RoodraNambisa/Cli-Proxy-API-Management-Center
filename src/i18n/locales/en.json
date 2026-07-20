@@ -618,6 +618,7 @@
     "xai_field_saved": "{{field}} saved",
     "cooldown_auth_until": "Entire credential cooling down until {{until}}",
     "cooldown_models_until": "{{count}} models cooling down; latest recovery {{until}}",
+    "cooldown_models_view_details": "View model cooldown details",
     "status_toggle_label": "Enabled",
     "status_enabled_success": "\"{{name}}\" enabled",
     "status_disabled_success": "\"{{name}}\" disabled",

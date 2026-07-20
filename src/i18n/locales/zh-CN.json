@@ -618,6 +618,7 @@
     "xai_field_saved": "{{field}} 已保存",
     "cooldown_auth_until": "整个凭证冷却至 {{until}}",
     "cooldown_models_until": "{{count}} 个模型冷却中，最晚至 {{until}}",
+    "cooldown_models_view_details": "查看冷却模型详情",
     "status_toggle_label": "启用",
     "status_enabled_success": "已启用 \"{{name}}\"",
     "status_disabled_success": "已停用 \"{{name}}\"",

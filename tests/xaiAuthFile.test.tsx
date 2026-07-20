@@ -119,6 +119,29 @@ describe('xAI auth file compatibility', () => {
 
     expect(screen.getByText('auth_files.health_status_disabled')).not.toBeNull();
     expect(screen.getByText('auth_files.cooldown_auth_until')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'auth_files.cooldown_auth_until' })).toBeNull();
+  });
+
+  test('opens model details from the model cooldown summary', () => {
+    const props = createCardProps({
+      name: 'model-cooling.json',
+      type: 'codex',
+      cooldown_active: true,
+      cooldown_scope: 'model',
+      cooldown_until: '2999-01-01T00:00:00Z',
+      cooldown_model_count: 3,
+    });
+
+    render(<AuthFileCard {...props} />);
+
+    const cooldownButton = screen.getByRole('button', {
+      name: 'auth_files.cooldown_models_until',
+    });
+    expect(cooldownButton.getAttribute('title')).toBe('auth_files.cooldown_models_view_details');
+    fireEvent.click(cooldownButton);
+    expect(props.onShowModels).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'model-cooling.json' })
+    );
   });
 
   test('shows only unexpired model cooldown badges', () => {

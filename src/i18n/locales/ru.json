@@ -618,6 +618,7 @@
     "xai_field_saved": "{{field}} сохранено",
     "cooldown_auth_until": "Вся учётная запись на cooldown до {{until}}",
     "cooldown_models_until": "Моделей на cooldown: {{count}}; последнее восстановление {{until}}",
+    "cooldown_models_view_details": "Показать сведения о cooldown моделей",
     "status_toggle_label": "Включено",
     "status_enabled_success": "\"{{name}}\" включён",
     "status_disabled_success": "\"{{name}}\" отключён",
