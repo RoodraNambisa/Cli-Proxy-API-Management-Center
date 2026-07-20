@@ -88,6 +88,24 @@ const isCodexPlanRefreshActive = (task: CodexPlanTypeRefreshTask | null): boolea
   isCodexPlanRefreshPaused(task) ||
   isCodexPlanRefreshPauseRequested(task);
 
+export const isCodexPlanRefreshClearBlocked = (task: CodexPlanTypeRefreshTask | null): boolean =>
+  isCodexPlanRefreshPauseRequested(task) ||
+  (isCodexPlanRefreshRunning(task) && !isCodexPlanRefreshPaused(task));
+
+export const shouldShowCodexPlanRefreshPanel = (
+  task: CodexPlanTypeRefreshTask | null,
+  loading: boolean
+): boolean =>
+  Boolean(
+    task &&
+    (loading ||
+      isCodexPlanRefreshActive(task) ||
+      task.state !== 'idle' ||
+      task.summary.processed > 0 ||
+      task.results.length > 0 ||
+      task.currentName)
+  );
+
 const isCodexPlanRefreshTerminal = (task: CodexPlanTypeRefreshTask | null): boolean =>
   Boolean(
     task &&
@@ -531,9 +549,9 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     [controlCodexPlanTypeRefresh]
   );
 
-  const clearCodexPlanTypeRefresh = useCallback(async () => {
+  const performClearCodexPlanTypeRefresh = useCallback(async () => {
     if (codexPlanRefreshActionLoading) return;
-    if (isCodexPlanRefreshActive(codexPlanRefreshTaskRef.current)) {
+    if (isCodexPlanRefreshClearBlocked(codexPlanRefreshTaskRef.current)) {
       showNotification(t('auth_files.codex_plan_refresh_clear_unavailable'), 'warning');
       return;
     }
@@ -542,7 +560,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     try {
       const task = await authFilesApi.clearCodexPlanTypeRefreshStatus();
       await applyCodexPlanRefreshTask(task);
-      if (isCodexPlanRefreshActive(task)) {
+      if (isCodexPlanRefreshClearBlocked(task)) {
         showNotification(t('auth_files.codex_plan_refresh_clear_unavailable'), 'warning');
       }
     } catch (err: unknown) {
@@ -557,6 +575,34 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       setCodexPlanRefreshActionLoading(false);
     }
   }, [applyCodexPlanRefreshTask, codexPlanRefreshActionLoading, showNotification, t]);
+
+  const clearCodexPlanTypeRefresh = useCallback(async () => {
+    if (codexPlanRefreshActionLoading) return;
+    const currentTask = codexPlanRefreshTaskRef.current;
+    if (isCodexPlanRefreshClearBlocked(currentTask)) {
+      showNotification(t('auth_files.codex_plan_refresh_clear_unavailable'), 'warning');
+      return;
+    }
+
+    if (isCodexPlanRefreshPaused(currentTask)) {
+      showConfirmation({
+        title: t('auth_files.codex_plan_refresh_close_task'),
+        message: t('auth_files.codex_plan_refresh_close_paused_confirm'),
+        variant: 'danger',
+        confirmText: t('auth_files.codex_plan_refresh_close_task'),
+        onConfirm: performClearCodexPlanTypeRefresh,
+      });
+      return;
+    }
+
+    await performClearCodexPlanTypeRefresh();
+  }, [
+    codexPlanRefreshActionLoading,
+    performClearCodexPlanTypeRefresh,
+    showConfirmation,
+    showNotification,
+    t,
+  ]);
 
   const refreshCodexPlanTypeRefreshStatus = useCallback(
     () => fetchCodexPlanRefreshStatus({ markLoading: true, silentUnsupported: true }),

@@ -51,7 +51,11 @@ import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
 import { useAuthFilesBatchSettings } from '@/features/authFiles/hooks/useAuthFilesBatchSettings';
-import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
+import {
+  isCodexPlanRefreshClearBlocked,
+  shouldShowCodexPlanRefreshPanel,
+  useAuthFilesData,
+} from '@/features/authFiles/hooks/useAuthFilesData';
 import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
 import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth';
 import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
@@ -186,6 +190,86 @@ const getCodexPlanRefreshHint = (t: TFunction, task: CodexPlanTypeRefreshTask): 
 
   return t('auth_files.codex_plan_refresh_idle_hint');
 };
+
+type CodexPlanRefreshActionsProps = {
+  task: CodexPlanTypeRefreshTask;
+  disableControls: boolean;
+  actionLoading: boolean;
+  starting: boolean;
+  loading: boolean;
+  onPause: () => void;
+  onResume: () => void;
+  onRetryFailed: () => void;
+  onClear: () => void;
+};
+
+export function CodexPlanRefreshActions({
+  task,
+  disableControls,
+  actionLoading,
+  starting,
+  loading,
+  onPause,
+  onResume,
+  onRetryFailed,
+  onClear,
+}: CodexPlanRefreshActionsProps) {
+  const { t } = useTranslation();
+  const running = isCodexPlanRefreshRunning(task);
+  const paused = isCodexPlanRefreshPaused(task);
+  const pauseRequested = isCodexPlanRefreshPauseRequested(task);
+  const stablePaused = paused && !pauseRequested;
+  const active = isCodexPlanRefreshActive(task);
+  const canRetryFailed = task.state === 'completed_with_errors' && task.canRetryFailed;
+  const clearBlocked = isCodexPlanRefreshClearBlocked(task);
+
+  return (
+    <div className={styles.codexPlanRefreshActions}>
+      {running && !paused && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onPause}
+          disabled={disableControls || actionLoading || pauseRequested}
+        >
+          {pauseRequested
+            ? t('auth_files.codex_plan_refresh_state_pause_requested')
+            : t('auth_files.codex_plan_refresh_pause')}
+        </Button>
+      )}
+      {stablePaused && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onResume}
+          disabled={disableControls || actionLoading}
+        >
+          {t('auth_files.codex_plan_refresh_resume')}
+        </Button>
+      )}
+      {canRetryFailed && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetryFailed}
+          disabled={disableControls || active || starting || loading}
+          loading={starting}
+        >
+          {t('auth_files.codex_plan_refresh_retry_failed')}
+        </Button>
+      )}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onClear}
+        disabled={disableControls || clearBlocked || actionLoading}
+        title={clearBlocked ? t('auth_files.codex_plan_refresh_clear_unavailable') : undefined}
+      >
+        {t('auth_files.codex_plan_refresh_close_task')}
+      </Button>
+    </div>
+  );
+}
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
@@ -787,21 +871,10 @@ export function AuthFilesPage() {
     () => selectedNames.some((name) => statusUpdating[name] === true),
     [selectedNames, statusUpdating]
   );
-  const codexPlanRefreshRunning = isCodexPlanRefreshRunning(codexPlanRefreshTask);
-  const codexPlanRefreshPaused = isCodexPlanRefreshPaused(codexPlanRefreshTask);
-  const codexPlanRefreshPauseRequested = isCodexPlanRefreshPauseRequested(codexPlanRefreshTask);
   const codexPlanRefreshActive = isCodexPlanRefreshActive(codexPlanRefreshTask);
-  const codexPlanRefreshCanRetryFailed = Boolean(
-    codexPlanRefreshTask?.state === 'completed_with_errors' && codexPlanRefreshTask.canRetryFailed
-  );
-  const showCodexPlanRefreshPanel = Boolean(
-    codexPlanRefreshTask &&
-    (codexPlanRefreshLoading ||
-      codexPlanRefreshActive ||
-      codexPlanRefreshTask.state !== 'idle' ||
-      codexPlanRefreshTask.summary.processed > 0 ||
-      codexPlanRefreshTask.results.length > 0 ||
-      codexPlanRefreshTask.currentName)
+  const showCodexPlanRefreshPanel = shouldShowCodexPlanRefreshPanel(
+    codexPlanRefreshTask,
+    codexPlanRefreshLoading
   );
   const codexPlanRefreshSummaryItems = useMemo(
     () =>
@@ -1356,65 +1429,17 @@ export function AuthFilesPage() {
               </div>
 
               <div className={styles.codexPlanRefreshSide}>
-                <div className={styles.codexPlanRefreshActions}>
-                  {codexPlanRefreshRunning && !codexPlanRefreshPaused && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void pauseCodexPlanTypeRefresh()}
-                      disabled={
-                        disableControls ||
-                        codexPlanRefreshActionLoading ||
-                        codexPlanRefreshPauseRequested
-                      }
-                    >
-                      {codexPlanRefreshPauseRequested
-                        ? t('auth_files.codex_plan_refresh_state_pause_requested')
-                        : t('auth_files.codex_plan_refresh_pause')}
-                    </Button>
-                  )}
-                  {codexPlanRefreshPaused && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void resumeCodexPlanTypeRefresh()}
-                      disabled={disableControls || codexPlanRefreshActionLoading}
-                    >
-                      {t('auth_files.codex_plan_refresh_resume')}
-                    </Button>
-                  )}
-                  {codexPlanRefreshCanRetryFailed && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void retryFailedCodexPlanTypeRefresh()}
-                      disabled={
-                        disableControls ||
-                        codexPlanRefreshActive ||
-                        codexPlanRefreshStarting ||
-                        codexPlanRefreshLoading
-                      }
-                      loading={codexPlanRefreshStarting}
-                    >
-                      {t('auth_files.codex_plan_refresh_retry_failed')}
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => void clearCodexPlanTypeRefresh()}
-                    disabled={
-                      disableControls || codexPlanRefreshActive || codexPlanRefreshActionLoading
-                    }
-                    title={
-                      codexPlanRefreshActive
-                        ? t('auth_files.codex_plan_refresh_clear_unavailable')
-                        : undefined
-                    }
-                  >
-                    {t('auth_files.codex_plan_refresh_close_task')}
-                  </Button>
-                </div>
+                <CodexPlanRefreshActions
+                  task={codexPlanRefreshTask}
+                  disableControls={disableControls}
+                  actionLoading={codexPlanRefreshActionLoading}
+                  starting={codexPlanRefreshStarting}
+                  loading={codexPlanRefreshLoading}
+                  onPause={() => void pauseCodexPlanTypeRefresh()}
+                  onResume={() => void resumeCodexPlanTypeRefresh()}
+                  onRetryFailed={() => void retryFailedCodexPlanTypeRefresh()}
+                  onClear={() => void clearCodexPlanTypeRefresh()}
+                />
 
                 {codexPlanRefreshTask.currentName && (
                   <div className={styles.codexPlanRefreshCurrent}>
