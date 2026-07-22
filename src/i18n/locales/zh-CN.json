@@ -2486,6 +2486,53 @@
       "target_initialization_failed": "初始化目标副本失败",
       "token_incompatible": "Token 与 ChatGPT Web 不兼容",
       "temporary_failure": "临时失败，请稍后重试"
+    },
+    "errors": {
+      "sentinel_sdk_busy": "SDK 求解池繁忙"
+    },
+    "sentinel": {
+      "title": "Sentinel SDK",
+      "description": "配置真实 Sentinel SDK 的按需回退，并查看当前求解池运行状态。",
+      "runtime_enabled": "启用真实 Sentinel SDK 回退",
+      "runtime_enabled_description": "普通请求仍优先使用 Go VM，仅在兼容失败或 Session Observer 必需时按需启动。",
+      "workers": "SDK Worker 数量",
+      "workers_hint": "范围 0–16；0 表示由后端自动决定。",
+      "automatic": "自动",
+      "queue_size": "等待队列大小",
+      "queue_size_hint": "范围 0–1024；默认 32。",
+      "cache_versions": "缓存版本数",
+      "cache_versions_hint": "范围 1–5；默认 3。",
+      "status_title": "运行状态",
+      "status_description": "配置开启不代表 SDK 已初始化；未初始化是正常的按需加载状态。",
+      "loading": "正在读取 Sentinel SDK 状态",
+      "load_failed": "读取 Sentinel SDK 状态失败",
+      "save_failed": "保存 Sentinel SDK 配置失败",
+      "save_success": "Sentinel SDK 配置已保存",
+      "saved_refresh_failed": "配置已保存，但重新读取运行状态失败",
+      "validation_workers": "SDK Worker 数量必须是 0–16 的整数。",
+      "validation_queue_size": "等待队列大小必须是 0–1024 的整数。",
+      "validation_cache_versions": "缓存版本数必须是 1–5 的整数。",
+      "yes": "是",
+      "no": "否",
+      "initialized_lazy": "尚未初始化（按需加载）",
+      "awaiting_initialization": "等待按需初始化",
+      "no_error": "无",
+      "status": {
+        "initialized": "已初始化",
+        "available": "当前可用",
+        "busy_workers": "繁忙 / Worker 上限",
+        "queued": "排队任务",
+        "source_pending": "源码等待任务",
+        "source_waiters": "源码等待者",
+        "bytecode_waiters": "字节码等待者",
+        "observer_sessions": "Observer 会话",
+        "sdk_version": "SDK 版本",
+        "sdk_sha256": "SDK SHA-256",
+        "source_cache_entries": "源码缓存条目",
+        "bytecode_cache_entries": "字节码缓存条目",
+        "fallback_count": "回退次数",
+        "last_error": "最近错误"
+      }
     }
   },
   "proxy_pools": {

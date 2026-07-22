@@ -2481,6 +2481,53 @@
       "target_initialization_failed": "Не удалось создать целевую копию",
       "token_incompatible": "Токен несовместим с ChatGPT Web",
       "temporary_failure": "Временная ошибка; повторите позже"
+    },
+    "errors": {
+      "sentinel_sdk_busy": "Пул решателей SDK занят"
+    },
+    "sentinel": {
+      "title": "Sentinel SDK",
+      "description": "Настройка резервного запуска настоящего Sentinel SDK по требованию и просмотр состояния пула решателей.",
+      "runtime_enabled": "Включить резервный Sentinel SDK",
+      "runtime_enabled_description": "Обычные запросы по-прежнему используют Go VM. SDK запускается по требованию только при ошибке совместимости или необходимости Session Observer.",
+      "workers": "Рабочие процессы SDK",
+      "workers_hint": "Диапазон 0–16; 0 — автоматический выбор сервером.",
+      "automatic": "Автоматически",
+      "queue_size": "Размер очереди",
+      "queue_size_hint": "Диапазон 0–1024; по умолчанию 32.",
+      "cache_versions": "Версии в кэше",
+      "cache_versions_hint": "Диапазон 1–5; по умолчанию 3.",
+      "status_title": "Состояние выполнения",
+      "status_description": "Включение настройки не инициализирует SDK. До первого использования состояние «не инициализирован» является нормальным.",
+      "loading": "Загрузка состояния Sentinel SDK",
+      "load_failed": "Не удалось загрузить состояние Sentinel SDK",
+      "save_failed": "Не удалось сохранить настройки Sentinel SDK",
+      "save_success": "Настройки Sentinel SDK сохранены",
+      "saved_refresh_failed": "Настройки сохранены, но состояние выполнения не удалось обновить",
+      "validation_workers": "Количество рабочих процессов SDK должно быть целым числом от 0 до 16.",
+      "validation_queue_size": "Размер очереди должен быть целым числом от 0 до 1024.",
+      "validation_cache_versions": "Количество версий в кэше должно быть целым числом от 1 до 5.",
+      "yes": "Да",
+      "no": "Нет",
+      "initialized_lazy": "Не инициализирован (по требованию)",
+      "awaiting_initialization": "Ожидание инициализации по требованию",
+      "no_error": "Нет",
+      "status": {
+        "initialized": "Инициализирован",
+        "available": "Доступен",
+        "busy_workers": "Занято / предел workers",
+        "queued": "В очереди",
+        "source_pending": "Ожидание исходника",
+        "source_waiters": "Ожидают исходник",
+        "bytecode_waiters": "Ожидают байткод",
+        "observer_sessions": "Сеансы Observer",
+        "sdk_version": "Версия SDK",
+        "sdk_sha256": "SHA-256 SDK",
+        "source_cache_entries": "Записи кэша исходника",
+        "bytecode_cache_entries": "Записи кэша байткода",
+        "fallback_count": "Число резервных запусков",
+        "last_error": "Последняя ошибка"
+      }
     }
   },
   "proxy_pools": {

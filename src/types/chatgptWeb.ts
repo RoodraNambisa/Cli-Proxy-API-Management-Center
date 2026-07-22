@@ -91,6 +91,33 @@ export interface ChatGptWebReloginResponse {
   error?: string;
 }
 
+export interface ChatGptWebSentinelConfig {
+  'sdk-runtime-enabled': boolean;
+  'sdk-workers': number;
+  'sdk-queue-size': number;
+  'sdk-cache-versions': number;
+}
+
+export type ChatGptWebSentinelConfigPatch = Partial<ChatGptWebSentinelConfig>;
+
+export interface ChatGptWebSentinelSnapshot extends ChatGptWebSentinelConfig {
+  initialized: boolean;
+  available: boolean;
+  worker_limit: number;
+  busy: number;
+  queued: number;
+  source_pending: number;
+  source_waiters: number;
+  bytecode_waiters: number;
+  observer_sessions: number;
+  sdk_version: string;
+  sdk_sha256: string;
+  source_cache_entries: number;
+  bytecode_cache_entries: number;
+  fallback_count: number;
+  last_error: string;
+}
+
 export const isChatGptWebLoginTaskTerminal = (state: ChatGptWebLoginTaskState): boolean =>
   state === 'completed' || state === 'completed_with_errors' || state === 'canceled';
 

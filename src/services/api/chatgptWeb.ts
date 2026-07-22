@@ -2,6 +2,9 @@ import type {
   ChatGptWebLoginTask,
   ChatGptWebMutationTask,
   ChatGptWebReloginResponse,
+  ChatGptWebSentinelConfig,
+  ChatGptWebSentinelConfigPatch,
+  ChatGptWebSentinelSnapshot,
 } from '@/types';
 import { apiClient } from './client';
 import { AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
@@ -72,5 +75,17 @@ export const chatGptWebApi = {
         timeout: CHATGPT_WEB_RELOGIN_TIMEOUT_MS,
       }
     );
+  },
+
+  getSentinel(): Promise<ChatGptWebSentinelSnapshot> {
+    return apiClient.get('/chatgpt-web/sentinel');
+  },
+
+  putSentinel(config: ChatGptWebSentinelConfig): Promise<unknown> {
+    return apiClient.put('/chatgpt-web/sentinel', config);
+  },
+
+  patchSentinel(config: ChatGptWebSentinelConfigPatch): Promise<unknown> {
+    return apiClient.patch('/chatgpt-web/sentinel', config);
   },
 };

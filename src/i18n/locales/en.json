@@ -2482,6 +2482,53 @@
       "target_initialization_failed": "Failed to initialize target copy",
       "token_incompatible": "Token is incompatible with ChatGPT Web",
       "temporary_failure": "Temporary failure; try again later"
+    },
+    "errors": {
+      "sentinel_sdk_busy": "SDK solver pool is busy"
+    },
+    "sentinel": {
+      "title": "Sentinel SDK",
+      "description": "Configure on-demand fallback to the real Sentinel SDK and inspect the current solver pool state.",
+      "runtime_enabled": "Enable real Sentinel SDK fallback",
+      "runtime_enabled_description": "Regular requests still prefer the Go VM. The SDK starts on demand only after a compatibility failure or when Session Observer requires it.",
+      "workers": "SDK workers",
+      "workers_hint": "Range 0–16; 0 lets the backend choose automatically.",
+      "automatic": "Automatic",
+      "queue_size": "Queue size",
+      "queue_size_hint": "Range 0–1024; default 32.",
+      "cache_versions": "Cached versions",
+      "cache_versions_hint": "Range 1–5; default 3.",
+      "status_title": "Runtime status",
+      "status_description": "Enabling the setting does not initialize the SDK. An uninitialized state is normal until it is needed.",
+      "loading": "Loading Sentinel SDK status",
+      "load_failed": "Failed to load Sentinel SDK status",
+      "save_failed": "Failed to save Sentinel SDK settings",
+      "save_success": "Sentinel SDK settings saved",
+      "saved_refresh_failed": "Settings were saved, but the runtime status could not be reloaded",
+      "validation_workers": "SDK workers must be an integer from 0 to 16.",
+      "validation_queue_size": "Queue size must be an integer from 0 to 1024.",
+      "validation_cache_versions": "Cached versions must be an integer from 1 to 5.",
+      "yes": "Yes",
+      "no": "No",
+      "initialized_lazy": "Not initialized (on demand)",
+      "awaiting_initialization": "Waiting for on-demand initialization",
+      "no_error": "None",
+      "status": {
+        "initialized": "Initialized",
+        "available": "Available",
+        "busy_workers": "Busy / worker limit",
+        "queued": "Queued",
+        "source_pending": "Source pending",
+        "source_waiters": "Source waiters",
+        "bytecode_waiters": "Bytecode waiters",
+        "observer_sessions": "Observer sessions",
+        "sdk_version": "SDK version",
+        "sdk_sha256": "SDK SHA-256",
+        "source_cache_entries": "Source cache entries",
+        "bytecode_cache_entries": "Bytecode cache entries",
+        "fallback_count": "Fallback count",
+        "last_error": "Last error"
+      }
     }
   },
   "proxy_pools": {

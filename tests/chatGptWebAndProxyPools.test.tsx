@@ -9,7 +9,13 @@ import { apiClient } from '@/services/api/client';
 import { chatGptWebApi } from '@/services/api/chatgptWeb';
 import { proxyPoolsApi } from '@/services/api/proxyPools';
 import { useAuthStore, useNotificationStore } from '@/stores';
-import type { AuthFileItem, ChatGptWebLoginTask, ChatGptWebMutationTask } from '@/types';
+import type {
+  AuthFileItem,
+  ChatGptWebLoginTask,
+  ChatGptWebMutationTask,
+  ChatGptWebSentinelSnapshot,
+} from '@/types';
+import { getChatGptWebErrorMessage } from '@/utils/chatgptWeb';
 import { normalizeModelList } from '@/utils/models';
 
 vi.mock('react-i18next', async (importOriginal) => {
@@ -77,6 +83,31 @@ const createMutationTask = (
   ...overrides,
 });
 
+const createSentinelSnapshot = (
+  overrides: Partial<ChatGptWebSentinelSnapshot> = {}
+): ChatGptWebSentinelSnapshot => ({
+  'sdk-runtime-enabled': true,
+  'sdk-workers': 0,
+  'sdk-queue-size': 32,
+  'sdk-cache-versions': 3,
+  initialized: false,
+  available: false,
+  worker_limit: 4,
+  busy: 0,
+  queued: 0,
+  source_pending: 0,
+  source_waiters: 0,
+  bytecode_waiters: 0,
+  observer_sessions: 0,
+  sdk_version: '',
+  sdk_sha256: '',
+  source_cache_entries: 0,
+  bytecode_cache_entries: 0,
+  fallback_count: 0,
+  last_error: '',
+  ...overrides,
+});
+
 describe('ChatGPT Web management compatibility', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -84,6 +115,159 @@ describe('ChatGPT Web management compatibility', () => {
     sessionStorage.clear();
     useAuthStore.setState({ connectionStatus: 'connected' });
     useNotificationStore.setState({ showNotification: vi.fn() });
+    vi.spyOn(chatGptWebApi, 'getSentinel').mockResolvedValue(createSentinelSnapshot());
+  });
+
+  test('uses the dedicated Sentinel GET, PUT, and PATCH endpoints', async () => {
+    vi.mocked(chatGptWebApi.getSentinel).mockRestore();
+    const snapshot = createSentinelSnapshot();
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue(snapshot);
+    const put = vi.spyOn(apiClient, 'put').mockResolvedValue({ status: 'ok' });
+    const patch = vi.spyOn(apiClient, 'patch').mockResolvedValue({ status: 'ok' });
+
+    await expect(chatGptWebApi.getSentinel()).resolves.toEqual(snapshot);
+    await chatGptWebApi.putSentinel({
+      'sdk-runtime-enabled': true,
+      'sdk-workers': 2,
+      'sdk-queue-size': 64,
+      'sdk-cache-versions': 4,
+    });
+    await chatGptWebApi.patchSentinel({ 'sdk-workers': 3 });
+
+    expect(get).toHaveBeenCalledWith('/chatgpt-web/sentinel');
+    expect(put).toHaveBeenCalledWith('/chatgpt-web/sentinel', {
+      'sdk-runtime-enabled': true,
+      'sdk-workers': 2,
+      'sdk-queue-size': 64,
+      'sdk-cache-versions': 4,
+    });
+    expect(patch).toHaveBeenCalledWith('/chatgpt-web/sentinel', { 'sdk-workers': 3 });
+  });
+
+  test('loads Sentinel lazily, disables settings with the switch off, and refetches after PATCH', async () => {
+    const getSentinel = vi.mocked(chatGptWebApi.getSentinel);
+    getSentinel.mockReset();
+    const initialSnapshot = Object.assign(
+      createSentinelSnapshot({
+        'sdk-runtime-enabled': false,
+        last_error: 'sentinel_sdk_busy',
+      }),
+      {
+        sdk_source: 'SENTINEL_SOURCE_MUST_NOT_RENDER',
+        challenge: 'SENTINEL_CHALLENGE_MUST_NOT_RENDER',
+      }
+    );
+    getSentinel.mockResolvedValueOnce(initialSnapshot).mockResolvedValueOnce(
+      createSentinelSnapshot({
+        'sdk-runtime-enabled': true,
+        'sdk-workers': 4,
+        initialized: true,
+        available: true,
+        busy: 2,
+        queued: 3,
+        sdk_version: 'sentinel-v1',
+        sdk_sha256: 'safe-sha256',
+        fallback_count: 9,
+      })
+    );
+    const patchSentinel = vi
+      .spyOn(chatGptWebApi, 'patchSentinel')
+      .mockResolvedValue({ status: 'ok' });
+
+    render(
+      <MemoryRouter>
+        <ChatGptWebPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(getSentinel).toHaveBeenCalledTimes(1));
+    const runtimeSwitch = screen.getByRole('checkbox', {
+      name: 'chatgpt_web.sentinel.runtime_enabled',
+    }) as HTMLInputElement;
+    const workers = document.getElementById('chatgpt-web-sentinel-workers') as HTMLInputElement;
+    const queueSize = document.getElementById(
+      'chatgpt-web-sentinel-queue-size'
+    ) as HTMLInputElement;
+    const cacheVersions = document.getElementById(
+      'chatgpt-web-sentinel-cache-versions'
+    ) as HTMLInputElement;
+
+    expect(runtimeSwitch.checked).toBe(false);
+    expect(workers.disabled).toBe(true);
+    expect(queueSize.disabled).toBe(true);
+    expect(cacheVersions.disabled).toBe(true);
+    expect(screen.getByText('chatgpt_web.sentinel.automatic')).not.toBeNull();
+    expect(screen.getByText('chatgpt_web.sentinel.initialized_lazy')).not.toBeNull();
+    expect(screen.getByText('chatgpt_web.errors.sentinel_sdk_busy')).not.toBeNull();
+    expect(document.body.textContent).not.toContain('SENTINEL_SOURCE_MUST_NOT_RENDER');
+    expect(document.body.textContent).not.toContain('SENTINEL_CHALLENGE_MUST_NOT_RENDER');
+
+    fireEvent.click(runtimeSwitch);
+    expect(workers.disabled).toBe(false);
+    fireEvent.change(workers, { target: { value: '4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() =>
+      expect(patchSentinel).toHaveBeenCalledWith({
+        'sdk-runtime-enabled': true,
+        'sdk-workers': 4,
+      })
+    );
+    await waitFor(() => expect(getSentinel).toHaveBeenCalledTimes(2));
+    expect(screen.getByText('sentinel-v1')).not.toBeNull();
+    expect(screen.getByText('safe-sha256')).not.toBeNull();
+    expect(screen.getByText('2 / 4')).not.toBeNull();
+  });
+
+  test('renders Sentinel busy as a solver-pool error without a lifecycle failure', async () => {
+    vi.spyOn(chatGptWebApi, 'startLoginTaskText').mockResolvedValue({
+      ...createLoginTask(),
+      state: 'completed_with_errors',
+      processed: 1,
+      failed: 1,
+      results: [
+        {
+          line: 1,
+          email: 'busy@example.com',
+          status: 'failed',
+          lifecycle_state: 'dead',
+          error_category: 'sentinel_sdk_busy',
+          error: 'ChatGPT Web Sentinel SDK is temporarily unavailable',
+          http_status: 503,
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <ChatGptWebPage />
+      </MemoryRouter>
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'chatgpt_web.manual_input_label' }), {
+      target: { value: 'busy@example.com---password---' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web.start_task/ }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/chatgpt_web\.errors\.sentinel_sdk_busy/)).not.toBeNull()
+    );
+    expect(screen.queryByText('dead')).toBeNull();
+  });
+
+  test('recognizes the nested 503 Sentinel busy response without exposing its raw message', () => {
+    const error = Object.assign(new Error('temporary runtime failure'), {
+      status: 503,
+      data: {
+        error: {
+          code: 'sentinel_sdk_busy',
+          message: 'ChatGPT Web Sentinel SDK is temporarily unavailable',
+        },
+      },
+    });
+
+    expect(getChatGptWebErrorMessage(error, (key) => key)).toBe(
+      'chatgpt_web.errors.sentinel_sdk_busy'
+    );
   });
 
   test('uploads the selected file directly without reading or converting its contents', async () => {

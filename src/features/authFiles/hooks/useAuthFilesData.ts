@@ -12,6 +12,7 @@ import type { AuthFileItem, CodexPlanTypeRefreshMode, CodexPlanTypeRefreshTask }
 import { formatFileSize } from '@/utils/format';
 import { MAX_AUTH_FILE_SIZE } from '@/utils/constants';
 import { downloadBlob } from '@/utils/download';
+import { getChatGptWebErrorMessage } from '@/utils/chatgptWeb';
 import {
   getTypeLabel,
   hasAuthFileStatusMessage,
@@ -1186,7 +1187,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
           response.warning ? 'warning' : 'success'
         );
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : '';
+        const errorMessage = getChatGptWebErrorMessage(err, t);
         showNotification(`${t('auth_files.chatgpt_web_relogin_failed')}: ${errorMessage}`, 'error');
       } finally {
         setChatGptWebReloginUpdating((current) => {

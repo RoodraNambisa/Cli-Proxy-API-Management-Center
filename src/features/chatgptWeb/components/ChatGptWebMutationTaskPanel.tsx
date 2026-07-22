@@ -10,6 +10,7 @@ import type {
 } from '@/types';
 import { isChatGptWebMutationTaskTerminal } from '@/types';
 import { formatDateTime } from '@/utils/format';
+import { isChatGptWebSentinelBusyError } from '@/utils/chatgptWeb';
 import styles from './ChatGptWebMutationTaskPanel.module.scss';
 
 export type ChatGptWebMutationTaskPanelProps = {
@@ -141,18 +142,21 @@ export function ChatGptWebMutationTaskPanel(props: ChatGptWebMutationTaskPanelPr
             </thead>
             <tbody>
               {sortedResults.map((result, index) => {
+                const sentinelBusy = isChatGptWebSentinelBusyError(result, result.http_status);
                 const statusLabel = readTranslatedValue(
                   t,
                   `chatgpt_web.mutation_result_states.${result.status}`,
                   result.status
                 );
-                const errorCategory = result.error_category
-                  ? readTranslatedValue(
-                      t,
-                      `chatgpt_web.mutation_error_categories.${result.error_category}`,
-                      result.error_category
-                    )
-                  : '';
+                const errorCategory = sentinelBusy
+                  ? t('chatgpt_web.errors.sentinel_sdk_busy')
+                  : result.error_category
+                    ? readTranslatedValue(
+                        t,
+                        `chatgpt_web.mutation_error_categories.${result.error_category}`,
+                        result.error_category
+                      )
+                    : '';
                 const credentialMode = result.credential_mode
                   ? readTranslatedValue(
                       t,
@@ -165,7 +169,7 @@ export function ChatGptWebMutationTaskPanel(props: ChatGptWebMutationTaskPanelPr
                 const message = [
                   result.http_status ? `HTTP ${result.http_status}` : '',
                   errorCategory,
-                  result.error,
+                  sentinelBusy ? '' : result.error,
                 ]
                   .filter(Boolean)
                   .join(' · ');

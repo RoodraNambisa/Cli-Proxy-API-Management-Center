@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ChatGptWebMutationTaskPanel } from '@/features/chatgptWeb/components/ChatGptWebMutationTaskPanel';
+import { ChatGptWebSentinelPanel } from '@/features/chatgptWeb/components/ChatGptWebSentinelPanel';
 import {
   IconFileText,
   IconKey,
@@ -21,15 +22,13 @@ import type {
 } from '@/types';
 import { isChatGptWebLoginTaskTerminal, isChatGptWebMutationTaskTerminal } from '@/types';
 import { formatDateTime, formatFileSize } from '@/utils/format';
+import { getChatGptWebErrorMessage, isChatGptWebSentinelBusyError } from '@/utils/chatgptWeb';
 import styles from './ChatGptWebPage.module.scss';
 
 const POLL_INTERVAL_MS = 1500;
 
 type AccountInputMode = 'manual' | 'file';
 type ChatGptWebPageMode = 'login' | 'import';
-
-const getErrorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error ?? '');
 
 export function ChatGptWebPage() {
   const { t } = useTranslation();
@@ -74,7 +73,7 @@ export function ChatGptWebPage() {
       } catch (error) {
         if (!quiet) {
           showNotification(
-            `${t('chatgpt_web.task_refresh_failed')}: ${getErrorMessage(error)}`,
+            `${t('chatgpt_web.task_refresh_failed')}: ${getChatGptWebErrorMessage(error, t)}`,
             'error'
           );
         }
@@ -120,7 +119,7 @@ export function ChatGptWebPage() {
       } catch (error) {
         if (!quiet || !importPollErrorNotifiedRef.current) {
           showNotification(
-            `${t('chatgpt_web.import_task_refresh_failed')}: ${getErrorMessage(error)}`,
+            `${t('chatgpt_web.import_task_refresh_failed')}: ${getChatGptWebErrorMessage(error, t)}`,
             'error'
           );
           importPollErrorNotifiedRef.current = true;
@@ -191,7 +190,10 @@ export function ChatGptWebPage() {
       setTask(nextTask);
       showNotification(t('chatgpt_web.task_started'), 'success');
     } catch (error) {
-      showNotification(`${t('chatgpt_web.task_start_failed')}: ${getErrorMessage(error)}`, 'error');
+      showNotification(
+        `${t('chatgpt_web.task_start_failed')}: ${getChatGptWebErrorMessage(error, t)}`,
+        'error'
+      );
     } finally {
       setStarting(false);
     }
@@ -213,7 +215,7 @@ export function ChatGptWebPage() {
       showNotification(t('chatgpt_web.task_cancel_requested'), 'info');
     } catch (error) {
       showNotification(
-        `${t('chatgpt_web.task_cancel_failed')}: ${getErrorMessage(error)}`,
+        `${t('chatgpt_web.task_cancel_failed')}: ${getChatGptWebErrorMessage(error, t)}`,
         'error'
       );
     } finally {
@@ -233,7 +235,7 @@ export function ChatGptWebPage() {
       showNotification(t('chatgpt_web.import_task_started'), 'success');
     } catch (error) {
       showNotification(
-        `${t('chatgpt_web.import_task_start_failed')}: ${getErrorMessage(error)}`,
+        `${t('chatgpt_web.import_task_start_failed')}: ${getChatGptWebErrorMessage(error, t)}`,
         'error'
       );
     } finally {
@@ -257,7 +259,7 @@ export function ChatGptWebPage() {
       showNotification(t('chatgpt_web.import_task_cancel_requested'), 'info');
     } catch (error) {
       showNotification(
-        `${t('chatgpt_web.import_task_cancel_failed')}: ${getErrorMessage(error)}`,
+        `${t('chatgpt_web.import_task_cancel_failed')}: ${getChatGptWebErrorMessage(error, t)}`,
         'error'
       );
     } finally {
@@ -303,6 +305,8 @@ export function ChatGptWebPage() {
           </Button>
         </div>
       </header>
+
+      <ChatGptWebSentinelPanel disabled={disabled} />
 
       <div
         className={styles.operationTabs}
@@ -575,25 +579,31 @@ export function ChatGptWebPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedResults.map((result) => (
-                    <tr key={`${result.line}-${result.email}`}>
-                      <td>{result.line}</td>
-                      <td className={styles.accountCell}>{result.email}</td>
-                      <td>
-                        <span className={styles.resultStatus} data-status={result.status}>
-                          {t(`chatgpt_web.result_states.${result.status}`)}
-                        </span>
-                      </td>
-                      <td>{result.lifecycle_state || '-'}</td>
-                      <td className={styles.messageCell}>
-                        {result.error
-                          ? [result.http_status ? `HTTP ${result.http_status}` : '', result.error]
-                              .filter(Boolean)
-                              .join(' ')
-                          : result.name || '-'}
-                      </td>
-                    </tr>
-                  ))}
+                  {sortedResults.map((result) => {
+                    const sentinelBusy = isChatGptWebSentinelBusyError(result, result.http_status);
+                    const message = sentinelBusy
+                      ? t('chatgpt_web.errors.sentinel_sdk_busy')
+                      : result.error;
+                    return (
+                      <tr key={`${result.line}-${result.email}`}>
+                        <td>{result.line}</td>
+                        <td className={styles.accountCell}>{result.email}</td>
+                        <td>
+                          <span className={styles.resultStatus} data-status={result.status}>
+                            {t(`chatgpt_web.result_states.${result.status}`)}
+                          </span>
+                        </td>
+                        <td>{sentinelBusy ? '-' : result.lifecycle_state || '-'}</td>
+                        <td className={styles.messageCell}>
+                          {message
+                            ? [result.http_status ? `HTTP ${result.http_status}` : '', message]
+                                .filter(Boolean)
+                                .join(' ')
+                            : result.name || '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
