@@ -23,6 +23,10 @@ import {
   RequestBodyReleaseCard,
   type RequestBodyReleaseCardHandle,
 } from '@/components/config/RequestBodyReleaseCard';
+import {
+  ChatGptWebSentinelPanel,
+  type ChatGptWebSentinelPanelHandle,
+} from '@/features/chatgptWeb/components/ChatGptWebSentinelPanel';
 import { DiffModal } from '@/components/config/DiffModal';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
@@ -31,16 +35,20 @@ import { configFileApi } from '@/services/api/configFile';
 import styles from './ConfigPage.module.scss';
 
 type ConfigEditorTab = 'visual' | 'source';
-type RequestBodyPanelId = 'request-body-release' | 'request-body-audit';
+type ConfigSidecarPanelId =
+  | 'request-body-release'
+  | 'request-body-audit'
+  | 'config-chatgpt-web-sentinel';
 
-type RequestBodyDirtySnapshot = {
+type ConfigSidecarDirtySnapshot = {
   release: boolean;
   audit: boolean;
+  sentinel: boolean;
 };
 
-type RequestBodySaveResult = {
-  succeeded: RequestBodyPanelId[];
-  failed: RequestBodyPanelId[];
+type ConfigSidecarSaveResult = {
+  succeeded: ConfigSidecarPanelId[];
+  failed: ConfigSidecarPanelId[];
 };
 
 const LazyConfigSourceEditor = lazy(() => import('@/components/config/ConfigSourceEditor'));
@@ -94,8 +102,10 @@ export function ConfigPage() {
   const [dirty, setDirty] = useState(false);
   const [requestBodyReleaseDirty, setRequestBodyReleaseDirty] = useState(false);
   const [requestBodyAuditDirty, setRequestBodyAuditDirty] = useState(false);
+  const [chatGptWebSentinelDirty, setChatGptWebSentinelDirty] = useState(false);
   const [requestBodyReleaseErrorCount, setRequestBodyReleaseErrorCount] = useState(0);
   const [requestBodyAuditErrorCount, setRequestBodyAuditErrorCount] = useState(0);
+  const [chatGptWebSentinelErrorCount, setChatGptWebSentinelErrorCount] = useState(0);
   const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [serverYaml, setServerYaml] = useState('');
   const [mergedYaml, setMergedYaml] = useState('');
@@ -111,10 +121,12 @@ export function ConfigPage() {
   const floatingActionsRef = useRef<HTMLDivElement>(null);
   const requestBodyReleaseRef = useRef<RequestBodyReleaseCardHandle | null>(null);
   const requestBodyAuditRef = useRef<RequestBodyAuditCardHandle | null>(null);
+  const chatGptWebSentinelRef = useRef<ChatGptWebSentinelPanelHandle | null>(null);
 
   const disableControls = connectionStatus !== 'connected';
   const yamlDirty = dirty || visualDirty;
-  const isDirty = yamlDirty || requestBodyReleaseDirty || requestBodyAuditDirty;
+  const isDirty =
+    yamlDirty || requestBodyReleaseDirty || requestBodyAuditDirty || chatGptWebSentinelDirty;
   const shouldRenderFloatingActions = isCurrentLayer;
   const hasVisualModeError = !!visualParseError;
   const hasVisualValidationErrors =
@@ -161,15 +173,27 @@ export function ConfigPage() {
     const releaseValid =
       !requestBodyReleaseDirty || requestBodyReleaseRef.current?.validate() !== false;
     const auditValid = !requestBodyAuditDirty || requestBodyAuditRef.current?.validate() !== false;
-    if (releaseValid && auditValid) return true;
+    const sentinelValid =
+      !chatGptWebSentinelDirty || chatGptWebSentinelRef.current?.validate() !== false;
+    if (releaseValid && auditValid && sentinelValid) return true;
     setActiveTab('visual');
     localStorage.setItem('config-management:tab', 'visual');
-    navigate(`/config?section=${releaseValid ? 'request-body-audit' : 'request-body-release'}`, {
-      replace: true,
-    });
+    const invalidSection = !releaseValid
+      ? 'request-body-release'
+      : !auditValid
+        ? 'request-body-audit'
+        : 'config-chatgpt-web-sentinel';
+    navigate(`/config?section=${invalidSection}`, { replace: true });
     showNotification(t('config_management.settings_center.sidecar_validation_failed'), 'error');
     return false;
-  }, [navigate, requestBodyAuditDirty, requestBodyReleaseDirty, showNotification, t]);
+  }, [
+    chatGptWebSentinelDirty,
+    navigate,
+    requestBodyAuditDirty,
+    requestBodyReleaseDirty,
+    showNotification,
+    t,
+  ]);
 
   const applyYamlSnapshot = useCallback(
     (nextContent: string) => {
@@ -183,7 +207,7 @@ export function ConfigPage() {
   );
 
   const refreshSavedSnapshots = useCallback(
-    async ({ reloadRelease = false, reloadAudit = false } = {}) => {
+    async ({ reloadRelease = false, reloadAudit = false, reloadSentinel = false } = {}) => {
       try {
         const [latestContent] = await Promise.all([
           configFileApi.fetchConfigYaml(),
@@ -192,6 +216,9 @@ export function ConfigPage() {
             : Promise.resolve(),
           reloadAudit
             ? (requestBodyAuditRef.current?.reload() ?? Promise.resolve())
+            : Promise.resolve(),
+          reloadSentinel
+            ? (chatGptWebSentinelRef.current?.reload() ?? Promise.resolve())
             : Promise.resolve(),
         ]);
         applyYamlSnapshot(latestContent);
@@ -232,8 +259,8 @@ export function ConfigPage() {
   }, [showNotification, t]);
 
   const saveDirtySidecars = useCallback(
-    async (snapshot: RequestBodyDirtySnapshot): Promise<RequestBodySaveResult> => {
-      const results: Array<{ id: RequestBodyPanelId; success: boolean }> = [];
+    async (snapshot: ConfigSidecarDirtySnapshot): Promise<ConfigSidecarSaveResult> => {
+      const results: Array<{ id: ConfigSidecarPanelId; success: boolean }> = [];
       if (snapshot.release) {
         const panel = requestBodyReleaseRef.current;
         results.push({
@@ -245,6 +272,13 @@ export function ConfigPage() {
         const panel = requestBodyAuditRef.current;
         results.push({
           id: 'request-body-audit',
+          success: panel ? await panel.save() : false,
+        });
+      }
+      if (snapshot.sentinel) {
+        const panel = chatGptWebSentinelRef.current;
+        results.push({
+          id: 'config-chatgpt-web-sentinel',
           success: panel ? await panel.save() : false,
         });
       }
@@ -265,7 +299,7 @@ export function ConfigPage() {
   );
 
   const showSidecarSaveSummary = useCallback(
-    (result: RequestBodySaveResult, yamlSaved: boolean) => {
+    (result: ConfigSidecarSaveResult, yamlSaved: boolean) => {
       if (result.failed.length === 0) return;
       if (yamlSaved) {
         showNotification(t('config_management.settings_center.partial_save'), 'warning');
@@ -277,7 +311,7 @@ export function ConfigPage() {
   );
 
   const saveSidecarsWithoutYaml = useCallback(
-    async (snapshot: RequestBodyDirtySnapshot) => {
+    async (snapshot: ConfigSidecarDirtySnapshot) => {
       const result = await saveDirtySidecars(snapshot);
       if (result.succeeded.length > 0) {
         await refreshSavedSnapshots();
@@ -290,9 +324,10 @@ export function ConfigPage() {
 
   const handleConfirmSave = async () => {
     if (!validateDirtySidecars()) return;
-    const sidecarSnapshot: RequestBodyDirtySnapshot = {
+    const sidecarSnapshot: ConfigSidecarDirtySnapshot = {
       release: requestBodyReleaseDirty,
       audit: requestBodyAuditDirty,
+      sentinel: chatGptWebSentinelDirty,
     };
     setSaving(true);
     try {
@@ -308,6 +343,7 @@ export function ConfigPage() {
       await refreshSavedSnapshots({
         reloadRelease: !sidecarSnapshot.release,
         reloadAudit: !sidecarSnapshot.audit,
+        reloadSentinel: !sidecarSnapshot.sentinel,
       });
       await refreshSharedConfig();
 
@@ -331,10 +367,14 @@ export function ConfigPage() {
   const handleSave = async () => {
     if (!validateDirtySidecars()) return;
 
-    if (!yamlDirty && (requestBodyReleaseDirty || requestBodyAuditDirty)) {
-      const sidecarSnapshot: RequestBodyDirtySnapshot = {
+    if (
+      !yamlDirty &&
+      (requestBodyReleaseDirty || requestBodyAuditDirty || chatGptWebSentinelDirty)
+    ) {
+      const sidecarSnapshot: ConfigSidecarDirtySnapshot = {
         release: requestBodyReleaseDirty,
         audit: requestBodyAuditDirty,
+        sentinel: chatGptWebSentinelDirty,
       };
       setSaving(true);
       try {
@@ -388,10 +428,11 @@ export function ConfigPage() {
 
       if (diffOriginal === nextMergedYaml) {
         applyYamlSnapshot(latestServerYaml);
-        if (requestBodyReleaseDirty || requestBodyAuditDirty) {
+        if (requestBodyReleaseDirty || requestBodyAuditDirty || chatGptWebSentinelDirty) {
           await saveSidecarsWithoutYaml({
             release: requestBodyReleaseDirty,
             audit: requestBodyAuditDirty,
+            sentinel: chatGptWebSentinelDirty,
           });
           return;
         }
@@ -624,6 +665,7 @@ export function ConfigPage() {
         loadConfig(),
         requestBodyReleaseRef.current?.reload(),
         requestBodyAuditRef.current?.reload(),
+        chatGptWebSentinelRef.current?.reload(),
       ]);
       return;
     }
@@ -639,6 +681,7 @@ export function ConfigPage() {
           loadConfig(),
           requestBodyReleaseRef.current?.reload(),
           requestBodyAuditRef.current?.reload(),
+          chatGptWebSentinelRef.current?.reload(),
         ]);
       },
     });
@@ -747,6 +790,8 @@ export function ConfigPage() {
               dirtyFields={visualDirtyFields}
               requestBodyDirty={requestBodyReleaseDirty || requestBodyAuditDirty}
               requestBodyErrorCount={requestBodyReleaseErrorCount + requestBodyAuditErrorCount}
+              chatGptWebSentinelDirty={chatGptWebSentinelDirty}
+              chatGptWebSentinelErrorCount={chatGptWebSentinelErrorCount}
               renderRequestBodyPanels={({ focusTarget }) => (
                 <>
                   <RequestBodyReleaseCard
@@ -768,6 +813,18 @@ export function ConfigPage() {
                     onErrorCountChange={setRequestBodyAuditErrorCount}
                   />
                 </>
+              )}
+              renderChatGptWebSentinel={({ active, focusTarget }) => (
+                <ChatGptWebSentinelPanel
+                  ref={chatGptWebSentinelRef}
+                  active={active}
+                  disabled={disableControls}
+                  externalSaving={saving}
+                  embedded
+                  focusTarget={focusTarget}
+                  onDirtyChange={setChatGptWebSentinelDirty}
+                  onErrorCountChange={setChatGptWebSentinelErrorCount}
+                />
               )}
               onChange={setVisualValues}
             />

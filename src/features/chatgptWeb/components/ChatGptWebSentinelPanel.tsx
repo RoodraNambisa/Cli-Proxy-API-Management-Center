@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
+import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
@@ -21,9 +30,24 @@ type SentinelDraft = {
   cacheVersions: string;
 };
 
-type ChatGptWebSentinelPanelProps = {
-  disabled?: boolean;
+export type ChatGptWebSentinelPanelHandle = {
+  save: () => Promise<boolean>;
+  reload: () => Promise<void>;
+  reset: () => void;
+  validate: () => boolean;
 };
+
+type ChatGptWebSentinelPanelProps = {
+  active?: boolean;
+  disabled?: boolean;
+  embedded?: boolean;
+  externalSaving?: boolean;
+  focusTarget?: string;
+  onDirtyChange?: (dirty: boolean) => void;
+  onErrorCountChange?: (count: number) => void;
+};
+
+const DISCLOSURE_STORAGE_KEY = 'config-management:chatgpt-web-sentinel-expanded';
 
 const DEFAULT_DRAFT: SentinelDraft = {
   runtimeEnabled: true,
@@ -88,12 +112,27 @@ const buildPatch = (
     : {}),
 });
 
-export function ChatGptWebSentinelPanel({ disabled = false }: ChatGptWebSentinelPanelProps) {
+export const ChatGptWebSentinelPanel = forwardRef<
+  ChatGptWebSentinelPanelHandle,
+  ChatGptWebSentinelPanelProps
+>(function ChatGptWebSentinelPanel(
+  {
+    active = true,
+    disabled = false,
+    embedded = false,
+    externalSaving = false,
+    focusTarget,
+    onDirtyChange,
+    onErrorCountChange,
+  },
+  ref
+) {
   const { t } = useTranslation();
   const { showNotification } = useNotificationStore();
   const requestSequenceRef = useRef(0);
   const translateRef = useRef(t);
   const notifyRef = useRef(showNotification);
+  const hasLoadedRef = useRef(false);
   translateRef.current = t;
   notifyRef.current = showNotification;
   const [snapshot, setSnapshot] = useState<ChatGptWebSentinelSnapshot | null>(null);
@@ -101,6 +140,9 @@ export function ChatGptWebSentinelPanel({ disabled = false }: ChatGptWebSentinel
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [expanded, setExpanded] = useState(
+    () => localStorage.getItem(DISCLOSURE_STORAGE_KEY) === 'true'
+  );
 
   const loadSnapshot = useCallback(
     async (notifyOnError = true): Promise<ChatGptWebSentinelSnapshot | null> => {
@@ -132,41 +174,119 @@ export function ChatGptWebSentinelPanel({ disabled = false }: ChatGptWebSentinel
   );
 
   useEffect(() => {
-    if (disabled) return undefined;
+    if (disabled || !active || hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
     void loadSnapshot();
-    return () => {
+  }, [active, disabled, loadSnapshot]);
+
+  useEffect(
+    () => () => {
       requestSequenceRef.current += 1;
-    };
-  }, [disabled, loadSnapshot]);
+    },
+    []
+  );
 
   const parsedDraft = useMemo(() => readConfig(draft), [draft]);
   const patch = useMemo(
     () => (snapshot && parsedDraft.config ? buildPatch(snapshot, parsedDraft.config) : {}),
     [parsedDraft.config, snapshot]
   );
-  const dirty = Object.keys(patch).length > 0;
-  const controlsDisabled = disabled || loading || saving || !snapshot;
+  const dirty = snapshot ? JSON.stringify(draft) !== JSON.stringify(toDraft(snapshot)) : false;
+  const errorCount = (parsedDraft.errorKey ? 1 : 0) + (loadError ? 1 : 0);
+  const controlsDisabled = disabled || externalSaving || loading || saving || !snapshot;
 
-  const handleSave = async () => {
-    if (!snapshot || !parsedDraft.config || !dirty || saving) return;
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+    return () => onDirtyChange?.(false);
+  }, [dirty, onDirtyChange]);
+
+  useEffect(() => {
+    onErrorCountChange?.(errorCount);
+    return () => onErrorCountChange?.(0);
+  }, [errorCount, onErrorCountChange]);
+
+  useEffect(() => {
+    if (!focusTarget?.startsWith('config-chatgpt-web-sentinel')) return;
+    setExpanded(true);
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById('config-chatgpt-web-sentinel');
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (target instanceof HTMLElement) target.focus({ preventScroll: true });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [focusTarget]);
+
+  const runValidation = useCallback(() => {
+    const valid = parsedDraft.config !== null;
+    if (!valid) setExpanded(true);
+    return valid;
+  }, [parsedDraft.config]);
+
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    if (!dirty) return true;
+    if (!snapshot || !parsedDraft.config || saving) return false;
+    if (Object.keys(patch).length === 0) {
+      setDraft(toDraft(snapshot));
+      return true;
+    }
     setSaving(true);
     try {
       await chatGptWebApi.patchSentinel(patch);
       const refreshed = await loadSnapshot(false);
       if (refreshed) {
-        showNotification(t('chatgpt_web.sentinel.save_success'), 'success');
+        if (!embedded) showNotification(t('chatgpt_web.sentinel.save_success'), 'success');
       } else {
+        const nextSnapshot = { ...snapshot, ...parsedDraft.config };
+        setSnapshot(nextSnapshot);
+        setDraft(toDraft(nextSnapshot));
         showNotification(t('chatgpt_web.sentinel.saved_refresh_failed'), 'warning');
       }
+      return true;
     } catch (error) {
       showNotification(
         `${t('chatgpt_web.sentinel.save_failed')}: ${getChatGptWebErrorMessage(error, t)}`,
         'error'
       );
+      return false;
     } finally {
       setSaving(false);
     }
-  };
+  }, [
+    dirty,
+    embedded,
+    loadSnapshot,
+    parsedDraft.config,
+    patch,
+    saving,
+    showNotification,
+    snapshot,
+    t,
+  ]);
+
+  const handleReset = useCallback(() => {
+    if (!snapshot) return;
+    setDraft(toDraft(snapshot));
+  }, [snapshot]);
+
+  const handleExpandedChange = useCallback((nextExpanded: boolean) => {
+    setExpanded(nextExpanded);
+    localStorage.setItem(DISCLOSURE_STORAGE_KEY, String(nextExpanded));
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      save: handleSave,
+      reload: async () => {
+        if (disabled || (!active && !hasLoadedRef.current)) return;
+        hasLoadedRef.current = true;
+        await loadSnapshot(false);
+      },
+      reset: handleReset,
+      validate: runValidation,
+    }),
+    [active, disabled, handleReset, handleSave, loadSnapshot, runValidation]
+  );
 
   const statusItems = snapshot
     ? [
@@ -205,35 +325,8 @@ export function ChatGptWebSentinelPanel({ disabled = false }: ChatGptWebSentinel
       ]
     : [];
 
-  return (
-    <section className={styles.panel} aria-labelledby="chatgpt-web-sentinel-title">
-      <div className={styles.heading}>
-        <div>
-          <h2 id="chatgpt-web-sentinel-title">{t('chatgpt_web.sentinel.title')}</h2>
-          <p>{t('chatgpt_web.sentinel.description')}</p>
-        </div>
-        <div className={styles.actions}>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => void loadSnapshot()}
-            loading={loading}
-            disabled={disabled || saving}
-          >
-            <IconRefreshCw size={15} />
-            {t('common.refresh')}
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => void handleSave()}
-            loading={saving}
-            disabled={controlsDisabled || !dirty || !parsedDraft.config}
-          >
-            {t('common.save')}
-          </Button>
-        </div>
-      </div>
-
+  const editorContent = (
+    <>
       <div className={styles.runtimeRow}>
         <div>
           <strong>{t('chatgpt_web.sentinel.runtime_enabled')}</strong>
@@ -310,8 +403,20 @@ export function ChatGptWebSentinelPanel({ disabled = false }: ChatGptWebSentinel
       ) : null}
 
       <div className={styles.statusHeading}>
-        <h3>{t('chatgpt_web.sentinel.status_title')}</h3>
-        <p>{t('chatgpt_web.sentinel.status_description')}</p>
+        <div>
+          <h3>{t('chatgpt_web.sentinel.status_title')}</h3>
+          <p>{t('chatgpt_web.sentinel.status_description')}</p>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => void loadSnapshot()}
+          loading={loading}
+          disabled={disabled || externalSaving || saving || dirty}
+        >
+          <IconRefreshCw size={15} />
+          {t('common.refresh')}
+        </Button>
       </div>
       {!snapshot ? (
         <div className={styles.statusEmpty} role={loadError ? 'alert' : undefined}>
@@ -332,6 +437,66 @@ export function ChatGptWebSentinelPanel({ disabled = false }: ChatGptWebSentinel
           ))}
         </dl>
       )}
+    </>
+  );
+
+  if (embedded) {
+    const summary = !snapshot
+      ? t(loadError ? 'chatgpt_web.sentinel.load_failed' : 'chatgpt_web.sentinel.loading')
+      : draft.runtimeEnabled
+        ? t('config_management.settings_center.status_enabled')
+        : t('config_management.settings_center.status_disabled');
+
+    return (
+      <ConfigDisclosure
+        id="config-chatgpt-web-sentinel"
+        title={t('chatgpt_web.sentinel.title')}
+        description={t('chatgpt_web.sentinel.description')}
+        summary={summary}
+        expanded={dirty || expanded || errorCount > 0}
+        onExpandedChange={handleExpandedChange}
+        dirty={dirty}
+        errorCount={errorCount}
+        actions={
+          dirty ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={controlsDisabled}
+              onClick={handleReset}
+            >
+              {t('chatgpt_web.sentinel.reset')}
+            </Button>
+          ) : null
+        }
+      >
+        <div className={styles.embeddedContent}>{editorContent}</div>
+      </ConfigDisclosure>
+    );
+  }
+
+  return (
+    <section className={styles.panel} aria-labelledby="chatgpt-web-sentinel-title">
+      <div className={styles.heading}>
+        <div>
+          <h2 id="chatgpt-web-sentinel-title">{t('chatgpt_web.sentinel.title')}</h2>
+          <p>{t('chatgpt_web.sentinel.description')}</p>
+        </div>
+      </div>
+      {editorContent}
+      <div className={styles.footerActions}>
+        <Button variant="secondary" disabled={controlsDisabled || !dirty} onClick={handleReset}>
+          {t('chatgpt_web.sentinel.reset')}
+        </Button>
+        <Button
+          onClick={() => void handleSave()}
+          loading={saving}
+          disabled={controlsDisabled || !dirty || !parsedDraft.config}
+        >
+          {t('common.save')}
+        </Button>
+      </div>
     </section>
   );
-}
+});

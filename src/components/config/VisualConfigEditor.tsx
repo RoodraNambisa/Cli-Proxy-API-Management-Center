@@ -108,7 +108,10 @@ interface VisualConfigEditorProps {
   dirtyFields?: string[];
   requestBodyDirty?: boolean;
   requestBodyErrorCount?: number;
+  chatGptWebSentinelDirty?: boolean;
+  chatGptWebSentinelErrorCount?: number;
   renderRequestBodyPanels?: (options: { focusTarget?: string }) => ReactNode;
+  renderChatGptWebSentinel?: (options: { active: boolean; focusTarget?: string }) => ReactNode;
   onChange: (values: Partial<VisualConfigValues>) => void;
 }
 
@@ -607,7 +610,10 @@ export function VisualConfigEditor({
   dirtyFields = [],
   requestBodyDirty = false,
   requestBodyErrorCount = 0,
+  chatGptWebSentinelDirty = false,
+  chatGptWebSentinelErrorCount = 0,
   renderRequestBodyPanels,
+  renderChatGptWebSentinel,
   onChange,
 }: VisualConfigEditorProps) {
   const { t } = useTranslation();
@@ -1175,7 +1181,7 @@ export function VisualConfigEditor({
           'images.native.edits.unsupportedModelStatusCode',
         ]),
       'provider-antigravity': 0,
-      'provider-chatgpt-web': 0,
+      'provider-chatgpt-web': chatGptWebSentinelErrorCount,
       'provider-grok': 0,
       'advanced-payload': hasPayloadValidationErrors ? 1 : 0,
     }),
@@ -1189,6 +1195,7 @@ export function VisualConfigEditor({
       nonRetryableErrorsErrorCount,
       routingPriorityOverridesErrorCount,
       requestBodyErrorCount,
+      chatGptWebSentinelErrorCount,
     ]
   );
 
@@ -1202,9 +1209,10 @@ export function VisualConfigEditor({
         errorCount: pageErrorCounts[page.id],
         dirty:
           configPageHasDirtyFields(page, dirtyFields) ||
-          (page.id === 'global-request' && requestBodyDirty),
+          (page.id === 'global-request' && requestBodyDirty) ||
+          (page.id === 'provider-chatgpt-web' && chatGptWebSentinelDirty),
       })),
-    [dirtyFields, pageErrorCounts, requestBodyDirty, t]
+    [chatGptWebSentinelDirty, dirtyFields, pageErrorCounts, requestBodyDirty, t]
   );
 
   const activePage = pages.find((page) => page.id === activePageId) ?? pages[0];
@@ -1474,24 +1482,18 @@ export function VisualConfigEditor({
                   {t('config_management.settings_center.chatgpt_web.login_tasks')}
                   <IconExternalLink size={15} />
                 </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => navigate('/auth-files?provider=chatgpt-web')}
-                >
-                  {t('config_management.settings_center.chatgpt_web.auth_files')}
-                  <IconExternalLink size={15} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => navigate('/config/proxy-pools')}
-                >
-                  {t('config_management.settings_center.chatgpt_web.proxy_pools')}
-                  <IconExternalLink size={15} />
-                </Button>
               </div>
             </section>
+
+            <div
+              className={styles.providerSidecarPanels}
+              hidden={activePageId !== 'provider-chatgpt-web'}
+            >
+              {renderChatGptWebSentinel?.({
+                active: activePageId === 'provider-chatgpt-web',
+                focusTarget,
+              })}
+            </div>
 
             <section
               id="config-grok-auth"

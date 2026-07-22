@@ -28,6 +28,7 @@ const translations: Record<string, string> = {
   'config_management.settings_center.pages.provider_antigravity.title': 'Antigravity',
   'config_management.settings_center.pages.provider_grok.title': 'Grok',
   'config_management.settings_center.pages.advanced_payload.title': 'Payload Rules',
+  'config_management.settings_center.chatgpt_web.login_tasks': 'Open account login tasks',
   'config_management.visual.sections.network.routing_per_auth_request_limit':
     'Request limit per credential',
   'config_management.visual.sections.network.routing_per_auth_request_window_minutes':
@@ -310,9 +311,7 @@ describe('configuration settings center', () => {
   test('removes retired Gemini CLI quota controls without hiding Antigravity credits', () => {
     const globalView = renderEditor('/config?section=global-request');
 
-    expect(
-      screen.queryByText('config_management.visual.sections.quota.switch_project')
-    ).toBeNull();
+    expect(screen.queryByText('config_management.visual.sections.quota.switch_project')).toBeNull();
     expect(
       screen.queryByText('config_management.visual.sections.quota.switch_preview_model')
     ).toBeNull();
@@ -325,6 +324,35 @@ describe('configuration settings center', () => {
         name: 'config_management.visual.sections.quota.antigravity_credits',
       })
     ).not.toBeNull();
+  });
+
+  test('keeps only the login-task shortcut on the ChatGPT Web config page', () => {
+    renderEditor('/config?section=provider-chatgpt-web', {
+      renderChatGptWebSentinel: ({ active }) =>
+        active ? <div>Sentinel configuration panel</div> : null,
+    });
+
+    expect(screen.getByRole('button', { name: /Open account login tasks/ })).not.toBeNull();
+    expect(screen.getByText('Sentinel configuration panel')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /ChatGPT Web credentials/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /structured prox/i })).toBeNull();
+  });
+
+  test('searches Sentinel SDK keys and opens the ChatGPT Web config page', () => {
+    renderEditor('/config?section=global-basics', {
+      renderChatGptWebSentinel: ({ active }) =>
+        active ? <div id="config-chatgpt-web-sentinel">Sentinel configuration panel</div> : null,
+    });
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'chatgpt-web.sentinel.sdk-workers' },
+    });
+    fireEvent.click(screen.getByText('chatgpt_web.sentinel.title'));
+
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-chatgpt-web-sentinel'
+    );
+    expect(screen.getByText('Sentinel configuration panel')).not.toBeNull();
   });
 });
 

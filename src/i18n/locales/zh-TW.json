@@ -1601,7 +1601,7 @@
         },
         "provider_chatgpt_web": {
           "title": "ChatGPT Web",
-          "description": "管理 ChatGPT Web 自動重新登入、帳號登入任務、認證檔案與結構化代理。"
+          "description": "管理 ChatGPT Web 自動重新登入和 Sentinel SDK；帳號登入透過獨立任務頁執行。"
         },
         "provider_grok": {
           "title": "Grok",
@@ -1628,9 +1628,9 @@
       "status_disabled": "未啟用",
       "legacy_images_optional": "Native 介面已涵蓋",
       "legacy_images_active": "相容設定生效中",
-      "sidecar_validation_failed": "請先修正請求本文設定中的驗證錯誤",
-      "partial_save": "YAML 已儲存，但部分請求本文設定儲存失敗；失敗項目仍保留未儲存狀態",
-      "sidecar_partial_save": "部分請求本文設定已儲存；失敗項目仍保留未儲存狀態",
+      "sidecar_validation_failed": "請先修正目前設定中的驗證錯誤",
+      "partial_save": "YAML 已儲存，但部分獨立設定儲存失敗；失敗項目仍保留未儲存狀態",
+      "sidecar_partial_save": "部分獨立設定已儲存；失敗項目仍保留未儲存狀態",
       "grok": {
         "title": "Grok 管理入口",
         "description": "Grok 登入、憑證層級 using_api/websockets 和配額資訊在對應管理頁維護。",
@@ -1640,12 +1640,10 @@
       },
       "chatgpt_web": {
         "title": "ChatGPT Web 管理入口",
-        "description": "帳號登入透過獨立任務頁執行；憑證狀態與手動重新登入在認證檔案頁維護。",
+        "description": "自動重新登入在此設定；帳號登入透過獨立任務頁執行，Sentinel SDK 設定和執行狀態顯示於下方。",
         "auto_relogin": "自動重新登入",
         "auto_relogin_description": "Token 無法更新且憑證允許重新登入時自動嘗試登入。帳號死亡或需要人工驗證時不會自動重新登入。",
-        "login_tasks": "開啟帳號登入任務",
-        "auth_files": "檢視 ChatGPT Web 憑證",
-        "proxy_pools": "管理結構化代理"
+        "login_tasks": "開啟帳號登入任務"
       }
     },
     "request_body_release": {
@@ -2617,6 +2615,7 @@
       "save_failed": "儲存 Sentinel SDK 設定失敗",
       "save_success": "Sentinel SDK 設定已儲存",
       "saved_refresh_failed": "設定已儲存，但重新讀取執行狀態失敗",
+      "reset": "還原",
       "validation_workers": "SDK Worker 數量必須是 0–16 的整數。",
       "validation_queue_size": "等待佇列大小必須是 0–1024 的整數。",
       "validation_cache_versions": "快取版本數必須是 1–5 的整數。",

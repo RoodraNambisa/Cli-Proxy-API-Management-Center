@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ChatGptWebMutationTaskPanel } from '@/features/chatgptWeb/components/ChatGptWebMutationTaskPanel';
-import { ChatGptWebSentinelPanel } from '@/features/chatgptWeb/components/ChatGptWebSentinelPanel';
 import {
   IconFileText,
   IconKey,
@@ -305,8 +304,6 @@ export function ChatGptWebPage() {
           </Button>
         </div>
       </header>
-
-      <ChatGptWebSentinelPanel disabled={disabled} />
 
       <div
         className={styles.operationTabs}

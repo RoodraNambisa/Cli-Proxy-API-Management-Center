@@ -3,6 +3,7 @@ import { parse } from 'yaml';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthFileCard, type AuthFileCardProps } from '@/features/authFiles/components/AuthFileCard';
+import { ChatGptWebSentinelPanel } from '@/features/chatgptWeb/components/ChatGptWebSentinelPanel';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
 import { ChatGptWebPage } from '@/pages/ChatGptWebPage';
 import { apiClient } from '@/services/api/client';
@@ -144,6 +145,16 @@ describe('ChatGPT Web management compatibility', () => {
     expect(patch).toHaveBeenCalledWith('/chatgpt-web/sentinel', { 'sdk-workers': 3 });
   });
 
+  test('defers the Sentinel status request until its config page becomes active', async () => {
+    const getSentinel = vi.mocked(chatGptWebApi.getSentinel);
+    const view = render(<ChatGptWebSentinelPanel active={false} />);
+
+    expect(getSentinel).not.toHaveBeenCalled();
+
+    view.rerender(<ChatGptWebSentinelPanel active />);
+    await waitFor(() => expect(getSentinel).toHaveBeenCalledTimes(1));
+  });
+
   test('loads Sentinel lazily, disables settings with the switch off, and refetches after PATCH', async () => {
     const getSentinel = vi.mocked(chatGptWebApi.getSentinel);
     getSentinel.mockReset();
@@ -174,11 +185,7 @@ describe('ChatGPT Web management compatibility', () => {
       .spyOn(chatGptWebApi, 'patchSentinel')
       .mockResolvedValue({ status: 'ok' });
 
-    render(
-      <MemoryRouter>
-        <ChatGptWebPage />
-      </MemoryRouter>
-    );
+    render(<ChatGptWebSentinelPanel />);
 
     await waitFor(() => expect(getSentinel).toHaveBeenCalledTimes(1));
     const runtimeSwitch = screen.getByRole('checkbox', {
@@ -217,6 +224,21 @@ describe('ChatGPT Web management compatibility', () => {
     expect(screen.getByText('sentinel-v1')).not.toBeNull();
     expect(screen.getByText('safe-sha256')).not.toBeNull();
     expect(screen.getByText('2 / 4')).not.toBeNull();
+  });
+
+  test('does not load or render Sentinel settings on the account-login task page', () => {
+    const getSentinel = vi.mocked(chatGptWebApi.getSentinel);
+
+    render(
+      <MemoryRouter>
+        <ChatGptWebPage />
+      </MemoryRouter>
+    );
+
+    expect(getSentinel).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('checkbox', { name: 'chatgpt_web.sentinel.runtime_enabled' })
+    ).toBeNull();
   });
 
   test('renders Sentinel busy as a solver-pool error without a lifecycle failure', async () => {

@@ -1582,7 +1582,7 @@
         },
         "provider_chatgpt_web": {
           "title": "ChatGPT Web",
-          "description": "管理 ChatGPT Web 自动重登、账号登录任务、认证文件和结构化代理。"
+          "description": "管理 ChatGPT Web 自动重登和 Sentinel SDK；账号登录通过独立任务页执行。"
         },
         "provider_grok": {
           "title": "Grok",
@@ -1609,9 +1609,9 @@
       "status_disabled": "未启用",
       "legacy_images_optional": "Native 接口已覆盖",
       "legacy_images_active": "兼容设置生效中",
-      "sidecar_validation_failed": "请先修复请求体配置中的校验错误",
-      "partial_save": "YAML 已保存，但部分请求体配置保存失败；失败项仍保留未保存状态",
-      "sidecar_partial_save": "部分请求体配置已保存；失败项仍保留未保存状态",
+      "sidecar_validation_failed": "请先修复当前配置中的校验错误",
+      "partial_save": "YAML 已保存，但部分独立配置保存失败；失败项仍保留未保存状态",
+      "sidecar_partial_save": "部分独立配置已保存；失败项仍保留未保存状态",
       "grok": {
         "title": "Grok 管理入口",
         "description": "Grok 的登录、凭证级 using_api/websockets 和额度信息在对应管理页面维护。",
@@ -1621,12 +1621,10 @@
       },
       "chatgpt_web": {
         "title": "ChatGPT Web 管理入口",
-        "description": "账号登录通过独立任务页面执行；凭证状态和手动重登在认证文件页维护。",
+        "description": "自动重登在此配置；账号登录通过独立任务页面执行，Sentinel SDK 配置和运行状态见下方。",
         "auto_relogin": "自动重新登录",
         "auto_relogin_description": "令牌无法刷新且凭证允许重登时自动尝试登录。账号死亡或需要人工验证时不会自动重登。",
-        "login_tasks": "打开账号登录任务",
-        "auth_files": "查看 ChatGPT Web 凭证",
-        "proxy_pools": "管理结构化代理"
+        "login_tasks": "打开账号登录任务"
       }
     },
     "request_body_release": {
@@ -2598,6 +2596,7 @@
       "save_failed": "保存 Sentinel SDK 配置失败",
       "save_success": "Sentinel SDK 配置已保存",
       "saved_refresh_failed": "配置已保存，但重新读取运行状态失败",
+      "reset": "还原",
       "validation_workers": "SDK Worker 数量必须是 0–16 的整数。",
       "validation_queue_size": "等待队列大小必须是 0–1024 的整数。",
       "validation_cache_versions": "缓存版本数必须是 1–5 的整数。",

@@ -479,6 +479,19 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['chatgpt web', '自动重登', 'auto relogin'],
   },
   {
+    id: 'config-chatgpt-web-sentinel',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'chatgpt_web.sentinel.title',
+    yamlKeys: [
+      'chatgpt-web.sentinel',
+      'chatgpt-web.sentinel.sdk-runtime-enabled',
+      'chatgpt-web.sentinel.sdk-workers',
+      'chatgpt-web.sentinel.sdk-queue-size',
+      'chatgpt-web.sentinel.sdk-cache-versions',
+    ],
+    aliases: ['sentinel sdk', 'solver pool', '求解池'],
+  },
+  {
     id: 'config-grok-auth',
     pageId: 'provider-grok',
     labelKey: 'config_management.settings_center.grok.auth_files',

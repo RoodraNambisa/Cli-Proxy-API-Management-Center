@@ -1578,7 +1578,7 @@
         },
         "provider_chatgpt_web": {
           "title": "ChatGPT Web",
-          "description": "Manage ChatGPT Web auto relogin, account login tasks, auth files, and structured proxies."
+          "description": "Manage ChatGPT Web automatic relogin and Sentinel SDK settings; account logins run on the dedicated task page."
         },
         "provider_grok": {
           "title": "Grok",
@@ -1605,9 +1605,9 @@
       "status_disabled": "Disabled",
       "legacy_images_optional": "Covered by native endpoints",
       "legacy_images_active": "Compatibility settings active",
-      "sidecar_validation_failed": "Fix validation errors in the request body settings first",
-      "partial_save": "YAML was saved, but some request body settings failed to save and remain modified",
-      "sidecar_partial_save": "Some request body settings were saved; failed settings remain modified",
+      "sidecar_validation_failed": "Fix validation errors in the current settings first",
+      "partial_save": "YAML was saved, but some independently managed settings failed to save and remain modified",
+      "sidecar_partial_save": "Some independently managed settings were saved; failed settings remain modified",
       "grok": {
         "title": "Grok management",
         "description": "Manage Grok login, credential-level using_api/websockets, and quota data on their dedicated pages.",
@@ -1617,12 +1617,10 @@
       },
       "chatgpt_web": {
         "title": "ChatGPT Web management",
-        "description": "Run account logins on the dedicated task page; manage credential status and manual relogin from Auth Files.",
+        "description": "Configure automatic relogin here; run account logins on the dedicated task page and manage Sentinel SDK settings and status below.",
         "auto_relogin": "Automatic relogin",
         "auto_relogin_description": "Automatically attempt login when a token cannot be refreshed and the credential can be relogged. Dead accounts and interaction-required states are never retried automatically.",
-        "login_tasks": "Open account login tasks",
-        "auth_files": "View ChatGPT Web credentials",
-        "proxy_pools": "Manage structured proxies"
+        "login_tasks": "Open account login tasks"
       }
     },
     "request_body_release": {
@@ -2594,6 +2592,7 @@
       "save_failed": "Failed to save Sentinel SDK settings",
       "save_success": "Sentinel SDK settings saved",
       "saved_refresh_failed": "Settings were saved, but the runtime status could not be reloaded",
+      "reset": "Reset",
       "validation_workers": "SDK workers must be an integer from 0 to 16.",
       "validation_queue_size": "Queue size must be an integer from 0 to 1024.",
       "validation_cache_versions": "Cached versions must be an integer from 1 to 5.",

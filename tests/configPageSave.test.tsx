@@ -7,6 +7,7 @@ const harness = vi.hoisted(() => ({
   visualDirty: false,
   releaseDirty: false,
   auditDirty: false,
+  sentinelDirty: false,
   mergedYaml: 'request-retry: 1\n',
   fetchYaml: vi.fn(),
   saveYaml: vi.fn(),
@@ -16,6 +17,8 @@ const harness = vi.hoisted(() => ({
   releaseReload: vi.fn(),
   auditSave: vi.fn(),
   auditReload: vi.fn(),
+  sentinelSave: vi.fn(),
+  sentinelReload: vi.fn(),
   showNotification: vi.fn(),
   showConfirmation: vi.fn(),
   clearConfigCache: vi.fn(),
@@ -90,9 +93,19 @@ vi.mock('@/components/config/VisualConfigEditor', async () => {
   return {
     VisualConfigEditor: ({
       renderRequestBodyPanels,
+      renderChatGptWebSentinel,
     }: {
       renderRequestBodyPanels?: (options: { focusTarget?: string }) => React.ReactNode;
-    }) => <div>{renderRequestBodyPanels?.({})}</div>,
+      renderChatGptWebSentinel?: (options: {
+        active: boolean;
+        focusTarget?: string;
+      }) => React.ReactNode;
+    }) => (
+      <div>
+        {renderRequestBodyPanels?.({})}
+        {renderChatGptWebSentinel?.({ active: true })}
+      </div>
+    ),
   };
 });
 
@@ -182,6 +195,49 @@ vi.mock('@/components/config/RequestBodyAuditCard', async () => {
   };
 });
 
+vi.mock('@/features/chatgptWeb/components/ChatGptWebSentinelPanel', async () => {
+  const React = await import('react');
+  type Props = {
+    onDirtyChange?: (dirty: boolean) => void;
+    onErrorCountChange?: (count: number) => void;
+  };
+  type Handle = {
+    save: () => Promise<boolean>;
+    reload: () => Promise<void>;
+    reset: () => void;
+    validate: () => boolean;
+  };
+
+  return {
+    ChatGptWebSentinelPanel: React.forwardRef<Handle, Props>(function MockSentinelPanel(
+      { onDirtyChange, onErrorCountChange },
+      ref
+    ) {
+      React.useEffect(() => {
+        onDirtyChange?.(harness.sentinelDirty);
+        onErrorCountChange?.(0);
+      }, [onDirtyChange, onErrorCountChange]);
+      React.useImperativeHandle(
+        ref,
+        () => ({
+          save: async () => {
+            const success = (await harness.sentinelSave()) !== false;
+            if (success) onDirtyChange?.(false);
+            return success;
+          },
+          reload: async () => {
+            await harness.sentinelReload();
+          },
+          reset: vi.fn(),
+          validate: () => true,
+        }),
+        [onDirtyChange]
+      );
+      return <div>sentinel-panel</div>;
+    }),
+  };
+});
+
 vi.mock('@/components/config/DiffModal', () => ({
   DiffModal: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
     open ? (
@@ -211,6 +267,7 @@ describe('ConfigPage save coordination', () => {
     harness.visualDirty = false;
     harness.releaseDirty = false;
     harness.auditDirty = false;
+    harness.sentinelDirty = false;
     harness.mergedYaml = 'request-retry: 1\n';
     for (const mock of Object.values(harness)) {
       if (typeof mock === 'function' && 'mockReset' in mock) mock.mockReset();
@@ -223,6 +280,8 @@ describe('ConfigPage save coordination', () => {
     harness.releaseReload.mockResolvedValue(undefined);
     harness.auditSave.mockResolvedValue(true);
     harness.auditReload.mockResolvedValue(undefined);
+    harness.sentinelSave.mockResolvedValue(true);
+    harness.sentinelReload.mockResolvedValue(undefined);
     harness.fetchSharedConfig.mockResolvedValue(undefined);
     harness.translate.mockImplementation((key: string) => key);
   });
@@ -245,6 +304,22 @@ describe('ConfigPage save coordination', () => {
     );
   });
 
+  test('saves Sentinel through the unified sidecar flow and refreshes YAML', async () => {
+    harness.sentinelDirty = true;
+    harness.fetchYaml
+      .mockResolvedValueOnce('chatgpt-web: {}\n')
+      .mockResolvedValueOnce('chatgpt-web:\n  sentinel:\n    sdk-workers: 4\n');
+
+    renderPage();
+    await clickSave();
+
+    await waitFor(() => expect(harness.sentinelSave).toHaveBeenCalledTimes(1));
+    expect(harness.saveYaml).not.toHaveBeenCalled();
+    expect(harness.loadVisualValues).toHaveBeenLastCalledWith(
+      'chatgpt-web:\n  sentinel:\n    sdk-workers: 4\n'
+    );
+  });
+
   test('reloads clean request-body panels after saving YAML', async () => {
     harness.visualDirty = true;
     harness.fetchYaml
@@ -259,6 +334,7 @@ describe('ConfigPage save coordination', () => {
     await waitFor(() => expect(harness.fetchYaml).toHaveBeenCalledTimes(3));
     expect(harness.releaseReload).toHaveBeenCalledTimes(1);
     expect(harness.auditReload).toHaveBeenCalledTimes(1);
+    expect(harness.sentinelReload).toHaveBeenCalledTimes(1);
     expect(harness.releaseReload.mock.invocationCallOrder[0]).toBeGreaterThan(
       harness.saveYaml.mock.invocationCallOrder[0]
     );

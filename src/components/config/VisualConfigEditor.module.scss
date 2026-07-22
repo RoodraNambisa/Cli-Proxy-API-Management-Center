@@ -1639,6 +1639,14 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+.providerSidecarPanels {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
 .providerHub {
   padding: 20px 0;
   border-bottom: 1px solid var(--border-color);
