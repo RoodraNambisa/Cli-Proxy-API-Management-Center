@@ -537,6 +537,28 @@ export const normalizeAuthFileEntry = (entry: AuthFileEntry): AuthFileEntry => {
     normalized.usingApi = usingApi;
     normalized.websockets = websockets;
   }
+  if (normalizedProvider === 'codex') {
+    const authMode = readStringValue(entry.authMode ?? entry['auth_mode']);
+    if (authMode) {
+      normalized.authMode = authMode.toLowerCase() === 'agentidentity' ? 'agentIdentity' : authMode;
+    }
+    const authModeLabel = readStringValue(entry.authModeLabel ?? entry['auth_mode_label']);
+    if (authModeLabel) {
+      normalized.authModeLabel = authModeLabel;
+    }
+    const canConvertToAgentIdentity = readBooleanValue(
+      entry.canConvertToAgentIdentity ?? entry['can_convert_to_agent_identity']
+    );
+    if (canConvertToAgentIdentity !== undefined) {
+      normalized.canConvertToAgentIdentity = canConvertToAgentIdentity;
+    }
+    const canConvertToOauth = readBooleanValue(
+      entry.canConvertToOauth ?? entry['can_convert_to_oauth']
+    );
+    if (canConvertToOauth !== undefined) {
+      normalized.canConvertToOauth = canConvertToOauth;
+    }
+  }
   const planType = readStringValue(entry.planType) ?? readStringValue(entry['plan_type']);
   if (planType) {
     normalized.planType = planType;

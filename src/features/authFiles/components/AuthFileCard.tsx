@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/icons';
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
 import type { XaiAuthFileField } from '@/services/api';
-import type { AuthFileItem } from '@/types';
+import type { AuthFileItem, CodexAuthMode } from '@/types';
 import { resolveAuthProvider, resolveCodexPlanType } from '@/utils/quota';
 import { calculateStatusBarData, normalizeAuthIndex, type KeyStats } from '@/utils/usage';
 import { formatDateTime, formatFileSize } from '@/utils/format';
@@ -35,6 +35,7 @@ import {
   parsePriorityValue,
   readXaiAuthFileUsingApi,
   readXaiAuthFileWebsockets,
+  resolveCodexAuthModeSummary,
   resolveAuthFileStats,
   type QuotaProviderType,
   type ResolvedTheme,
@@ -66,6 +67,7 @@ export type AuthFileCardProps = {
   xaiFieldsUpdating: Record<string, Partial<Record<XaiAuthFileField, boolean>>>;
   chatGptWebReloginUpdating?: Record<string, boolean>;
   restoring?: Record<string, boolean>;
+  codexIdentityConverting?: boolean;
   quotaFilterType: QuotaProviderType | null;
   keyStats: KeyStats;
   statusBarCache: Map<string, AuthFileStatusBarData>;
@@ -79,6 +81,7 @@ export type AuthFileCardProps = {
   onToggleXaiField: (file: AuthFileItem, field: XaiAuthFileField, value: boolean) => void;
   onChatGptWebRelogin?: (file: AuthFileItem) => void;
   onRestore?: (file: AuthFileItem) => void;
+  onConvertCodexAuthMode?: (file: AuthFileItem, targetMode: CodexAuthMode) => void;
   onToggleSelect: (name: string) => void;
 };
 
@@ -102,6 +105,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     xaiFieldsUpdating,
     chatGptWebReloginUpdating = {},
     restoring = {},
+    codexIdentityConverting = false,
     quotaFilterType,
     keyStats,
     statusBarCache,
@@ -115,6 +119,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     onToggleXaiField,
     onChatGptWebRelogin = () => {},
     onRestore = () => {},
+    onConvertCodexAuthMode,
     onToggleSelect,
   } = props;
 
@@ -283,6 +288,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const codexPlanValueClass = PREMIUM_CODEX_PLAN_TYPES.has(codexPlanType ?? '')
     ? `${styles.codexPlanValue} ${styles.premiumPlanValue}`
     : styles.codexPlanValue;
+  const codexAuthMode = resolveCodexAuthModeSummary(file);
   const stateLabel = isRetiredGeminiCli
     ? t('auth_files.health_status_unsupported')
     : isRuntimeOnly
@@ -412,6 +418,44 @@ export function AuthFileCard(props: AuthFileCardProps) {
             <div className={styles.codexPlan}>
               <span className={styles.codexPlanLabel}>{t('codex_quota.plan_label')}</span>
               <span className={codexPlanValueClass}>{codexPlanDisplay}</span>
+            </div>
+          )}
+
+          {codexAuthMode && (
+            <div
+              className={`${styles.codexAuthModePanel} ${compact ? styles.codexAuthModePanelCompact : ''}`}
+            >
+              <div className={styles.codexAuthModeSummary}>
+                <span>{t('auth_files.codex_identity_mode_label')}</span>
+                <strong>{codexAuthMode.label}</strong>
+              </div>
+              {onConvertCodexAuthMode &&
+                (codexAuthMode.canConvertToAgentIdentity || codexAuthMode.canConvertToOauth) && (
+                  <div className={styles.codexAuthModeActions}>
+                    {codexAuthMode.canConvertToAgentIdentity && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onConvertCodexAuthMode(file, 'agentIdentity')}
+                        disabled={disableControls || codexIdentityConverting}
+                        loading={codexIdentityConverting}
+                      >
+                        {t('auth_files.codex_identity_convert_to_agent')}
+                      </Button>
+                    )}
+                    {codexAuthMode.canConvertToOauth && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onConvertCodexAuthMode(file, 'oauth')}
+                        disabled={disableControls || codexIdentityConverting}
+                        loading={codexIdentityConverting}
+                      >
+                        {t('auth_files.codex_identity_convert_to_oauth')}
+                      </Button>
+                    )}
+                  </div>
+                )}
             </div>
           )}
 

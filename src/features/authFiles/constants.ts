@@ -237,6 +237,56 @@ export const parseDisableCoolingValue = (value: unknown): boolean | undefined =>
 export const readCodexAuthFileWebsockets = (value: Record<string, unknown>): boolean =>
   parseDisableCoolingValue(value.websockets) ?? false;
 
+export type CodexAuthModeSummary = {
+  mode: 'oauth' | 'agentIdentity';
+  label: string;
+  canConvertToAgentIdentity: boolean;
+  canConvertToOauth: boolean;
+};
+
+export const resolveCodexAuthModeSummary = (file: AuthFileItem): CodexAuthModeSummary | null => {
+  if (
+    normalizeProviderKey(String(file.provider ?? file.type ?? '')) !== 'codex' ||
+    isRuntimeOnlyAuthFile(file)
+  ) {
+    return null;
+  }
+
+  const authKind = String(file.auth_kind ?? file.authKind ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, '_');
+  const rawMode = String(file.authMode ?? file.auth_mode ?? '')
+    .trim()
+    .toLowerCase();
+  const hasModeSummary = Boolean(
+    rawMode ||
+    file.authModeLabel ||
+    file.auth_mode_label ||
+    typeof file.canConvertToAgentIdentity === 'boolean' ||
+    typeof file.can_convert_to_agent_identity === 'boolean' ||
+    typeof file.canConvertToOauth === 'boolean' ||
+    typeof file.can_convert_to_oauth === 'boolean'
+  );
+
+  if (!hasModeSummary && (authKind === 'apikey' || authKind === 'api_key')) {
+    return null;
+  }
+
+  const mode = rawMode === 'agentidentity' ? 'agentIdentity' : 'oauth';
+  const configuredLabel = String(file.authModeLabel ?? file.auth_mode_label ?? '').trim();
+  return {
+    mode,
+    label: configuredLabel || (mode === 'agentIdentity' ? 'Agent Identity' : 'OAuth'),
+    canConvertToAgentIdentity:
+      parseDisableCoolingValue(
+        file.canConvertToAgentIdentity ?? file.can_convert_to_agent_identity
+      ) ?? false,
+    canConvertToOauth:
+      parseDisableCoolingValue(file.canConvertToOauth ?? file.can_convert_to_oauth) ?? false,
+  };
+};
+
 export const applyCodexAuthFileWebsockets = (
   value: Record<string, unknown>,
   websockets: boolean

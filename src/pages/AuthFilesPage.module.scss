@@ -1056,6 +1056,58 @@
   min-width: 0;
 }
 
+.codexAuthModePanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-left: 3px solid color-mix(in srgb, var(--primary-color) 58%, var(--border-color));
+  background: color-mix(in srgb, var(--bg-secondary) 76%, transparent);
+}
+
+.codexAuthModeSummary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 11px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+}
+
+.codexAuthModeActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-wrap: wrap;
+
+  :global(.btn.btn-sm) {
+    min-height: 28px;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}
+
+.codexAuthModePanelCompact {
+  align-items: flex-start;
+  flex-direction: column;
+
+  .codexAuthModeActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
 .codexResetCredits {
   display: flex;
   flex-direction: column;

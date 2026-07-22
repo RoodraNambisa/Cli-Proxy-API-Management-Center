@@ -1,0 +1,256 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.formBody,
+.taskPanel {
+  min-width: 0;
+}
+
+.formBody {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+}
+
+.conversionSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: 10px 12px;
+  border-left: 3px solid var(--primary-color);
+  background: var(--bg-secondary);
+
+  span {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+}
+
+.nameList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+
+  span {
+    color: var(--text-secondary);
+    font-family: monospace;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.tokenTextarea {
+  min-height: 190px;
+  resize: vertical;
+  font-family: monospace;
+  line-height: 1.5;
+}
+
+.taskHeader,
+.taskTitleRow,
+.taskActions,
+.resultsHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.taskHeader {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.taskTitleRow {
+  min-width: 0;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+  }
+}
+
+.taskActions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.taskState,
+.resultState {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.taskState[data-status='completed'],
+.resultState[data-status='created'],
+.resultState[data-status='updated'],
+.resultState[data-status='unchanged'] {
+  background: var(--success-badge-bg);
+  color: var(--success-badge-text);
+}
+
+.taskState[data-status='completed_with_errors'],
+.resultState[data-status='failed'] {
+  background: var(--failure-badge-bg);
+  color: var(--failure-badge-text);
+}
+
+.taskState[data-status='canceled'],
+.resultState[data-status='canceled'] {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.progressTrack {
+  height: 7px;
+  margin-top: $spacing-lg;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--primary-color);
+    transition: width 180ms ease;
+  }
+}
+
+.progressLabel {
+  margin-top: 5px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-align: right;
+}
+
+.taskMetrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(72px, 1fr));
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 11px;
+  }
+
+  strong {
+    font-size: 17px;
+  }
+}
+
+.resultsHeader {
+  justify-content: space-between;
+  margin: $spacing-lg 0 $spacing-sm;
+
+  h4 {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 12px;
+  }
+}
+
+.emptyResults {
+  padding: $spacing-lg;
+  border: 1px dashed var(--border-color);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.resultsTable {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+
+  td {
+    color: var(--text-primary);
+    font-size: 12px;
+  }
+
+  tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+.wrapCell,
+.errorCell {
+  overflow-wrap: anywhere;
+}
+
+.errorCell {
+  max-width: 300px;
+  color: var(--text-secondary) !important;
+}
+
+@include mobile {
+  .taskHeader {
+    flex-direction: column;
+  }
+
+  .taskActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .taskMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

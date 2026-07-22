@@ -20,6 +20,7 @@ export type AuthFileType =
   | 'unknown';
 
 export type AuthCooldownScope = 'auth' | 'model';
+export type CodexAuthMode = 'oauth' | 'agentIdentity';
 
 export interface AuthFileProxyBinding {
   pool?: string;
@@ -77,6 +78,14 @@ export interface AuthFileItem {
   dependent_names?: string[];
   deletion_requested_at?: string;
   proxy_binding?: AuthFileProxyBinding;
+  auth_mode?: CodexAuthMode | string;
+  auth_mode_label?: string;
+  can_convert_to_agent_identity?: boolean;
+  can_convert_to_oauth?: boolean;
+  authMode?: CodexAuthMode | string;
+  authModeLabel?: string;
+  canConvertToAgentIdentity?: boolean;
+  canConvertToOauth?: boolean;
   lastRefresh?: string | number;
   modified?: number;
   [key: string]: unknown;

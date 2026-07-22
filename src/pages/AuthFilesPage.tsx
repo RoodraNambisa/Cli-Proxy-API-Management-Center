@@ -21,7 +21,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { IconFilterAll, IconRefreshCw } from '@/components/ui/icons';
+import { IconFilterAll, IconKey, IconRefreshCw } from '@/components/ui/icons';
 import { CODEX_CONFIG } from '@/components/quota';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
@@ -39,18 +39,21 @@ import {
   isRuntimeOnlyAuthFile,
   normalizeProviderKey,
   parsePriorityValue,
+  resolveCodexAuthModeSummary,
   type QuotaProviderType,
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
 import { resolveCodexPlanType } from '@/utils/quota';
 import { AuthFileCard } from '@/features/authFiles/components/AuthFileCard';
 import { AuthFilesBatchSettingsModal } from '@/features/authFiles/components/AuthFilesBatchSettingsModal';
+import { CodexAgentIdentityConversionModal } from '@/features/authFiles/components/CodexAgentIdentityConversionModal';
 import { AuthFilesDependencyDeleteModal } from '@/features/authFiles/components/AuthFilesDependencyDeleteModal';
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
 import { useAuthFilesBatchSettings } from '@/features/authFiles/hooks/useAuthFilesBatchSettings';
+import { useCodexAgentIdentityConversion } from '@/features/authFiles/hooks/useCodexAgentIdentityConversion';
 import {
   isCodexPlanRefreshClearBlocked,
   shouldShowCodexPlanRefreshPanel,
@@ -433,6 +436,12 @@ export function AuthFilesPage() {
   } = useAuthFilesBatchSettings({
     files,
     disableControls,
+    loadFiles: refreshFilesInBackground,
+    deselectAll,
+    replaceSelection,
+  });
+
+  const codexIdentityConversion = useCodexAgentIdentityConversion({
     loadFiles: refreshFilesInBackground,
     deselectAll,
     replaceSelection,
@@ -867,6 +876,18 @@ export function AuthFilesPage() {
     [pageItems]
   );
   const selectedNames = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
+  const selectedCodexIdentityTargets = useMemo(() => {
+    const toAgentIdentity: string[] = [];
+    const toOauth: string[] = [];
+    files.forEach((file) => {
+      if (!selectedFiles.has(file.name)) return;
+      const summary = resolveCodexAuthModeSummary(file);
+      if (!summary) return;
+      if (summary.canConvertToAgentIdentity) toAgentIdentity.push(file.name);
+      if (summary.canConvertToOauth) toOauth.push(file.name);
+    });
+    return { toAgentIdentity, toOauth };
+  }, [files, selectedFiles]);
   const selectedHasStatusUpdating = useMemo(
     () => selectedNames.some((name) => statusUpdating[name] === true),
     [selectedNames, statusUpdating]
@@ -1350,6 +1371,15 @@ export function AuthFilesPage() {
               {t('auth_files.codex_plan_refresh_button')}
             </Button>
             <Button
+              variant="secondary"
+              size="sm"
+              onClick={codexIdentityConversion.openAccessTokens}
+              disabled={disableControls || codexIdentityConversion.state.open}
+            >
+              <IconKey size={14} />
+              {t('auth_files.codex_identity_token_button')}
+            </Button>
+            <Button
               size="sm"
               onClick={handleUploadClick}
               disabled={disableControls || uploading}
@@ -1649,6 +1679,9 @@ export function AuthFilesPage() {
                     xaiFieldsUpdating={xaiFieldsUpdating}
                     chatGptWebReloginUpdating={chatGptWebReloginUpdating}
                     restoring={restoring}
+                    codexIdentityConverting={
+                      codexIdentityConversion.active || codexIdentityConversion.state.starting
+                    }
                     quotaFilterType={quotaFilterType}
                     keyStats={keyStats}
                     statusBarCache={statusBarCache}
@@ -1662,6 +1695,9 @@ export function AuthFilesPage() {
                     onToggleXaiField={handleXaiFieldToggle}
                     onChatGptWebRelogin={handleChatGptWebRelogin}
                     onRestore={handleRestore}
+                    onConvertCodexAuthMode={(target, targetMode) =>
+                      codexIdentityConversion.openNames([target.name], targetMode)
+                    }
                     onToggleSelect={toggleSelect}
                   />
                 ))}
@@ -1763,6 +1799,17 @@ export function AuthFilesPage() {
         onCancelConversionTask={() => void cancelConversionTask()}
       />
 
+      <CodexAgentIdentityConversionModal
+        state={codexIdentityConversion.state}
+        active={codexIdentityConversion.active}
+        accessTokenCount={codexIdentityConversion.accessTokenCount}
+        onClose={codexIdentityConversion.close}
+        onAccessTokenTextChange={codexIdentityConversion.setAccessTokenText}
+        onStart={() => void codexIdentityConversion.start()}
+        onRefresh={() => void codexIdentityConversion.refresh()}
+        onCancel={() => void codexIdentityConversion.cancel()}
+      />
+
       <AuthFilesDependencyDeleteModal
         state={dependencyDelete}
         onClose={closeDependencyDelete}
@@ -1833,6 +1880,40 @@ export function AuthFilesPage() {
                   >
                     {t('auth_files.batch_settings_button')}
                   </Button>
+                  {selectedCodexIdentityTargets.toAgentIdentity.length > 0 && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        codexIdentityConversion.openNames(
+                          selectedCodexIdentityTargets.toAgentIdentity,
+                          'agentIdentity'
+                        )
+                      }
+                      disabled={disableControls || codexIdentityConversion.state.open}
+                    >
+                      {t('auth_files.codex_identity_batch_to_agent', {
+                        count: selectedCodexIdentityTargets.toAgentIdentity.length,
+                      })}
+                    </Button>
+                  )}
+                  {selectedCodexIdentityTargets.toOauth.length > 0 && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        codexIdentityConversion.openNames(
+                          selectedCodexIdentityTargets.toOauth,
+                          'oauth'
+                        )
+                      }
+                      disabled={disableControls || codexIdentityConversion.state.open}
+                    >
+                      {t('auth_files.codex_identity_batch_to_oauth', {
+                        count: selectedCodexIdentityTargets.toOauth.length,
+                      })}
+                    </Button>
+                  )}
                   <Button
                     variant="secondary"
                     size="sm"
