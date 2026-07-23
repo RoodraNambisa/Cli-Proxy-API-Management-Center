@@ -118,6 +118,7 @@ describe('Codex Agent Identity management', () => {
           can_convert_to_oauth: true,
           can_convert_to_agent_identity: false,
         })}
+        codexIdentityConversionVisible
         onConvertCodexAuthMode={onConvert}
       />
     );
@@ -134,6 +135,26 @@ describe('Codex Agent Identity management', () => {
       expect.objectContaining({ name: 'agent.json' }),
       'oauth'
     );
+  });
+
+  test('keeps the auth mode visible while conversion actions are hidden by default', () => {
+    render(
+      <AuthFileCard
+        {...createCardProps({
+          name: 'oauth.json',
+          type: 'codex',
+          auth_mode: 'oauth',
+          auth_mode_label: 'OAuth',
+          can_convert_to_agent_identity: true,
+        })}
+        onConvertCodexAuthMode={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('OAuth')).not.toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'auth_files.codex_identity_convert_to_agent' })
+    ).toBeNull();
   });
 
   test('submits all names and access tokens without a frontend item limit', async () => {

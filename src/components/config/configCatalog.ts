@@ -2,6 +2,7 @@ export type ConfigPageGroupId = 'global' | 'providers' | 'advanced';
 
 export type ConfigPageId =
   | 'global-basics'
+  | 'global-interface'
   | 'global-credentials'
   | 'global-network'
   | 'global-request'
@@ -46,6 +47,13 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'rmAccessPath',
       'rmPanelRepo',
     ],
+  },
+  {
+    id: 'global-interface',
+    group: 'global',
+    titleKey: 'config_management.settings_center.pages.global_interface.title',
+    descriptionKey: 'config_management.settings_center.pages.global_interface.description',
+    dirtyPrefixes: [],
   },
   {
     id: 'global-credentials',
@@ -151,6 +159,13 @@ export const CONFIG_PAGE_IDS = new Set<ConfigPageId>(
 );
 
 export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
+  {
+    id: 'config-frontend-features',
+    pageId: 'global-interface',
+    labelKey: 'config_management.settings_center.frontend_features.title',
+    yamlKeys: ['local:frontend-feature-visibility'],
+    aliases: ['feature visibility', 'frontend features', '功能显示', '功能顯示', 'Agent Identity'],
+  },
   {
     id: 'config-host',
     pageId: 'global-basics',

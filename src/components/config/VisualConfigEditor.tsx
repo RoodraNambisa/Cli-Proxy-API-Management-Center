@@ -18,6 +18,7 @@ import {
   IconCode,
   IconDiamond,
   IconExternalLink,
+  IconEye,
   IconKey,
   IconSatellite,
   IconSearch,
@@ -60,6 +61,7 @@ import type {
 } from '@/types/visualConfig';
 import { makeClientId } from '@/types/visualConfig';
 import { configApi, type ProxyUrlCheckResult } from '@/services/api/config';
+import { useFrontendFeatureStore } from '@/stores';
 import {
   isAuthModelExclusionAllMode,
   normalizeAuthModelExclusionModels,
@@ -84,6 +86,7 @@ type VisualPage = ConfigPageDefinition & {
 
 const CONFIG_PAGE_ICONS: Record<ConfigPageId, ComponentType<IconProps>> = {
   'global-basics': IconSettings,
+  'global-interface': IconEye,
   'global-credentials': IconKey,
   'global-network': IconTrendingUp,
   'global-request': IconTimer,
@@ -618,6 +621,10 @@ export function VisualConfigEditor({
 }: VisualConfigEditorProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const codexAgentIdentityConversionVisible = useFrontendFeatureStore(
+    (state) => state.visibility.codexAgentIdentityConversion
+  );
+  const setFrontendFeatureVisible = useFrontendFeatureStore((state) => state.setFeatureVisible);
   const [searchParams, setSearchParams] = useSearchParams();
   const sectionParam = searchParams.get('section');
   const [activePageId, setActivePageId] = useState<ConfigPageId>(() => {
@@ -1137,6 +1144,7 @@ export function VisualConfigEditor({
   const pageErrorCounts = useMemo<Record<ConfigPageId, number>>(
     () => ({
       'global-basics': countErrors(['port', 'rmAccessPath']),
+      'global-interface': 0,
       'global-credentials': authModelExclusionsErrorCount,
       'global-network':
         countErrors([
@@ -1446,6 +1454,32 @@ export function VisualConfigEditor({
             </header>
           ) : null}
           <div className={styles.sections}>
+            <ConfigSection
+              id="config-frontend-features"
+              hidden={activePageId !== 'global-interface'}
+              icon={<IconEye size={16} />}
+              title={t('config_management.settings_center.frontend_features.title')}
+              description={t('config_management.settings_center.frontend_features.description')}
+            >
+              <SectionStack>
+                <div className={styles.localPreferenceNotice}>
+                  {t('config_management.settings_center.frontend_features.local_only')}
+                </div>
+                <ToggleRow
+                  title={t(
+                    'config_management.settings_center.frontend_features.codex_agent_identity'
+                  )}
+                  description={t(
+                    'config_management.settings_center.frontend_features.codex_agent_identity_description'
+                  )}
+                  checked={codexAgentIdentityConversionVisible}
+                  onChange={(visible) =>
+                    setFrontendFeatureVisible('codexAgentIdentityConversion', visible)
+                  }
+                />
+              </SectionStack>
+            </ConfigSection>
+
             <div className={styles.requestBodyPanels} hidden={activePageId !== 'global-request'}>
               {renderRequestBodyPanels?.({ focusTarget })}
             </div>

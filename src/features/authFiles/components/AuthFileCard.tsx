@@ -67,6 +67,7 @@ export type AuthFileCardProps = {
   xaiFieldsUpdating: Record<string, Partial<Record<XaiAuthFileField, boolean>>>;
   chatGptWebReloginUpdating?: Record<string, boolean>;
   restoring?: Record<string, boolean>;
+  codexIdentityConversionVisible?: boolean;
   codexIdentityConverting?: boolean;
   quotaFilterType: QuotaProviderType | null;
   keyStats: KeyStats;
@@ -105,6 +106,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     xaiFieldsUpdating,
     chatGptWebReloginUpdating = {},
     restoring = {},
+    codexIdentityConversionVisible = false,
     codexIdentityConverting = false,
     quotaFilterType,
     keyStats,
@@ -429,7 +431,8 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 <span>{t('auth_files.codex_identity_mode_label')}</span>
                 <strong>{codexAuthMode.label}</strong>
               </div>
-              {onConvertCodexAuthMode &&
+              {codexIdentityConversionVisible &&
+                onConvertCodexAuthMode &&
                 (codexAuthMode.canConvertToAgentIdentity || codexAuthMode.canConvertToOauth) && (
                   <div className={styles.codexAuthModeActions}>
                     {codexAuthMode.canConvertToAgentIdentity && (

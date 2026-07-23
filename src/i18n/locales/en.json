@@ -1548,6 +1548,10 @@
           "title": "Basics & Access",
           "description": "Server binding, TLS, remote management, and control panel access."
         },
+        "global_interface": {
+          "title": "Interface & Features",
+          "description": "Control which management features are visible in this browser."
+        },
         "global_credentials": {
           "title": "Credentials & Keys",
           "description": "Auth directory, management keys, and credential model exclusion rules."
@@ -1608,6 +1612,13 @@
       "sidecar_validation_failed": "Fix validation errors in the current settings first",
       "partial_save": "YAML was saved, but some independently managed settings failed to save and remain modified",
       "sidecar_partial_save": "Some independently managed settings were saved; failed settings remain modified",
+      "frontend_features": {
+        "title": "Frontend feature visibility",
+        "description": "Control the visibility of optional, compatibility, or retired control-panel features.",
+        "local_only": "These preferences are stored only in this browser and take effect immediately. They are not written to backend YAML and do not modify existing credentials or tasks.",
+        "codex_agent_identity": "Show Codex Agent Identity conversion tools",
+        "codex_agent_identity_description": "The official conversion flow has been closed, so token, single-credential, and batch conversion entry points are hidden by default. Enable this only with a backend that still supports the flow; existing credential auth modes remain visible."
+      },
       "grok": {
         "title": "Grok management",
         "description": "Manage Grok login, credential-level using_api/websockets, and quota data on their dedicated pages.",

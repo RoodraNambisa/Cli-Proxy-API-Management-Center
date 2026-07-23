@@ -10,6 +10,11 @@ import {
   configPageHasDirtyFields,
 } from '@/components/config/configCatalog';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
+import {
+  DEFAULT_FRONTEND_FEATURE_VISIBILITY,
+  FRONTEND_FEATURE_VISIBILITY_STORAGE_KEY,
+  useFrontendFeatureStore,
+} from '@/stores';
 import { DEFAULT_VISUAL_VALUES, type VisualConfigValues } from '@/types/visualConfig';
 
 const translations: Record<string, string> = {
@@ -18,6 +23,7 @@ const translations: Record<string, string> = {
   'config_management.settings_center.groups.providers': 'Providers',
   'config_management.settings_center.groups.advanced': 'Advanced',
   'config_management.settings_center.pages.global_basics.title': 'Basics & Access',
+  'config_management.settings_center.pages.global_interface.title': 'Interface & Features',
   'config_management.settings_center.pages.global_credentials.title': 'Credentials & Keys',
   'config_management.settings_center.pages.global_network.title': 'Network & Routing',
   'config_management.settings_center.pages.global_request.title': 'Requests & Errors',
@@ -29,6 +35,9 @@ const translations: Record<string, string> = {
   'config_management.settings_center.pages.provider_grok.title': 'Grok',
   'config_management.settings_center.pages.advanced_payload.title': 'Payload Rules',
   'config_management.settings_center.chatgpt_web.login_tasks': 'Open account login tasks',
+  'config_management.settings_center.frontend_features.title': 'Frontend feature visibility',
+  'config_management.settings_center.frontend_features.codex_agent_identity':
+    'Show Codex Agent Identity conversion tools',
   'config_management.visual.sections.network.routing_per_auth_request_limit':
     'Request limit per credential',
   'config_management.visual.sections.network.routing_per_auth_request_window_minutes':
@@ -80,6 +89,9 @@ function renderEditor(
 
 describe('configuration settings center', () => {
   beforeEach(() => {
+    useFrontendFeatureStore.setState({
+      visibility: { ...DEFAULT_FRONTEND_FEATURE_VISIBILITY },
+    });
     localStorage.clear();
     scrollIntoViewMock = vi.fn();
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
@@ -103,6 +115,39 @@ describe('configuration settings center', () => {
 
     expect(screen.getByRole('heading', { name: 'Antigravity', level: 2 })).not.toBeNull();
     expect(screen.getByTestId('location').textContent).toBe('/config?section=provider-antigravity');
+  });
+
+  test('keeps retired frontend tools hidden by default and persists an explicit opt-in', () => {
+    const onChange = vi.fn();
+    renderEditor('/config?section=global-interface', { onChange });
+
+    expect(screen.getByRole('heading', { name: 'Interface & Features', level: 2 })).not.toBeNull();
+    const toggle = screen.getByRole('checkbox', {
+      name: 'Show Codex Agent Identity conversion tools',
+    });
+    expect((toggle as HTMLInputElement).checked).toBe(false);
+
+    fireEvent.click(toggle);
+
+    expect((toggle as HTMLInputElement).checked).toBe(true);
+    const persisted = JSON.parse(
+      localStorage.getItem(FRONTEND_FEATURE_VISIBILITY_STORAGE_KEY) ?? '{}'
+    ) as { state?: { visibility?: { codexAgentIdentityConversion?: boolean } } };
+    expect(persisted.state?.visibility?.codexAgentIdentityConversion).toBe(true);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  test('finds frontend visibility controls without treating them as backend YAML', () => {
+    renderEditor('/config?section=global-basics');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'Agent Identity' },
+    });
+    fireEvent.click(screen.getByText('Frontend feature visibility'));
+
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-frontend-features'
+    );
   });
 
   test('searches YAML keys and navigates across pages', () => {

@@ -82,7 +82,13 @@ import {
   writePersistedAuthFilesCompactMode,
   type AuthFilesSortMode,
 } from '@/features/authFiles/uiState';
-import { useAuthStore, useNotificationStore, useQuotaStore, useThemeStore } from '@/stores';
+import {
+  useAuthStore,
+  useFrontendFeatureStore,
+  useNotificationStore,
+  useQuotaStore,
+  useThemeStore,
+} from '@/stores';
 import type { CodexPlanTypeRefreshTask } from '@/types';
 import { getStatusFromError } from '@/utils/quota';
 import { normalizeAuthIndex } from '@/utils/usage';
@@ -280,6 +286,9 @@ export function AuthFilesPage() {
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const setCodexQuota = useQuotaStore((state) => state.setCodexQuota);
   const resolvedTheme: ResolvedTheme = useThemeStore((state) => state.resolvedTheme);
+  const codexAgentIdentityConversionVisible = useFrontendFeatureStore(
+    (state) => state.visibility.codexAgentIdentityConversion
+  );
   const pageTransitionLayer = usePageTransitionLayer();
   const isCurrentLayer = pageTransitionLayer ? pageTransitionLayer.status === 'current' : true;
   const navigate = useNavigate();
@@ -446,6 +455,27 @@ export function AuthFilesPage() {
     deselectAll,
     replaceSelection,
   });
+  const codexIdentityConversionOpen = codexIdentityConversion.state.open;
+  const codexIdentityConversionStarting = codexIdentityConversion.state.starting;
+  const codexIdentityConversionActive = codexIdentityConversion.active;
+  const closeCodexIdentityConversion = codexIdentityConversion.close;
+
+  useEffect(() => {
+    if (
+      !codexAgentIdentityConversionVisible &&
+      codexIdentityConversionOpen &&
+      !codexIdentityConversionActive &&
+      !codexIdentityConversionStarting
+    ) {
+      closeCodexIdentityConversion();
+    }
+  }, [
+    closeCodexIdentityConversion,
+    codexIdentityConversionActive,
+    codexIdentityConversionOpen,
+    codexIdentityConversionStarting,
+    codexAgentIdentityConversionVisible,
+  ]);
 
   const normalizedFilter = normalizeProviderKey(String(filter));
   const quotaFilterType: QuotaProviderType | null = QUOTA_PROVIDER_TYPES.has(
@@ -879,6 +909,9 @@ export function AuthFilesPage() {
   const selectedCodexIdentityTargets = useMemo(() => {
     const toAgentIdentity: string[] = [];
     const toOauth: string[] = [];
+    if (!codexAgentIdentityConversionVisible) {
+      return { toAgentIdentity, toOauth };
+    }
     files.forEach((file) => {
       if (!selectedFiles.has(file.name)) return;
       const summary = resolveCodexAuthModeSummary(file);
@@ -887,7 +920,7 @@ export function AuthFilesPage() {
       if (summary.canConvertToOauth) toOauth.push(file.name);
     });
     return { toAgentIdentity, toOauth };
-  }, [files, selectedFiles]);
+  }, [codexAgentIdentityConversionVisible, files, selectedFiles]);
   const selectedHasStatusUpdating = useMemo(
     () => selectedNames.some((name) => statusUpdating[name] === true),
     [selectedNames, statusUpdating]
@@ -1370,15 +1403,17 @@ export function AuthFilesPage() {
             >
               {t('auth_files.codex_plan_refresh_button')}
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={codexIdentityConversion.openAccessTokens}
-              disabled={disableControls || codexIdentityConversion.state.open}
-            >
-              <IconKey size={14} />
-              {t('auth_files.codex_identity_token_button')}
-            </Button>
+            {codexAgentIdentityConversionVisible ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={codexIdentityConversion.openAccessTokens}
+                disabled={disableControls || codexIdentityConversion.state.open}
+              >
+                <IconKey size={14} />
+                {t('auth_files.codex_identity_token_button')}
+              </Button>
+            ) : null}
             <Button
               size="sm"
               onClick={handleUploadClick}
@@ -1679,6 +1714,7 @@ export function AuthFilesPage() {
                     xaiFieldsUpdating={xaiFieldsUpdating}
                     chatGptWebReloginUpdating={chatGptWebReloginUpdating}
                     restoring={restoring}
+                    codexIdentityConversionVisible={codexAgentIdentityConversionVisible}
                     codexIdentityConverting={
                       codexIdentityConversion.active || codexIdentityConversion.state.starting
                     }
@@ -1695,8 +1731,11 @@ export function AuthFilesPage() {
                     onToggleXaiField={handleXaiFieldToggle}
                     onChatGptWebRelogin={handleChatGptWebRelogin}
                     onRestore={handleRestore}
-                    onConvertCodexAuthMode={(target, targetMode) =>
-                      codexIdentityConversion.openNames([target.name], targetMode)
+                    onConvertCodexAuthMode={
+                      codexAgentIdentityConversionVisible
+                        ? (target, targetMode) =>
+                            codexIdentityConversion.openNames([target.name], targetMode)
+                        : undefined
                     }
                     onToggleSelect={toggleSelect}
                   />
@@ -1799,16 +1838,18 @@ export function AuthFilesPage() {
         onCancelConversionTask={() => void cancelConversionTask()}
       />
 
-      <CodexAgentIdentityConversionModal
-        state={codexIdentityConversion.state}
-        active={codexIdentityConversion.active}
-        accessTokenCount={codexIdentityConversion.accessTokenCount}
-        onClose={codexIdentityConversion.close}
-        onAccessTokenTextChange={codexIdentityConversion.setAccessTokenText}
-        onStart={() => void codexIdentityConversion.start()}
-        onRefresh={() => void codexIdentityConversion.refresh()}
-        onCancel={() => void codexIdentityConversion.cancel()}
-      />
+      {codexAgentIdentityConversionVisible ? (
+        <CodexAgentIdentityConversionModal
+          state={codexIdentityConversion.state}
+          active={codexIdentityConversion.active}
+          accessTokenCount={codexIdentityConversion.accessTokenCount}
+          onClose={codexIdentityConversion.close}
+          onAccessTokenTextChange={codexIdentityConversion.setAccessTokenText}
+          onStart={() => void codexIdentityConversion.start()}
+          onRefresh={() => void codexIdentityConversion.refresh()}
+          onCancel={() => void codexIdentityConversion.cancel()}
+        />
+      ) : null}
 
       <AuthFilesDependencyDeleteModal
         state={dependencyDelete}

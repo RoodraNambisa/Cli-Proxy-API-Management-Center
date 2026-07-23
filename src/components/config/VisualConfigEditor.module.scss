@@ -1675,6 +1675,15 @@
   margin-top: 14px;
 }
 
+.localPreferenceNotice {
+  padding: 10px 12px;
+  border-left: 3px solid color-mix(in srgb, var(--primary-color) 55%, var(--border-color));
+  background: color-mix(in srgb, var(--primary-color) 5%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .sectionGrid {
   gap: 12px;
 }

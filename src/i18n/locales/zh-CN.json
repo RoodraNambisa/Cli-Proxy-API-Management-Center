@@ -1552,6 +1552,10 @@
           "title": "基础与访问",
           "description": "服务器监听、TLS、远程管理和控制面板访问。"
         },
+        "global_interface": {
+          "title": "界面与功能",
+          "description": "控制当前浏览器中管理功能的显示与隐藏。"
+        },
         "global_credentials": {
           "title": "凭证与密钥",
           "description": "认证目录、管理密钥和凭证模型排除规则。"
@@ -1612,6 +1616,13 @@
       "sidecar_validation_failed": "请先修复当前配置中的校验错误",
       "partial_save": "YAML 已保存，但部分独立配置保存失败；失败项仍保留未保存状态",
       "sidecar_partial_save": "部分独立配置已保存；失败项仍保留未保存状态",
+      "frontend_features": {
+        "title": "前端功能显示",
+        "description": "管理可选、兼容或已停用功能在控制面板中的可见性。",
+        "local_only": "这些偏好仅保存在当前浏览器并立即生效，不会写入后端 YAML，也不会修改现有凭证或任务。",
+        "codex_agent_identity": "显示 Codex Agent Identity 转换工具",
+        "codex_agent_identity_description": "官方转换流程已关闭，因此默认隐藏 Token、单凭证和批量转换入口。仅在使用仍兼容该流程的后端时开启；现有凭证的认证模式仍会正常显示。"
+      },
       "grok": {
         "title": "Grok 管理入口",
         "description": "Grok 的登录、凭证级 using_api/websockets 和额度信息在对应管理页面维护。",
