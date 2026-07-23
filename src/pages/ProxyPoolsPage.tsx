@@ -965,7 +965,7 @@ export function ProxyPoolsPage() {
                     onChange={(event) => updatePoolEntry(index, { id: event.target.value })}
                   />
                   <Input
-                    type="password"
+                    type="text"
                     autoComplete="off"
                     data-1p-ignore="true"
                     data-lpignore="true"
