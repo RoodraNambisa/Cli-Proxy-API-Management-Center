@@ -8,6 +8,7 @@ const harness = vi.hoisted(() => ({
   releaseDirty: false,
   auditDirty: false,
   sentinelDirty: false,
+  usageCacheDirty: false,
   mergedYaml: 'request-retry: 1\n',
   fetchYaml: vi.fn(),
   saveYaml: vi.fn(),
@@ -19,6 +20,8 @@ const harness = vi.hoisted(() => ({
   auditReload: vi.fn(),
   sentinelSave: vi.fn(),
   sentinelReload: vi.fn(),
+  usageCacheSave: vi.fn(),
+  usageCacheReload: vi.fn(),
   showNotification: vi.fn(),
   showConfirmation: vi.fn(),
   clearConfigCache: vi.fn(),
@@ -238,6 +241,49 @@ vi.mock('@/features/chatgptWeb/components/ChatGptWebSentinelPanel', async () => 
   };
 });
 
+vi.mock('@/features/chatgptWeb/components/ChatGptWebUsageCachePanel', async () => {
+  const React = await import('react');
+  type Props = {
+    onDirtyChange?: (dirty: boolean) => void;
+    onErrorCountChange?: (count: number) => void;
+  };
+  type Handle = {
+    save: () => Promise<boolean>;
+    reload: () => Promise<void>;
+    reset: () => void;
+    validate: () => boolean;
+  };
+
+  return {
+    ChatGptWebUsageCachePanel: React.forwardRef<Handle, Props>(function MockUsageCachePanel(
+      { onDirtyChange, onErrorCountChange },
+      ref
+    ) {
+      React.useEffect(() => {
+        onDirtyChange?.(harness.usageCacheDirty);
+        onErrorCountChange?.(0);
+      }, [onDirtyChange, onErrorCountChange]);
+      React.useImperativeHandle(
+        ref,
+        () => ({
+          save: async () => {
+            const success = (await harness.usageCacheSave()) !== false;
+            if (success) onDirtyChange?.(false);
+            return success;
+          },
+          reload: async () => {
+            await harness.usageCacheReload();
+          },
+          reset: vi.fn(),
+          validate: () => true,
+        }),
+        [onDirtyChange]
+      );
+      return <div>usage-cache-panel</div>;
+    }),
+  };
+});
+
 vi.mock('@/components/config/DiffModal', () => ({
   DiffModal: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
     open ? (
@@ -268,6 +314,7 @@ describe('ConfigPage save coordination', () => {
     harness.releaseDirty = false;
     harness.auditDirty = false;
     harness.sentinelDirty = false;
+    harness.usageCacheDirty = false;
     harness.mergedYaml = 'request-retry: 1\n';
     for (const mock of Object.values(harness)) {
       if (typeof mock === 'function' && 'mockReset' in mock) mock.mockReset();
@@ -282,6 +329,8 @@ describe('ConfigPage save coordination', () => {
     harness.auditReload.mockResolvedValue(undefined);
     harness.sentinelSave.mockResolvedValue(true);
     harness.sentinelReload.mockResolvedValue(undefined);
+    harness.usageCacheSave.mockResolvedValue(true);
+    harness.usageCacheReload.mockResolvedValue(undefined);
     harness.fetchSharedConfig.mockResolvedValue(undefined);
     harness.translate.mockImplementation((key: string) => key);
   });
@@ -320,6 +369,22 @@ describe('ConfigPage save coordination', () => {
     );
   });
 
+  test('saves ChatGPT Web usage cache through the unified sidecar flow', async () => {
+    harness.usageCacheDirty = true;
+    harness.fetchYaml
+      .mockResolvedValueOnce('chatgpt-web: {}\n')
+      .mockResolvedValueOnce('chatgpt-web:\n  estimate-token-usage: true\n');
+
+    renderPage();
+    await clickSave();
+
+    await waitFor(() => expect(harness.usageCacheSave).toHaveBeenCalledTimes(1));
+    expect(harness.saveYaml).not.toHaveBeenCalled();
+    expect(harness.loadVisualValues).toHaveBeenLastCalledWith(
+      'chatgpt-web:\n  estimate-token-usage: true\n'
+    );
+  });
+
   test('reloads clean request-body panels after saving YAML', async () => {
     harness.visualDirty = true;
     harness.fetchYaml
@@ -335,6 +400,7 @@ describe('ConfigPage save coordination', () => {
     expect(harness.releaseReload).toHaveBeenCalledTimes(1);
     expect(harness.auditReload).toHaveBeenCalledTimes(1);
     expect(harness.sentinelReload).toHaveBeenCalledTimes(1);
+    expect(harness.usageCacheReload).toHaveBeenCalledTimes(1);
     expect(harness.releaseReload.mock.invocationCallOrder[0]).toBeGreaterThan(
       harness.saveYaml.mock.invocationCallOrder[0]
     );

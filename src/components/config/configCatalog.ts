@@ -492,6 +492,21 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['sentinel sdk', 'solver pool', '求解池'],
   },
   {
+    id: 'config-chatgpt-web-usage-cache',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'chatgpt_web.usage_cache.title',
+    yamlKeys: [
+      'chatgpt-web.estimate-token-usage',
+      'chatgpt-web.usage-cache',
+      'chatgpt-web.usage-cache.enabled',
+      'chatgpt-web.usage-cache.disk-threshold-mb',
+      'chatgpt-web.usage-cache.max-disk-size-mb',
+      'chatgpt-web.usage-cache.path',
+      'chatgpt-web.image-usage.auto-output-quality',
+    ],
+    aliases: ['usage cache', 'token estimation', '计费缓存', 'token 估算'],
+  },
+  {
     id: 'config-grok-auth',
     pageId: 'provider-grok',
     labelKey: 'config_management.settings_center.grok.auth_files',

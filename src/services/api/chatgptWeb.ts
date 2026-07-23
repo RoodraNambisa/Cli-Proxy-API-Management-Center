@@ -5,6 +5,8 @@ import type {
   ChatGptWebSentinelConfig,
   ChatGptWebSentinelConfigPatch,
   ChatGptWebSentinelSnapshot,
+  ChatGptWebUsageConfig,
+  ChatGptWebUsageSnapshot,
 } from '@/types';
 import { apiClient } from './client';
 import { AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
@@ -87,5 +89,17 @@ export const chatGptWebApi = {
 
   patchSentinel(config: ChatGptWebSentinelConfigPatch): Promise<unknown> {
     return apiClient.patch('/chatgpt-web/sentinel', config);
+  },
+
+  getUsageCache(): Promise<ChatGptWebUsageSnapshot> {
+    return apiClient.get('/chatgpt-web/usage-cache');
+  },
+
+  putUsageCache(config: ChatGptWebUsageConfig): Promise<unknown> {
+    return apiClient.put('/chatgpt-web/usage-cache', config);
+  },
+
+  patchUsageCache(config: ChatGptWebUsageConfig): Promise<unknown> {
+    return apiClient.patch('/chatgpt-web/usage-cache', config);
   },
 };

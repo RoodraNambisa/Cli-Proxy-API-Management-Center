@@ -118,6 +118,39 @@ export interface ChatGptWebSentinelSnapshot extends ChatGptWebSentinelConfig {
   last_error: string;
 }
 
+export type ChatGptWebImageUsageQuality = 'low' | 'medium' | 'high';
+
+export interface ChatGptWebUsageCacheSettings {
+  enabled: boolean;
+  'disk-threshold-mb': number;
+  'max-disk-size-mb': number;
+  path: string;
+}
+
+export interface ChatGptWebUsageConfig {
+  'estimate-token-usage': boolean;
+  'usage-cache': ChatGptWebUsageCacheSettings;
+  'image-usage': {
+    'auto-output-quality': ChatGptWebImageUsageQuality;
+  };
+}
+
+export interface ChatGptWebUsageCacheStats {
+  active_memory_entries: number;
+  active_memory_bytes: number;
+  active_disk_entries: number;
+  active_disk_bytes: number;
+  peak_disk_bytes: number;
+  successful_calculations: number;
+  failed_discards: number;
+  capacity_rejections: number;
+  write_errors: number;
+}
+
+export interface ChatGptWebUsageSnapshot extends ChatGptWebUsageConfig {
+  stats: ChatGptWebUsageCacheStats;
+}
+
 export const isChatGptWebLoginTaskTerminal = (state: ChatGptWebLoginTaskState): boolean =>
   state === 'completed' || state === 'completed_with_errors' || state === 'canceled';
 

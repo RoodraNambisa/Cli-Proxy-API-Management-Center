@@ -27,6 +27,10 @@ import {
   ChatGptWebSentinelPanel,
   type ChatGptWebSentinelPanelHandle,
 } from '@/features/chatgptWeb/components/ChatGptWebSentinelPanel';
+import {
+  ChatGptWebUsageCachePanel,
+  type ChatGptWebUsageCachePanelHandle,
+} from '@/features/chatgptWeb/components/ChatGptWebUsageCachePanel';
 import { DiffModal } from '@/components/config/DiffModal';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
@@ -38,12 +42,14 @@ type ConfigEditorTab = 'visual' | 'source';
 type ConfigSidecarPanelId =
   | 'request-body-release'
   | 'request-body-audit'
-  | 'config-chatgpt-web-sentinel';
+  | 'config-chatgpt-web-sentinel'
+  | 'config-chatgpt-web-usage-cache';
 
 type ConfigSidecarDirtySnapshot = {
   release: boolean;
   audit: boolean;
   sentinel: boolean;
+  usageCache: boolean;
 };
 
 type ConfigSidecarSaveResult = {
@@ -103,9 +109,11 @@ export function ConfigPage() {
   const [requestBodyReleaseDirty, setRequestBodyReleaseDirty] = useState(false);
   const [requestBodyAuditDirty, setRequestBodyAuditDirty] = useState(false);
   const [chatGptWebSentinelDirty, setChatGptWebSentinelDirty] = useState(false);
+  const [chatGptWebUsageCacheDirty, setChatGptWebUsageCacheDirty] = useState(false);
   const [requestBodyReleaseErrorCount, setRequestBodyReleaseErrorCount] = useState(0);
   const [requestBodyAuditErrorCount, setRequestBodyAuditErrorCount] = useState(0);
   const [chatGptWebSentinelErrorCount, setChatGptWebSentinelErrorCount] = useState(0);
+  const [chatGptWebUsageCacheErrorCount, setChatGptWebUsageCacheErrorCount] = useState(0);
   const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [serverYaml, setServerYaml] = useState('');
   const [mergedYaml, setMergedYaml] = useState('');
@@ -122,11 +130,16 @@ export function ConfigPage() {
   const requestBodyReleaseRef = useRef<RequestBodyReleaseCardHandle | null>(null);
   const requestBodyAuditRef = useRef<RequestBodyAuditCardHandle | null>(null);
   const chatGptWebSentinelRef = useRef<ChatGptWebSentinelPanelHandle | null>(null);
+  const chatGptWebUsageCacheRef = useRef<ChatGptWebUsageCachePanelHandle | null>(null);
 
   const disableControls = connectionStatus !== 'connected';
   const yamlDirty = dirty || visualDirty;
   const isDirty =
-    yamlDirty || requestBodyReleaseDirty || requestBodyAuditDirty || chatGptWebSentinelDirty;
+    yamlDirty ||
+    requestBodyReleaseDirty ||
+    requestBodyAuditDirty ||
+    chatGptWebSentinelDirty ||
+    chatGptWebUsageCacheDirty;
   const shouldRenderFloatingActions = isCurrentLayer;
   const hasVisualModeError = !!visualParseError;
   const hasVisualValidationErrors =
@@ -175,19 +188,24 @@ export function ConfigPage() {
     const auditValid = !requestBodyAuditDirty || requestBodyAuditRef.current?.validate() !== false;
     const sentinelValid =
       !chatGptWebSentinelDirty || chatGptWebSentinelRef.current?.validate() !== false;
-    if (releaseValid && auditValid && sentinelValid) return true;
+    const usageCacheValid =
+      !chatGptWebUsageCacheDirty || chatGptWebUsageCacheRef.current?.validate() !== false;
+    if (releaseValid && auditValid && sentinelValid && usageCacheValid) return true;
     setActiveTab('visual');
     localStorage.setItem('config-management:tab', 'visual');
     const invalidSection = !releaseValid
       ? 'request-body-release'
       : !auditValid
         ? 'request-body-audit'
-        : 'config-chatgpt-web-sentinel';
+        : !sentinelValid
+          ? 'config-chatgpt-web-sentinel'
+          : 'config-chatgpt-web-usage-cache';
     navigate(`/config?section=${invalidSection}`, { replace: true });
     showNotification(t('config_management.settings_center.sidecar_validation_failed'), 'error');
     return false;
   }, [
     chatGptWebSentinelDirty,
+    chatGptWebUsageCacheDirty,
     navigate,
     requestBodyAuditDirty,
     requestBodyReleaseDirty,
@@ -207,7 +225,12 @@ export function ConfigPage() {
   );
 
   const refreshSavedSnapshots = useCallback(
-    async ({ reloadRelease = false, reloadAudit = false, reloadSentinel = false } = {}) => {
+    async ({
+      reloadRelease = false,
+      reloadAudit = false,
+      reloadSentinel = false,
+      reloadUsageCache = false,
+    } = {}) => {
       try {
         const [latestContent] = await Promise.all([
           configFileApi.fetchConfigYaml(),
@@ -219,6 +242,9 @@ export function ConfigPage() {
             : Promise.resolve(),
           reloadSentinel
             ? (chatGptWebSentinelRef.current?.reload() ?? Promise.resolve())
+            : Promise.resolve(),
+          reloadUsageCache
+            ? (chatGptWebUsageCacheRef.current?.reload() ?? Promise.resolve())
             : Promise.resolve(),
         ]);
         applyYamlSnapshot(latestContent);
@@ -282,6 +308,13 @@ export function ConfigPage() {
           success: panel ? await panel.save() : false,
         });
       }
+      if (snapshot.usageCache) {
+        const panel = chatGptWebUsageCacheRef.current;
+        results.push({
+          id: 'config-chatgpt-web-usage-cache',
+          success: panel ? await panel.save() : false,
+        });
+      }
 
       const failedResult = results.find((result) => !result.success);
       if (failedResult) {
@@ -328,6 +361,7 @@ export function ConfigPage() {
       release: requestBodyReleaseDirty,
       audit: requestBodyAuditDirty,
       sentinel: chatGptWebSentinelDirty,
+      usageCache: chatGptWebUsageCacheDirty,
     };
     setSaving(true);
     try {
@@ -344,6 +378,7 @@ export function ConfigPage() {
         reloadRelease: !sidecarSnapshot.release,
         reloadAudit: !sidecarSnapshot.audit,
         reloadSentinel: !sidecarSnapshot.sentinel,
+        reloadUsageCache: !sidecarSnapshot.usageCache,
       });
       await refreshSharedConfig();
 
@@ -369,12 +404,16 @@ export function ConfigPage() {
 
     if (
       !yamlDirty &&
-      (requestBodyReleaseDirty || requestBodyAuditDirty || chatGptWebSentinelDirty)
+      (requestBodyReleaseDirty ||
+        requestBodyAuditDirty ||
+        chatGptWebSentinelDirty ||
+        chatGptWebUsageCacheDirty)
     ) {
       const sidecarSnapshot: ConfigSidecarDirtySnapshot = {
         release: requestBodyReleaseDirty,
         audit: requestBodyAuditDirty,
         sentinel: chatGptWebSentinelDirty,
+        usageCache: chatGptWebUsageCacheDirty,
       };
       setSaving(true);
       try {
@@ -428,11 +467,17 @@ export function ConfigPage() {
 
       if (diffOriginal === nextMergedYaml) {
         applyYamlSnapshot(latestServerYaml);
-        if (requestBodyReleaseDirty || requestBodyAuditDirty || chatGptWebSentinelDirty) {
+        if (
+          requestBodyReleaseDirty ||
+          requestBodyAuditDirty ||
+          chatGptWebSentinelDirty ||
+          chatGptWebUsageCacheDirty
+        ) {
           await saveSidecarsWithoutYaml({
             release: requestBodyReleaseDirty,
             audit: requestBodyAuditDirty,
             sentinel: chatGptWebSentinelDirty,
+            usageCache: chatGptWebUsageCacheDirty,
           });
           return;
         }
@@ -666,6 +711,7 @@ export function ConfigPage() {
         requestBodyReleaseRef.current?.reload(),
         requestBodyAuditRef.current?.reload(),
         chatGptWebSentinelRef.current?.reload(),
+        chatGptWebUsageCacheRef.current?.reload(),
       ]);
       return;
     }
@@ -682,6 +728,7 @@ export function ConfigPage() {
           requestBodyReleaseRef.current?.reload(),
           requestBodyAuditRef.current?.reload(),
           chatGptWebSentinelRef.current?.reload(),
+          chatGptWebUsageCacheRef.current?.reload(),
         ]);
       },
     });
@@ -790,8 +837,10 @@ export function ConfigPage() {
               dirtyFields={visualDirtyFields}
               requestBodyDirty={requestBodyReleaseDirty || requestBodyAuditDirty}
               requestBodyErrorCount={requestBodyReleaseErrorCount + requestBodyAuditErrorCount}
-              chatGptWebSentinelDirty={chatGptWebSentinelDirty}
-              chatGptWebSentinelErrorCount={chatGptWebSentinelErrorCount}
+              chatGptWebSentinelDirty={chatGptWebSentinelDirty || chatGptWebUsageCacheDirty}
+              chatGptWebSentinelErrorCount={
+                chatGptWebSentinelErrorCount + chatGptWebUsageCacheErrorCount
+              }
               renderRequestBodyPanels={({ focusTarget }) => (
                 <>
                   <RequestBodyReleaseCard
@@ -815,16 +864,27 @@ export function ConfigPage() {
                 </>
               )}
               renderChatGptWebSentinel={({ active, focusTarget }) => (
-                <ChatGptWebSentinelPanel
-                  ref={chatGptWebSentinelRef}
-                  active={active}
-                  disabled={disableControls}
-                  externalSaving={saving}
-                  embedded
-                  focusTarget={focusTarget}
-                  onDirtyChange={setChatGptWebSentinelDirty}
-                  onErrorCountChange={setChatGptWebSentinelErrorCount}
-                />
+                <>
+                  <ChatGptWebUsageCachePanel
+                    ref={chatGptWebUsageCacheRef}
+                    active={active}
+                    disabled={disableControls}
+                    externalSaving={saving}
+                    focusTarget={focusTarget}
+                    onDirtyChange={setChatGptWebUsageCacheDirty}
+                    onErrorCountChange={setChatGptWebUsageCacheErrorCount}
+                  />
+                  <ChatGptWebSentinelPanel
+                    ref={chatGptWebSentinelRef}
+                    active={active}
+                    disabled={disableControls}
+                    externalSaving={saving}
+                    embedded
+                    focusTarget={focusTarget}
+                    onDirtyChange={setChatGptWebSentinelDirty}
+                    onErrorCountChange={setChatGptWebSentinelErrorCount}
+                  />
+                </>
               )}
               onChange={setVisualValues}
             />
