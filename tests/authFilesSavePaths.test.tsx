@@ -9,6 +9,7 @@ import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAut
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem } from '@/types';
+import { AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS } from '@/utils/constants';
 
 vi.mock('react-i18next', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-i18next')>();
@@ -303,6 +304,7 @@ describe('auth file save paths', () => {
           names: ['first.json', 'second.json'],
           fields: { priority: 0, disable_cooling: false },
         },
+        timeout: AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS,
       })
     );
     const validateStatus = requestRaw.mock.calls[0][0].validateStatus;

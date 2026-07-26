@@ -12,7 +12,10 @@ import type {
 } from '@/types/authFile';
 import type { OAuthModelAliasEntry } from '@/types';
 import { parseTimestampMs } from '@/utils/timestamp';
-import { AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
+import {
+  AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS,
+  AUTH_FILE_UPLOAD_TIMEOUT_MS,
+} from '@/utils/constants';
 import { mapWithConcurrency } from '@/utils/concurrency';
 
 type StatusError = { status?: number };
@@ -863,6 +866,7 @@ export const authFilesApi = {
       url: '/auth-files/fields',
       method: 'PATCH',
       data: { names: requestedNames, fields },
+      timeout: AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS,
       validateStatus: (status) => status === 200 || status === 207,
     });
     return normalizeAuthFileFieldsBatchResponse(
