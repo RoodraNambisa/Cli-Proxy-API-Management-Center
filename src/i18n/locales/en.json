@@ -984,7 +984,14 @@
     "reset_credits_expiry_label": "Manual reset expiry (GMT+8)",
     "reset_credit_number": "Reset {{index}}",
     "reset_credits_expiry_failed": "Failed to load manual reset expiry: {{message}}",
-    "reset_credits_invalid_payload": "Manual reset expiry response has an invalid format"
+    "reset_credits_invalid_payload": "Manual reset expiry response has an invalid format",
+    "use_reset_credit_button": "Use this reset",
+    "reset_confirm_title": "Reset Codex quota",
+    "reset_credit_confirm_message": "This will consume the manual reset expiring at {{expiresAt}} to reset the Codex quota for \"{{name}}\". Continue?",
+    "reset_confirm_button": "Reset quota",
+    "reset_success": "Reset Codex quota for \"{{name}}\"",
+    "reset_failed": "Failed to reset Codex quota for \"{{name}}\": {{message}}",
+    "missing_reset_credit_id": "This manual reset is missing credit_id and cannot be used"
   },
   "kimi_quota": {
     "title": "Kimi Quota",

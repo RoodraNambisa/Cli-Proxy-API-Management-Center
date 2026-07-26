@@ -34,6 +34,7 @@ import {
   CLAUDE_USAGE_URL,
   CLAUDE_REQUEST_HEADERS,
   CLAUDE_USAGE_WINDOW_KEYS,
+  CODEX_RATE_LIMIT_RESET_CREDITS_CONSUME_URL,
   CODEX_RATE_LIMIT_RESET_CREDITS_URL,
   CODEX_USAGE_URL,
   CODEX_REQUEST_HEADERS,
@@ -104,6 +105,7 @@ export interface QuotaConfig<TState, TData, TResetData = unknown> {
   filterFn: (file: AuthFileItem) => boolean;
   fetchQuota: (file: AuthFileItem, t: TFunction) => Promise<TData>;
   fetchResetCredits?: (file: AuthFileItem, t: TFunction) => Promise<TResetData>;
+  resetQuota?: (file: AuthFileItem, t: TFunction, creditId: string) => Promise<TData>;
   storeSelector: (state: QuotaStore) => Record<string, TState>;
   storeSetter: keyof QuotaStore;
   buildLoadingState: () => TState;
@@ -127,6 +129,7 @@ type CodexResetCreditsData = {
 type CodexQuotaData = {
   planType: string | null;
   windows: CodexQuotaWindow[];
+  resetCreditsData?: CodexResetCreditsData;
 };
 
 type CodexAuthFileDetails = {
@@ -554,6 +557,71 @@ const fetchCodexQuota = async (file: AuthFileItem, t: TFunction): Promise<CodexQ
   };
 };
 
+const createCodexRedeemRequestId = (): string => {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const value = Math.floor(Math.random() * 16);
+    const segment = char === 'x' ? value : (value & 0x3) | 0x8;
+    return segment.toString(16);
+  });
+};
+
+const consumeCodexRateLimitResetCredit = async (
+  file: AuthFileItem,
+  t: TFunction,
+  creditId: string
+): Promise<void> => {
+  const normalizedCreditId = creditId.trim();
+  if (!normalizedCreditId) {
+    throw new Error(t('codex_quota.missing_reset_credit_id'));
+  }
+
+  const rawAuthIndex = file['auth_index'] ?? file.authIndex;
+  const authIndex = normalizeAuthIndex(rawAuthIndex);
+  if (!authIndex) {
+    throw new Error(t('codex_quota.missing_auth_index'));
+  }
+
+  const { accountId } = await resolveCodexAuthFileDetails(file);
+  if (!accountId) {
+    throw new Error(t('codex_quota.missing_account_id'));
+  }
+
+  const result = await apiCallApi.request({
+    authIndex,
+    method: 'POST',
+    url: CODEX_RATE_LIMIT_RESET_CREDITS_CONSUME_URL,
+    header: {
+      ...CODEX_REQUEST_HEADERS,
+      'Chatgpt-Account-Id': accountId,
+    },
+    data: JSON.stringify({
+      credit_id: normalizedCreditId,
+      redeem_request_id: createCodexRedeemRequestId(),
+    }),
+  });
+
+  if (result.statusCode < 200 || result.statusCode >= 300) {
+    throw createStatusError(getApiCallErrorMessage(result), result.statusCode);
+  }
+};
+
+const resetCodexQuota = async (
+  file: AuthFileItem,
+  t: TFunction,
+  creditId: string
+): Promise<CodexQuotaData> => {
+  await consumeCodexRateLimitResetCredit(file, t, creditId);
+  const [quota, resetCreditsData] = await Promise.all([
+    fetchCodexQuota(file, t),
+    fetchCodexResetCreditsForFile(file, t),
+  ]);
+  return { ...quota, resetCreditsData };
+};
+
 const renderAntigravityItems = (
   quota: AntigravityQuotaState,
   t: TFunction,
@@ -602,7 +670,7 @@ const renderCodexItems = (
   t: TFunction,
   helpers: QuotaRenderHelpers
 ): ReactNode => {
-  const { styles: styleMap, QuotaProgressBar } = helpers;
+  const { styles: styleMap, QuotaProgressBar, renderResetCreditAction } = helpers;
   const { createElement: h, Fragment } = React;
   const windows = quota.windows ?? [];
   const planType = quota.planType ?? null;
@@ -664,8 +732,9 @@ const renderCodexItems = (
           { className: styleMap.codexResetCreditsTitle },
           t('codex_quota.reset_credits_expiry_label')
         ),
-        ...resetCredits.map((credit, index) =>
-          h(
+        ...resetCredits.map((credit, index) => {
+          const action = credit.id.trim() ? renderResetCreditAction?.(credit) : undefined;
+          return h(
             'div',
             {
               key: credit.id || `${credit.expiresAt}-${index}`,
@@ -677,12 +746,17 @@ const renderCodexItems = (
               t('codex_quota.reset_credit_number', { index: index + 1 })
             ),
             h(
-              'span',
-              { className: styleMap.codexResetCreditTime },
-              formatShanghaiDateTime(credit.expiresAt) || credit.expiresAt
+              'div',
+              { className: styleMap.codexResetCreditMeta },
+              h(
+                'span',
+                { className: styleMap.codexResetCreditTime },
+                formatShanghaiDateTime(credit.expiresAt) || credit.expiresAt
+              ),
+              action
             )
-          )
-        )
+          );
+        })
       )
     );
   } else if (resetCreditsError) {
@@ -1012,6 +1086,7 @@ export const CODEX_CONFIG: QuotaConfig<CodexQuotaState, CodexQuotaData, CodexRes
   filterFn: (file) => isCodexFile(file) && !isDisabledAuthFile(file),
   fetchQuota: fetchCodexQuota,
   fetchResetCredits: fetchCodexResetCreditsForFile,
+  resetQuota: resetCodexQuota,
   storeSelector: (state) => state.codexQuota,
   storeSetter: 'setCodexQuota',
   buildLoadingState: () => ({ status: 'loading', windows: [] }),
@@ -1019,9 +1094,17 @@ export const CODEX_CONFIG: QuotaConfig<CodexQuotaState, CodexQuotaData, CodexRes
     status: 'success',
     windows: data.windows,
     planType: data.planType,
-    resetCreditsAvailableCount: previous?.resetCreditsAvailableCount,
-    resetCredits: previous?.resetCredits,
-    resetCreditsError: previous?.resetCreditsError,
+    resetCreditsAvailableCount:
+      data.resetCreditsData === undefined
+        ? previous?.resetCreditsAvailableCount
+        : (data.resetCreditsData.availableCount ??
+          (data.resetCreditsData.credits.length > 0 ? data.resetCreditsData.credits.length : null)),
+    resetCredits:
+      data.resetCreditsData === undefined ? previous?.resetCredits : data.resetCreditsData.credits,
+    resetCreditsError:
+      data.resetCreditsData === undefined
+        ? previous?.resetCreditsError
+        : data.resetCreditsData.error,
   }),
   buildResetCreditsSuccessState: (data, previous) => ({
     status: 'success',

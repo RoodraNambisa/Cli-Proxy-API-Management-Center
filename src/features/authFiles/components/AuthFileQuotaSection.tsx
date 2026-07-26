@@ -8,9 +8,10 @@ import {
   KIMI_CONFIG,
   XAI_CONFIG,
 } from '@/components/quota';
+import { Button } from '@/components/ui/Button';
 import { useNotificationStore, useQuotaStore } from '@/stores';
-import type { AuthFileItem } from '@/types';
-import { getStatusFromError } from '@/utils/quota';
+import type { AuthFileItem, CodexRateLimitResetCredit } from '@/types';
+import { formatShanghaiDateTime, getStatusFromError } from '@/utils/quota';
 import {
   isRuntimeOnlyAuthFile,
   resolveQuotaErrorMessage,
@@ -44,7 +45,9 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
   const { file, quotaType, disableControls } = props;
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
+  const showConfirmation = useNotificationStore((state) => state.showConfirmation);
   const [resetCreditsRefreshing, setResetCreditsRefreshing] = useState(false);
+  const [resettingCreditId, setResettingCreditId] = useState<string | null>(null);
 
   const quota = useQuotaStore((state) => {
     if (quotaType === 'antigravity') return state.antigravityQuota[file.name] as QuotaState;
@@ -111,9 +114,63 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
     i18nPrefix: string;
     renderQuotaItems: (quota: unknown, t: TFunction, helpers: unknown) => unknown;
     fetchResetCredits?: (file: AuthFileItem, t: TFunction) => Promise<unknown>;
+    resetQuota?: (file: AuthFileItem, t: TFunction, creditId: string) => Promise<unknown>;
+    buildSuccessState: (data: unknown, previous?: unknown) => unknown;
     buildResetCreditsSuccessState?: (data: unknown, previous?: unknown) => unknown;
     getResetCreditsRefreshError?: (data: unknown) => string;
   };
+
+  const resetQuotaForFile = useCallback(
+    (credit: CodexRateLimitResetCredit) => {
+      if (disableControls) return;
+      if (isRuntimeOnlyAuthFile(file)) return;
+      if (file.disabled) return;
+      if (quota?.status === 'loading') return;
+      if (resettingCreditId) return;
+
+      const resetQuota = config.resetQuota;
+      if (!resetQuota) return;
+      const creditId = credit.id.trim();
+      if (!creditId) return;
+
+      showConfirmation({
+        title: t('codex_quota.reset_confirm_title'),
+        message: t('codex_quota.reset_credit_confirm_message', {
+          name: file.name,
+          expiresAt: formatShanghaiDateTime(credit.expiresAt) || credit.expiresAt,
+        }),
+        confirmText: t('codex_quota.reset_confirm_button'),
+        variant: 'primary',
+        onConfirm: async () => {
+          setResettingCreditId(creditId);
+          try {
+            const data = await resetQuota(file, t, creditId);
+            updateQuotaState((prev: Record<string, unknown>) => ({
+              ...prev,
+              [file.name]: config.buildSuccessState(data, prev[file.name]),
+            }));
+            showNotification(t('codex_quota.reset_success', { name: file.name }), 'success');
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : t('common.unknown_error');
+            showNotification(t('codex_quota.reset_failed', { name: file.name, message }), 'error');
+          } finally {
+            setResettingCreditId((current) => (current === creditId ? null : current));
+          }
+        },
+      });
+    },
+    [
+      config,
+      disableControls,
+      file,
+      quota?.status,
+      resettingCreditId,
+      showConfirmation,
+      showNotification,
+      t,
+      updateQuotaState,
+    ]
+  );
 
   const refreshResetCreditsForFile = useCallback(async () => {
     if (disableControls) return;
@@ -168,9 +225,12 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
   ]);
 
   const quotaStatus = quota?.status ?? 'idle';
-  const canRefreshQuota = !disableControls && !file.disabled;
-  const canRefreshResetCredits =
-    canRefreshQuota && Boolean(config.fetchResetCredits && config.buildResetCreditsSuccessState);
+  const canRefreshQuota = !disableControls && !file.disabled && !resettingCreditId;
+  const supportsResetCredits = Boolean(
+    config.fetchResetCredits && config.buildResetCreditsSuccessState
+  );
+  const showResetCreditControls = !disableControls && !file.disabled && supportsResetCredits;
+  const canRefreshResetCredits = canRefreshQuota && supportsResetCredits;
   const quotaErrorMessage = resolveQuotaErrorMessage(
     t,
     quota?.errorStatus,
@@ -179,7 +239,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
 
   return (
     <div className={styles.quotaSection}>
-      {canRefreshResetCredits && (
+      {showResetCreditControls && (
         <div className={styles.quotaInlineActions}>
           <button
             type="button"
@@ -221,7 +281,33 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
           })}
         </div>
       ) : quota ? (
-        (config.renderQuotaItems(quota, t, { styles, QuotaProgressBar }) as ReactNode)
+        (config.renderQuotaItems(quota, t, {
+          styles,
+          QuotaProgressBar,
+          renderResetCreditAction: config.resetQuota
+            ? (credit: CodexRateLimitResetCredit) => (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className={styles.codexResetCreditAction}
+                  onClick={() => resetQuotaForFile(credit)}
+                  disabled={
+                    disableControls ||
+                    file.disabled ||
+                    quotaStatus === 'loading' ||
+                    resetCreditsRefreshing ||
+                    resettingCreditId !== null
+                  }
+                  loading={resettingCreditId === credit.id.trim()}
+                  title={t('codex_quota.use_reset_credit_button')}
+                  aria-label={t('codex_quota.use_reset_credit_button')}
+                >
+                  {t('codex_quota.use_reset_credit_button')}
+                </Button>
+              )
+            : undefined,
+        }) as ReactNode)
       ) : (
         <div className={styles.quotaMessage}>{t(`${config.i18nPrefix}.idle`)}</div>
       )}

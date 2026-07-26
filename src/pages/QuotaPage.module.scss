@@ -494,6 +494,22 @@
   min-width: 0;
 }
 
+.codexResetCreditMeta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.codexResetCreditAction:global(.btn.btn-sm) {
+  flex: 0 0 auto;
+  min-height: 26px;
+  padding: 3px 8px;
+  border-radius: $radius-sm;
+}
+
 .codexResetCreditsError {
   font-size: 12px;
   line-height: 1.4;

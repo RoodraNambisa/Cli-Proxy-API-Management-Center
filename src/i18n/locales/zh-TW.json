@@ -981,7 +981,14 @@
     "reset_credits_expiry_label": "主動重置過期時間（GMT+8）",
     "reset_credit_number": "第 {{index}} 次",
     "reset_credits_expiry_failed": "主動重置過期時間取得失敗：{{message}}",
-    "reset_credits_invalid_payload": "主動重置過期時間回傳資料格式不正確"
+    "reset_credits_invalid_payload": "主動重置過期時間回傳資料格式不正確",
+    "use_reset_credit_button": "使用此次數",
+    "reset_confirm_title": "重置 Codex 配額",
+    "reset_credit_confirm_message": "將消耗 {{expiresAt}} 到期的這次主動重置來重置「{{name}}」的 Codex 配額。是否繼續？",
+    "reset_confirm_button": "確認重置",
+    "reset_success": "已重置「{{name}}」的 Codex 配額",
+    "reset_failed": "重置「{{name}}」的 Codex 配額失敗：{{message}}",
+    "missing_reset_credit_id": "該主動重置記錄缺少 credit_id，無法使用"
   },
   "kimi_quota": {
     "title": "Kimi 配額",

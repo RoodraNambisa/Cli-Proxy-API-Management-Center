@@ -981,7 +981,14 @@
     "reset_credits_expiry_label": "Срок действия ручных сбросов (GMT+8)",
     "reset_credit_number": "Сброс {{index}}",
     "reset_credits_expiry_failed": "Не удалось загрузить срок действия ручных сбросов: {{message}}",
-    "reset_credits_invalid_payload": "Ответ со сроками действия ручных сбросов имеет неверный формат"
+    "reset_credits_invalid_payload": "Ответ со сроками действия ручных сбросов имеет неверный формат",
+    "use_reset_credit_button": "Использовать этот сброс",
+    "reset_confirm_title": "Сброс квоты Codex",
+    "reset_credit_confirm_message": "Ручной сброс со сроком действия до {{expiresAt}} будет использован для квоты Codex файла \"{{name}}\". Продолжить?",
+    "reset_confirm_button": "Сбросить квоту",
+    "reset_success": "Квота Codex для \"{{name}}\" сброшена",
+    "reset_failed": "Не удалось сбросить квоту Codex для \"{{name}}\": {{message}}",
+    "missing_reset_credit_id": "У этой записи ручного сброса отсутствует credit_id"
   },
   "kimi_quota": {
     "title": "Квота Kimi",
