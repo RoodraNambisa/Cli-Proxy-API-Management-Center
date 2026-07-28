@@ -1970,6 +1970,19 @@ function getNextDirtyFields(
       nextValues.chatgptWebAutoRelogin === baselineValues.chatgptWebAutoRelogin
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageUpstreamModel')) {
+    updateDirty(
+      'chatgptWebImageUpstreamModel',
+      nextValues.chatgptWebImageUpstreamModel === baselineValues.chatgptWebImageUpstreamModel
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebIgnoreUnsupportedImageParams')) {
+    updateDirty(
+      'chatgptWebIgnoreUnsupportedImageParams',
+      nextValues.chatgptWebIgnoreUnsupportedImageParams ===
+        baselineValues.chatgptWebIgnoreUnsupportedImageParams
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'requestRetry')) {
     updateDirty('requestRetry', nextValues.requestRetry === baselineValues.requestRetry);
   }
@@ -2434,6 +2447,7 @@ export function useVisualConfig() {
       const quotaExceeded = asRecord(parsed['quota-exceeded']);
       const authMaintenance = asRecord(parsed['auth-maintenance']);
       const images = asRecord(parsed.images);
+      const imagesChatGPTWeb = asRecord(images?.['chatgpt-web'] ?? images?.chatgptWeb);
       const pprof = asRecord(parsed.pprof);
       const routing = asRecord(parsed.routing);
       const payload = asRecord(parsed.payload);
@@ -2567,6 +2581,16 @@ export function useVisualConfig() {
         codexHeaderDefaultsOriginator:
           typeof codexHeaderDefaults?.originator === 'string' ? codexHeaderDefaults.originator : '',
         chatgptWebAutoRelogin: Boolean(chatgptWeb?.['auto-relogin'] ?? chatgptWeb?.autoRelogin),
+        chatgptWebImageUpstreamModel:
+          typeof imagesChatGPTWeb?.['upstream-model'] === 'string'
+            ? imagesChatGPTWeb['upstream-model']
+            : typeof imagesChatGPTWeb?.upstreamModel === 'string'
+              ? imagesChatGPTWeb.upstreamModel
+              : DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel,
+        chatgptWebIgnoreUnsupportedImageParams: Boolean(
+          imagesChatGPTWeb?.['ignore-unsupported-params'] ??
+          imagesChatGPTWeb?.ignoreUnsupportedParams
+        ),
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryCredentials: String(parsed['max-retry-credentials'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
@@ -3120,6 +3144,11 @@ export function useVisualConfig() {
           values.images.unsupportedStatusCode !== imagesDefaults.unsupportedStatusCode ||
           values.images.streamFlushIntervalMs !== imagesDefaults.streamFlushIntervalMs ||
           values.images.streamFlushMinBytes !== imagesDefaults.streamFlushMinBytes ||
+          values.chatgptWebImageUpstreamModel !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel ||
+          values.chatgptWebIgnoreUnsupportedImageParams !==
+            DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
+          docHas(doc, ['images', 'chatgpt-web']) ||
           docHas(doc, ['images', 'native']) ||
           !areNativeImagesEqual(values.images.native, imagesDefaults.native);
         if (imagesDefined) {
@@ -3160,6 +3189,25 @@ export function useVisualConfig() {
             ['images', 'stream-flush-min-bytes'],
             values.images.streamFlushMinBytes
           );
+          if (
+            docHas(doc, ['images', 'chatgpt-web']) ||
+            values.chatgptWebImageUpstreamModel !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel ||
+            values.chatgptWebIgnoreUnsupportedImageParams !==
+              DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams
+          ) {
+            ensureMapInDoc(doc, ['images', 'chatgpt-web']);
+            setStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'upstream-model'],
+              values.chatgptWebImageUpstreamModel
+            );
+            doc.setIn(
+              ['images', 'chatgpt-web', 'ignore-unsupported-params'],
+              values.chatgptWebIgnoreUnsupportedImageParams
+            );
+            deleteIfMapEmpty(doc, ['images', 'chatgpt-web']);
+          }
           if (
             docHas(doc, ['images', 'native']) ||
             !areNativeImagesEqual(values.images.native, imagesDefaults.native)

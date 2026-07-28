@@ -652,6 +652,31 @@ describe('ChatGPT Web management compatibility', () => {
     });
   });
 
+  test('reads and writes ChatGPT Web image compatibility settings', () => {
+    const initialYaml =
+      'images:\n  chatgpt-web:\n    upstream-model: gpt-5-5-custom\n    ignore-unsupported-params: false\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+    expect(result.current.visualValues.chatgptWebImageUpstreamModel).toBe('gpt-5-5-custom');
+    expect(result.current.visualValues.chatgptWebIgnoreUnsupportedImageParams).toBe(false);
+    act(() =>
+      result.current.setVisualValues({
+        chatgptWebImageUpstreamModel: 'gpt-5-5',
+        chatgptWebIgnoreUnsupportedImageParams: true,
+      })
+    );
+
+    expect(parse(result.current.applyVisualChangesToYaml(initialYaml))).toMatchObject({
+      images: {
+        'chatgpt-web': {
+          'upstream-model': 'gpt-5-5',
+          'ignore-unsupported-params': true,
+        },
+      },
+    });
+  });
+
   test('deduplicates the same image model registered by Codex and ChatGPT Web', () => {
     const models = normalizeModelList(
       [

@@ -251,6 +251,8 @@ export type VisualConfigValues = {
   codexHeaderDefaultsBetaFeatures: string;
   codexHeaderDefaultsOriginator: string;
   chatgptWebAutoRelogin: boolean;
+  chatgptWebImageUpstreamModel: string;
+  chatgptWebIgnoreUnsupportedImageParams: boolean;
   requestRetry: string;
   maxRetryCredentials: string;
   maxRetryInterval: string;
@@ -320,6 +322,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexHeaderDefaultsBetaFeatures: '',
   codexHeaderDefaultsOriginator: '',
   chatgptWebAutoRelogin: false,
+  chatgptWebImageUpstreamModel: 'gpt-5-5',
+  chatgptWebIgnoreUnsupportedImageParams: false,
   requestRetry: '',
   maxRetryCredentials: '',
   maxRetryInterval: '',

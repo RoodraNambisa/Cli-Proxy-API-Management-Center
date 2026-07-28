@@ -1507,6 +1507,34 @@ export function VisualConfigEditor({
                 disabled={disabled}
                 onChange={(chatgptWebAutoRelogin) => onChange({ chatgptWebAutoRelogin })}
               />
+              <SectionGrid>
+                <Input
+                  id="config-chatgpt-web-image-upstream-model"
+                  label={t('config_management.settings_center.chatgpt_web.image_upstream_model')}
+                  hint={t(
+                    'config_management.settings_center.chatgpt_web.image_upstream_model_description'
+                  )}
+                  placeholder="gpt-5-5"
+                  value={values.chatgptWebImageUpstreamModel}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    onChange({ chatgptWebImageUpstreamModel: event.target.value })
+                  }
+                />
+              </SectionGrid>
+              <ToggleRow
+                title={t(
+                  'config_management.settings_center.chatgpt_web.ignore_unsupported_image_params'
+                )}
+                description={t(
+                  'config_management.settings_center.chatgpt_web.ignore_unsupported_image_params_description'
+                )}
+                checked={values.chatgptWebIgnoreUnsupportedImageParams}
+                disabled={disabled}
+                onChange={(chatgptWebIgnoreUnsupportedImageParams) =>
+                  onChange({ chatgptWebIgnoreUnsupportedImageParams })
+                }
+              />
               <div className={styles.providerHubActions}>
                 <Button
                   type="button"

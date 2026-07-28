@@ -1678,9 +1678,13 @@
       },
       "chatgpt_web": {
         "title": "ChatGPT Web 管理入口",
-        "description": "自動重新登入在此設定；帳號登入透過獨立任務頁執行，Sentinel SDK 設定和執行狀態顯示於下方。",
+        "description": "自動重新登入與 Web 圖片相容性在此設定；帳號登入透過獨立任務頁執行，Sentinel SDK 設定和執行狀態顯示於下方。",
         "auto_relogin": "自動重新登入",
         "auto_relogin_description": "Token 無法更新且憑證允許重新登入時自動嘗試登入。帳號死亡或需要人工驗證時不會自動重新登入。",
+        "image_upstream_model": "圖片上游承載模型",
+        "image_upstream_model_description": "ChatGPT Web picture_v2 對話使用的上游模型；留空時後端使用 gpt-5-5。",
+        "ignore_unsupported_image_params": "忽略 Web 不支援的圖片參數",
+        "ignore_unsupported_image_params_description": "開啟後，ChatGPT Web 無法精確表達的 size、quality、background、輸出格式等參數不再排除 Web 路由；這些要求會被丟棄或降級為 PNG。遠端圖片、file_id、無效 mask 和大小限制仍會拒絕。",
         "login_tasks": "開啟帳號登入任務"
       }
     },

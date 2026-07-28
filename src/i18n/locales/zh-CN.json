@@ -1659,9 +1659,13 @@
       },
       "chatgpt_web": {
         "title": "ChatGPT Web 管理入口",
-        "description": "自动重登在此配置；账号登录通过独立任务页面执行，Sentinel SDK 配置和运行状态见下方。",
+        "description": "自动重登和 Web 图片兼容在此配置；账号登录通过独立任务页面执行，Sentinel SDK 配置和运行状态见下方。",
         "auto_relogin": "自动重新登录",
         "auto_relogin_description": "令牌无法刷新且凭证允许重登时自动尝试登录。账号死亡或需要人工验证时不会自动重登。",
+        "image_upstream_model": "图片上游承载模型",
+        "image_upstream_model_description": "ChatGPT Web picture_v2 会话使用的上游模型；留空时后端使用 gpt-5-5。",
+        "ignore_unsupported_image_params": "忽略 Web 不支持的图片参数",
+        "ignore_unsupported_image_params_description": "开启后，无法由 ChatGPT Web 精确表达的 size、quality、background、输出格式等参数不会再排除 Web 路由；这些要求会被丢弃或降级为 PNG。远程图片、file_id、非法 mask 和体积限制仍会拒绝。",
         "login_tasks": "打开账号登录任务"
       }
     },

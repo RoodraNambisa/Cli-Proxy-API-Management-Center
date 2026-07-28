@@ -1655,9 +1655,13 @@
       },
       "chatgpt_web": {
         "title": "ChatGPT Web management",
-        "description": "Configure automatic relogin here; run account logins on the dedicated task page and manage Sentinel SDK settings and status below.",
+        "description": "Configure automatic relogin and Web image compatibility here; run account logins on the dedicated task page and manage Sentinel SDK settings and status below.",
         "auto_relogin": "Automatic relogin",
         "auto_relogin_description": "Automatically attempt login when a token cannot be refreshed and the credential can be relogged. Dead accounts and interaction-required states are never retried automatically.",
+        "image_upstream_model": "Image upstream model",
+        "image_upstream_model_description": "Upstream model used for ChatGPT Web picture_v2 conversations. The backend uses gpt-5-5 when empty.",
+        "ignore_unsupported_image_params": "Ignore unsupported Web image parameters",
+        "ignore_unsupported_image_params_description": "When enabled, size, quality, background, output format, and similar options that ChatGPT Web cannot express no longer exclude Web routing. They are dropped or downgraded to PNG. Remote images, file_id, invalid masks, and size limits are still rejected.",
         "login_tasks": "Open account login tasks"
       }
     },

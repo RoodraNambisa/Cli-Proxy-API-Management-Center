@@ -136,7 +136,11 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     group: 'providers',
     titleKey: 'config_management.settings_center.pages.provider_chatgpt_web.title',
     descriptionKey: 'config_management.settings_center.pages.provider_chatgpt_web.description',
-    dirtyPrefixes: ['chatgptWebAutoRelogin'],
+    dirtyPrefixes: [
+      'chatgptWebAutoRelogin',
+      'chatgptWebImageUpstreamModel',
+      'chatgptWebIgnoreUnsupportedImageParams',
+    ],
   },
   {
     id: 'provider-grok',
@@ -492,6 +496,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.settings_center.chatgpt_web.auto_relogin',
     yamlKeys: ['chatgpt-web.auto-relogin'],
     aliases: ['chatgpt web', '自动重登', 'auto relogin'],
+  },
+  {
+    id: 'config-chatgpt-web-image-upstream-model',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.image_upstream_model',
+    yamlKeys: ['images.chatgpt-web.upstream-model', 'images.chatgpt-web.ignore-unsupported-params'],
+    aliases: ['picture_v2', 'web image', '图片参数', '忽略参数'],
   },
   {
     id: 'config-chatgpt-web-account-info',
