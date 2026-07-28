@@ -282,7 +282,32 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const lastLoginAt = metadataTime(file.last_login_at);
   const lastRefreshAt = metadataTime(file.last_refresh_at);
   const lastReloginAt = metadataTime(file.last_relogin_at);
-  const codexPlanType = resolveCodexPlanType(file);
+  const chatGptWebPlanType = String(file.plan_type ?? file.planType ?? '').trim();
+  const chatGptWebAccountType = String(file.account_type ?? '').trim();
+  const imageQuotaState = String(file.quota_state ?? 'unknown')
+    .trim()
+    .toLowerCase();
+  const imageQuotaRemainingRaw = file.image_quota_remaining;
+  const imageQuotaRemaining =
+    typeof imageQuotaRemainingRaw === 'number' && Number.isFinite(imageQuotaRemainingRaw)
+      ? Math.max(0, imageQuotaRemainingRaw)
+      : null;
+  const imageQuotaExhausted = imageQuotaState === 'exhausted';
+  const imageQuotaModelCooldown =
+    isChatGptWeb && imageQuotaExhausted && cooldownActive && cooldownScope === 'model';
+  const imageQuotaStale = file.quota_stale === true;
+  const imageQuotaRefreshing = file.quota_refreshing === true;
+  const imageQuotaResetAt = metadataTime(file.image_quota_reset_at);
+  const imageQuotaUpdatedAt = metadataTime(file.quota_updated_at);
+  const imageQuotaNextRefreshAt = metadataTime(file.quota_next_refresh_at);
+  const imageQuotaLastError = String(file.quota_last_error ?? '').trim();
+  const imageQuotaStateKey = `auth_files.chatgpt_web_image_quota_${imageQuotaState}`;
+  const translatedImageQuotaState = t(imageQuotaStateKey);
+  const imageQuotaStateLabel =
+    translatedImageQuotaState !== imageQuotaStateKey
+      ? translatedImageQuotaState
+      : imageQuotaState || t('auth_files.chatgpt_web_image_quota_unknown');
+  const codexPlanType = providerKey === 'codex' ? resolveCodexPlanType(file) : null;
   const codexPlanKey = codexPlanType ? `codex_quota.plan_${codexPlanType}` : '';
   const codexPlanLabel = codexPlanKey ? t(codexPlanKey) : '';
   const codexPlanDisplay =
@@ -334,7 +359,6 @@ export function AuthFileCard(props: AuthFileCardProps) {
           until: cooldownUntilText,
         });
   const canOpenModelCooldownDetails = cooldownScope === 'model' && showModelsButton;
-
   return (
     <div
       className={`${styles.fileCard} ${compact ? styles.fileCardCompact : ''} ${providerCardClass} ${selected ? styles.fileCardSelected : ''} ${file.disabled ? styles.fileCardDisabled : ''}`}
@@ -541,6 +565,14 @@ export function AuthFileCard(props: AuthFileCardProps) {
                     <strong>{refreshStrategyLabel}</strong>
                   </div>
                   <div>
+                    <span>{t('auth_files.chatgpt_web_account_type')}</span>
+                    <strong>{chatGptWebAccountType || '-'}</strong>
+                  </div>
+                  <div>
+                    <span>{t('auth_files.chatgpt_web_plan_type')}</span>
+                    <strong>{chatGptWebPlanType || '-'}</strong>
+                  </div>
+                  <div>
                     <span>{t('auth_files.chatgpt_web_source_auth')}</span>
                     <strong>{sourceAuthId || '-'}</strong>
                   </div>
@@ -579,6 +611,62 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   </div>
                 </div>
               ) : null}
+              <div
+                className={`${styles.chatGptWebImageQuota} ${
+                  imageQuotaExhausted
+                    ? styles.chatGptWebImageQuotaExhausted
+                    : imageQuotaState === 'available'
+                      ? styles.chatGptWebImageQuotaAvailable
+                      : styles.chatGptWebImageQuotaUnknown
+                }`}
+              >
+                <div className={styles.chatGptWebImageQuotaHeader}>
+                  <div>
+                    <span>{t('auth_files.chatgpt_web_image_quota_label')}</span>
+                    <strong>{imageQuotaStateLabel}</strong>
+                  </div>
+                  <div className={styles.chatGptWebImageQuotaFlags}>
+                    {chatGptWebAccountType ? <span>{chatGptWebAccountType}</span> : null}
+                    {imageQuotaRefreshing ? (
+                      <span>{t('auth_files.chatgpt_web_image_quota_refreshing')}</span>
+                    ) : null}
+                    {imageQuotaStale ? (
+                      <span>{t('auth_files.chatgpt_web_image_quota_stale')}</span>
+                    ) : null}
+                  </div>
+                </div>
+                {!compact ? (
+                  <div className={styles.chatGptWebImageQuotaGrid}>
+                    <div>
+                      <span>{t('auth_files.chatgpt_web_image_quota_remaining')}</span>
+                      <strong>{imageQuotaRemaining ?? '-'}</strong>
+                    </div>
+                    <div>
+                      <span>{t('auth_files.chatgpt_web_image_quota_reset')}</span>
+                      <strong>{imageQuotaResetAt}</strong>
+                    </div>
+                    <div>
+                      <span>{t('auth_files.chatgpt_web_image_quota_updated')}</span>
+                      <strong>{imageQuotaUpdatedAt}</strong>
+                    </div>
+                    <div>
+                      <span>{t('auth_files.chatgpt_web_image_quota_next_refresh')}</span>
+                      <strong>{imageQuotaNextRefreshAt}</strong>
+                    </div>
+                  </div>
+                ) : (
+                  <span className={styles.chatGptWebImageQuotaCompact}>
+                    {t('auth_files.chatgpt_web_image_quota_compact', {
+                      remaining: imageQuotaRemaining ?? '-',
+                      reset: imageQuotaResetAt,
+                    })}{' '}
+                    · {t('auth_files.chatgpt_web_image_quota_updated')}: {imageQuotaUpdatedAt}
+                  </span>
+                )}
+                {imageQuotaLastError ? (
+                  <span className={styles.chatGptWebImageQuotaError}>{imageQuotaLastError}</span>
+                ) : null}
+              </div>
               {proxyBinding ? (
                 <div className={styles.chatGptWebProxyBinding}>
                   <span>{t('auth_files.chatgpt_web_proxy_binding')}</span>
@@ -616,6 +704,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
           ) : null}
 
           {cooldownActive &&
+            !imageQuotaModelCooldown &&
             !criticalLifecycleState &&
             !sourceMissing &&
             !tokenOnly &&

@@ -2,8 +2,9 @@
  * 认证文件与 OAuth 排除模型相关 API
  */
 
-import { apiClient } from './client';
+import { apiClient, type ApiClientConnectionSnapshot } from './client';
 import type {
+  AuthFileModelItem,
   AuthFilesResponse,
   CodexPlanTypeRefreshResult,
   CodexPlanTypeRefreshMode,
@@ -12,10 +13,7 @@ import type {
 } from '@/types/authFile';
 import type { OAuthModelAliasEntry } from '@/types';
 import { parseTimestampMs } from '@/utils/timestamp';
-import {
-  AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS,
-  AUTH_FILE_UPLOAD_TIMEOUT_MS,
-} from '@/utils/constants';
+import { AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS, AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
 import { mapWithConcurrency } from '@/utils/concurrency';
 
 type StatusError = { status?: number };
@@ -504,12 +502,47 @@ const compareAuthFileEntries = (left: AuthFileEntry, right: AuthFileEntry): numb
   return 0;
 };
 
+const AUTH_FILE_QUOTA_SNAPSHOT_KEYS = [
+  'quota_state',
+  'image_quota_remaining',
+  'image_quota_reset_at',
+  'quota_updated_at',
+  'quota_stale',
+  'quota_refreshing',
+  'quota_next_refresh_at',
+  'quota_last_error',
+] as const;
+
+const hasAuthFileQuotaSnapshot = (entry: AuthFileEntry): boolean =>
+  AUTH_FILE_QUOTA_SNAPSHOT_KEYS.some((key) => Object.prototype.hasOwnProperty.call(entry, key));
+
+const hasExplicitUnknownAuthFileQuota = (entry: AuthFileEntry): boolean =>
+  entry.quota_state === 'unknown' ||
+  (Object.prototype.hasOwnProperty.call(entry, 'image_quota_remaining') &&
+    entry.image_quota_remaining === null);
+
 const mergeAuthFileEntries = (entries: AuthFileEntry[]): AuthFileEntry => {
   const [primary, ...rest] = [...entries].sort(compareAuthFileEntries);
   const merged: AuthFileEntry = { ...primary };
 
+  const quotaSource = hasAuthFileQuotaSnapshot(primary)
+    ? primary
+    : (rest.find(hasExplicitUnknownAuthFileQuota) ?? rest.find(hasAuthFileQuotaSnapshot));
+  if (quotaSource) {
+    const mergedRecord = merged as Record<string, unknown>;
+    const quotaSourceRecord = quotaSource as Record<string, unknown>;
+    for (const key of AUTH_FILE_QUOTA_SNAPSHOT_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(quotaSource, key)) {
+        mergedRecord[key] = quotaSourceRecord[key];
+      } else {
+        delete mergedRecord[key];
+      }
+    }
+  }
+
   rest.forEach((entry) => {
     Object.entries(entry).forEach(([key, value]) => {
+      if ((AUTH_FILE_QUOTA_SNAPSHOT_KEYS as readonly string[]).includes(key)) return;
       if (!hasMeaningfulValue(merged[key]) && hasMeaningfulValue(value)) {
         merged[key] = value;
       }
@@ -846,7 +879,16 @@ const uploadAuthFilesRequest = async (files: File[]): Promise<AuthFileBatchUploa
 };
 
 export const authFilesApi = {
-  list: async () => dedupeAuthFilesResponse(await apiClient.get<AuthFilesResponse>('/auth-files')),
+  list: async (connection?: ApiClientConnectionSnapshot, signal?: AbortSignal) =>
+    dedupeAuthFilesResponse(
+      connection
+        ? await apiClient.getAtConnection<AuthFilesResponse>(
+            connection,
+            '/auth-files',
+            signal ? { signal } : undefined
+          )
+        : await apiClient.get<AuthFilesResponse>('/auth-files', signal ? { signal } : undefined)
+    ),
 
   setStatus: (name: string, disabled: boolean) =>
     apiClient.patch<AuthFileStatusResponse>('/auth-files/status', { name, disabled }),
@@ -1110,34 +1152,21 @@ export const authFilesApi = {
   },
 
   // 获取认证凭证支持的模型
-  async getModelsForAuthFile(name: string): Promise<
-    {
-      id: string;
-      display_name?: string;
-      type?: string;
-      owned_by?: string;
-      cooldown_active?: boolean;
-      cooldownActive?: boolean;
-      scope?: string;
-      until?: string;
-    }[]
-  > {
-    const data = await apiClient.get<Record<string, unknown>>(
-      `/auth-files/models?name=${encodeURIComponent(name)}`
-    );
+  async getModelsForAuthFile(
+    name: string,
+    connection?: ApiClientConnectionSnapshot,
+    signal?: AbortSignal
+  ): Promise<AuthFileModelItem[]> {
+    const path = `/auth-files/models?name=${encodeURIComponent(name)}`;
+    const data = connection
+      ? await apiClient.getAtConnection<Record<string, unknown>>(
+          connection,
+          path,
+          signal ? { signal } : undefined
+        )
+      : await apiClient.get<Record<string, unknown>>(path, signal ? { signal } : undefined);
     const models = data.models ?? data['models'];
-    return Array.isArray(models)
-      ? (models as {
-          id: string;
-          display_name?: string;
-          type?: string;
-          owned_by?: string;
-          cooldown_active?: boolean;
-          cooldownActive?: boolean;
-          scope?: string;
-          until?: string;
-        }[])
-      : [];
+    return Array.isArray(models) ? (models as AuthFileModelItem[]) : [];
   },
 
   // 获取指定 channel 的模型定义

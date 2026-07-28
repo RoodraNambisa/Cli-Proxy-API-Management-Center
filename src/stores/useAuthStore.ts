@@ -21,6 +21,7 @@ import {
 interface AuthStoreState extends AuthState {
   connectionStatus: ConnectionStatus;
   connectionError: string | null;
+  connectionGeneration: number;
 
   // 操作
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -46,6 +47,7 @@ export const useAuthStore = create<AuthStoreState>()(
       serverBuildDate: null,
       connectionStatus: 'disconnected',
       connectionError: null,
+      connectionGeneration: 0,
 
       // 恢复会话并自动登录
       restoreSession: () => {
@@ -115,7 +117,7 @@ export const useAuthStore = create<AuthStoreState>()(
           'managementAccessPath'
         );
         const currentAccessPath = hasExplicitManagementAccessPath
-          ? credentials.managementAccessPath ?? ''
+          ? (credentials.managementAccessPath ?? '')
           : get().managementAccessPath || detectManagementAccessPathFromLocation();
         const { apiBase, managementAccessPath } = parseConnectionTarget(
           credentials.apiBase,
@@ -139,7 +141,7 @@ export const useAuthStore = create<AuthStoreState>()(
           await useConfigStore.getState().fetchConfig(undefined, true);
 
           // 登录成功
-          set({
+          set((state) => ({
             isAuthenticated: true,
             apiBase,
             managementAccessPath,
@@ -147,7 +149,8 @@ export const useAuthStore = create<AuthStoreState>()(
             rememberPassword,
             connectionStatus: 'connected',
             connectionError: null,
-          });
+            connectionGeneration: state.connectionGeneration + 1,
+          }));
           if (rememberPassword) {
             localStorage.setItem('isLoggedIn', 'true');
           } else {
@@ -202,10 +205,11 @@ export const useAuthStore = create<AuthStoreState>()(
           // 验证连接
           await useConfigStore.getState().fetchConfig();
 
-          set({
+          set((state) => ({
             isAuthenticated: true,
             connectionStatus: 'connected',
-          });
+            connectionGeneration: state.connectionGeneration + 1,
+          }));
 
           return true;
         } catch {

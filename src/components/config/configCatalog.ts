@@ -494,6 +494,20 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['chatgpt web', '自动重登', 'auto relogin'],
   },
   {
+    id: 'config-chatgpt-web-account-info',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'chatgpt_web.account_info.title',
+    yamlKeys: [
+      'chatgpt-web.account-info',
+      'chatgpt-web.account-info.refresh-workers',
+      'chatgpt-web.account-info.refresh-queue-size',
+      'chatgpt-web.account-info.refresh-ttl-minutes',
+      'chatgpt-web.account-info.recovery-jitter-seconds',
+      'chatgpt-web.account-info.max-retries',
+    ],
+    aliases: ['account info', 'image quota', '账号信息', '图片额度', '刷新池'],
+  },
+  {
     id: 'config-chatgpt-web-sentinel',
     pageId: 'provider-chatgpt-web',
     labelKey: 'chatgpt_web.sentinel.title',

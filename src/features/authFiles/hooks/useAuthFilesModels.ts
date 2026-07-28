@@ -1,10 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { authFilesApi } from '@/services/api';
+import { apiClient, authFilesApi } from '@/services/api';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem } from '@/types';
 import type { AuthFileModelItem } from '@/features/authFiles/constants';
 import { normalizeProviderKey } from '@/features/authFiles/constants';
+import { captureAuthFileSnapshotOrder } from '@/features/authFiles/snapshotOrder';
 
 type ModelsError = 'unsupported' | null;
 
@@ -13,6 +14,8 @@ export type UseAuthFilesModelsResult = {
   modelsLoading: boolean;
   modelsList: AuthFileModelItem[];
   modelsLoadedAtMs: number;
+  modelsSnapshotOrder: number;
+  modelsFile: AuthFileItem | null;
   modelsFileName: string;
   modelsFileType: string;
   modelsError: ModelsError;
@@ -20,7 +23,10 @@ export type UseAuthFilesModelsResult = {
   closeModelsModal: () => void;
 };
 
-export function useAuthFilesModels(): UseAuthFilesModelsResult {
+export function useAuthFilesModels(
+  files: AuthFileItem[] = [],
+  connectionGenerationKey = ''
+): UseAuthFilesModelsResult {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
 
@@ -28,35 +34,83 @@ export function useAuthFilesModels(): UseAuthFilesModelsResult {
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsList, setModelsList] = useState<AuthFileModelItem[]>([]);
   const [modelsLoadedAtMs, setModelsLoadedAtMs] = useState(0);
+  const [modelsSnapshotOrder, setModelsSnapshotOrder] = useState(0);
   const [modelsFileName, setModelsFileName] = useState('');
   const [modelsFileType, setModelsFileType] = useState('');
   const [modelsError, setModelsError] = useState<ModelsError>(null);
   const requestSequenceRef = useRef(0);
+  const requestAbortRef = useRef<AbortController | null>(null);
+  const connectionGenerationKeyRef = useRef(connectionGenerationKey);
+  connectionGenerationKeyRef.current = connectionGenerationKey;
+  const modelsFile = files.find((file) => file.name === modelsFileName) ?? null;
+
+  useEffect(() => {
+    requestAbortRef.current?.abort();
+    requestAbortRef.current = null;
+    requestSequenceRef.current += 1;
+    setModelsModalOpen(false);
+    setModelsLoading(false);
+    setModelsList([]);
+    setModelsLoadedAtMs(0);
+    setModelsSnapshotOrder(0);
+    setModelsFileName('');
+    setModelsFileType('');
+    setModelsError(null);
+    return () => {
+      requestAbortRef.current?.abort();
+      requestAbortRef.current = null;
+    };
+  }, [connectionGenerationKey]);
 
   const closeModelsModal = useCallback(() => {
+    requestAbortRef.current?.abort();
+    requestAbortRef.current = null;
     requestSequenceRef.current += 1;
     setModelsModalOpen(false);
   }, []);
 
   const showModels = useCallback(
     async (item: AuthFileItem) => {
+      requestAbortRef.current?.abort();
+      const abortController = new AbortController();
+      requestAbortRef.current = abortController;
       const requestSequence = requestSequenceRef.current + 1;
+      const requestConnectionGenerationKey = connectionGenerationKeyRef.current;
+      const requestSnapshotOrder = captureAuthFileSnapshotOrder();
       requestSequenceRef.current = requestSequence;
       setModelsFileName(item.name);
       setModelsFileType(normalizeProviderKey(String(item.provider ?? item.type ?? '')));
       setModelsList([]);
       setModelsLoadedAtMs(0);
+      setModelsSnapshotOrder(0);
       setModelsError(null);
       setModelsModalOpen(true);
 
       setModelsLoading(true);
+      const connection = apiClient.captureConnection();
       try {
-        const models = await authFilesApi.getModelsForAuthFile(item.name);
-        if (requestSequenceRef.current !== requestSequence) return;
+        const models = await authFilesApi.getModelsForAuthFile(
+          item.name,
+          connection,
+          abortController.signal
+        );
+        if (
+          requestSequenceRef.current !== requestSequence ||
+          connectionGenerationKeyRef.current !== requestConnectionGenerationKey
+        ) {
+          return;
+        }
         setModelsList(models);
+        setModelsSnapshotOrder(requestSnapshotOrder);
         setModelsLoadedAtMs(Date.now());
       } catch (err) {
-        if (requestSequenceRef.current !== requestSequence) return;
+        if (abortController.signal.aborted) return;
+        if (
+          requestSequenceRef.current !== requestSequence ||
+          connectionGenerationKeyRef.current !== requestConnectionGenerationKey
+        ) {
+          return;
+        }
         const errorMessage = err instanceof Error ? err.message : '';
         if (
           errorMessage.includes('404') ||
@@ -68,7 +122,13 @@ export function useAuthFilesModels(): UseAuthFilesModelsResult {
           showNotification(`${t('notification.load_failed')}: ${errorMessage}`, 'error');
         }
       } finally {
-        if (requestSequenceRef.current === requestSequence) {
+        if (requestAbortRef.current === abortController) {
+          requestAbortRef.current = null;
+        }
+        if (
+          requestSequenceRef.current === requestSequence &&
+          connectionGenerationKeyRef.current === requestConnectionGenerationKey
+        ) {
           setModelsLoading(false);
         }
       }
@@ -81,6 +141,8 @@ export function useAuthFilesModels(): UseAuthFilesModelsResult {
     modelsLoading,
     modelsList,
     modelsLoadedAtMs,
+    modelsSnapshotOrder,
+    modelsFile,
     modelsFileName,
     modelsFileType,
     modelsError,

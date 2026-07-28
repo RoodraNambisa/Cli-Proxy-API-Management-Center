@@ -399,6 +399,19 @@ describe('configuration settings center', () => {
     );
     expect(screen.getByText('Sentinel configuration panel')).not.toBeNull();
   });
+
+  test('searches account-info leaf keys and opens the ChatGPT Web config page', () => {
+    renderEditor('/config?section=global-basics');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'chatgpt-web.account-info.refresh-queue-size' },
+    });
+    fireEvent.click(screen.getByText('chatgpt_web.account_info.title'));
+
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-chatgpt-web-account-info'
+    );
+  });
 });
 
 describe('ConfigDisclosure', () => {

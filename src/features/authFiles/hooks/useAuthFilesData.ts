@@ -21,6 +21,7 @@ import {
   readXaiAuthFileUsingApi,
   readXaiAuthFileWebsockets,
 } from '@/features/authFiles/constants';
+import { captureAuthFileSnapshotOrder } from '@/features/authFiles/snapshotOrder';
 
 const CODEX_PLAN_TYPE_REFRESH_POLL_INTERVAL_MS = 3000;
 const COOLDOWN_MISSING_PREVIEW_LIMIT = 5;
@@ -141,6 +142,7 @@ type LoadFilesOptions = {
 export type UseAuthFilesDataResult = {
   files: AuthFileItem[];
   filesLoadedAtMs: number;
+  filesSnapshotOrder: number;
   selectedFiles: Set<string>;
   selectionCount: number;
   loading: boolean;
@@ -202,15 +204,17 @@ export type UseAuthFilesDataResult = {
 export type UseAuthFilesDataOptions = {
   refreshKeyStats: () => Promise<void>;
   active?: boolean;
+  connectionGenerationKey?: string;
 };
 
 export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFilesDataResult {
-  const { refreshKeyStats, active = true } = options;
+  const { refreshKeyStats, active = true, connectionGenerationKey = '' } = options;
   const { t } = useTranslation();
   const { showNotification, showConfirmation } = useNotificationStore();
 
   const [files, setFiles] = useState<AuthFileItem[]>([]);
   const [filesLoadedAtMs, setFilesLoadedAtMs] = useState(0);
+  const [filesSnapshotOrder, setFilesSnapshotOrder] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -250,7 +254,21 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const batchStatusPendingRef = useRef(false);
   const codexPlanRefreshTaskRef = useRef<CodexPlanTypeRefreshTask | null>(null);
   const codexPlanRefreshPollErrorNotifiedRef = useRef(false);
+  const loadFilesRequestRef = useRef(0);
+  const loadFilesConnectionRef = useRef(connectionGenerationKey);
+  const loadFilesAbortRef = useRef<AbortController | null>(null);
+  loadFilesConnectionRef.current = connectionGenerationKey;
   const selectionCount = selectedFiles.size;
+
+  useEffect(() => {
+    loadFilesAbortRef.current?.abort();
+    loadFilesAbortRef.current = null;
+    return () => {
+      loadFilesAbortRef.current?.abort();
+      loadFilesAbortRef.current = null;
+    };
+  }, [connectionGenerationKey]);
+
   const toggleSelect = useCallback((name: string) => {
     setSelectedFiles((prev) => {
       const next = new Set(prev);
@@ -342,25 +360,42 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
   const loadFiles = useCallback(
     async (options?: LoadFilesOptions) => {
+      const requestId = ++loadFilesRequestRef.current;
+      const requestConnection = connectionGenerationKey;
+      const requestSnapshotOrder = captureAuthFileSnapshotOrder();
+      loadFilesAbortRef.current?.abort();
+      const abortController = new AbortController();
+      loadFilesAbortRef.current = abortController;
+      const isCurrentRequest = () =>
+        loadFilesRequestRef.current === requestId &&
+        loadFilesConnectionRef.current === requestConnection;
       const background = options?.background === true;
       if (!background) {
         setLoading(true);
       }
       setError('');
+      const connection = apiClient.captureConnection();
       try {
-        const data = await authFilesApi.list();
+        const data = await authFilesApi.list(connection, abortController.signal);
+        if (!isCurrentRequest()) return;
         setFiles(data?.files || []);
+        setFilesSnapshotOrder(requestSnapshotOrder);
         setFilesLoadedAtMs(Date.now());
       } catch (err: unknown) {
+        if (abortController.signal.aborted) return;
+        if (!isCurrentRequest()) return;
         const errorMessage = err instanceof Error ? err.message : t('notification.refresh_failed');
         setError(errorMessage);
       } finally {
-        if (!background) {
+        if (loadFilesAbortRef.current === abortController) {
+          loadFilesAbortRef.current = null;
+        }
+        if (isCurrentRequest()) {
           setLoading(false);
         }
       }
     },
-    [t]
+    [connectionGenerationKey, t]
   );
 
   const applyCodexPlanRefreshTask = useCallback(
@@ -1145,8 +1180,10 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       }
 
       try {
+        const requestSnapshotOrder = captureAuthFileSnapshotOrder();
         const data = await authFilesApi.list();
         setFiles(data?.files || []);
+        setFilesSnapshotOrder(requestSnapshotOrder);
         setFilesLoadedAtMs(Date.now());
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : '';
@@ -1531,6 +1568,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   return {
     files,
     filesLoadedAtMs,
+    filesSnapshotOrder,
     selectedFiles,
     selectionCount,
     loading,

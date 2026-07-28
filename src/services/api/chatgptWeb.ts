@@ -1,4 +1,8 @@
 import type {
+  ChatGptWebAccountInfoConfig,
+  ChatGptWebAccountInfoConfigPatch,
+  ChatGptWebAccountInfoRefreshTask,
+  ChatGptWebAccountInfoSnapshot,
   ChatGptWebLoginTask,
   ChatGptWebMutationTask,
   ChatGptWebReloginResponse,
@@ -8,10 +12,12 @@ import type {
   ChatGptWebUsageConfig,
   ChatGptWebUsageSnapshot,
 } from '@/types';
-import { apiClient } from './client';
+import { isChatGptWebAccountInfoRefreshTaskTerminal } from '@/types';
+import { apiClient, type ApiClientConnectionSnapshot } from './client';
 import { AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
 
 const CHATGPT_WEB_RELOGIN_TIMEOUT_MS = 2 * 60 * 1000;
+const accountInfoTaskConnections = new Map<string, ApiClientConnectionSnapshot>();
 
 export const chatGptWebApi = {
   startLoginTask(file: File): Promise<ChatGptWebLoginTask> {
@@ -77,6 +83,96 @@ export const chatGptWebApi = {
         timeout: CHATGPT_WEB_RELOGIN_TIMEOUT_MS,
       }
     );
+  },
+
+  getAccountInfo(
+    connection?: ApiClientConnectionSnapshot,
+    signal?: AbortSignal
+  ): Promise<ChatGptWebAccountInfoSnapshot> {
+    if (connection) {
+      return signal
+        ? apiClient.getAtConnection(connection, '/chatgpt-web/account-info', { signal })
+        : apiClient.getAtConnection(connection, '/chatgpt-web/account-info');
+    }
+    return signal
+      ? apiClient.get('/chatgpt-web/account-info', { signal })
+      : apiClient.get('/chatgpt-web/account-info');
+  },
+
+  putAccountInfo(config: ChatGptWebAccountInfoConfig): Promise<unknown> {
+    return apiClient.put('/chatgpt-web/account-info', config);
+  },
+
+  patchAccountInfo(
+    config: ChatGptWebAccountInfoConfigPatch,
+    connection?: ApiClientConnectionSnapshot
+  ): Promise<unknown> {
+    return connection
+      ? apiClient.patchAtConnection(connection, '/chatgpt-web/account-info', config)
+      : apiClient.patch('/chatgpt-web/account-info', config);
+  },
+
+  startAccountInfoRefreshTask(
+    names: string[],
+    force: boolean,
+    connection: ApiClientConnectionSnapshot = apiClient.captureConnection()
+  ): Promise<ChatGptWebAccountInfoRefreshTask> {
+    return apiClient
+      .postAtConnection<ChatGptWebAccountInfoRefreshTask>(
+        connection,
+        '/chatgpt-web/account-info/refresh-tasks',
+        { names, force }
+      )
+      .then((task) => {
+        if (!isChatGptWebAccountInfoRefreshTaskTerminal(task.state)) {
+          accountInfoTaskConnections.set(task.id, connection);
+        }
+        return task;
+      });
+  },
+
+  async getAccountInfoRefreshTask(
+    id: string,
+    signal?: AbortSignal
+  ): Promise<ChatGptWebAccountInfoRefreshTask> {
+    const path = `/chatgpt-web/account-info/refresh-tasks/${encodeURIComponent(id)}`;
+    const connection = accountInfoTaskConnections.get(id);
+    try {
+      const task = connection
+        ? signal
+          ? await apiClient.getAtConnection<ChatGptWebAccountInfoRefreshTask>(connection, path, {
+              signal,
+            })
+          : await apiClient.getAtConnection<ChatGptWebAccountInfoRefreshTask>(connection, path)
+        : signal
+          ? await apiClient.get<ChatGptWebAccountInfoRefreshTask>(path, { signal })
+          : await apiClient.get<ChatGptWebAccountInfoRefreshTask>(path);
+      if (isChatGptWebAccountInfoRefreshTaskTerminal(task.state)) {
+        accountInfoTaskConnections.delete(id);
+      }
+      return task;
+    } catch (error) {
+      if (
+        error !== null &&
+        typeof error === 'object' &&
+        (error as { status?: unknown }).status === 404
+      ) {
+        accountInfoTaskConnections.delete(id);
+      }
+      throw error;
+    }
+  },
+
+  async cancelAccountInfoRefreshTask(id: string): Promise<ChatGptWebAccountInfoRefreshTask> {
+    const path = `/chatgpt-web/account-info/refresh-tasks/${encodeURIComponent(id)}`;
+    const connection = accountInfoTaskConnections.get(id);
+    try {
+      return connection
+        ? await apiClient.deleteAtConnection<ChatGptWebAccountInfoRefreshTask>(connection, path)
+        : await apiClient.delete<ChatGptWebAccountInfoRefreshTask>(path);
+    } finally {
+      accountInfoTaskConnections.delete(id);
+    }
   },
 
   getSentinel(): Promise<ChatGptWebSentinelSnapshot> {

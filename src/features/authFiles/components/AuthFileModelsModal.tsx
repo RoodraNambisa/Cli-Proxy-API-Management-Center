@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import type { AuthFileItem } from '@/types';
 import type { AuthFileModelItem } from '@/features/authFiles/constants';
 import {
   getAuthFileModelCapability,
@@ -20,6 +21,10 @@ export type AuthFileModelsModalProps = {
   error: 'unsupported' | null;
   models: AuthFileModelItem[];
   loadedAtMs: number;
+  snapshotOrder?: number;
+  fileLoadedAtMs?: number;
+  fileSnapshotOrder?: number;
+  file?: AuthFileItem | null;
   excluded: Record<string, string[]>;
   onClose: () => void;
   onCopyText: (text: string) => void;
@@ -35,10 +40,16 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
     error,
     models,
     loadedAtMs,
+    snapshotOrder = loadedAtMs,
+    fileLoadedAtMs = 0,
+    fileSnapshotOrder = fileLoadedAtMs,
+    file,
     excluded,
     onClose,
     onCopyText,
   } = props;
+  const normalizedFileType = fileType.trim().toLowerCase();
+  const planType = String(file?.plan_type ?? file?.planType ?? '').trim();
 
   return (
     <Modal
@@ -76,16 +87,131 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
               defaultValue: '列表为当前后端实际注册模型，已应用模型排除规则。',
             })}
           </div>
+          {normalizedFileType === 'chatgpt-web' && planType ? (
+            <div className={styles.hint}>
+              {t('auth_files.chatgpt_web_plan_type')}: {planType}
+            </div>
+          ) : null}
           <div className={styles.modelsList}>
             {models.map((model) => {
               const excludedModel = isModelExcluded(model.id, fileType, excluded);
               const capability = getAuthFileModelCapability(model, fileType);
-              const cooldownUntilMs = parseTimestampMs(model.until);
+              const normalizedModelID = model.id.trim().toLowerCase();
+              const imageModelByID =
+                normalizedModelID === 'gpt-image-2' || normalizedModelID.endsWith('/gpt-image-2');
+              const imageQuotaModel =
+                typeof model.image_quota_model === 'boolean'
+                  ? model.image_quota_model
+                  : imageModelByID;
+              const preferFileImageQuota =
+                normalizedFileType === 'chatgpt-web' &&
+                imageQuotaModel &&
+                fileSnapshotOrder > snapshotOrder;
+              const modelHasImageQuotaSnapshot = [
+                'quota_state',
+                'image_quota_remaining',
+                'image_quota_reset_at',
+                'quota_stale',
+                'quota_next_refresh_at',
+              ].some((key) => Object.prototype.hasOwnProperty.call(model, key));
+              const useModelImageQuotaSnapshot =
+                !preferFileImageQuota && modelHasImageQuotaSnapshot;
+              const useFileImageQuotaSnapshot =
+                preferFileImageQuota || (!useModelImageQuotaSnapshot && imageQuotaModel);
+              const modelImageQuotaState = String(model.quota_state ?? '')
+                .trim()
+                .toLowerCase();
+              const fileImageQuotaState = String(file?.quota_state ?? '')
+                .trim()
+                .toLowerCase();
+              const imageQuotaState = useModelImageQuotaSnapshot
+                ? modelImageQuotaState
+                : useFileImageQuotaSnapshot
+                  ? fileImageQuotaState
+                  : '';
+              const fileCooldownScope = String(file?.cooldown_scope ?? file?.cooldownScope ?? '')
+                .trim()
+                .toLowerCase();
+              const fileCooldownActive = parseDisableCoolingValue(
+                file?.cooldown_active ?? file?.cooldownActive
+              );
+              const newerFileClearsCooldown =
+                fileSnapshotOrder > snapshotOrder && fileCooldownActive === false;
+              const preferFileAuthCooldown =
+                fileSnapshotOrder > snapshotOrder && fileCooldownScope === 'auth';
+              const cooldownUntilMs = parseTimestampMs(
+                preferFileAuthCooldown
+                  ? (file?.cooldown_until ?? file?.cooldownUntil ?? model.until)
+                  : model.until
+              );
+              const suppressRecoveredImageQuotaCooldown =
+                preferFileImageQuota &&
+                modelImageQuotaState === 'exhausted' &&
+                imageQuotaState !== 'exhausted' &&
+                !preferFileAuthCooldown;
               const cooldownActive =
-                (parseDisableCoolingValue(model.cooldownActive ?? model.cooldown_active) ?? false) &&
+                (parseDisableCoolingValue(
+                  preferFileAuthCooldown
+                    ? (file?.cooldown_active ??
+                        file?.cooldownActive ??
+                        model.cooldownActive ??
+                        model.cooldown_active)
+                    : (model.cooldownActive ?? model.cooldown_active)
+                ) ??
+                  false) &&
                 Number.isFinite(cooldownUntilMs) &&
-                cooldownUntilMs > loadedAtMs;
-              const cooldownScope = String(model.scope ?? '').trim().toLowerCase();
+                cooldownUntilMs > Math.max(loadedAtMs, fileLoadedAtMs) &&
+                !suppressRecoveredImageQuotaCooldown &&
+                !newerFileClearsCooldown;
+              const cooldownScope = String(
+                preferFileAuthCooldown
+                  ? (file?.cooldown_scope ?? file?.cooldownScope ?? '')
+                  : (model.scope ?? '')
+              )
+                .trim()
+                .toLowerCase();
+              const imageQuotaRemainingValue = useModelImageQuotaSnapshot
+                ? model.image_quota_remaining
+                : useFileImageQuotaSnapshot
+                  ? file?.image_quota_remaining
+                  : undefined;
+              const imageQuotaRemaining =
+                typeof imageQuotaRemainingValue === 'number' &&
+                Number.isFinite(imageQuotaRemainingValue)
+                  ? Math.max(0, Math.trunc(imageQuotaRemainingValue))
+                  : null;
+              const imageQuotaStale = useModelImageQuotaSnapshot
+                ? model.quota_stale === true
+                : useFileImageQuotaSnapshot && file?.quota_stale === true;
+              const imageQuotaExhausted =
+                normalizedFileType === 'chatgpt-web' &&
+                imageQuotaModel &&
+                imageQuotaState === 'exhausted';
+              const imageQuotaResetAt = parseTimestampMs(
+                useModelImageQuotaSnapshot
+                  ? model.image_quota_reset_at
+                  : useFileImageQuotaSnapshot
+                    ? file?.image_quota_reset_at
+                    : undefined
+              );
+              const imageQuotaNextRefreshAt = parseTimestampMs(
+                useModelImageQuotaSnapshot
+                  ? model.quota_next_refresh_at
+                  : useFileImageQuotaSnapshot
+                    ? file?.quota_next_refresh_at
+                    : undefined
+              );
+              const imageQuotaRecoveryAt =
+                cooldownActive && cooldownScope === 'model'
+                  ? cooldownUntilMs
+                  : Number.isFinite(imageQuotaNextRefreshAt)
+                    ? imageQuotaNextRefreshAt
+                    : imageQuotaResetAt;
+              const explicitImageQuotaCooldown =
+                imageQuotaModel &&
+                imageQuotaExhausted &&
+                cooldownActive &&
+                cooldownScope === 'model';
               return (
                 <div
                   key={model.id}
@@ -117,7 +243,35 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
                       {t('auth_files.models_excluded_badge', { defaultValue: '已禁用' })}
                     </span>
                   )}
-                  {cooldownActive && (
+                  {imageQuotaExhausted ? (
+                    <>
+                      <span
+                        className={`${styles.modelCooldownBadge} ${styles.modelCooldownBadgeModel}`}
+                      >
+                        {t('auth_files.chatgpt_web_image_quota_model_badge')}
+                      </span>
+                      {Number.isFinite(imageQuotaRecoveryAt) ? (
+                        <span className={styles.modelCooldownUntil}>
+                          {t('auth_files.chatgpt_web_image_quota_recheck_at', {
+                            until: formatDateTime(new Date(imageQuotaRecoveryAt)),
+                          })}
+                        </span>
+                      ) : null}
+                    </>
+                  ) : null}
+                  {normalizedFileType === 'chatgpt-web' &&
+                  imageQuotaModel &&
+                  imageQuotaRemaining !== null ? (
+                    <span className={styles.modelCooldownUntil}>
+                      {t('auth_files.chatgpt_web_image_quota_remaining')}: {imageQuotaRemaining}
+                    </span>
+                  ) : null}
+                  {normalizedFileType === 'chatgpt-web' && imageQuotaModel && imageQuotaStale ? (
+                    <span className={styles.modelCooldownUntil}>
+                      {t('auth_files.chatgpt_web_image_quota_stale')}
+                    </span>
+                  ) : null}
+                  {cooldownActive && !explicitImageQuotaCooldown ? (
                     <>
                       <span
                         className={`${styles.modelCooldownBadge} ${
@@ -136,7 +290,7 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
                         })}
                       </span>
                     </>
-                  )}
+                  ) : null}
                   {model.type && <span className={styles.modelType}>{model.type}</span>}
                 </div>
               );

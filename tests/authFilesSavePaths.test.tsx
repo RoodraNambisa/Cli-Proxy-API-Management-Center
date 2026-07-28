@@ -617,6 +617,95 @@ describe('auth file save paths', () => {
     expect(result.current.selectedFiles.size).toBe(0);
   });
 
+  test('keeps an explicit unknown image quota when duplicate auth-file entries are merged', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({
+      files: [
+        {
+          name: 'chatgpt-web.json',
+          type: 'chatgpt-web',
+          source: 'file',
+          path: '/auths/chatgpt-web.json',
+          quota_state: 'unknown',
+          image_quota_remaining: null,
+        },
+        {
+          name: 'chatgpt-web.json',
+          type: 'chatgpt-web',
+          runtime_only: true,
+          quota_state: 'available',
+          image_quota_remaining: 7,
+        },
+      ],
+    });
+
+    const response = await authFilesApi.list();
+
+    expect(response.files).toHaveLength(1);
+    expect(response.files[0]?.quota_state).toBe('unknown');
+    expect(response.files[0]?.image_quota_remaining).toBeNull();
+  });
+
+  test('keeps a secondary explicit unknown image quota when duplicate auth-file entries are merged', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({
+      files: [
+        {
+          name: 'chatgpt-web.json',
+          type: 'chatgpt-web',
+          source: 'file',
+          path: '/auths/chatgpt-web.json',
+        },
+        {
+          name: 'chatgpt-web.json',
+          type: 'chatgpt-web',
+          runtime_only: true,
+          image_quota_remaining: null,
+        },
+        {
+          name: 'chatgpt-web.json',
+          type: 'chatgpt-web',
+          runtime_only: true,
+          image_quota_remaining: 7,
+        },
+      ],
+    });
+
+    const response = await authFilesApi.list();
+
+    expect(response.files).toHaveLength(1);
+    expect(response.files[0]?.image_quota_remaining).toBeNull();
+  });
+
+  test('does not merge an older quota snapshot into a newer unknown snapshot', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({
+      files: [
+        {
+          name: 'chatgpt-web.json',
+          type: 'chatgpt-web',
+          source: 'file',
+          path: '/auths/chatgpt-web.json',
+          quota_state: 'unknown',
+        },
+        {
+          name: 'chatgpt-web.json',
+          type: 'chatgpt-web',
+          runtime_only: true,
+          quota_state: 'available',
+          image_quota_remaining: 7,
+          image_quota_reset_at: '2099-01-01T00:00:00Z',
+          quota_stale: true,
+        },
+      ],
+    });
+
+    const response = await authFilesApi.list();
+
+    expect(response.files).toHaveLength(1);
+    expect(response.files[0]?.quota_state).toBe('unknown');
+    expect(response.files[0]).not.toHaveProperty('image_quota_remaining');
+    expect(response.files[0]).not.toHaveProperty('image_quota_reset_at');
+    expect(response.files[0]).not.toHaveProperty('quota_stale');
+  });
+
   test('downloads ChatGPT Web files individually and as selected or complete archives', async () => {
     const getRaw = vi.spyOn(apiClient, 'getRaw').mockResolvedValue({
       data: new Blob(['{"type":"chatgpt-web"}'], { type: 'application/json' }),

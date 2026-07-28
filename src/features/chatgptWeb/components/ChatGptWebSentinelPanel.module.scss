@@ -44,6 +44,36 @@
   gap: $spacing-lg;
 }
 
+.generationWarning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: 10px 12px;
+  border: 1px solid var(--warning-color);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--warning-color) 8%, var(--bg-primary));
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+
+  > span {
+    min-width: 0;
+  }
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .runtimeRow {
   align-items: center;
   padding: 12px 0;
@@ -217,6 +247,7 @@
   }
 
   .heading,
+  .generationWarning,
   .runtimeRow,
   .statusHeading {
     align-items: flex-start;

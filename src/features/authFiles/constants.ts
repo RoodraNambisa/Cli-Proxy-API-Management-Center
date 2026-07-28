@@ -12,7 +12,7 @@ import iconQwen from '@/assets/icons/qwen.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
 import iconOpenaiLight from '@/assets/icons/openai-light.svg';
 import iconOpenaiDark from '@/assets/icons/openai-dark.svg';
-import type { AuthFileItem } from '@/types';
+import type { AuthFileItem, AuthFileModelItem } from '@/types';
 import { parseTimestamp } from '@/utils/timestamp';
 import {
   normalizeAuthIndex,
@@ -24,16 +24,7 @@ import {
 export type ThemeColors = { bg: string; text: string; border?: string };
 export type TypeColorSet = { light: ThemeColors; dark?: ThemeColors };
 export type ResolvedTheme = 'light' | 'dark';
-export type AuthFileModelItem = {
-  id: string;
-  display_name?: string;
-  type?: string;
-  owned_by?: string;
-  cooldown_active?: boolean;
-  cooldownActive?: boolean;
-  scope?: 'auth' | 'model' | string;
-  until?: string;
-};
+export type { AuthFileModelItem } from '@/types';
 export type AuthFileIconAsset = string | { light: string; dark: string };
 
 export type QuotaProviderType = 'antigravity' | 'claude' | 'codex' | 'kimi' | 'xai';
@@ -332,6 +323,25 @@ export function isRuntimeOnlyAuthFile(file: AuthFileItem): boolean {
   if (typeof raw === 'boolean') return raw;
   if (typeof raw === 'string') return raw.trim().toLowerCase() === 'true';
   return false;
+}
+
+export function isChatGptWebAccountInfoRefreshable(file: AuthFileItem): boolean {
+  if (
+    normalizeProviderKey(String(file.provider || file.type || '')) !== 'chatgpt-web' ||
+    isRuntimeOnlyAuthFile(file)
+  ) {
+    return false;
+  }
+  if (typeof file.account_info_refreshable === 'boolean') {
+    return file.account_info_refreshable;
+  }
+  if (file.disabled === true) {
+    return false;
+  }
+  const lifecycleState = String(file.lifecycle_state ?? '')
+    .trim()
+    .toLowerCase();
+  return lifecycleState === '' || lifecycleState === 'active';
 }
 
 export function resolveAuthFileStats(file: AuthFileItem, stats: KeyStats): KeyStatBucket {

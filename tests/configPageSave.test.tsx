@@ -7,6 +7,7 @@ const harness = vi.hoisted(() => ({
   visualDirty: false,
   releaseDirty: false,
   auditDirty: false,
+  accountInfoDirty: false,
   sentinelDirty: false,
   usageCacheDirty: false,
   mergedYaml: 'request-retry: 1\n',
@@ -18,6 +19,8 @@ const harness = vi.hoisted(() => ({
   releaseReload: vi.fn(),
   auditSave: vi.fn(),
   auditReload: vi.fn(),
+  accountInfoSave: vi.fn(),
+  accountInfoReload: vi.fn(),
   sentinelSave: vi.fn(),
   sentinelReload: vi.fn(),
   usageCacheSave: vi.fn(),
@@ -27,6 +30,7 @@ const harness = vi.hoisted(() => ({
   clearConfigCache: vi.fn(),
   fetchSharedConfig: vi.fn(),
   translate: vi.fn(),
+  pageTransitionLayer: null as { isCurrentLayer: boolean } | null,
 }));
 
 vi.mock('react-i18next', async (importOriginal) => {
@@ -38,7 +42,7 @@ vi.mock('react-i18next', async (importOriginal) => {
 });
 
 vi.mock('@/components/common/PageTransitionLayer', () => ({
-  usePageTransitionLayer: () => null,
+  usePageTransitionLayer: () => harness.pageTransitionLayer,
 }));
 
 vi.mock('@/hooks/useMediaQuery', () => ({
@@ -115,6 +119,7 @@ vi.mock('@/components/config/VisualConfigEditor', async () => {
 vi.mock('@/components/config/RequestBodyReleaseCard', async () => {
   const React = await import('react');
   type Props = {
+    active?: boolean;
     onDirtyChange?: (dirty: boolean) => void;
     onErrorCountChange?: (count: number) => void;
   };
@@ -241,6 +246,53 @@ vi.mock('@/features/chatgptWeb/components/ChatGptWebSentinelPanel', async () => 
   };
 });
 
+vi.mock('@/features/chatgptWeb/components/ChatGptWebAccountInfoPanel', async () => {
+  const React = await import('react');
+  type Props = {
+    onDirtyChange?: (dirty: boolean) => void;
+    onErrorCountChange?: (count: number) => void;
+  };
+  type Handle = {
+    save: () => Promise<boolean>;
+    reload: () => Promise<void>;
+    reset: () => void;
+    validate: () => boolean;
+  };
+
+  return {
+    ChatGptWebAccountInfoPanel: React.forwardRef<Handle, Props>(function MockAccountInfoPanel(
+      { active, onDirtyChange, onErrorCountChange },
+      ref
+    ) {
+      React.useEffect(() => {
+        onDirtyChange?.(harness.accountInfoDirty);
+        onErrorCountChange?.(0);
+      }, [onDirtyChange, onErrorCountChange]);
+      React.useImperativeHandle(
+        ref,
+        () => ({
+          save: async () => {
+            const success = (await harness.accountInfoSave()) !== false;
+            if (success) onDirtyChange?.(false);
+            return success;
+          },
+          reload: async () => {
+            await harness.accountInfoReload();
+          },
+          reset: vi.fn(),
+          validate: () => true,
+        }),
+        [onDirtyChange]
+      );
+      return (
+        <div data-testid="account-info-panel" data-active={String(active)}>
+          account-info-panel
+        </div>
+      );
+    }),
+  };
+});
+
 vi.mock('@/features/chatgptWeb/components/ChatGptWebUsageCachePanel', async () => {
   const React = await import('react');
   type Props = {
@@ -313,8 +365,10 @@ describe('ConfigPage save coordination', () => {
     harness.visualDirty = false;
     harness.releaseDirty = false;
     harness.auditDirty = false;
+    harness.accountInfoDirty = false;
     harness.sentinelDirty = false;
     harness.usageCacheDirty = false;
+    harness.pageTransitionLayer = null;
     harness.mergedYaml = 'request-retry: 1\n';
     for (const mock of Object.values(harness)) {
       if (typeof mock === 'function' && 'mockReset' in mock) mock.mockReset();
@@ -327,6 +381,8 @@ describe('ConfigPage save coordination', () => {
     harness.releaseReload.mockResolvedValue(undefined);
     harness.auditSave.mockResolvedValue(true);
     harness.auditReload.mockResolvedValue(undefined);
+    harness.accountInfoSave.mockResolvedValue(true);
+    harness.accountInfoReload.mockResolvedValue(undefined);
     harness.sentinelSave.mockResolvedValue(true);
     harness.sentinelReload.mockResolvedValue(undefined);
     harness.usageCacheSave.mockResolvedValue(true);
@@ -369,6 +425,41 @@ describe('ConfigPage save coordination', () => {
     );
   });
 
+  test('saves ChatGPT Web account info through the unified sidecar flow', async () => {
+    harness.accountInfoDirty = true;
+    harness.fetchYaml
+      .mockResolvedValueOnce('chatgpt-web: {}\n')
+      .mockResolvedValueOnce('chatgpt-web:\n  account-info:\n    refresh-workers: 6\n');
+
+    renderPage();
+    await clickSave();
+
+    await waitFor(() => expect(harness.accountInfoSave).toHaveBeenCalledTimes(1));
+    expect(harness.saveYaml).not.toHaveBeenCalled();
+    expect(harness.loadVisualValues).toHaveBeenLastCalledWith(
+      'chatgpt-web:\n  account-info:\n    refresh-workers: 6\n'
+    );
+  });
+
+  test('deactivates account-info polling outside the visible current visual layer', async () => {
+    const firstRender = renderPage();
+    const accountInfoPanel = await screen.findByTestId('account-info-panel');
+    expect(accountInfoPanel.getAttribute('data-active')).toBe('true');
+
+    const sourceTab = screen.getByRole('button', { name: 'config_management.tabs.source' });
+    await waitFor(() => expect(sourceTab.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(sourceTab);
+    await waitFor(() => expect(accountInfoPanel.getAttribute('data-active')).toBe('false'));
+    firstRender.unmount();
+
+    localStorage.setItem('config-management:tab', 'visual');
+    harness.pageTransitionLayer = { isCurrentLayer: false };
+    renderPage();
+    expect((await screen.findByTestId('account-info-panel')).getAttribute('data-active')).toBe(
+      'false'
+    );
+  });
+
   test('saves ChatGPT Web usage cache through the unified sidecar flow', async () => {
     harness.usageCacheDirty = true;
     harness.fetchYaml
@@ -399,6 +490,7 @@ describe('ConfigPage save coordination', () => {
     await waitFor(() => expect(harness.fetchYaml).toHaveBeenCalledTimes(3));
     expect(harness.releaseReload).toHaveBeenCalledTimes(1);
     expect(harness.auditReload).toHaveBeenCalledTimes(1);
+    expect(harness.accountInfoReload).toHaveBeenCalledTimes(1);
     expect(harness.sentinelReload).toHaveBeenCalledTimes(1);
     expect(harness.usageCacheReload).toHaveBeenCalledTimes(1);
     expect(harness.releaseReload.mock.invocationCallOrder[0]).toBeGreaterThan(

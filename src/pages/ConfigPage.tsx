@@ -24,6 +24,10 @@ import {
   type RequestBodyReleaseCardHandle,
 } from '@/components/config/RequestBodyReleaseCard';
 import {
+  ChatGptWebAccountInfoPanel,
+  type ChatGptWebAccountInfoPanelHandle,
+} from '@/features/chatgptWeb/components/ChatGptWebAccountInfoPanel';
+import {
   ChatGptWebSentinelPanel,
   type ChatGptWebSentinelPanelHandle,
 } from '@/features/chatgptWeb/components/ChatGptWebSentinelPanel';
@@ -42,12 +46,14 @@ type ConfigEditorTab = 'visual' | 'source';
 type ConfigSidecarPanelId =
   | 'request-body-release'
   | 'request-body-audit'
+  | 'config-chatgpt-web-account-info'
   | 'config-chatgpt-web-sentinel'
   | 'config-chatgpt-web-usage-cache';
 
 type ConfigSidecarDirtySnapshot = {
   release: boolean;
   audit: boolean;
+  accountInfo: boolean;
   sentinel: boolean;
   usageCache: boolean;
 };
@@ -77,6 +83,16 @@ export function ConfigPage() {
   const showNotification = useNotificationStore((state) => state.showNotification);
   const showConfirmation = useNotificationStore((state) => state.showConfirmation);
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
+  const connectionGenerationKey = useAuthStore((state) =>
+    JSON.stringify([
+      state.apiBase,
+      state.managementAccessPath,
+      state.connectionStatus,
+      state.serverVersion,
+      state.serverBuildDate,
+      state.connectionGeneration ?? 0,
+    ])
+  );
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const isMobile = useMediaQuery('(max-width: 768px)');
 
@@ -108,10 +124,12 @@ export function ConfigPage() {
   const [dirty, setDirty] = useState(false);
   const [requestBodyReleaseDirty, setRequestBodyReleaseDirty] = useState(false);
   const [requestBodyAuditDirty, setRequestBodyAuditDirty] = useState(false);
+  const [chatGptWebAccountInfoDirty, setChatGptWebAccountInfoDirty] = useState(false);
   const [chatGptWebSentinelDirty, setChatGptWebSentinelDirty] = useState(false);
   const [chatGptWebUsageCacheDirty, setChatGptWebUsageCacheDirty] = useState(false);
   const [requestBodyReleaseErrorCount, setRequestBodyReleaseErrorCount] = useState(0);
   const [requestBodyAuditErrorCount, setRequestBodyAuditErrorCount] = useState(0);
+  const [chatGptWebAccountInfoErrorCount, setChatGptWebAccountInfoErrorCount] = useState(0);
   const [chatGptWebSentinelErrorCount, setChatGptWebSentinelErrorCount] = useState(0);
   const [chatGptWebUsageCacheErrorCount, setChatGptWebUsageCacheErrorCount] = useState(0);
   const [diffModalOpen, setDiffModalOpen] = useState(false);
@@ -129,6 +147,7 @@ export function ConfigPage() {
   const floatingActionsRef = useRef<HTMLDivElement>(null);
   const requestBodyReleaseRef = useRef<RequestBodyReleaseCardHandle | null>(null);
   const requestBodyAuditRef = useRef<RequestBodyAuditCardHandle | null>(null);
+  const chatGptWebAccountInfoRef = useRef<ChatGptWebAccountInfoPanelHandle | null>(null);
   const chatGptWebSentinelRef = useRef<ChatGptWebSentinelPanelHandle | null>(null);
   const chatGptWebUsageCacheRef = useRef<ChatGptWebUsageCachePanelHandle | null>(null);
 
@@ -138,6 +157,7 @@ export function ConfigPage() {
     yamlDirty ||
     requestBodyReleaseDirty ||
     requestBodyAuditDirty ||
+    chatGptWebAccountInfoDirty ||
     chatGptWebSentinelDirty ||
     chatGptWebUsageCacheDirty;
   const shouldRenderFloatingActions = isCurrentLayer;
@@ -186,24 +206,30 @@ export function ConfigPage() {
     const releaseValid =
       !requestBodyReleaseDirty || requestBodyReleaseRef.current?.validate() !== false;
     const auditValid = !requestBodyAuditDirty || requestBodyAuditRef.current?.validate() !== false;
+    const accountInfoValid =
+      !chatGptWebAccountInfoDirty || chatGptWebAccountInfoRef.current?.validate() !== false;
     const sentinelValid =
       !chatGptWebSentinelDirty || chatGptWebSentinelRef.current?.validate() !== false;
     const usageCacheValid =
       !chatGptWebUsageCacheDirty || chatGptWebUsageCacheRef.current?.validate() !== false;
-    if (releaseValid && auditValid && sentinelValid && usageCacheValid) return true;
+    if (releaseValid && auditValid && accountInfoValid && sentinelValid && usageCacheValid)
+      return true;
     setActiveTab('visual');
     localStorage.setItem('config-management:tab', 'visual');
     const invalidSection = !releaseValid
       ? 'request-body-release'
       : !auditValid
         ? 'request-body-audit'
-        : !sentinelValid
-          ? 'config-chatgpt-web-sentinel'
-          : 'config-chatgpt-web-usage-cache';
+        : !accountInfoValid
+          ? 'config-chatgpt-web-account-info'
+          : !sentinelValid
+            ? 'config-chatgpt-web-sentinel'
+            : 'config-chatgpt-web-usage-cache';
     navigate(`/config?section=${invalidSection}`, { replace: true });
     showNotification(t('config_management.settings_center.sidecar_validation_failed'), 'error');
     return false;
   }, [
+    chatGptWebAccountInfoDirty,
     chatGptWebSentinelDirty,
     chatGptWebUsageCacheDirty,
     navigate,
@@ -228,6 +254,7 @@ export function ConfigPage() {
     async ({
       reloadRelease = false,
       reloadAudit = false,
+      reloadAccountInfo = false,
       reloadSentinel = false,
       reloadUsageCache = false,
     } = {}) => {
@@ -239,6 +266,9 @@ export function ConfigPage() {
             : Promise.resolve(),
           reloadAudit
             ? (requestBodyAuditRef.current?.reload() ?? Promise.resolve())
+            : Promise.resolve(),
+          reloadAccountInfo
+            ? (chatGptWebAccountInfoRef.current?.reload() ?? Promise.resolve())
             : Promise.resolve(),
           reloadSentinel
             ? (chatGptWebSentinelRef.current?.reload() ?? Promise.resolve())
@@ -301,6 +331,13 @@ export function ConfigPage() {
           success: panel ? await panel.save() : false,
         });
       }
+      if (snapshot.accountInfo) {
+        const panel = chatGptWebAccountInfoRef.current;
+        results.push({
+          id: 'config-chatgpt-web-account-info',
+          success: panel ? await panel.save() : false,
+        });
+      }
       if (snapshot.sentinel) {
         const panel = chatGptWebSentinelRef.current;
         results.push({
@@ -360,6 +397,7 @@ export function ConfigPage() {
     const sidecarSnapshot: ConfigSidecarDirtySnapshot = {
       release: requestBodyReleaseDirty,
       audit: requestBodyAuditDirty,
+      accountInfo: chatGptWebAccountInfoDirty,
       sentinel: chatGptWebSentinelDirty,
       usageCache: chatGptWebUsageCacheDirty,
     };
@@ -377,6 +415,7 @@ export function ConfigPage() {
       await refreshSavedSnapshots({
         reloadRelease: !sidecarSnapshot.release,
         reloadAudit: !sidecarSnapshot.audit,
+        reloadAccountInfo: !sidecarSnapshot.accountInfo,
         reloadSentinel: !sidecarSnapshot.sentinel,
         reloadUsageCache: !sidecarSnapshot.usageCache,
       });
@@ -406,12 +445,14 @@ export function ConfigPage() {
       !yamlDirty &&
       (requestBodyReleaseDirty ||
         requestBodyAuditDirty ||
+        chatGptWebAccountInfoDirty ||
         chatGptWebSentinelDirty ||
         chatGptWebUsageCacheDirty)
     ) {
       const sidecarSnapshot: ConfigSidecarDirtySnapshot = {
         release: requestBodyReleaseDirty,
         audit: requestBodyAuditDirty,
+        accountInfo: chatGptWebAccountInfoDirty,
         sentinel: chatGptWebSentinelDirty,
         usageCache: chatGptWebUsageCacheDirty,
       };
@@ -470,12 +511,14 @@ export function ConfigPage() {
         if (
           requestBodyReleaseDirty ||
           requestBodyAuditDirty ||
+          chatGptWebAccountInfoDirty ||
           chatGptWebSentinelDirty ||
           chatGptWebUsageCacheDirty
         ) {
           await saveSidecarsWithoutYaml({
             release: requestBodyReleaseDirty,
             audit: requestBodyAuditDirty,
+            accountInfo: chatGptWebAccountInfoDirty,
             sentinel: chatGptWebSentinelDirty,
             usageCache: chatGptWebUsageCacheDirty,
           });
@@ -710,6 +753,7 @@ export function ConfigPage() {
         loadConfig(),
         requestBodyReleaseRef.current?.reload(),
         requestBodyAuditRef.current?.reload(),
+        chatGptWebAccountInfoRef.current?.reload(),
         chatGptWebSentinelRef.current?.reload(),
         chatGptWebUsageCacheRef.current?.reload(),
       ]);
@@ -727,6 +771,7 @@ export function ConfigPage() {
           loadConfig(),
           requestBodyReleaseRef.current?.reload(),
           requestBodyAuditRef.current?.reload(),
+          chatGptWebAccountInfoRef.current?.reload(),
           chatGptWebSentinelRef.current?.reload(),
           chatGptWebUsageCacheRef.current?.reload(),
         ]);
@@ -837,9 +882,13 @@ export function ConfigPage() {
               dirtyFields={visualDirtyFields}
               requestBodyDirty={requestBodyReleaseDirty || requestBodyAuditDirty}
               requestBodyErrorCount={requestBodyReleaseErrorCount + requestBodyAuditErrorCount}
-              chatGptWebSentinelDirty={chatGptWebSentinelDirty || chatGptWebUsageCacheDirty}
+              chatGptWebSentinelDirty={
+                chatGptWebAccountInfoDirty || chatGptWebSentinelDirty || chatGptWebUsageCacheDirty
+              }
               chatGptWebSentinelErrorCount={
-                chatGptWebSentinelErrorCount + chatGptWebUsageCacheErrorCount
+                chatGptWebAccountInfoErrorCount +
+                chatGptWebSentinelErrorCount +
+                chatGptWebUsageCacheErrorCount
               }
               renderRequestBodyPanels={({ focusTarget }) => (
                 <>
@@ -865,6 +914,16 @@ export function ConfigPage() {
               )}
               renderChatGptWebSentinel={({ active, focusTarget }) => (
                 <>
+                  <ChatGptWebAccountInfoPanel
+                    ref={chatGptWebAccountInfoRef}
+                    active={active && activeTab === 'visual' && isCurrentLayer}
+                    disabled={disableControls}
+                    connectionGenerationKey={connectionGenerationKey}
+                    externalSaving={saving}
+                    focusTarget={focusTarget}
+                    onDirtyChange={setChatGptWebAccountInfoDirty}
+                    onErrorCountChange={setChatGptWebAccountInfoErrorCount}
+                  />
                   <ChatGptWebUsageCachePanel
                     ref={chatGptWebUsageCacheRef}
                     active={active}

@@ -7,6 +7,7 @@ import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileMod
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import type { PrefixProxyEditorState } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
 import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
+import { captureAuthFileSnapshotOrder } from '@/features/authFiles/snapshotOrder';
 import {
   getAuthFileModelCapability,
   isXaiProvider,
@@ -204,6 +205,95 @@ describe('xAI auth file compatibility', () => {
     });
     expect(result.current.modelsFileName).toBe('second.json');
     expect(result.current.modelsList).toEqual([{ id: 'second-model' }]);
+  });
+
+  test('records model snapshot order separately from response completion time', async () => {
+    const requestStartedAt = Date.now() + 60_000;
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(requestStartedAt);
+    let resolveRequest: ((models: { id: string }[]) => void) | undefined;
+    const request = new Promise<{ id: string }[]>((resolve) => {
+      resolveRequest = resolve;
+    });
+    vi.spyOn(authFilesApi, 'getModelsForAuthFile').mockReturnValue(request);
+    const { result } = renderHook(() => useAuthFilesModels());
+
+    let openRequest: Promise<void> | undefined;
+    act(() => {
+      openRequest = result.current.showModels({ name: 'web.json', type: 'chatgpt-web' });
+    });
+    nowSpy.mockReturnValue(requestStartedAt + 5_000);
+    const laterSnapshotOrder = captureAuthFileSnapshotOrder();
+    await act(async () => {
+      resolveRequest?.([{ id: 'gpt-image-2' }]);
+      await openRequest;
+    });
+
+    expect(result.current.modelsSnapshotOrder).toBeLessThan(laterSnapshotOrder);
+    expect(result.current.modelsLoadedAtMs).toBe(requestStartedAt + 5_000);
+  });
+
+  test('ignores a stale model response after the backend connection changes', async () => {
+    const oldConnection = {
+      apiBase: 'https://old.example/v0/management',
+      managementKey: 'old-secret',
+      timeout: 30_000,
+    };
+    vi.spyOn(apiClient, 'captureConnection').mockReturnValue(oldConnection);
+    let resolveRequest: ((models: { id: string }[]) => void) | undefined;
+    const request = new Promise<{ id: string }[]>((resolve) => {
+      resolveRequest = resolve;
+    });
+    const getModels = vi.spyOn(authFilesApi, 'getModelsForAuthFile').mockReturnValue(request);
+    const { result, rerender } = renderHook(
+      ({ connectionGenerationKey }: { connectionGenerationKey: string }) =>
+        useAuthFilesModels([], connectionGenerationKey),
+      { initialProps: { connectionGenerationKey: 'connection-a' } }
+    );
+
+    let openRequest: Promise<void> | undefined;
+    act(() => {
+      openRequest = result.current.showModels({ name: 'first.json', type: 'codex' });
+    });
+    rerender({ connectionGenerationKey: 'connection-b' });
+    await act(async () => {
+      resolveRequest?.([{ id: 'stale-model' }]);
+      await openRequest;
+    });
+
+    expect(result.current.modelsModalOpen).toBe(false);
+    expect(result.current.modelsFileName).toBe('');
+    expect(result.current.modelsList).toEqual([]);
+    expect(result.current.modelsLoadedAtMs).toBe(0);
+    expect(result.current.modelsSnapshotOrder).toBe(0);
+    expect(getModels).toHaveBeenCalledWith('first.json', oldConnection, expect.any(AbortSignal));
+    expect(getModels.mock.calls[0]?.[2]?.aborted).toBe(true);
+  });
+
+  test('derives the open model file from the latest auth-file list', async () => {
+    vi.spyOn(authFilesApi, 'getModelsForAuthFile').mockResolvedValue([{ id: 'gpt-image-2' }]);
+    const initialFile: AuthFileItem = {
+      name: 'web.json',
+      type: 'chatgpt-web',
+      quota_state: 'unknown',
+    };
+    const latestFile: AuthFileItem = {
+      ...initialFile,
+      quota_state: 'exhausted',
+      image_quota_reset_at: '2099-01-01T00:00:00Z',
+    };
+    const { result, rerender } = renderHook(
+      ({ files }: { files: AuthFileItem[] }) => useAuthFilesModels(files),
+      { initialProps: { files: [initialFile] } }
+    );
+
+    await act(async () => {
+      await result.current.showModels(initialFile);
+    });
+    expect(result.current.modelsFile).toBe(initialFile);
+
+    rerender({ files: [latestFile] });
+    expect(result.current.modelsFile).toBe(latestFile);
+    expect(result.current.modelsFile?.quota_state).toBe('exhausted');
   });
 
   test('shows xAI-only switches and never exposes them on other provider cards', () => {

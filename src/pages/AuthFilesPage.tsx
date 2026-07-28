@@ -36,6 +36,7 @@ import {
   getTypeColor,
   getTypeLabel,
   hasAuthFileStatusMessage,
+  isChatGptWebAccountInfoRefreshable,
   isRuntimeOnlyAuthFile,
   normalizeProviderKey,
   parsePriorityValue,
@@ -65,6 +66,7 @@ import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAut
 import { useAuthFilesStats } from '@/features/authFiles/hooks/useAuthFilesStats';
 import { useAuthFilesStatusBarCache } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import { useAuthFilesUsageSummary } from '@/features/authFiles/hooks/useAuthFilesUsageSummary';
+import { useChatGptWebAccountInfoRefresh } from '@/features/authFiles/hooks/useChatGptWebAccountInfoRefresh';
 import {
   ALL_PLAN_FILTER,
   ALL_PRIORITY_FILTER,
@@ -284,6 +286,16 @@ export function AuthFilesPage() {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
+  const connectionGenerationKey = useAuthStore((state) =>
+    JSON.stringify([
+      state.apiBase,
+      state.managementAccessPath,
+      state.connectionStatus,
+      state.serverVersion,
+      state.serverBuildDate,
+      state.connectionGeneration ?? 0,
+    ])
+  );
   const setCodexQuota = useQuotaStore((state) => state.setCodexQuota);
   const resolvedTheme: ResolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const codexAgentIdentityConversionVisible = useFrontendFeatureStore(
@@ -328,6 +340,7 @@ export function AuthFilesPage() {
   const {
     files,
     filesLoadedAtMs,
+    filesSnapshotOrder,
     selectedFiles,
     selectionCount,
     loading,
@@ -380,7 +393,11 @@ export function AuthFilesPage() {
     batchDelete,
     closeDependencyDelete,
     confirmDependencyDelete,
-  } = useAuthFilesData({ refreshKeyStats: refreshVisibleKeyStats, active: isCurrentLayer });
+  } = useAuthFilesData({
+    refreshKeyStats: refreshVisibleKeyStats,
+    active: isCurrentLayer,
+    connectionGenerationKey,
+  });
 
   const refreshFilesInBackground = useCallback(() => loadFiles({ background: true }), [loadFiles]);
 
@@ -410,12 +427,14 @@ export function AuthFilesPage() {
     modelsLoading,
     modelsList,
     modelsLoadedAtMs,
+    modelsSnapshotOrder,
+    modelsFile,
     modelsFileName,
     modelsFileType,
     modelsError,
     showModels,
     closeModelsModal,
-  } = useAuthFilesModels();
+  } = useAuthFilesModels(files, connectionGenerationKey);
 
   const {
     prefixProxyEditor,
@@ -906,6 +925,60 @@ export function AuthFilesPage() {
     [pageItems]
   );
   const selectedNames = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
+  const currentPageChatGptWebNames = useMemo(
+    () => pageItems.filter(isChatGptWebAccountInfoRefreshable).map((file) => file.name),
+    [pageItems]
+  );
+  const chatGptWebAccountInfoVisibleScopeKey = useMemo(
+    () =>
+      JSON.stringify([
+        currentPage,
+        pageSize,
+        filter,
+        planFilter,
+        priorityFilter,
+        problemOnly,
+        enabledOnly,
+        disabledOnly,
+        compactMode,
+        normalizedSearch,
+        sortMode,
+      ]),
+    [
+      compactMode,
+      disabledOnly,
+      enabledOnly,
+      filter,
+      currentPage,
+      pageSize,
+      planFilter,
+      priorityFilter,
+      problemOnly,
+      normalizedSearch,
+      sortMode,
+    ]
+  );
+  const selectedChatGptWebNames = useMemo(
+    () =>
+      files
+        .filter((file) => selectedFiles.has(file.name) && isChatGptWebAccountInfoRefreshable(file))
+        .map((file) => file.name),
+    [files, selectedFiles]
+  );
+  const {
+    manualRefreshing: chatGptWebAccountInfoRefreshing,
+    manualLiveMessage: chatGptWebAccountInfoLiveMessage,
+    unsupported: chatGptWebAccountInfoUnsupported,
+    refreshSelected: refreshSelectedChatGptWebAccountInfo,
+  } = useChatGptWebAccountInfoRefresh({
+    active: isCurrentLayer && !loading && uiStateHydrated,
+    disabled: disableControls,
+    connectionGenerationKey,
+    visibleScopeKey: chatGptWebAccountInfoVisibleScopeKey,
+    visibleNames: currentPageChatGptWebNames,
+    selectedNames: selectedChatGptWebNames,
+    reloadFiles: refreshFilesInBackground,
+  });
   const selectedCodexIdentityTargets = useMemo(() => {
     const toAgentIdentity: string[] = [];
     const toOauth: string[] = [];
@@ -1347,6 +1420,9 @@ export function AuthFilesPage() {
 
   return (
     <div className={styles.container}>
+      <span className={styles.visuallyHidden} role="status" aria-live="polite" aria-atomic="true">
+        {chatGptWebAccountInfoLiveMessage}
+      </span>
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>{t('auth_files.title')}</h1>
         <p className={styles.description}>{t('auth_files.description')}</p>
@@ -1808,6 +1884,10 @@ export function AuthFilesPage() {
         error={modelsError}
         models={modelsList}
         loadedAtMs={modelsLoadedAtMs}
+        snapshotOrder={modelsSnapshotOrder}
+        fileLoadedAtMs={filesLoadedAtMs}
+        fileSnapshotOrder={filesSnapshotOrder}
+        file={modelsFile}
         excluded={excluded}
         onClose={closeModelsModal}
         onCopyText={copyTextWithNotification}
@@ -1921,6 +2001,31 @@ export function AuthFilesPage() {
                   >
                     {t('auth_files.batch_settings_button')}
                   </Button>
+                  {selectedChatGptWebNames.length > 0 ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void refreshSelectedChatGptWebAccountInfo()}
+                      disabled={
+                        disableControls ||
+                        chatGptWebAccountInfoRefreshing ||
+                        chatGptWebAccountInfoUnsupported
+                      }
+                      loading={chatGptWebAccountInfoRefreshing}
+                      title={
+                        chatGptWebAccountInfoUnsupported
+                          ? t('auth_files.chatgpt_web_account_refresh_unsupported')
+                          : undefined
+                      }
+                    >
+                      <IconRefreshCw size={14} />
+                      {chatGptWebAccountInfoUnsupported
+                        ? t('auth_files.chatgpt_web_account_refresh_unsupported')
+                        : t('auth_files.chatgpt_web_account_refresh_selected', {
+                            count: selectedChatGptWebNames.length,
+                          })}
+                    </Button>
+                  ) : null}
                   {selectedCodexIdentityTargets.toAgentIdentity.length > 0 && (
                     <Button
                       variant="secondary"

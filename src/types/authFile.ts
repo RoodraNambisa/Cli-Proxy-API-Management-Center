@@ -21,6 +21,24 @@ export type AuthFileType =
 
 export type AuthCooldownScope = 'auth' | 'model';
 export type CodexAuthMode = 'oauth' | 'agentIdentity';
+export type ChatGptWebQuotaState = 'unknown' | 'available' | 'exhausted';
+
+export interface AuthFileModelItem {
+  id: string;
+  display_name?: string;
+  type?: string;
+  owned_by?: string;
+  cooldown_active?: boolean;
+  cooldownActive?: boolean;
+  scope?: AuthCooldownScope | string;
+  until?: string;
+  quota_state?: ChatGptWebQuotaState | string;
+  quota_stale?: boolean;
+  image_quota_remaining?: number | null;
+  image_quota_reset_at?: string;
+  quota_next_refresh_at?: string;
+  image_quota_model?: boolean;
+}
 
 export interface AuthFileProxyBinding {
   pool?: string;
@@ -67,6 +85,17 @@ export interface AuthFileItem {
   last_login_at?: string;
   last_refresh_at?: string;
   last_relogin_at?: string;
+  account_type?: string;
+  plan_type?: string;
+  image_quota_remaining?: number | null;
+  image_quota_reset_at?: string;
+  quota_state?: ChatGptWebQuotaState | string;
+  quota_updated_at?: string;
+  quota_stale?: boolean;
+  quota_refreshing?: boolean;
+  quota_next_refresh_at?: string;
+  quota_last_error?: string;
+  account_info_refreshable?: boolean;
   credential_mode?: string;
   refresh_strategy?: string;
   token_only?: boolean;

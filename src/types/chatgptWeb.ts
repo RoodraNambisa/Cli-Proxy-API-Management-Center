@@ -91,6 +91,88 @@ export interface ChatGptWebReloginResponse {
   error?: string;
 }
 
+export interface ChatGptWebAccountInfoConfig {
+  'refresh-workers': number;
+  'refresh-queue-size': number;
+  'refresh-ttl-minutes': number;
+  'recovery-jitter-seconds': number;
+  'max-retries': number;
+}
+
+export interface ChatGptWebAccountInfoRuntime {
+  busy: number;
+  queued: number;
+  scheduled: number;
+  inflight: number;
+  refresh_count: number;
+  retry_count: number;
+  failed_count: number;
+  last_error: string;
+}
+
+export interface ChatGptWebAccountInfoSnapshot {
+  config: ChatGptWebAccountInfoConfig;
+  runtime: ChatGptWebAccountInfoRuntime;
+}
+
+export type ChatGptWebAccountInfoConfigPatch = Partial<ChatGptWebAccountInfoConfig>;
+
+export type ChatGptWebAccountInfoRefreshTaskState =
+  | 'queued'
+  | 'running'
+  | 'canceling'
+  | 'completed'
+  | 'completed_with_errors'
+  | 'failed'
+  | 'canceled';
+
+export type ChatGptWebAccountInfoRefreshResultStatus =
+  | 'updated'
+  | 'unchanged'
+  | 'fresh'
+  | 'partial'
+  | 'failed'
+  | 'canceled';
+
+export interface ChatGptWebAccountInfoRefreshResult {
+  name: string;
+  auth_index?: string;
+  status: ChatGptWebAccountInfoRefreshResultStatus | string;
+  attempts?: number;
+  account_type?: string;
+  plan_type?: string;
+  image_quota_remaining?: number | null;
+  image_quota_reset_at?: string;
+  quota_state?: string;
+  http_status?: number;
+  error?: string;
+}
+
+export interface ChatGptWebAccountInfoRefreshTask {
+  id: string;
+  state: ChatGptWebAccountInfoRefreshTaskState | string;
+  force?: boolean;
+  created_at?: string;
+  started_at?: string;
+  completed_at?: string;
+  total?: number;
+  processed?: number;
+  succeeded?: number;
+  updated?: number;
+  unchanged?: number;
+  fresh?: number;
+  partial?: number;
+  failed?: number;
+  canceled?: number;
+  results?: ChatGptWebAccountInfoRefreshResult[];
+}
+
+export const isChatGptWebAccountInfoRefreshTaskTerminal = (state: string): boolean =>
+  state === 'completed' ||
+  state === 'completed_with_errors' ||
+  state === 'failed' ||
+  state === 'canceled';
+
 export interface ChatGptWebSentinelConfig {
   'sdk-runtime-enabled': boolean;
   'sdk-workers': number;

@@ -8,6 +8,16 @@ import type { ApiClientConfig, ApiError } from '@/types';
 import { BUILD_DATE_HEADER_KEYS, REQUEST_TIMEOUT_MS, VERSION_HEADER_KEYS } from '@/utils/constants';
 import { computeApiUrl } from '@/utils/connection';
 
+export type ApiClientConnectionSnapshot = Readonly<{
+  apiBase: string;
+  managementKey: string;
+  timeout: number;
+}>;
+
+type ScopedAxiosRequestConfig = AxiosRequestConfig & {
+  __apiClientConnection?: ApiClientConnectionSnapshot;
+};
+
 class ApiClient {
   private instance: AxiosInstance;
   private apiBase: string = '';
@@ -76,6 +86,11 @@ class ApiClient {
     return null;
   }
 
+  private connectionIsCurrent(connection?: ApiClientConnectionSnapshot): boolean {
+    if (!connection) return true;
+    return connection.apiBase === this.apiBase && connection.managementKey === this.managementKey;
+  }
+
   /**
    * 设置请求/响应拦截器
    */
@@ -83,16 +98,22 @@ class ApiClient {
     // 请求拦截器
     this.instance.interceptors.request.use(
       (config) => {
+        const scopedConfig = config as ScopedAxiosRequestConfig;
+        const connection = scopedConfig.__apiClientConnection;
         // 设置 baseURL
-        config.baseURL = this.apiBase;
+        config.baseURL = connection?.apiBase ?? this.apiBase;
+        config.timeout = connection?.timeout ?? config.timeout;
         if (config.url) {
           // Normalize deprecated Gemini endpoint to the current path.
           config.url = config.url.replace(/\/generative-language-api-key\b/g, '/gemini-api-key');
         }
 
         // 添加认证头
-        if (this.managementKey) {
-          config.headers.Authorization = `Bearer ${this.managementKey}`;
+        const managementKey = connection?.managementKey ?? this.managementKey;
+        if (managementKey) {
+          config.headers.Authorization = `Bearer ${managementKey}`;
+        } else {
+          delete config.headers.Authorization;
         }
 
         return config;
@@ -103,12 +124,13 @@ class ApiClient {
     // 响应拦截器
     this.instance.interceptors.response.use(
       (response) => {
+        const connection = (response.config as ScopedAxiosRequestConfig).__apiClientConnection;
         const headers = response.headers as Record<string, string | undefined>;
         const version = this.readHeader(headers, VERSION_HEADER_KEYS);
         const buildDate = this.readHeader(headers, BUILD_DATE_HEADER_KEYS);
 
         // 触发版本更新事件（后续通过 store 处理）
-        if (version || buildDate) {
+        if ((version || buildDate) && this.connectionIsCurrent(connection)) {
           window.dispatchEvent(
             new CustomEvent('server-version-update', {
               detail: { version: version || null, buildDate: buildDate || null },
@@ -120,6 +142,25 @@ class ApiClient {
       },
       (error) => Promise.reject(this.handleError(error))
     );
+  }
+
+  captureConnection(): ApiClientConnectionSnapshot {
+    const timeout = Number(this.instance.defaults.timeout);
+    return {
+      apiBase: this.apiBase,
+      managementKey: this.managementKey,
+      timeout: Number.isFinite(timeout) && timeout > 0 ? timeout : REQUEST_TIMEOUT_MS,
+    };
+  }
+
+  private scopedConfig(
+    connection: ApiClientConnectionSnapshot,
+    config?: AxiosRequestConfig
+  ): ScopedAxiosRequestConfig {
+    return {
+      ...(config ?? {}),
+      __apiClientConnection: connection,
+    };
   }
 
   /**
@@ -149,7 +190,9 @@ class ApiClient {
       apiError.data = responseData;
 
       // 401 未授权 - 触发登出事件
-      if (error.response?.status === 401) {
+      const connection = (error.config as ScopedAxiosRequestConfig | undefined)
+        ?.__apiClientConnection;
+      if (error.response?.status === 401 && this.connectionIsCurrent(connection)) {
         window.dispatchEvent(new Event('unauthorized'));
       }
 
@@ -175,11 +218,30 @@ class ApiClient {
     return response.data;
   }
 
+  async getAtConnection<T = unknown>(
+    connection: ApiClientConnectionSnapshot,
+    url: string,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
+    const response = await this.instance.get<T>(url, this.scopedConfig(connection, config));
+    return response.data;
+  }
+
   /**
    * POST 请求
    */
   async post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.instance.post<T>(url, data, config);
+    return response.data;
+  }
+
+  async postAtConnection<T = unknown>(
+    connection: ApiClientConnectionSnapshot,
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
+    const response = await this.instance.post<T>(url, data, this.scopedConfig(connection, config));
     return response.data;
   }
 
@@ -199,11 +261,30 @@ class ApiClient {
     return response.data;
   }
 
+  async patchAtConnection<T = unknown>(
+    connection: ApiClientConnectionSnapshot,
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
+    const response = await this.instance.patch<T>(url, data, this.scopedConfig(connection, config));
+    return response.data;
+  }
+
   /**
    * DELETE 请求
    */
   async delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.instance.delete<T>(url, config);
+    return response.data;
+  }
+
+  async deleteAtConnection<T = unknown>(
+    connection: ApiClientConnectionSnapshot,
+    url: string,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
+    const response = await this.instance.delete<T>(url, this.scopedConfig(connection, config));
     return response.data;
   }
 
