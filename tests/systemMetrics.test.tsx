@@ -1,6 +1,10 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { createRef } from 'react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { ChatGptWebUsageCachePanel } from '@/features/chatgptWeb/components/ChatGptWebUsageCachePanel';
+import {
+  ChatGptWebUsageCachePanel,
+  type ChatGptWebUsageCachePanelHandle,
+} from '@/features/chatgptWeb/components/ChatGptWebUsageCachePanel';
 import { SystemPage } from '@/pages/SystemPage';
 import { chatGptWebApi, configApi, systemMetricsApi } from '@/services/api';
 import { apiKeysApi } from '@/services/api/apiKeys';
@@ -202,6 +206,153 @@ describe('system metrics and filesystem capacity', () => {
     render(<ChatGptWebUsageCachePanel />);
     expect(await screen.findByText('chatgpt_web.usage_cache.filesystem_unsupported')).toBeTruthy();
     expect(getUsageCache).toHaveBeenCalledTimes(2);
+  });
+
+  test('omits resource guard fields when saving against an older backend', async () => {
+    localStorage.setItem('config-management:chatgpt-web-usage-cache-expanded', 'true');
+    const oldSnapshot = createUsageSnapshot(undefined);
+    vi.spyOn(chatGptWebApi, 'getUsageCache').mockResolvedValue(oldSnapshot);
+    const patchUsageCache = vi.spyOn(chatGptWebApi, 'patchUsageCache').mockResolvedValue({});
+    const panelRef = createRef<ChatGptWebUsageCachePanelHandle>();
+
+    render(<ChatGptWebUsageCachePanel ref={panelRef} />);
+    expect(
+      await screen.findByText('chatgpt_web.usage_cache.resource_guard_unsupported')
+    ).toBeTruthy();
+    fireEvent.change(document.getElementById('chatgpt-web-usage-max-disk') as HTMLInputElement, {
+      target: { value: '2048' },
+    });
+    await act(async () => {
+      await panelRef.current?.save();
+    });
+
+    await waitFor(() => expect(patchUsageCache).toHaveBeenCalledTimes(1));
+    const payload = patchUsageCache.mock.calls[0]?.[0];
+    expect(payload?.['usage-cache']).toEqual({
+      enabled: true,
+      'disk-threshold-mb': 1,
+      'max-disk-size-mb': 2048,
+      path: '/tmp/usage-cache',
+    });
+  });
+
+  test('redetects resource guard support after switching server connections', async () => {
+    localStorage.setItem('config-management:chatgpt-web-usage-cache-expanded', 'true');
+    const supportedSnapshot = createUsageSnapshot(undefined);
+    supportedSnapshot['usage-cache']['resource-guard-enabled'] = true;
+    supportedSnapshot['usage-cache']['min-available-disk-mb'] = 1024;
+    supportedSnapshot['usage-cache']['max-filesystem-used-percent'] = 95;
+    const unsupportedSnapshot = createUsageSnapshot(undefined);
+    const getUsageCache = vi
+      .spyOn(chatGptWebApi, 'getUsageCache')
+      .mockResolvedValueOnce(supportedSnapshot)
+      .mockResolvedValueOnce(unsupportedSnapshot)
+      .mockResolvedValueOnce(supportedSnapshot);
+
+    const view = render(<ChatGptWebUsageCachePanel connectionGenerationKey="server-a" />);
+    expect(await screen.findByText('chatgpt_web.usage_cache.resource_guard')).toBeTruthy();
+
+    view.rerender(<ChatGptWebUsageCachePanel connectionGenerationKey="server-b" />);
+    expect(
+      await screen.findByText('chatgpt_web.usage_cache.resource_guard_unsupported')
+    ).toBeTruthy();
+
+    view.rerender(<ChatGptWebUsageCachePanel connectionGenerationKey="server-c" />);
+    await waitFor(() =>
+      expect(screen.queryByText('chatgpt_web.usage_cache.resource_guard_unsupported')).toBeNull()
+    );
+    expect(screen.getByText('chatgpt_web.usage_cache.resource_guard')).toBeTruthy();
+    expect(getUsageCache).toHaveBeenCalledTimes(3);
+  });
+
+  test('does not report an unsupported backend before capability detection completes', async () => {
+    localStorage.setItem('config-management:chatgpt-web-usage-cache-expanded', 'true');
+    const supportedSnapshot = createUsageSnapshot(undefined);
+    supportedSnapshot['usage-cache']['resource-guard-enabled'] = true;
+    supportedSnapshot['usage-cache']['min-available-disk-mb'] = 1024;
+    supportedSnapshot['usage-cache']['max-filesystem-used-percent'] = 95;
+    let resolveSnapshot: ((snapshot: ChatGptWebUsageSnapshot) => void) | undefined;
+    vi.spyOn(chatGptWebApi, 'getUsageCache').mockReturnValue(
+      new Promise((resolve) => {
+        resolveSnapshot = resolve;
+      })
+    );
+
+    render(<ChatGptWebUsageCachePanel connectionGenerationKey="pending-server" />);
+    expect(screen.queryByText('chatgpt_web.usage_cache.resource_guard_unsupported')).toBeNull();
+
+    await act(async () => {
+      resolveSnapshot?.(supportedSnapshot);
+    });
+    expect(await screen.findByText('chatgpt_web.usage_cache.resource_guard')).toBeTruthy();
+  });
+
+  test('rejects an empty minimum available disk threshold', async () => {
+    localStorage.setItem('config-management:chatgpt-web-usage-cache-expanded', 'true');
+    const snapshot = createUsageSnapshot(undefined);
+    snapshot['usage-cache']['resource-guard-enabled'] = true;
+    snapshot['usage-cache']['min-available-disk-mb'] = 1024;
+    snapshot['usage-cache']['max-filesystem-used-percent'] = 95;
+    vi.spyOn(chatGptWebApi, 'getUsageCache').mockResolvedValue(snapshot);
+    const patchUsageCache = vi.spyOn(chatGptWebApi, 'patchUsageCache').mockResolvedValue({});
+    const panelRef = createRef<ChatGptWebUsageCachePanelHandle>();
+
+    render(<ChatGptWebUsageCachePanel ref={panelRef} />);
+    await screen.findByText('chatgpt_web.usage_cache.resource_guard');
+    fireEvent.change(
+      document.getElementById('chatgpt-web-usage-min-available') as HTMLInputElement,
+      { target: { value: '' } }
+    );
+
+    expect(panelRef.current?.validate()).toBe(false);
+    await act(async () => {
+      expect(await panelRef.current?.save()).toBe(false);
+    });
+    expect(patchUsageCache).not.toHaveBeenCalled();
+    expect(screen.getByText('chatgpt_web.usage_cache.validation_min_available')).toBeTruthy();
+  });
+
+  test('retains a dirty draft and blocks saving after the server connection changes', async () => {
+    localStorage.setItem('config-management:chatgpt-web-usage-cache-expanded', 'true');
+    const firstSnapshot = createUsageSnapshot(undefined);
+    firstSnapshot['usage-cache']['resource-guard-enabled'] = true;
+    firstSnapshot['usage-cache']['min-available-disk-mb'] = 1024;
+    firstSnapshot['usage-cache']['max-filesystem-used-percent'] = 95;
+    const secondSnapshot = createUsageSnapshot(undefined);
+    secondSnapshot['usage-cache']['max-disk-size-mb'] = 4096;
+    secondSnapshot['usage-cache']['resource-guard-enabled'] = true;
+    secondSnapshot['usage-cache']['min-available-disk-mb'] = 1024;
+    secondSnapshot['usage-cache']['max-filesystem-used-percent'] = 95;
+    vi.spyOn(chatGptWebApi, 'getUsageCache')
+      .mockResolvedValueOnce(firstSnapshot)
+      .mockResolvedValueOnce(secondSnapshot);
+    const patchUsageCache = vi.spyOn(chatGptWebApi, 'patchUsageCache').mockResolvedValue({});
+    const panelRef = createRef<ChatGptWebUsageCachePanelHandle>();
+
+    const view = render(
+      <ChatGptWebUsageCachePanel ref={panelRef} connectionGenerationKey="server-a" />
+    );
+    await screen.findByText('chatgpt_web.usage_cache.resource_guard');
+    const maxDiskInput = document.getElementById('chatgpt-web-usage-max-disk') as HTMLInputElement;
+    fireEvent.change(maxDiskInput, { target: { value: '2048' } });
+
+    view.rerender(<ChatGptWebUsageCachePanel ref={panelRef} connectionGenerationKey="server-b" />);
+    expect(
+      await screen.findByText('chatgpt_web.usage_cache.connection_changed_draft_retained')
+    ).toBeTruthy();
+    expect((screen.getByDisplayValue('2048') as HTMLInputElement).value).toBe('2048');
+    await act(async () => {
+      expect(await panelRef.current?.save()).toBe(false);
+    });
+    expect(patchUsageCache).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('chatgpt_web.usage_cache.reset'));
+    await waitFor(() =>
+      expect((screen.getByDisplayValue('4096') as HTMLInputElement).value).toBe('4096')
+    );
+    expect(
+      screen.queryByText('chatgpt_web.usage_cache.connection_changed_draft_retained')
+    ).toBeNull();
   });
 
   test('polls while mounted and stops after leaving the system page', async () => {

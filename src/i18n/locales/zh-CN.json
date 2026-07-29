@@ -1915,7 +1915,7 @@
           "non_retryable_errors_message_placeholder": "例如: content policy",
           "non_retryable_errors_message_hint": "大小写不敏感包含匹配；状态码、type、code、消息至少填写一项。",
           "error_response_rewrites": "错误响应改写规则",
-          "error_response_rewrites_desc": "按顺序匹配最终错误，并改写返回客户端的状态码或 JSON 响应体",
+          "error_response_rewrites_desc": "按顺序匹配最终错误（包括本地转换和缓存错误），并改写返回客户端的状态码或 JSON 响应体",
           "error_response_rewrites_hint": "第一条命中的规则生效；匹配条件和返回修改至少各填写一项。",
           "error_response_rewrites_add": "添加改写规则",
           "error_response_rewrites_empty": "暂无错误响应改写规则",
@@ -2781,6 +2781,15 @@
       "threshold_hint": "按去除原始 JSON 和图片 base64 后的计费文本计算；小于阈值提前算，大于等于阈值落盘。",
       "max_disk": "磁盘最大容量（MiB）",
       "max_disk_hint": "大请求预留空间会超过容量时，在生成前返回 503。",
+      "resource_guard": "启用磁盘资源预判",
+      "resource_guard_description": "只在大请求准备落盘时检查真实可用空间；达到任一阈值就返回 503，不重试或冷却凭证。",
+      "resource_guard_unsupported": "当前后端不支持磁盘资源预判；仍可保存原有 Usage 缓存设置。",
+      "connection_changed_draft_retained": "服务器连接已变化，未保存草稿已保留；请先重置为当前服务器配置后再编辑。",
+      "min_available": "最小可用磁盘（MiB）",
+      "min_available_hint": "本次预计写入后必须保留的进程可用空间；0 表示只使用百分比阈值。",
+      "max_used_percent": "最大文件系统使用率（%）",
+      "max_used_percent_hint": "本次预计写入后达到该使用率时拒绝请求，范围 1–100。",
+      "resource_pressure": "当前磁盘已达到资源保护阈值，需要落盘的大请求将被拒绝。",
       "path": "缓存目录",
       "path_placeholder": "系统临时目录",
       "path_hint": "留空使用实例私有的系统临时目录；自定义目录不能被多个实例共用。",
@@ -2810,6 +2819,8 @@
       "validation_threshold": "阈值必须是大于 0 的整数。",
       "validation_max_disk": "磁盘最大容量必须是大于 0 的整数。",
       "validation_order": "阈值不能大于磁盘最大容量。",
+      "validation_min_available": "最小可用磁盘必须是大于等于 0 的整数。",
+      "validation_max_used": "最大文件系统使用率必须是 1–100 的整数。",
       "status": {
         "active_memory": "活动内存：条目 / 字节",
         "active_disk": "活动磁盘：条目 / 字节",
@@ -2817,6 +2828,7 @@
         "successful": "成功计算",
         "discarded": "失败或取消丢弃",
         "rejected": "容量拒绝",
+        "resource_rejected": "资源阈值拒绝",
         "write_errors": "磁盘写入错误"
       }
     }

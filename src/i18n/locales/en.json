@@ -1911,7 +1911,7 @@
           "non_retryable_errors_message_placeholder": "e.g. content policy",
           "non_retryable_errors_message_hint": "Case-insensitive contains match. Fill at least one of status code, type, code, or message.",
           "error_response_rewrites": "Error response rewrite rules",
-          "error_response_rewrites_desc": "Match final errors in order and rewrite the status code or JSON body returned to the client",
+          "error_response_rewrites_desc": "Match final errors, including local conversion and cache failures, and rewrite the status code or JSON body returned to the client",
           "error_response_rewrites_hint": "The first matching rule wins. Fill at least one matcher and one response change.",
           "error_response_rewrites_add": "Add rewrite rule",
           "error_response_rewrites_empty": "No error response rewrite rules",
@@ -2777,6 +2777,15 @@
       "threshold_hint": "Measured from compact billing text, not raw JSON or image base64. Smaller inputs are precomputed; larger inputs spill to disk.",
       "max_disk": "Maximum disk usage (MiB)",
       "max_disk_hint": "A large request is rejected with 503 before generation when reserving it would exceed this limit.",
+      "resource_guard": "Enable disk resource preflight",
+      "resource_guard_description": "Check real capacity only when a large request is about to spill to disk. Crossing either threshold returns 503 without retrying or cooling a credential.",
+      "resource_guard_unsupported": "The current backend does not support disk resource preflight. Existing Usage cache settings can still be saved.",
+      "connection_changed_draft_retained": "The server connection changed. Your unsaved draft was kept; reset it before editing settings for this server.",
+      "min_available": "Minimum available disk (MiB)",
+      "min_available_hint": "Space that must remain available to the process after the projected write. Use 0 to rely only on the percentage threshold.",
+      "max_used_percent": "Maximum filesystem usage (%)",
+      "max_used_percent_hint": "Reject when the projected write reaches this usage level, from 1 to 100.",
+      "resource_pressure": "The filesystem is currently at the resource guard threshold. Large requests that require disk spill will be rejected.",
       "path": "Cache directory",
       "path_placeholder": "System temporary directory",
       "path_hint": "Leave empty for an instance-private system temporary directory. A custom path must not be shared by multiple instances.",
@@ -2806,6 +2815,8 @@
       "validation_threshold": "The threshold must be a positive integer.",
       "validation_max_disk": "Maximum disk usage must be a positive integer.",
       "validation_order": "The threshold cannot exceed maximum disk usage.",
+      "validation_min_available": "Minimum available disk must be a non-negative integer.",
+      "validation_max_used": "Maximum filesystem usage must be an integer from 1 to 100.",
       "status": {
         "active_memory": "Active memory: entries / bytes",
         "active_disk": "Active disk: entries / bytes",
@@ -2813,6 +2824,7 @@
         "successful": "Successful calculations",
         "discarded": "Failed or canceled discards",
         "rejected": "Capacity rejections",
+        "resource_rejected": "Resource threshold rejections",
         "write_errors": "Disk write errors"
       }
     }

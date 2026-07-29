@@ -207,6 +207,9 @@ export interface ChatGptWebUsageCacheSettings {
   enabled: boolean;
   'disk-threshold-mb': number;
   'max-disk-size-mb': number;
+  'resource-guard-enabled'?: boolean;
+  'min-available-disk-mb'?: number;
+  'max-filesystem-used-percent'?: number;
   path: string;
 }
 
@@ -227,6 +230,7 @@ export interface ChatGptWebUsageCacheStats {
   successful_calculations: number;
   failed_discards: number;
   capacity_rejections: number;
+  resource_rejections?: number;
   write_errors: number;
 }
 

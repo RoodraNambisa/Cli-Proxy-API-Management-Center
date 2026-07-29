@@ -928,6 +928,7 @@ export function ConfigPage() {
                     ref={chatGptWebUsageCacheRef}
                     active={active}
                     disabled={disableControls}
+                    connectionGenerationKey={connectionGenerationKey}
                     externalSaving={saving}
                     focusTarget={focusTarget}
                     onDirtyChange={setChatGptWebUsageCacheDirty}

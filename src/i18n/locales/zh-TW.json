@@ -1934,7 +1934,7 @@
           "non_retryable_errors_message_placeholder": "例如: content policy",
           "non_retryable_errors_message_hint": "大小寫不敏感包含匹配；狀態碼、type、code、訊息至少填寫一項。",
           "error_response_rewrites": "錯誤回應改寫規則",
-          "error_response_rewrites_desc": "依序匹配最終錯誤，並改寫回傳給用戶端的狀態碼或 JSON 回應內容",
+          "error_response_rewrites_desc": "依序匹配最終錯誤（包括本機轉換與快取錯誤），並改寫回傳給用戶端的狀態碼或 JSON 回應內容",
           "error_response_rewrites_hint": "第一條命中的規則生效；匹配條件和回傳修改至少各填寫一項。",
           "error_response_rewrites_add": "新增改寫規則",
           "error_response_rewrites_empty": "暫無錯誤回應改寫規則",
@@ -2800,6 +2800,15 @@
       "threshold_hint": "依去除原始 JSON 與圖片 base64 後的計費文字計算；小於門檻提前算，大於等於門檻寫入磁碟。",
       "max_disk": "磁碟最大容量（MiB）",
       "max_disk_hint": "大請求預留空間超過容量時，會在生成前回傳 503。",
+      "resource_guard": "啟用磁碟資源預判",
+      "resource_guard_description": "只在大請求準備寫入磁碟時檢查實際可用空間；達到任一門檻就回傳 503，不重試或冷卻憑證。",
+      "resource_guard_unsupported": "目前後端不支援磁碟資源預判；仍可儲存原有 Usage 快取設定。",
+      "connection_changed_draft_retained": "伺服器連線已變更，未儲存草稿已保留；請先重設為目前伺服器設定後再編輯。",
+      "min_available": "最小可用磁碟（MiB）",
+      "min_available_hint": "本次預估寫入後必須保留的程序可用空間；0 表示只使用百分比門檻。",
+      "max_used_percent": "最大檔案系統使用率（%）",
+      "max_used_percent_hint": "本次預估寫入後達到此使用率時拒絕請求，範圍 1–100。",
+      "resource_pressure": "目前磁碟已達資源保護門檻，需要寫入磁碟的大請求將被拒絕。",
       "path": "快取目錄",
       "path_placeholder": "系統暫存目錄",
       "path_hint": "留空使用執行個體私有的系統暫存目錄；自訂目錄不得由多個執行個體共用。",
@@ -2829,6 +2838,8 @@
       "validation_threshold": "門檻必須是大於 0 的整數。",
       "validation_max_disk": "磁碟最大容量必須是大於 0 的整數。",
       "validation_order": "門檻不能大於磁碟最大容量。",
+      "validation_min_available": "最小可用磁碟必須是大於等於 0 的整數。",
+      "validation_max_used": "最大檔案系統使用率必須是 1–100 的整數。",
       "status": {
         "active_memory": "作用中記憶體：項目 / 位元組",
         "active_disk": "作用中磁碟：項目 / 位元組",
@@ -2836,6 +2847,7 @@
         "successful": "成功計算",
         "discarded": "失敗或取消丟棄",
         "rejected": "容量拒絕",
+        "resource_rejected": "資源門檻拒絕",
         "write_errors": "磁碟寫入錯誤"
       }
     }
