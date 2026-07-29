@@ -5,6 +5,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { AuthFileCard, type AuthFileCardProps } from '@/features/authFiles/components/AuthFileCard';
 import { ChatGptWebSentinelPanel } from '@/features/chatgptWeb/components/ChatGptWebSentinelPanel';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
+import enLocale from '@/i18n/locales/en.json';
+import ruLocale from '@/i18n/locales/ru.json';
+import zhCNLocale from '@/i18n/locales/zh-CN.json';
+import zhTWLocale from '@/i18n/locales/zh-TW.json';
 import { ChatGptWebPage } from '@/pages/ChatGptWebPage';
 import { apiClient } from '@/services/api/client';
 import { chatGptWebApi } from '@/services/api/chatgptWeb';
@@ -650,6 +654,143 @@ describe('ChatGPT Web management compatibility', () => {
     expect(parse(result.current.applyVisualChangesToYaml(initialYaml))).toMatchObject({
       'chatgpt-web': { 'auto-relogin': true },
     });
+  });
+
+  test('reads and writes ChatGPT Web dead credential cleanup priorities', () => {
+    const initialYaml =
+      'chatgpt-web:\n  auto-delete-dead-auths: false\n  auto-delete-dead-priorities: []\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+    expect(result.current.visualValues.chatgptWebAutoDeleteDeadAuths).toBe(false);
+    expect(result.current.visualValues.chatgptWebAutoDeleteDeadPriorities).toEqual([]);
+    act(() =>
+      result.current.setVisualValues({
+        chatgptWebAutoDeleteDeadAuths: true,
+        chatgptWebAutoDeleteDeadPriorities: ['1', '0', '-1'],
+      })
+    );
+
+    expect(parse(result.current.applyVisualChangesToYaml(initialYaml))).toMatchObject({
+      'chatgpt-web': {
+        'auto-delete-dead-auths': true,
+        'auto-delete-dead-priorities': [1, 0, -1],
+      },
+    });
+  });
+
+  test('normalizes a scalar dead credential cleanup priority without broadening deletion', () => {
+    const initialYaml =
+      'chatgpt-web:\n  auto-delete-dead-auths: true\n  auto-delete-dead-priorities: -1\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+
+    expect(result.current.visualValues.chatgptWebAutoDeleteDeadPriorities).toEqual(['-1']);
+    expect(
+      result.current.visualValidationErrors.chatgptWebAutoDeleteDeadPriorities
+    ).toBeUndefined();
+    expect(parse(result.current.applyVisualChangesToYaml(initialYaml))).toMatchObject({
+      'chatgpt-web': {
+        'auto-delete-dead-priorities': [-1],
+      },
+    });
+  });
+
+  test('does not enable dead credential cleanup for a string false value', () => {
+    const initialYaml =
+      'chatgpt-web:\n  auto-delete-dead-auths: "false"\n  auto-delete-dead-priorities: []\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+
+    expect(result.current.visualValues.chatgptWebAutoDeleteDeadAuths).toBe(false);
+    expect(parse(result.current.applyVisualChangesToYaml(initialYaml))).toMatchObject({
+      'chatgpt-web': {
+        'auto-delete-dead-auths': false,
+        'auto-delete-dead-priorities': [],
+      },
+    });
+  });
+
+  test('rejects unsafe dead credential cleanup priorities instead of saving all priorities', () => {
+    const initialYaml =
+      'chatgpt-web:\n  auto-delete-dead-auths: true\n  auto-delete-dead-priorities: [0]\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+    act(() =>
+      result.current.setVisualValues({
+        chatgptWebAutoDeleteDeadAuths: false,
+        chatgptWebAutoDeleteDeadPriorities: ['9007199254740993'],
+      })
+    );
+
+    expect(result.current.visualValidationErrors.chatgptWebAutoDeleteDeadPriorities).toBe(
+      'integer_list'
+    );
+    expect(result.current.visualDirtyFields).toEqual(
+      expect.arrayContaining([
+        'chatgptWebAutoDeleteDeadAuths',
+        'chatgptWebAutoDeleteDeadPriorities',
+      ])
+    );
+    expect(parse(result.current.applyVisualChangesToYaml(initialYaml))).toMatchObject({
+      'chatgpt-web': {
+        'auto-delete-dead-auths': true,
+        'auto-delete-dead-priorities': [0],
+      },
+    });
+  });
+
+  test('preserves invalid YAML priority items instead of broadening cleanup', () => {
+    const initialYaml =
+      'chatgpt-web:\n  auto-delete-dead-auths: true\n  auto-delete-dead-priorities: [null]\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+
+    expect(result.current.visualValues.chatgptWebAutoDeleteDeadPriorities).toEqual(['']);
+    expect(result.current.visualValidationErrors.chatgptWebAutoDeleteDeadPriorities).toBe(
+      'integer_list'
+    );
+    expect(parse(result.current.applyVisualChangesToYaml(initialYaml))).toMatchObject({
+      'chatgpt-web': {
+        'auto-delete-dead-auths': true,
+        'auto-delete-dead-priorities': [null],
+      },
+    });
+  });
+
+  test('preserves a null priority value instead of broadening cleanup', () => {
+    const initialYaml =
+      'chatgpt-web:\n  auto-delete-dead-auths: true\n  auto-delete-dead-priorities: null\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+
+    expect(result.current.visualValues.chatgptWebAutoDeleteDeadPriorities).toEqual(['']);
+    expect(result.current.visualValidationErrors.chatgptWebAutoDeleteDeadPriorities).toBe(
+      'integer_list'
+    );
+    expect(parse(result.current.applyVisualChangesToYaml(initialYaml))).toMatchObject({
+      'chatgpt-web': {
+        'auto-delete-dead-auths': true,
+        'auto-delete-dead-priorities': null,
+      },
+    });
+  });
+
+  test('defines dead credential cleanup labels in every locale', () => {
+    for (const locale of [enLocale, ruLocale, zhCNLocale, zhTWLocale]) {
+      const labels = locale.config_management.settings_center.chatgpt_web;
+      expect(labels.auto_delete_dead_auths).toBeTruthy();
+      expect(labels.auto_delete_dead_auths_description).toBeTruthy();
+      expect(labels.auto_delete_dead_priorities).toBeTruthy();
+      expect(labels.auto_delete_dead_priorities_description).toBeTruthy();
+      expect(labels.auto_delete_dead_priorities_placeholder).toBeTruthy();
+      expect(labels.auto_delete_dead_priorities_empty).toBeTruthy();
+    }
   });
 
   test('reads and writes ChatGPT Web image compatibility settings', () => {

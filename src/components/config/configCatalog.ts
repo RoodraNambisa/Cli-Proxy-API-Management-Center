@@ -138,6 +138,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     descriptionKey: 'config_management.settings_center.pages.provider_chatgpt_web.description',
     dirtyPrefixes: [
       'chatgptWebAutoRelogin',
+      'chatgptWebAutoDeleteDead',
       'chatgptWebImageUpstreamModel',
       'chatgptWebIgnoreUnsupportedImageParams',
     ],
@@ -496,6 +497,20 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.settings_center.chatgpt_web.auto_relogin',
     yamlKeys: ['chatgpt-web.auto-relogin'],
     aliases: ['chatgpt web', '自动重登', 'auto relogin'],
+  },
+  {
+    id: 'config-chatgpt-web-auto-delete-dead',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.auto_delete_dead_auths',
+    yamlKeys: ['chatgpt-web.auto-delete-dead-auths'],
+    aliases: ['死亡账号', '自动删除凭证', 'dead auth'],
+  },
+  {
+    id: 'config-chatgpt-web-auto-delete-dead-priorities',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.auto_delete_dead_priorities',
+    yamlKeys: ['chatgpt-web.auto-delete-dead-priorities'],
+    aliases: ['优先级', '優先順序', 'приоритеты', 'priority'],
   },
   {
     id: 'config-chatgpt-web-image-upstream-model',

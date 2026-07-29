@@ -299,6 +299,12 @@ function parseStringList(raw: unknown): string[] {
   return raw.map((item) => String(item ?? '').trim()).filter(Boolean);
 }
 
+function parseIntegerStringList(raw: unknown): string[] {
+  if (raw === undefined) return [];
+  const values = Array.isArray(raw) ? raw : [raw];
+  return values.map((item) => String(item ?? '').trim());
+}
+
 function normalizeStringListItems(items: string[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
@@ -1079,6 +1085,10 @@ function getIntegerStringListError(values: string[]): 'integer_list' | undefined
     : 'integer_list';
 }
 
+function getSafeIntegerStringListError(values: string[]): 'integer_list' | undefined {
+  return values.every((value) => parseIntegerString(value) !== null) ? undefined : 'integer_list';
+}
+
 function getPositiveIntegerError(value: string): 'positive_integer' | undefined {
   const trimmed = value.trim();
   if (!trimmed) return 'positive_integer';
@@ -1313,6 +1323,9 @@ export function getVisualConfigValidationErrors(
     maxRetryCredentials: getNonNegativeIntegerError(values.maxRetryCredentials),
     maxRetryInterval: getNonNegativeIntegerError(values.maxRetryInterval),
     noCooldownStatusCodes: getHttpStatusListError(values.noCooldownStatusCodes),
+    chatgptWebAutoDeleteDeadPriorities: getSafeIntegerStringListError(
+      values.chatgptWebAutoDeleteDeadPriorities
+    ),
     routingFillFirstRange: routingFillFirstRangeError,
     routingFillFirstPerAuthRpm: routingFillFirstPerAuthRpmError,
     routingPerAuthRequestLimit: routingPerAuthRequestLimitError,
@@ -1970,6 +1983,21 @@ function getNextDirtyFields(
       nextValues.chatgptWebAutoRelogin === baselineValues.chatgptWebAutoRelogin
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAutoDeleteDeadAuths')) {
+    updateDirty(
+      'chatgptWebAutoDeleteDeadAuths',
+      nextValues.chatgptWebAutoDeleteDeadAuths === baselineValues.chatgptWebAutoDeleteDeadAuths
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAutoDeleteDeadPriorities')) {
+    updateDirty(
+      'chatgptWebAutoDeleteDeadPriorities',
+      areStringArraysEqual(
+        nextValues.chatgptWebAutoDeleteDeadPriorities,
+        baselineValues.chatgptWebAutoDeleteDeadPriorities
+      )
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageUpstreamModel')) {
     updateDirty(
       'chatgptWebImageUpstreamModel',
@@ -2444,6 +2472,11 @@ export function useVisualConfig() {
         parsed['codex-header-defaults'] ?? parsed.codexHeaderDefaults
       );
       const chatgptWeb = asRecord(parsed['chatgpt-web'] ?? parsed.chatgptWeb);
+      const chatgptWebAutoDeleteDeadPrioritiesRaw =
+        chatgptWeb &&
+        Object.prototype.hasOwnProperty.call(chatgptWeb, 'auto-delete-dead-priorities')
+          ? chatgptWeb['auto-delete-dead-priorities']
+          : chatgptWeb?.autoDeleteDeadPriorities;
       const quotaExceeded = asRecord(parsed['quota-exceeded']);
       const authMaintenance = asRecord(parsed['auth-maintenance']);
       const images = asRecord(parsed.images);
@@ -2581,6 +2614,12 @@ export function useVisualConfig() {
         codexHeaderDefaultsOriginator:
           typeof codexHeaderDefaults?.originator === 'string' ? codexHeaderDefaults.originator : '',
         chatgptWebAutoRelogin: Boolean(chatgptWeb?.['auto-relogin'] ?? chatgptWeb?.autoRelogin),
+        chatgptWebAutoDeleteDeadAuths: parseBooleanValue(
+          chatgptWeb?.['auto-delete-dead-auths'] ?? chatgptWeb?.autoDeleteDeadAuths
+        ),
+        chatgptWebAutoDeleteDeadPriorities: parseIntegerStringList(
+          chatgptWebAutoDeleteDeadPrioritiesRaw
+        ),
         chatgptWebImageUpstreamModel:
           typeof imagesChatGPTWeb?.['upstream-model'] === 'string'
             ? imagesChatGPTWeb['upstream-model']
@@ -2958,9 +2997,33 @@ export function useVisualConfig() {
           );
           deleteIfMapEmpty(doc, ['codex-header-defaults']);
         }
-        if (docHas(doc, ['chatgpt-web']) || values.chatgptWebAutoRelogin) {
+        if (
+          docHas(doc, ['chatgpt-web']) ||
+          values.chatgptWebAutoRelogin ||
+          values.chatgptWebAutoDeleteDeadAuths ||
+          values.chatgptWebAutoDeleteDeadPriorities.length > 0
+        ) {
           ensureMapInDoc(doc, ['chatgpt-web']);
           doc.setIn(['chatgpt-web', 'auto-relogin'], values.chatgptWebAutoRelogin);
+          const autoDeleteConfigured =
+            docHas(doc, ['chatgpt-web', 'auto-delete-dead-auths']) ||
+            docHas(doc, ['chatgpt-web', 'auto-delete-dead-priorities']) ||
+            values.chatgptWebAutoDeleteDeadAuths ||
+            values.chatgptWebAutoDeleteDeadPriorities.length > 0;
+          if (autoDeleteConfigured) {
+            const parsedPriorities =
+              values.chatgptWebAutoDeleteDeadPriorities.map(parseIntegerString);
+            if (parsedPriorities.every((priority): priority is number => priority !== null)) {
+              doc.setIn(
+                ['chatgpt-web', 'auto-delete-dead-auths'],
+                values.chatgptWebAutoDeleteDeadAuths
+              );
+              doc.setIn(
+                ['chatgpt-web', 'auto-delete-dead-priorities'],
+                Array.from(new Set(parsedPriorities))
+              );
+            }
+          }
           deleteIfMapEmpty(doc, ['chatgpt-web']);
         }
         if (docHas(doc, ['no-cooldown-status-codes']) || values.noCooldownStatusCodes.trim()) {

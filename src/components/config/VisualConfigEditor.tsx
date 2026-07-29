@@ -767,6 +767,10 @@ export function VisualConfigEditor({
     t,
     validationErrors?.noCooldownStatusCodes
   );
+  const chatGptWebAutoDeleteDeadPrioritiesError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebAutoDeleteDeadPriorities
+  );
   const fixedErrorCooldownsErrorCount = useMemo(
     () =>
       Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('fixedErrorCooldowns.'))
@@ -1189,7 +1193,8 @@ export function VisualConfigEditor({
           'images.native.edits.unsupportedModelStatusCode',
         ]),
       'provider-antigravity': 0,
-      'provider-chatgpt-web': chatGptWebSentinelErrorCount,
+      'provider-chatgpt-web':
+        chatGptWebSentinelErrorCount + countErrors(['chatgptWebAutoDeleteDeadPriorities']),
       'provider-grok': 0,
       'advanced-payload': hasPayloadValidationErrors ? 1 : 0,
     }),
@@ -1507,6 +1512,44 @@ export function VisualConfigEditor({
                 disabled={disabled}
                 onChange={(chatgptWebAutoRelogin) => onChange({ chatgptWebAutoRelogin })}
               />
+              <div id="config-chatgpt-web-auto-delete-dead">
+                <ToggleRow
+                  title={t('config_management.settings_center.chatgpt_web.auto_delete_dead_auths')}
+                  description={t(
+                    'config_management.settings_center.chatgpt_web.auto_delete_dead_auths_description'
+                  )}
+                  checked={values.chatgptWebAutoDeleteDeadAuths}
+                  disabled={disabled}
+                  onChange={(chatgptWebAutoDeleteDeadAuths) =>
+                    onChange({ chatgptWebAutoDeleteDeadAuths })
+                  }
+                />
+                <div id="config-chatgpt-web-auto-delete-dead-priorities">
+                  <FieldShell
+                    label={t(
+                      'config_management.settings_center.chatgpt_web.auto_delete_dead_priorities'
+                    )}
+                    hint={t(
+                      'config_management.settings_center.chatgpt_web.auto_delete_dead_priorities_description'
+                    )}
+                    error={chatGptWebAutoDeleteDeadPrioritiesError}
+                  >
+                    <TagListEditor
+                      value={values.chatgptWebAutoDeleteDeadPriorities}
+                      disabled={disabled}
+                      placeholder={t(
+                        'config_management.settings_center.chatgpt_web.auto_delete_dead_priorities_placeholder'
+                      )}
+                      emptyLabel={t(
+                        'config_management.settings_center.chatgpt_web.auto_delete_dead_priorities_empty'
+                      )}
+                      onChange={(chatgptWebAutoDeleteDeadPriorities) =>
+                        onChange({ chatgptWebAutoDeleteDeadPriorities })
+                      }
+                    />
+                  </FieldShell>
+                </div>
+              </div>
               <SectionGrid>
                 <Input
                   id="config-chatgpt-web-image-upstream-model"

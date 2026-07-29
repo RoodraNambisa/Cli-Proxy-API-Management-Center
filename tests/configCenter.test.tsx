@@ -235,6 +235,33 @@ describe('configuration settings center', () => {
     await waitFor(() => expect(disclosure?.getAttribute('aria-expanded')).toBe('true'));
   });
 
+  test('targets both ChatGPT Web dead cleanup settings from shareable links', async () => {
+    const { unmount } = renderEditor(
+      '/config?section=config-chatgpt-web-auto-delete-dead-priorities'
+    );
+
+    const priorities = document.getElementById('config-chatgpt-web-auto-delete-dead-priorities');
+    expect(priorities).not.toBeNull();
+    await waitFor(() => expect(scrollIntoViewMock).toHaveBeenCalled());
+    unmount();
+
+    renderEditor('/config?section=config-chatgpt-web-auto-delete-dead');
+    expect(document.getElementById('config-chatgpt-web-auto-delete-dead')).not.toBeNull();
+    await waitFor(() => expect(scrollIntoViewMock).toHaveBeenCalled());
+  });
+
+  test('keeps dead cleanup priorities editable while automatic deletion is off', () => {
+    const values = cloneValues();
+    values.chatgptWebAutoDeleteDeadAuths = false;
+    values.chatgptWebAutoDeleteDeadPriorities = ['invalid'];
+    renderEditor('/config?section=provider-chatgpt-web', { values });
+
+    const input = screen.getByPlaceholderText(
+      'config_management.settings_center.chatgpt_web.auto_delete_dead_priorities_placeholder'
+    ) as HTMLInputElement;
+    expect(input.disabled).toBe(false);
+  });
+
   test('shows dirty and validation indicators on the owning navigation page', () => {
     renderEditor('/config?section=provider-codex', {
       dirtyFields: ['images'],
