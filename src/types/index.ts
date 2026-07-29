@@ -17,3 +17,4 @@ export * from './sourceInfo';
 export * from './chatgptWeb';
 export * from './proxyPool';
 export * from './codexAgentIdentity';
+export * from './systemMetrics';

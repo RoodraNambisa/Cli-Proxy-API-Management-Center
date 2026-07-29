@@ -223,8 +223,13 @@ export const ChatGptWebUsageCachePanel = forwardRef<
       await chatGptWebApi.patchUsageCache(parsedDraft.config);
       const refreshed = await loadSnapshot({ notify: false });
       if (!refreshed) {
-        setSnapshot({ ...parsedDraft.config, stats: snapshot.stats });
-        setDraft(toDraft({ ...parsedDraft.config, stats: snapshot.stats }));
+        const fallbackSnapshot = {
+          ...parsedDraft.config,
+          stats: snapshot.stats,
+          filesystem: snapshot.filesystem,
+        };
+        setSnapshot(fallbackSnapshot);
+        setDraft(toDraft(fallbackSnapshot));
         showNotification(t('chatgpt_web.usage_cache.saved_refresh_failed'), 'warning');
       }
       return true;
@@ -275,6 +280,11 @@ export const ChatGptWebUsageCachePanel = forwardRef<
       ? Math.min(100, (snapshot.stats.active_disk_bytes / maxDiskBytes) * 100)
       : 0;
   const stats = snapshot?.stats;
+  const filesystem = snapshot?.filesystem;
+  const filesystemReady = filesystem?.status === 'ok' && filesystem.total_bytes > 0;
+  const filesystemPercent = filesystemReady
+    ? Math.min(100, Math.max(0, filesystem.used_percent))
+    : 0;
 
   return (
     <ConfigDisclosure
@@ -470,6 +480,47 @@ export const ChatGptWebUsageCachePanel = forwardRef<
                 </div>
               ))}
             </dl>
+            <div className={styles.filesystem}>
+              <div className={styles.filesystemHeading}>
+                <div>
+                  <span>{t('chatgpt_web.usage_cache.filesystem_title')}</span>
+                  <strong>{filesystem?.path || '-'}</strong>
+                </div>
+                {!filesystemReady ? (
+                  <span className={styles.filesystemState}>
+                    {t(
+                      filesystem?.status === 'unavailable'
+                        ? 'chatgpt_web.usage_cache.filesystem_unavailable'
+                        : 'chatgpt_web.usage_cache.filesystem_unsupported'
+                    )}
+                  </span>
+                ) : null}
+              </div>
+              {filesystemReady ? (
+                <>
+                  <div
+                    className={styles.capacityTrack}
+                    aria-label={t('chatgpt_web.usage_cache.filesystem_title')}
+                  >
+                    <span style={{ width: `${filesystemPercent}%` }} />
+                  </div>
+                  <dl className={styles.filesystemStats}>
+                    <div>
+                      <dt>{t('chatgpt_web.usage_cache.filesystem_used')}</dt>
+                      <dd>{formatBytes(filesystem.used_bytes)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t('chatgpt_web.usage_cache.filesystem_available')}</dt>
+                      <dd>{formatBytes(filesystem.available_bytes)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t('chatgpt_web.usage_cache.filesystem_total')}</dt>
+                      <dd>{formatBytes(filesystem.total_bytes)}</dd>
+                    </div>
+                  </dl>
+                </>
+              ) : null}
+            </div>
           </>
         )}
       </div>

@@ -12,9 +12,10 @@ import {
   useModelsStore,
   useThemeStore,
 } from '@/stores';
-import { configApi, versionApi } from '@/services/api';
+import { configApi, systemMetricsApi, versionApi } from '@/services/api';
 import type { ControlPanelUpdateStatus } from '@/services/api/config';
 import { apiKeysApi } from '@/services/api/apiKeys';
+import type { SystemFilesystemSnapshot, SystemMetricsSnapshot } from '@/types';
 import { classifyModels } from '@/utils/models';
 import { STORAGE_KEY_AUTH } from '@/utils/constants';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
@@ -70,6 +71,23 @@ const compareVersions = (latest?: string | null, current?: string | null) => {
   return 0;
 };
 
+const SYSTEM_METRICS_POLL_INTERVAL_MS = 5000;
+
+const formatBytes = (value: number): string => {
+  if (!Number.isFinite(value) || value <= 0) return '0 B';
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+  const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+  return `${(value / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+};
+
+const getErrorStatus = (error: unknown): number | undefined => {
+  if (!error || typeof error !== 'object') return undefined;
+  const direct = (error as { status?: unknown }).status;
+  if (typeof direct === 'number') return direct;
+  const response = (error as { response?: { status?: unknown } }).response;
+  return typeof response?.status === 'number' ? response.status : undefined;
+};
+
 export function SystemPage() {
   const { t, i18n } = useTranslation();
   const { showNotification, showConfirmation } = useNotificationStore();
@@ -98,10 +116,18 @@ export function SystemPage() {
     useState<ControlPanelUpdateStatus | null>(null);
   const [checkingControlPanelUpdate, setCheckingControlPanelUpdate] = useState(false);
   const [updatingControlPanel, setUpdatingControlPanel] = useState(false);
+  const [systemMetrics, setSystemMetrics] = useState<SystemMetricsSnapshot | null>(null);
+  const [systemMetricsLoading, setSystemMetricsLoading] = useState(false);
+  const [systemMetricsError, setSystemMetricsError] = useState('');
+  const [systemMetricsUnsupported, setSystemMetricsUnsupported] = useState(false);
 
   const apiKeysCache = useRef<string[]>([]);
   const versionTapCount = useRef(0);
   const versionTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const systemMetricsRequestSequence = useRef(0);
+  const systemMetricsConnectionKey = useRef('');
+  const systemMetricsInFlightConnection = useRef<string | null>(null);
+  const currentSystemMetricsConnectionKey = `${auth.connectionGeneration}:${auth.apiBase}:${auth.managementAccessPath}`;
 
   const otherLabel = useMemo(
     () => (i18n.language?.toLowerCase().startsWith('zh') ? '其他' : 'Other'),
@@ -404,6 +430,47 @@ export function SystemPage() {
     }
   }, [auth.connectionStatus, showNotification, t]);
 
+  const loadSystemMetrics = useCallback(
+    async ({
+      background = false,
+      force = false,
+    }: { background?: boolean; force?: boolean } = {}) => {
+      if (auth.connectionStatus !== 'connected' || (systemMetricsUnsupported && !force)) return;
+      if (systemMetricsInFlightConnection.current === currentSystemMetricsConnectionKey) return;
+      systemMetricsInFlightConnection.current = currentSystemMetricsConnectionKey;
+      const requestSequence = ++systemMetricsRequestSequence.current;
+      if (!background) setSystemMetricsLoading(true);
+      try {
+        const snapshot = await systemMetricsApi.get();
+        if (requestSequence !== systemMetricsRequestSequence.current) return;
+        setSystemMetrics(snapshot);
+        setSystemMetricsError('');
+        setSystemMetricsUnsupported(false);
+      } catch (error: unknown) {
+        if (requestSequence !== systemMetricsRequestSequence.current) return;
+        const unsupported = getErrorStatus(error) === 404;
+        setSystemMetricsUnsupported(unsupported);
+        setSystemMetricsError(
+          unsupported
+            ? ''
+            : error instanceof Error
+              ? error.message
+              : typeof error === 'string'
+                ? error
+                : t('system_info.metrics_load_failed')
+        );
+      } finally {
+        if (systemMetricsInFlightConnection.current === currentSystemMetricsConnectionKey) {
+          systemMetricsInFlightConnection.current = null;
+        }
+        if (requestSequence === systemMetricsRequestSequence.current && !background) {
+          setSystemMetricsLoading(false);
+        }
+      }
+    },
+    [auth.connectionStatus, currentSystemMetricsConnectionKey, systemMetricsUnsupported, t]
+  );
+
   useEffect(() => {
     fetchConfig().catch(() => {
       // ignore
@@ -413,6 +480,40 @@ export function SystemPage() {
   useEffect(() => {
     void loadControlPanelUpdateStatus();
   }, [loadControlPanelUpdateStatus]);
+
+  useEffect(() => {
+    if (systemMetricsConnectionKey.current === currentSystemMetricsConnectionKey) return;
+    systemMetricsConnectionKey.current = currentSystemMetricsConnectionKey;
+    systemMetricsInFlightConnection.current = null;
+    systemMetricsRequestSequence.current += 1;
+    setSystemMetrics(null);
+    setSystemMetricsLoading(false);
+    setSystemMetricsError('');
+    setSystemMetricsUnsupported(false);
+  }, [currentSystemMetricsConnectionKey]);
+
+  useEffect(() => {
+    if (auth.connectionStatus !== 'connected') {
+      systemMetricsInFlightConnection.current = null;
+      systemMetricsRequestSequence.current += 1;
+      setSystemMetrics(null);
+      setSystemMetricsLoading(false);
+      setSystemMetricsError('');
+      setSystemMetricsUnsupported(false);
+      return;
+    }
+    void loadSystemMetrics();
+    if (systemMetricsUnsupported) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== 'hidden') {
+        void loadSystemMetrics({ background: true });
+      }
+    }, SYSTEM_METRICS_POLL_INTERVAL_MS);
+    return () => {
+      window.clearInterval(timer);
+      systemMetricsRequestSequence.current += 1;
+    };
+  }, [auth.connectionStatus, loadSystemMetrics, systemMetricsUnsupported]);
 
   useEffect(() => {
     if (requestLogModalOpen && !requestLogTouched) {
@@ -425,6 +526,8 @@ export function SystemPage() {
       if (versionTapTimer.current) {
         clearTimeout(versionTapTimer.current);
       }
+      systemMetricsInFlightConnection.current = null;
+      systemMetricsRequestSequence.current += 1;
     };
   }, []);
 
@@ -432,6 +535,26 @@ export function SystemPage() {
     fetchModels();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.connectionStatus, auth.apiBase]);
+
+  const formatMetricDate = useCallback(
+    (value: string | null | undefined) => {
+      if (!value) return '-';
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString(i18n.language);
+    },
+    [i18n.language]
+  );
+
+  const filesystemEntries: Array<{
+    key: 'working_directory' | 'auth_directory' | 'usage_cache';
+    value: SystemFilesystemSnapshot;
+  }> = systemMetrics
+    ? [
+        { key: 'working_directory', value: systemMetrics.filesystems.working_directory },
+        { key: 'auth_directory', value: systemMetrics.filesystems.auth_directory },
+        { key: 'usage_cache', value: systemMetrics.filesystems.usage_cache },
+      ]
+    : [];
 
   return (
     <div className={styles.container}>
@@ -485,6 +608,119 @@ export function SystemPage() {
               <div className={styles.tileSub}>{auth.apiBase || '-'}</div>
             </div>
           </div>
+        </Card>
+
+        <Card
+          title={t('system_info.metrics_title')}
+          extra={
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void loadSystemMetrics({ force: true })}
+              loading={systemMetricsLoading}
+              disabled={auth.connectionStatus !== 'connected'}
+            >
+              {t('common.refresh')}
+            </Button>
+          }
+        >
+          <p className={styles.sectionDescription}>{t('system_info.metrics_desc')}</p>
+          {systemMetricsUnsupported ? (
+            <div className="hint">{t('system_info.metrics_unsupported')}</div>
+          ) : systemMetricsError ? (
+            <div className="error-box">
+              {t('system_info.metrics_load_failed')}: {systemMetricsError}
+            </div>
+          ) : !systemMetrics ? (
+            <div className="hint">
+              {systemMetricsLoading
+                ? t('system_info.metrics_loading')
+                : t('system_info.metrics_unavailable')}
+            </div>
+          ) : (
+            <div className={styles.metricsContent}>
+              <div className={styles.metricsCollectedAt}>
+                {t('system_info.metrics_collected_at')}:{' '}
+                {formatMetricDate(systemMetrics.collected_at)}
+              </div>
+              <dl className={styles.metricsGrid}>
+                {[
+                  ['heap_alloc', formatBytes(systemMetrics.runtime.heap_alloc_bytes)],
+                  ['heap_inuse', formatBytes(systemMetrics.runtime.heap_inuse_bytes)],
+                  ['runtime_sys', formatBytes(systemMetrics.runtime.runtime_sys_bytes)],
+                  ['total_alloc', formatBytes(systemMetrics.runtime.total_alloc_bytes)],
+                  ['stack_inuse', formatBytes(systemMetrics.runtime.stack_inuse_bytes)],
+                  ['goroutines', systemMetrics.runtime.goroutines],
+                  ['gc_cycles', systemMetrics.runtime.gc_cycles],
+                  [
+                    'gomaxprocs',
+                    `${systemMetrics.runtime.gomaxprocs} / ${systemMetrics.runtime.logical_cpus}`,
+                  ],
+                  [
+                    'runtime',
+                    `${systemMetrics.runtime.go_version} · ${systemMetrics.runtime.goos}/${systemMetrics.runtime.goarch}`,
+                  ],
+                  ['last_gc', formatMetricDate(systemMetrics.runtime.last_gc_at)],
+                ].map(([key, value]) => (
+                  <div key={key}>
+                    <dt>{t(`system_info.metrics.${key}`)}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div className={styles.filesystemList}>
+                {filesystemEntries.map(({ key, value }) => {
+                  const ready = value.status === 'ok' && value.total_bytes > 0;
+                  const usedPercent = ready ? Math.min(100, Math.max(0, value.used_percent)) : 0;
+                  return (
+                    <section key={key} className={styles.filesystemItem}>
+                      <div className={styles.filesystemHeader}>
+                        <div>
+                          <h3>{t(`system_info.filesystems.${key}`)}</h3>
+                          <span>{value.path || '-'}</span>
+                        </div>
+                        {!ready ? (
+                          <span className={styles.filesystemStatus}>
+                            {t(
+                              value.status === 'unavailable'
+                                ? 'system_info.filesystem_unavailable'
+                                : 'system_info.filesystem_unsupported'
+                            )}
+                          </span>
+                        ) : null}
+                      </div>
+                      {ready ? (
+                        <>
+                          <div
+                            className={styles.filesystemTrack}
+                            aria-label={t(`system_info.filesystems.${key}`)}
+                          >
+                            <span style={{ width: `${usedPercent}%` }} />
+                          </div>
+                          <dl className={styles.filesystemStats}>
+                            <div>
+                              <dt>{t('system_info.filesystem_used')}</dt>
+                              <dd>{formatBytes(value.used_bytes)}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.filesystem_available')}</dt>
+                              <dd>{formatBytes(value.available_bytes)}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.filesystem_total')}</dt>
+                              <dd>{formatBytes(value.total_bytes)}</dd>
+                            </div>
+                          </dl>
+                        </>
+                      ) : null}
+                    </section>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </Card>
 
         <Card

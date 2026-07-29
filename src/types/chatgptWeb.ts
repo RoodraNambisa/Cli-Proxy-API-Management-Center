@@ -1,4 +1,5 @@
 import type { AuthFileItem } from './authFile';
+import type { SystemFilesystemSnapshot } from './systemMetrics';
 
 export type ChatGptWebLoginTaskState =
   | 'queued'
@@ -231,6 +232,7 @@ export interface ChatGptWebUsageCacheStats {
 
 export interface ChatGptWebUsageSnapshot extends ChatGptWebUsageConfig {
   stats: ChatGptWebUsageCacheStats;
+  filesystem?: SystemFilesystemSnapshot;
 }
 
 export const isChatGptWebLoginTaskTerminal = (state: ChatGptWebLoginTaskState): boolean =>

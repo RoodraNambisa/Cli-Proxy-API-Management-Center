@@ -1,3 +1,5 @@
+@use '../styles/mixins' as *;
+
 .container {
   width: 100%;
 }
@@ -147,6 +149,131 @@
   margin: 0 0 $spacing-md 0;
 }
 
+.metricsContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.metricsCollectedAt {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
+
+  > div {
+    min-width: 0;
+    padding: 10px 12px;
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  dt {
+    color: var(--text-tertiary);
+    font-size: 11px;
+  }
+
+  dd {
+    margin: 4px 0 0;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+}
+
+.filesystemList {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-color);
+}
+
+.filesystemItem {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: $spacing-md 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.filesystemHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+
+  > div {
+    min-width: 0;
+  }
+
+  h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+
+  span {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-tertiary);
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+      monospace;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.filesystemStatus {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.filesystemTrack {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+    transition: width 180ms ease;
+  }
+}
+
+.filesystemStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+
+  dt {
+    color: var(--text-tertiary);
+    font-size: 11px;
+  }
+
+  dd {
+    margin: 3px 0 0;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 650;
+  }
+}
+
 .clearLoginActions {
   display: flex;
   justify-content: flex-end;
@@ -236,6 +363,23 @@
 .modelAlias {
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@include mobile {
+  .metricsGrid,
+  .filesystemStats {
+    grid-template-columns: 1fr;
+  }
+
+  .filesystemHeader {
+    flex-direction: column;
+  }
 }
 
 .updatePanel {
