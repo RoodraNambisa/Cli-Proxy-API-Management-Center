@@ -51,6 +51,9 @@ export type VisualConfigValidationErrorCode =
   | 'http_status_code'
   | 'integer'
   | 'priority_duplicate'
+  | 'routing_subscription_plan_required'
+  | 'routing_subscription_limit_required'
+  | 'routing_subscription_overlap'
   | 'fill_first_controls_conflict'
   | 'fixed_error_cooldown_match_required'
   | 'non_retryable_error_match_required'
@@ -198,6 +201,14 @@ export interface DisabledImageGenerationToolErrorVisualConfig {
 
 export type RoutingPriorityOverrideStrategy = '' | 'round-robin' | 'fill-first' | 'random';
 
+export interface RoutingSubscriptionOverrideVisualEntry {
+  clientId: string;
+  providers: string[];
+  planTypes: string[];
+  perAuthRequestLimit: string;
+  perAuthRequestWindowMinutes: string;
+}
+
 export interface RoutingPriorityOverrideVisualEntry {
   clientId: string;
   priority: string;
@@ -207,6 +218,7 @@ export interface RoutingPriorityOverrideVisualEntry {
   fillFirstPerAuthRpm: string;
   perAuthRequestLimit: string;
   perAuthRequestWindowMinutes: string;
+  subscriptionOverrides: RoutingSubscriptionOverrideVisualEntry[];
 }
 
 export type CodexCustomModelValidationErrors = Record<

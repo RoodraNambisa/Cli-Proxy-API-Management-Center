@@ -58,6 +58,13 @@ export interface RequestBodyReleaseConfig {
 
 export type RoutingStrategy = 'round-robin' | 'fill-first' | 'random';
 
+export interface RoutingSubscriptionOverrideConfig {
+  providers?: string[];
+  planTypes: string[];
+  perAuthRequestLimit?: number | null;
+  perAuthRequestWindowMinutes?: number | null;
+}
+
 export interface RoutingPriorityOverrideConfig {
   priority: number;
   strategy?: RoutingStrategy | string;
@@ -66,6 +73,7 @@ export interface RoutingPriorityOverrideConfig {
   fillFirstPerAuthRpm?: number | null;
   perAuthRequestLimit?: number | null;
   perAuthRequestWindowMinutes?: number | null;
+  subscriptionOverrides?: RoutingSubscriptionOverrideConfig[];
 }
 
 export interface RequestBodyAuditErrorConfig {

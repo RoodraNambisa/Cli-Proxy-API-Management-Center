@@ -1,11 +1,22 @@
-import { act, renderHook } from '@testing-library/react';
+import { useState } from 'react';
+import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { parse } from 'yaml';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { VisualConfigEditor } from '@/components/config/VisualConfigEditor';
 import { getVisualConfigValidationErrors, useVisualConfig } from '@/hooks/useVisualConfig';
 import { apiClient } from '@/services/api/client';
 import { configApi } from '@/services/api/config';
 import { normalizeConfigResponse } from '@/services/api/transformers';
 import { DEFAULT_VISUAL_VALUES, type VisualConfigValues } from '@/types/visualConfig';
+
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>();
+  return {
+    ...actual,
+    useTranslation: () => ({ t: (key: string) => key }),
+  };
+});
 
 const initialYaml = `routing:
   strategy: random
@@ -16,6 +27,10 @@ const initialYaml = `routing:
     - priority: 4
       per-auth-request-limit: 0
       per-auth-request-window-minutes: 2
+      subscription-overrides:
+        - providers: [codex]
+          plan-types: [ChatGPTProPlan, plus, ChatGPTBusinessPlan]
+          per-auth-request-limit: 20
 error-response-rewrites:
   - status-code: 429
     response-status-code: 503
@@ -29,6 +44,7 @@ const cloneValues = (): VisualConfigValues =>
 describe('routing request limits and error response rewrites', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    localStorage.clear();
   });
 
   test('preserves inherited overrides and distinguishes an omitted body from an explicit empty body', () => {
@@ -42,6 +58,14 @@ describe('routing request limits and error response rewrites', () => {
       priority: '4',
       perAuthRequestLimit: '0',
       perAuthRequestWindowMinutes: '2',
+      subscriptionOverrides: [
+        {
+          providers: ['codex'],
+          planTypes: ['pro', 'plus', 'team'],
+          perAuthRequestLimit: '20',
+          perAuthRequestWindowMinutes: '',
+        },
+      ],
     });
     expect(result.current.visualValues.errorResponseRewrites).toHaveLength(2);
     expect(result.current.visualValues.errorResponseRewrites[0].responseBodyEnabled).toBe(false);
@@ -75,6 +99,13 @@ describe('routing request limits and error response rewrites', () => {
           priority: 4,
           'per-auth-request-limit': 0,
           'per-auth-request-window-minutes': 2,
+          'subscription-overrides': [
+            {
+              providers: ['codex'],
+              'plan-types': ['pro', 'plus', 'team'],
+              'per-auth-request-limit': 20,
+            },
+          ],
         },
       ],
     });
@@ -98,6 +129,15 @@ describe('routing request limits and error response rewrites', () => {
         fillFirstPerAuthRpm: '',
         perAuthRequestLimit: '-2',
         perAuthRequestWindowMinutes: '0',
+        subscriptionOverrides: [
+          {
+            clientId: 'missing-subscription',
+            providers: [],
+            planTypes: [],
+            perAuthRequestLimit: '',
+            perAuthRequestWindowMinutes: '',
+          },
+        ],
       },
     ];
     values.errorResponseRewrites = [
@@ -124,12 +164,233 @@ describe('routing request limits and error response rewrites', () => {
       routingPerAuthRequestWindowMinutes: 'positive_integer',
       'routingPriorityOverrides.priority-4.perAuthRequestLimit': 'non_negative_integer',
       'routingPriorityOverrides.priority-4.perAuthRequestWindowMinutes': 'positive_integer',
+      'routingPriorityOverrides.priority-4.subscriptionOverrides.missing-subscription.planTypes':
+        'routing_subscription_plan_required',
+      'routingPriorityOverrides.priority-4.subscriptionOverrides.missing-subscription.perAuthRequestLimit':
+        'routing_subscription_limit_required',
       'errorResponseRewrites.missing-both-sides.statusCode':
         'error_response_rewrite_match_required',
       'errorResponseRewrites.missing-both-sides.responseStatusCode':
         'error_response_rewrite_result_required',
       'errorResponseRewrites.invalid-body.responseBody': 'json_object',
     });
+  });
+
+  test('rejects overlapping subscription plan rules within one priority', () => {
+    const values = cloneValues();
+    values.routingPriorityOverrides = [
+      {
+        clientId: 'priority-0',
+        priority: '0',
+        strategy: 'random',
+        maxRetryCredentials: '',
+        fillFirstRange: '',
+        fillFirstPerAuthRpm: '',
+        perAuthRequestLimit: '',
+        perAuthRequestWindowMinutes: '',
+        subscriptionOverrides: [
+          {
+            clientId: 'all-providers',
+            providers: [],
+            planTypes: ['pro'],
+            perAuthRequestLimit: '10',
+            perAuthRequestWindowMinutes: '',
+          },
+          {
+            clientId: 'codex-pro',
+            providers: ['codex'],
+            planTypes: ['ChatGPTProPlan'],
+            perAuthRequestLimit: '20',
+            perAuthRequestWindowMinutes: '',
+          },
+        ],
+      },
+    ];
+
+    expect(getVisualConfigValidationErrors(values)).toMatchObject({
+      'routingPriorityOverrides.priority-0.subscriptionOverrides.codex-pro.planTypes':
+        'routing_subscription_overlap',
+    });
+  });
+
+  test('allows the same plan in disjoint provider scopes', () => {
+    const { result } = renderHook(() => useVisualConfig());
+    act(() => {
+      result.current.loadVisualValuesFromYaml(
+        'routing:\n  priority-overrides:\n    - priority: 0\n'
+      );
+    });
+    act(() => {
+      result.current.setVisualValues({
+        routingPriorityOverrides: [
+          {
+            clientId: 'priority-0',
+            priority: '0',
+            strategy: '',
+            maxRetryCredentials: '',
+            fillFirstRange: '',
+            fillFirstPerAuthRpm: '',
+            perAuthRequestLimit: '',
+            perAuthRequestWindowMinutes: '',
+            subscriptionOverrides: [
+              {
+                clientId: 'codex-pro',
+                providers: ['codex'],
+                planTypes: ['pro'],
+                perAuthRequestLimit: '10',
+                perAuthRequestWindowMinutes: '',
+              },
+              {
+                clientId: 'web-pro',
+                providers: ['chatgpt-web'],
+                planTypes: ['ChatGPTProPlan'],
+                perAuthRequestLimit: '20',
+                perAuthRequestWindowMinutes: '',
+              },
+            ],
+          },
+        ],
+      });
+    });
+
+    expect(result.current.visualValidationErrors).not.toHaveProperty(
+      'routingPriorityOverrides.priority-0.subscriptionOverrides.web-pro.planTypes'
+    );
+    const merged = parse(
+      result.current.applyVisualChangesToYaml(
+        'routing:\n  priority-overrides:\n    - priority: 0\n'
+      )
+    );
+    expect(merged.routing['priority-overrides'][0]['subscription-overrides']).toEqual([
+      {
+        providers: ['codex'],
+        'plan-types': ['pro'],
+        'per-auth-request-limit': 10,
+      },
+      {
+        providers: ['chatgpt-web'],
+        'plan-types': ['pro'],
+        'per-auth-request-limit': 20,
+      },
+    ]);
+  });
+
+  test('keeps incomplete subscription drafts when switching through YAML', () => {
+    const { result } = renderHook(() => useVisualConfig());
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+
+    act(() => {
+      result.current.setVisualValues({
+        routingPriorityOverrides: result.current.visualValues.routingPriorityOverrides.map(
+          (rule) => ({
+            ...rule,
+            subscriptionOverrides: rule.subscriptionOverrides.map((subscriptionRule) => ({
+              ...subscriptionRule,
+              planTypes: [],
+              perAuthRequestLimit: 'not-a-number',
+            })),
+          })
+        ),
+      });
+    });
+
+    const merged = parse(result.current.applyVisualChangesToYaml(initialYaml));
+    expect(merged.routing['priority-overrides'][0]['subscription-overrides']).toEqual([
+      {
+        providers: ['codex'],
+        'plan-types': [],
+        'per-auth-request-limit': 'not-a-number',
+      },
+    ]);
+  });
+
+  test('adds, edits, and removes subscription request limits in the visual editor', () => {
+    const initialValues = cloneValues();
+    initialValues.routingPriorityOverrides = [
+      {
+        clientId: 'priority-0',
+        priority: '0',
+        strategy: 'random',
+        maxRetryCredentials: '',
+        fillFirstRange: '',
+        fillFirstPerAuthRpm: '',
+        perAuthRequestLimit: '',
+        perAuthRequestWindowMinutes: '',
+        subscriptionOverrides: [],
+      },
+    ];
+    function Harness() {
+      const [values, setValues] = useState(initialValues);
+      return (
+        <MemoryRouter initialEntries={['/config?section=global-network']}>
+          <>
+            <output data-testid="routing-values">{JSON.stringify(values)}</output>
+            <VisualConfigEditor
+              values={values}
+              baselineValues={initialValues}
+              validationErrors={getVisualConfigValidationErrors(values)}
+              onChange={(patch) => setValues((current) => ({ ...current, ...patch }))}
+            />
+          </>
+        </MemoryRouter>
+      );
+    }
+    const readValues = () =>
+      JSON.parse(screen.getByTestId('routing-values').textContent ?? '{}') as VisualConfigValues;
+
+    render(<Harness />);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'config_management.visual.sections.network.priority_subscription_overrides_add',
+      })
+    );
+
+    const planTypesInput = screen.getByRole('textbox', {
+      name: 'config_management.visual.sections.network.priority_subscription_overrides_plan_types',
+    });
+    const providersInput = screen.getByRole('textbox', {
+      name: 'config_management.visual.sections.network.priority_subscription_overrides_providers',
+    });
+    const describedBy = planTypesInput.getAttribute('aria-describedby')?.split(/\s+/) ?? [];
+    expect(planTypesInput.id).not.toBe('');
+    expect(planTypesInput.getAttribute('aria-invalid')).toBe('true');
+    expect(describedBy).toHaveLength(2);
+    describedBy.forEach((id) => expect(document.getElementById(id)).not.toBeNull());
+
+    fireEvent.change(planTypesInput, { target: { value: 'pro,plus' } });
+    fireEvent.keyDown(planTypesInput, { key: 'Enter', code: 'Enter' });
+    expect(planTypesInput.getAttribute('aria-invalid')).toBeNull();
+    fireEvent.change(providersInput, { target: { value: 'codex' } });
+    fireEvent.keyDown(providersInput, { key: 'Enter', code: 'Enter' });
+
+    const title = screen.getByText(
+      'config_management.visual.sections.network.priority_subscription_overrides_rule'
+    );
+    const subscriptionCard = title.parentElement?.parentElement;
+    expect(subscriptionCard).not.toBeNull();
+    const card = within(subscriptionCard as HTMLElement);
+    fireEvent.change(
+      card.getByRole('spinbutton', {
+        name: 'config_management.visual.sections.network.priority_subscription_overrides_limit',
+      }),
+      { target: { value: '20' } }
+    );
+    fireEvent.change(
+      card.getByRole('spinbutton', {
+        name: 'config_management.visual.sections.network.priority_subscription_overrides_window',
+      }),
+      { target: { value: '5' } }
+    );
+
+    expect(readValues().routingPriorityOverrides[0].subscriptionOverrides[0]).toMatchObject({
+      planTypes: ['pro', 'plus'],
+      providers: ['codex'],
+      perAuthRequestLimit: '20',
+      perAuthRequestWindowMinutes: '5',
+    });
+
+    fireEvent.click(card.getByRole('button', { name: 'config_management.visual.common.delete' }));
+    expect(readValues().routingPriorityOverrides[0].subscriptionOverrides).toEqual([]);
   });
 
   test('treats zero status fields as omitted without dropping the rewrite rule', () => {
@@ -198,6 +459,13 @@ describe('routing request limits and error response rewrites', () => {
               priority: -1,
               'per-auth-request-limit': 0,
               'per-auth-request-window-minutes': 2,
+              'subscription-overrides': [
+                {
+                  providers: ['chatgpt-web'],
+                  'plan-types': ['pro'],
+                  'per-auth-request-limit': 12,
+                },
+              ],
             },
           ],
         },
@@ -216,6 +484,13 @@ describe('routing request limits and error response rewrites', () => {
           priority: -1,
           perAuthRequestLimit: 0,
           perAuthRequestWindowMinutes: 2,
+          subscriptionOverrides: [
+            {
+              providers: ['chatgpt-web'],
+              planTypes: ['pro'],
+              perAuthRequestLimit: 12,
+            },
+          ],
         },
       ],
       errorResponseRewrites: [
@@ -247,6 +522,13 @@ describe('routing request limits and error response rewrites', () => {
         strategy: 'random',
         perAuthRequestLimit: 0,
         perAuthRequestWindowMinutes: 2,
+        subscriptionOverrides: [
+          {
+            providers: ['codex'],
+            planTypes: ['pro', 'plus'],
+            perAuthRequestLimit: 20,
+          },
+        ],
       },
     ]);
 
@@ -261,6 +543,13 @@ describe('routing request limits and error response rewrites', () => {
           strategy: 'random',
           'per-auth-request-limit': 0,
           'per-auth-request-window-minutes': 2,
+          'subscription-overrides': [
+            {
+              providers: ['codex'],
+              'plan-types': ['pro', 'plus'],
+              'per-auth-request-limit': 20,
+            },
+          ],
         },
       ],
     });

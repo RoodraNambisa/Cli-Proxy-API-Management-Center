@@ -54,6 +54,7 @@ import type {
   PayloadRule,
   RoutingPriorityOverrideStrategy,
   RoutingPriorityOverrideVisualEntry,
+  RoutingSubscriptionOverrideVisualEntry,
   VisualConfigFieldPath,
   VisualConfigValidationErrorCode,
   VisualConfigValidationErrors,
@@ -926,6 +927,7 @@ export function VisualConfigEditor({
         fillFirstPerAuthRpm: '',
         perAuthRequestLimit: '',
         perAuthRequestWindowMinutes: '',
+        subscriptionOverrides: [],
       },
     ]);
   }, [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]);
@@ -947,6 +949,68 @@ export function VisualConfigEditor({
     },
     [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]
   );
+  const addRoutingSubscriptionOverride = useCallback(
+    (priorityClientId: string) => {
+      const subscriptionOverride: RoutingSubscriptionOverrideVisualEntry = {
+        clientId: makeClientId(),
+        providers: [],
+        planTypes: [],
+        perAuthRequestLimit: '',
+        perAuthRequestWindowMinutes: '',
+      };
+      handleRoutingPriorityOverridesChange(
+        values.routingPriorityOverrides.map((rule) =>
+          rule.clientId === priorityClientId
+            ? {
+                ...rule,
+                subscriptionOverrides: [...rule.subscriptionOverrides, subscriptionOverride],
+              }
+            : rule
+        )
+      );
+    },
+    [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]
+  );
+  const updateRoutingSubscriptionOverride = useCallback(
+    (
+      priorityClientId: string,
+      subscriptionClientId: string,
+      patch: Partial<RoutingSubscriptionOverrideVisualEntry>
+    ) => {
+      handleRoutingPriorityOverridesChange(
+        values.routingPriorityOverrides.map((rule) =>
+          rule.clientId === priorityClientId
+            ? {
+                ...rule,
+                subscriptionOverrides: rule.subscriptionOverrides.map((subscriptionRule) =>
+                  subscriptionRule.clientId === subscriptionClientId
+                    ? { ...subscriptionRule, ...patch }
+                    : subscriptionRule
+                ),
+              }
+            : rule
+        )
+      );
+    },
+    [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]
+  );
+  const removeRoutingSubscriptionOverride = useCallback(
+    (priorityClientId: string, subscriptionClientId: string) => {
+      handleRoutingPriorityOverridesChange(
+        values.routingPriorityOverrides.map((rule) =>
+          rule.clientId === priorityClientId
+            ? {
+                ...rule,
+                subscriptionOverrides: rule.subscriptionOverrides.filter(
+                  (subscriptionRule) => subscriptionRule.clientId !== subscriptionClientId
+                ),
+              }
+            : rule
+        )
+      );
+    },
+    [handleRoutingPriorityOverridesChange, values.routingPriorityOverrides]
+  );
   const getRoutingPriorityOverrideError = useCallback(
     (
       clientId: string,
@@ -959,6 +1023,20 @@ export function VisualConfigEditor({
         | 'perAuthRequestWindowMinutes'
     ) =>
       getValidationMessage(t, validationErrors?.[`routingPriorityOverrides.${clientId}.${field}`]),
+    [t, validationErrors]
+  );
+  const getRoutingSubscriptionOverrideError = useCallback(
+    (
+      priorityClientId: string,
+      subscriptionClientId: string,
+      field: 'planTypes' | 'perAuthRequestLimit' | 'perAuthRequestWindowMinutes'
+    ) =>
+      getValidationMessage(
+        t,
+        validationErrors?.[
+          `routingPriorityOverrides.${priorityClientId}.subscriptionOverrides.${subscriptionClientId}.${field}`
+        ]
+      ),
     [t, validationErrors]
   );
   const addFixedErrorCooldown = useCallback(() => {
@@ -2732,6 +2810,227 @@ export function VisualConfigEditor({
                                         error={fillFirstPerAuthRpmError}
                                       />
                                     </>
+                                  )}
+                                </div>
+                                <div className={styles.subscriptionOverrideSection}>
+                                  <div className={styles.blockHeaderRow}>
+                                    <div>
+                                      <div className={styles.blockLabel}>
+                                        {t(
+                                          'config_management.visual.sections.network.priority_subscription_overrides'
+                                        )}
+                                      </div>
+                                      <div className={styles.fieldHint}>
+                                        {t(
+                                          'config_management.visual.sections.network.priority_subscription_overrides_hint'
+                                        )}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      size="sm"
+                                      onClick={() => addRoutingSubscriptionOverride(rule.clientId)}
+                                      disabled={disabled}
+                                    >
+                                      {t(
+                                        'config_management.visual.sections.network.priority_subscription_overrides_add'
+                                      )}
+                                    </Button>
+                                  </div>
+                                  {rule.subscriptionOverrides.length === 0 ? (
+                                    <div className={styles.emptyState}>
+                                      {t(
+                                        'config_management.visual.sections.network.priority_subscription_overrides_empty'
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className={styles.subscriptionOverrideList}>
+                                      {rule.subscriptionOverrides.map(
+                                        (subscriptionRule, subscriptionIndex) => {
+                                          const planTypesError =
+                                            getRoutingSubscriptionOverrideError(
+                                              rule.clientId,
+                                              subscriptionRule.clientId,
+                                              'planTypes'
+                                            );
+                                          const subscriptionLimitError =
+                                            getRoutingSubscriptionOverrideError(
+                                              rule.clientId,
+                                              subscriptionRule.clientId,
+                                              'perAuthRequestLimit'
+                                            );
+                                          const subscriptionWindowError =
+                                            getRoutingSubscriptionOverrideError(
+                                              rule.clientId,
+                                              subscriptionRule.clientId,
+                                              'perAuthRequestWindowMinutes'
+                                            );
+                                          const planTypesInputId = `routing-subscription-${subscriptionRule.clientId}-plan-types`;
+                                          const planTypesHintId = `${planTypesInputId}-hint`;
+                                          const planTypesErrorId = `${planTypesInputId}-error`;
+                                          const providersInputId = `routing-subscription-${subscriptionRule.clientId}-providers`;
+                                          const providersHintId = `${providersInputId}-hint`;
+                                          return (
+                                            <div
+                                              key={subscriptionRule.clientId}
+                                              className={styles.subscriptionOverrideItem}
+                                            >
+                                              <div className={styles.ruleCardHeader}>
+                                                <div className={styles.ruleCardTitle}>
+                                                  {t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_rule',
+                                                    {
+                                                      index: subscriptionIndex + 1,
+                                                    }
+                                                  )}
+                                                </div>
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() =>
+                                                    removeRoutingSubscriptionOverride(
+                                                      rule.clientId,
+                                                      subscriptionRule.clientId
+                                                    )
+                                                  }
+                                                  disabled={disabled}
+                                                >
+                                                  {t('config_management.visual.common.delete')}
+                                                </Button>
+                                              </div>
+                                              <div className={styles.subscriptionOverrideGrid}>
+                                                <FieldShell
+                                                  label={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_plan_types'
+                                                  )}
+                                                  htmlFor={planTypesInputId}
+                                                  hint={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_plan_types_hint'
+                                                  )}
+                                                  hintId={planTypesHintId}
+                                                  error={planTypesError}
+                                                  errorId={planTypesErrorId}
+                                                >
+                                                  <TagListEditor
+                                                    value={subscriptionRule.planTypes}
+                                                    disabled={disabled}
+                                                    inputId={planTypesInputId}
+                                                    inputAriaLabel={t(
+                                                      'config_management.visual.sections.network.priority_subscription_overrides_plan_types'
+                                                    )}
+                                                    ariaDescribedBy={`${planTypesHintId}${
+                                                      planTypesError ? ` ${planTypesErrorId}` : ''
+                                                    }`}
+                                                    ariaInvalid={Boolean(planTypesError)}
+                                                    placeholder={t(
+                                                      'config_management.visual.sections.network.priority_subscription_overrides_plan_types_placeholder'
+                                                    )}
+                                                    emptyLabel={t(
+                                                      'config_management.visual.sections.network.priority_subscription_overrides_plan_types_empty'
+                                                    )}
+                                                    onChange={(planTypes) =>
+                                                      updateRoutingSubscriptionOverride(
+                                                        rule.clientId,
+                                                        subscriptionRule.clientId,
+                                                        { planTypes }
+                                                      )
+                                                    }
+                                                  />
+                                                </FieldShell>
+                                                <FieldShell
+                                                  label={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_providers'
+                                                  )}
+                                                  htmlFor={providersInputId}
+                                                  hint={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_providers_hint'
+                                                  )}
+                                                  hintId={providersHintId}
+                                                >
+                                                  <TagListEditor
+                                                    value={subscriptionRule.providers}
+                                                    disabled={disabled}
+                                                    inputId={providersInputId}
+                                                    inputAriaLabel={t(
+                                                      'config_management.visual.sections.network.priority_subscription_overrides_providers'
+                                                    )}
+                                                    ariaDescribedBy={providersHintId}
+                                                    placeholder={t(
+                                                      'config_management.visual.sections.network.priority_subscription_overrides_providers_placeholder'
+                                                    )}
+                                                    emptyLabel={t(
+                                                      'config_management.visual.sections.network.priority_subscription_overrides_providers_empty'
+                                                    )}
+                                                    onChange={(providers) =>
+                                                      updateRoutingSubscriptionOverride(
+                                                        rule.clientId,
+                                                        subscriptionRule.clientId,
+                                                        { providers }
+                                                      )
+                                                    }
+                                                  />
+                                                </FieldShell>
+                                                <Input
+                                                  label={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_limit'
+                                                  )}
+                                                  type="number"
+                                                  min={0}
+                                                  placeholder={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_inherit_priority'
+                                                  )}
+                                                  value={subscriptionRule.perAuthRequestLimit}
+                                                  onChange={(event) =>
+                                                    updateRoutingSubscriptionOverride(
+                                                      rule.clientId,
+                                                      subscriptionRule.clientId,
+                                                      {
+                                                        perAuthRequestLimit: event.target.value,
+                                                      }
+                                                    )
+                                                  }
+                                                  disabled={disabled}
+                                                  hint={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_limit_hint'
+                                                  )}
+                                                  error={subscriptionLimitError}
+                                                />
+                                                <Input
+                                                  label={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_window'
+                                                  )}
+                                                  type="number"
+                                                  min={1}
+                                                  placeholder={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_inherit_priority'
+                                                  )}
+                                                  value={
+                                                    subscriptionRule.perAuthRequestWindowMinutes
+                                                  }
+                                                  onChange={(event) =>
+                                                    updateRoutingSubscriptionOverride(
+                                                      rule.clientId,
+                                                      subscriptionRule.clientId,
+                                                      {
+                                                        perAuthRequestWindowMinutes:
+                                                          event.target.value,
+                                                      }
+                                                    )
+                                                  }
+                                                  disabled={disabled}
+                                                  hint={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_window_hint'
+                                                  )}
+                                                  error={subscriptionWindowError}
+                                                />
+                                              </div>
+                                            </div>
+                                          );
+                                        }
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               </div>

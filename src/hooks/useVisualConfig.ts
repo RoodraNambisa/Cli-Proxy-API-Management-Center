@@ -18,6 +18,7 @@ import type {
   PayloadRule,
   RoutingPriorityOverrideStrategy,
   RoutingPriorityOverrideVisualEntry,
+  RoutingSubscriptionOverrideVisualEntry,
   VisualConfigValues,
   VisualConfigValidationErrors,
   PayloadParamValidationErrorCode,
@@ -756,6 +757,72 @@ function normalizeRoutingPriorityOverrideStrategy(value: unknown): RoutingPriori
   return value === 'round-robin' || value === 'fill-first' || value === 'random' ? value : '';
 }
 
+function normalizeRoutingPlanType(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  const compact = normalized.replace(/[-_\s]/g, '');
+  switch (compact) {
+    case 'chatgptfreeplan':
+      return 'free';
+    case 'chatgptplusplan':
+      return 'plus';
+    case 'chatgptproplan':
+      return 'pro';
+    case 'chatgptteamplan':
+    case 'chatgptbusinessplan':
+    case 'selfservebusiness':
+    case 'selfservebusinessusagebased':
+      return 'team';
+    case 'chatgptenterpriseplan':
+      return 'enterprise';
+    default:
+      return normalized;
+  }
+}
+
+function normalizeRoutingProviders(values: string[]): string[] {
+  return normalizeStringListItems(values.map((value) => value.toLowerCase()));
+}
+
+function normalizeRoutingPlanTypes(values: string[]): string[] {
+  return normalizeStringListItems(values.map(normalizeRoutingPlanType));
+}
+
+function routingProviderScopesOverlap(left: string[], right: string[]): boolean {
+  const normalizedLeft = normalizeRoutingProviders(left);
+  const normalizedRight = normalizeRoutingProviders(right);
+  if (normalizedLeft.length === 0 || normalizedRight.length === 0) return true;
+  const rightProviders = new Set(normalizedRight);
+  return normalizedLeft.some((provider) => rightProviders.has(provider));
+}
+
+function parseRoutingSubscriptionOverrides(raw: unknown): RoutingSubscriptionOverrideVisualEntry[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.reduce<RoutingSubscriptionOverrideVisualEntry[]>((result, item) => {
+    const record = asRecord(item);
+    if (!record) return result;
+    result.push({
+      clientId: makeClientId(),
+      providers: normalizeRoutingProviders(parseStringList(record.providers)),
+      planTypes: normalizeRoutingPlanTypes(
+        parseStringList(record['plan-types'] ?? record.planTypes)
+      ),
+      perAuthRequestLimit:
+        record['per-auth-request-limit'] === undefined && record.perAuthRequestLimit === undefined
+          ? ''
+          : String(record['per-auth-request-limit'] ?? record.perAuthRequestLimit ?? ''),
+      perAuthRequestWindowMinutes:
+        record['per-auth-request-window-minutes'] === undefined &&
+        record.perAuthRequestWindowMinutes === undefined
+          ? ''
+          : String(
+              record['per-auth-request-window-minutes'] ?? record.perAuthRequestWindowMinutes ?? ''
+            ),
+    });
+    return result;
+  }, []);
+}
+
 function parseRoutingPriorityOverrides(raw: unknown): RoutingPriorityOverrideVisualEntry[] {
   if (!Array.isArray(raw)) return [];
 
@@ -798,6 +865,9 @@ function parseRoutingPriorityOverrides(raw: unknown): RoutingPriorityOverrideVis
           : String(
               record['per-auth-request-window-minutes'] ?? record.perAuthRequestWindowMinutes ?? ''
             ),
+      subscriptionOverrides: parseRoutingSubscriptionOverrides(
+        record['subscription-overrides'] ?? record.subscriptionOverrides
+      ),
     });
     return result;
   }, []);
@@ -818,7 +888,18 @@ function areRoutingPriorityOverridesEqual(
       entry.fillFirstRange === other.fillFirstRange &&
       entry.fillFirstPerAuthRpm === other.fillFirstPerAuthRpm &&
       entry.perAuthRequestLimit === other.perAuthRequestLimit &&
-      entry.perAuthRequestWindowMinutes === other.perAuthRequestWindowMinutes
+      entry.perAuthRequestWindowMinutes === other.perAuthRequestWindowMinutes &&
+      entry.subscriptionOverrides.length === other.subscriptionOverrides.length &&
+      entry.subscriptionOverrides.every((subscription, subscriptionIndex) => {
+        const otherSubscription = other.subscriptionOverrides[subscriptionIndex];
+        return (
+          Boolean(otherSubscription) &&
+          areStringArraysEqual(subscription.providers, otherSubscription.providers) &&
+          areStringArraysEqual(subscription.planTypes, otherSubscription.planTypes) &&
+          subscription.perAuthRequestLimit === otherSubscription.perAuthRequestLimit &&
+          subscription.perAuthRequestWindowMinutes === otherSubscription.perAuthRequestWindowMinutes
+        );
+      })
     );
   });
 }
@@ -1005,6 +1086,34 @@ function serializeRoutingPriorityOverridesForYaml(
       );
       if (perAuthRequestWindowMinutes === null) return result;
       entry['per-auth-request-window-minutes'] = perAuthRequestWindowMinutes;
+    }
+    if (rule.subscriptionOverrides.length > 0) {
+      entry['subscription-overrides'] = rule.subscriptionOverrides.reduce<
+        Array<Record<string, unknown>>
+      >((subscriptionResult, subscriptionRule) => {
+        const planTypes = normalizeRoutingPlanTypes(subscriptionRule.planTypes);
+        const subscriptionEntry: Record<string, unknown> = {
+          'plan-types': planTypes,
+        };
+        const providers = normalizeRoutingProviders(subscriptionRule.providers);
+        if (providers.length > 0) {
+          subscriptionEntry.providers = providers;
+        }
+        if (subscriptionRule.perAuthRequestLimit.trim()) {
+          const limit = parseNonNegativeIntegerString(subscriptionRule.perAuthRequestLimit);
+          subscriptionEntry['per-auth-request-limit'] =
+            limit ?? subscriptionRule.perAuthRequestLimit.trim();
+        }
+        if (subscriptionRule.perAuthRequestWindowMinutes.trim()) {
+          const windowMinutes = parsePositiveIntegerString(
+            subscriptionRule.perAuthRequestWindowMinutes
+          );
+          subscriptionEntry['per-auth-request-window-minutes'] =
+            windowMinutes ?? subscriptionRule.perAuthRequestWindowMinutes.trim();
+        }
+        subscriptionResult.push(subscriptionEntry);
+        return subscriptionResult;
+      }, []);
     }
 
     result.push(entry);
@@ -1212,6 +1321,45 @@ export function getVisualConfigValidationErrors(
         result[`routingPriorityOverrides.${rule.clientId}.fillFirstPerAuthRpm`] =
           'fill_first_controls_conflict';
       }
+      rule.subscriptionOverrides.forEach((subscriptionRule, subscriptionIndex) => {
+        const pathPrefix = `routingPriorityOverrides.${rule.clientId}.subscriptionOverrides.${subscriptionRule.clientId}`;
+        const planTypes = normalizeRoutingPlanTypes(subscriptionRule.planTypes);
+        if (planTypes.length === 0) {
+          result[`${pathPrefix}.planTypes`] = 'routing_subscription_plan_required';
+        }
+        const subscriptionLimitError = subscriptionRule.perAuthRequestLimit.trim()
+          ? getNonNegativeIntegerError(subscriptionRule.perAuthRequestLimit)
+          : undefined;
+        if (subscriptionLimitError) {
+          result[`${pathPrefix}.perAuthRequestLimit`] = subscriptionLimitError;
+        }
+        const subscriptionWindowError = subscriptionRule.perAuthRequestWindowMinutes.trim()
+          ? getPositiveIntegerError(subscriptionRule.perAuthRequestWindowMinutes)
+          : undefined;
+        if (subscriptionWindowError) {
+          result[`${pathPrefix}.perAuthRequestWindowMinutes`] = subscriptionWindowError;
+        }
+        if (
+          !subscriptionRule.perAuthRequestLimit.trim() &&
+          !subscriptionRule.perAuthRequestWindowMinutes.trim()
+        ) {
+          result[`${pathPrefix}.perAuthRequestLimit`] = 'routing_subscription_limit_required';
+          result[`${pathPrefix}.perAuthRequestWindowMinutes`] =
+            'routing_subscription_limit_required';
+        }
+        const overlapsPreviousRule = rule.subscriptionOverrides
+          .slice(0, subscriptionIndex)
+          .some((previousRule) => {
+            if (!routingProviderScopesOverlap(previousRule.providers, subscriptionRule.providers)) {
+              return false;
+            }
+            const previousPlanTypes = new Set(normalizeRoutingPlanTypes(previousRule.planTypes));
+            return planTypes.some((planType) => previousPlanTypes.has(planType));
+          });
+        if (overlapsPreviousRule) {
+          result[`${pathPrefix}.planTypes`] = 'routing_subscription_overlap';
+        }
+      });
       return result;
     }, {});
   const fixedErrorCooldownErrors = values.fixedErrorCooldowns.reduce<VisualConfigValidationErrors>(

@@ -265,6 +265,67 @@ const normalizeRoutingPriorityOverrides = (
           entry.perAuthRequestWindowMinutes = perAuthRequestWindowMinutes;
         }
       }
+      const subscriptionOverridesRaw = item['subscription-overrides'] ?? item.subscriptionOverrides;
+      if (Array.isArray(subscriptionOverridesRaw)) {
+        const subscriptionOverrides = subscriptionOverridesRaw.reduce<
+          NonNullable<typeof entry.subscriptionOverrides>
+        >((subscriptionResult, subscriptionItem) => {
+          if (!isRecord(subscriptionItem)) return subscriptionResult;
+          const planTypes = normalizeStringArray(
+            subscriptionItem['plan-types'] ?? subscriptionItem.planTypes
+          );
+          if (!planTypes?.length) return subscriptionResult;
+
+          const subscriptionEntry: NonNullable<typeof entry.subscriptionOverrides>[number] = {
+            planTypes,
+          };
+          const providers = normalizeStringArray(subscriptionItem.providers);
+          if (providers?.length) {
+            subscriptionEntry.providers = providers;
+          }
+          const subscriptionLimitRaw = Object.prototype.hasOwnProperty.call(
+            subscriptionItem,
+            'per-auth-request-limit'
+          )
+            ? subscriptionItem['per-auth-request-limit']
+            : subscriptionItem.perAuthRequestLimit;
+          if (subscriptionLimitRaw === null) {
+            subscriptionEntry.perAuthRequestLimit = null;
+          } else {
+            const subscriptionLimit = normalizeNumber(subscriptionLimitRaw);
+            if (
+              subscriptionLimit !== undefined &&
+              Number.isSafeInteger(subscriptionLimit) &&
+              subscriptionLimit >= 0
+            ) {
+              subscriptionEntry.perAuthRequestLimit = subscriptionLimit;
+            }
+          }
+          const subscriptionWindowRaw = Object.prototype.hasOwnProperty.call(
+            subscriptionItem,
+            'per-auth-request-window-minutes'
+          )
+            ? subscriptionItem['per-auth-request-window-minutes']
+            : subscriptionItem.perAuthRequestWindowMinutes;
+          if (subscriptionWindowRaw === null) {
+            subscriptionEntry.perAuthRequestWindowMinutes = null;
+          } else {
+            const subscriptionWindow = normalizeNumber(subscriptionWindowRaw);
+            if (
+              subscriptionWindow !== undefined &&
+              Number.isSafeInteger(subscriptionWindow) &&
+              subscriptionWindow >= 1
+            ) {
+              subscriptionEntry.perAuthRequestWindowMinutes = subscriptionWindow;
+            }
+          }
+          subscriptionResult.push(subscriptionEntry);
+          return subscriptionResult;
+        }, []);
+        if (subscriptionOverrides.length > 0) {
+          entry.subscriptionOverrides = subscriptionOverrides;
+        }
+      }
 
       result.push(entry);
       return result;

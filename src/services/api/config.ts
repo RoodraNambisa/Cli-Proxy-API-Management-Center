@@ -332,6 +332,69 @@ const normalizeRoutingPriorityOverrides = (value: unknown): RoutingPriorityOverr
         entry.perAuthRequestWindowMinutes = parsed;
       }
     }
+    const subscriptionOverridesRaw =
+      source['subscription-overrides'] ?? source.subscriptionOverrides;
+    if (Array.isArray(subscriptionOverridesRaw)) {
+      const subscriptionOverrides = subscriptionOverridesRaw.reduce<
+        NonNullable<RoutingPriorityOverrideConfig['subscriptionOverrides']>
+      >((subscriptionResult, subscriptionItem) => {
+        if (
+          subscriptionItem === null ||
+          typeof subscriptionItem !== 'object' ||
+          Array.isArray(subscriptionItem)
+        ) {
+          return subscriptionResult;
+        }
+        const subscriptionSource = subscriptionItem as Record<string, unknown>;
+        const planTypes = normalizeStringList(
+          subscriptionSource['plan-types'] ?? subscriptionSource.planTypes
+        );
+        if (planTypes.length === 0) return subscriptionResult;
+
+        const subscriptionEntry: NonNullable<
+          RoutingPriorityOverrideConfig['subscriptionOverrides']
+        >[number] = {
+          planTypes,
+        };
+        const providers = normalizeStringList(subscriptionSource.providers);
+        if (providers.length > 0) {
+          subscriptionEntry.providers = providers;
+        }
+        const subscriptionLimitRaw = Object.prototype.hasOwnProperty.call(
+          subscriptionSource,
+          'per-auth-request-limit'
+        )
+          ? subscriptionSource['per-auth-request-limit']
+          : subscriptionSource.perAuthRequestLimit;
+        if (subscriptionLimitRaw === null) {
+          subscriptionEntry.perAuthRequestLimit = null;
+        } else if (subscriptionLimitRaw !== undefined) {
+          const parsed = Number(subscriptionLimitRaw);
+          if (Number.isSafeInteger(parsed) && parsed >= 0) {
+            subscriptionEntry.perAuthRequestLimit = parsed;
+          }
+        }
+        const subscriptionWindowRaw = Object.prototype.hasOwnProperty.call(
+          subscriptionSource,
+          'per-auth-request-window-minutes'
+        )
+          ? subscriptionSource['per-auth-request-window-minutes']
+          : subscriptionSource.perAuthRequestWindowMinutes;
+        if (subscriptionWindowRaw === null) {
+          subscriptionEntry.perAuthRequestWindowMinutes = null;
+        } else if (subscriptionWindowRaw !== undefined) {
+          const parsed = Number(subscriptionWindowRaw);
+          if (Number.isSafeInteger(parsed) && parsed >= 1) {
+            subscriptionEntry.perAuthRequestWindowMinutes = parsed;
+          }
+        }
+        subscriptionResult.push(subscriptionEntry);
+        return subscriptionResult;
+      }, []);
+      if (subscriptionOverrides.length > 0) {
+        entry.subscriptionOverrides = subscriptionOverrides;
+      }
+    }
 
     result.push(entry);
     return result;
@@ -370,6 +433,26 @@ const serializeRoutingPriorityOverrides = (
     }
     if (override.perAuthRequestWindowMinutes !== undefined) {
       entry['per-auth-request-window-minutes'] = override.perAuthRequestWindowMinutes;
+    }
+    if (override.subscriptionOverrides?.length) {
+      entry['subscription-overrides'] = override.subscriptionOverrides.map(
+        (subscriptionOverride) => {
+          const subscriptionEntry: Record<string, unknown> = {
+            'plan-types': subscriptionOverride.planTypes,
+          };
+          if (subscriptionOverride.providers?.length) {
+            subscriptionEntry.providers = subscriptionOverride.providers;
+          }
+          if (subscriptionOverride.perAuthRequestLimit !== undefined) {
+            subscriptionEntry['per-auth-request-limit'] = subscriptionOverride.perAuthRequestLimit;
+          }
+          if (subscriptionOverride.perAuthRequestWindowMinutes !== undefined) {
+            subscriptionEntry['per-auth-request-window-minutes'] =
+              subscriptionOverride.perAuthRequestWindowMinutes;
+          }
+          return subscriptionEntry;
+        }
+      );
     }
     return entry;
   });

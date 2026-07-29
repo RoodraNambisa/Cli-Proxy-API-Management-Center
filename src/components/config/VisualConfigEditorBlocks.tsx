@@ -655,6 +655,9 @@ export const TagListEditor = memo(function TagListEditor({
   disabled,
   placeholder,
   inputAriaLabel,
+  inputId,
+  ariaDescribedBy,
+  ariaInvalid,
   emptyLabel,
   onChange,
 }: {
@@ -662,6 +665,9 @@ export const TagListEditor = memo(function TagListEditor({
   disabled?: boolean;
   placeholder?: string;
   inputAriaLabel?: string;
+  inputId?: string;
+  ariaDescribedBy?: string;
+  ariaInvalid?: boolean;
   emptyLabel?: string;
   onChange: (next: string[]) => void;
 }) {
@@ -751,10 +757,13 @@ export const TagListEditor = memo(function TagListEditor({
       </div>
       <div className={styles.tagListInputRow}>
         <input
+          id={inputId}
           className="input"
           value={draft}
           placeholder={placeholder}
           aria-label={inputAriaLabel ?? placeholder}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid || undefined}
           disabled={disabled}
           onChange={(event) => setDraft(event.target.value.replace(/[\r\n]/g, ','))}
           onKeyDown={(event) => {

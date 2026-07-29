@@ -1051,6 +1051,43 @@
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
+.subscriptionOverrideSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed color-mix(in srgb, var(--border-color) 82%, transparent);
+}
+
+.subscriptionOverrideList {
+  display: flex;
+  flex-direction: column;
+}
+
+.subscriptionOverrideItem {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 68%, transparent);
+
+  &:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.subscriptionOverrideGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
 .codexCustomModelGroups {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1196,6 +1233,7 @@
   .errorResponseRewriteGrid,
   .authModelExclusionGrid,
   .priorityOverrideGrid,
+  .subscriptionOverrideGrid,
   .codexCustomModelGroups,
   .payloadRuleModelRow,
   .payloadRuleModelRowProtocolFirst,
