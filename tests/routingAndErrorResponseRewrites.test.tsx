@@ -340,6 +340,11 @@ describe('routing request limits and error response rewrites', () => {
 
     render(<Harness />);
     fireEvent.click(
+      document.querySelector(
+        '#config-routing-priority-overrides button[aria-expanded]'
+      ) as HTMLButtonElement
+    );
+    fireEvent.click(
       screen.getByRole('button', {
         name: 'config_management.visual.sections.network.priority_subscription_overrides_add',
       })

@@ -1,4 +1,4 @@
-import { act, render, renderHook, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { parse as parseYaml } from 'yaml';
@@ -70,6 +70,11 @@ describe('auth model exclusion providers', () => {
           onChange={vi.fn()}
         />
       </MemoryRouter>
+    );
+    fireEvent.click(
+      document.querySelector(
+        '#config-auth-model-exclusions button[aria-expanded]'
+      ) as HTMLButtonElement
     );
     expect(
       screen.getByText('config_management.visual.sections.auth.auth_model_exclusions_providers')

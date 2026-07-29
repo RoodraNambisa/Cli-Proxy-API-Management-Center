@@ -34,6 +34,26 @@ const translations: Record<string, string> = {
   'config_management.settings_center.pages.provider_antigravity.title': 'Antigravity',
   'config_management.settings_center.pages.provider_grok.title': 'Grok',
   'config_management.settings_center.pages.advanced_payload.title': 'Payload Rules',
+  'config_management.settings_center.disclosures.credential_access.title':
+    'Credential Storage & Management Access',
+  'config_management.settings_center.disclosures.credential_access.description':
+    'Manage credentials',
+  'config_management.settings_center.disclosures.api_keys.title': 'API Keys',
+  'config_management.settings_center.disclosures.api_keys.description': 'Manage API keys',
+  'config_management.settings_center.disclosures.proxy.title': 'Proxy & Proxy Pools',
+  'config_management.settings_center.disclosures.proxy.description': 'Manage proxies',
+  'config_management.settings_center.disclosures.retry.title': 'Request Retry & Cooldown Waiting',
+  'config_management.settings_center.disclosures.retry.description': 'Manage retries',
+  'config_management.settings_center.disclosures.routing.title': 'Global Routing Strategy',
+  'config_management.settings_center.disclosures.routing.description': 'Manage routing',
+  'config_management.settings_center.disclosures.session_access.title':
+    'Session & Protocol Options',
+  'config_management.settings_center.disclosures.session_access.description':
+    'Manage sessions and protocols',
+  'config_management.settings_center.disclosures.cooldown_exceptions.title':
+    'Cooldown Exception Status Codes',
+  'config_management.settings_center.disclosures.cooldown_exceptions.description':
+    'Manage cooldown exceptions',
   'config_management.settings_center.chatgpt_web.login_tasks': 'Open account login tasks',
   'config_management.settings_center.frontend_features.title': 'Frontend feature visibility',
   'config_management.settings_center.frontend_features.codex_agent_identity':
@@ -300,13 +320,63 @@ describe('configuration settings center', () => {
     expect(mobilePicker.textContent).toContain('Fix errors (1)');
   });
 
-  test('assigns the management key to Credentials & Keys', () => {
-    renderEditor('/config?section=global-credentials');
+  test('collapses credential settings, persists expansion, and keeps ownership metadata', () => {
+    const view = renderEditor('/config?section=global-credentials');
 
+    const disclosure = screen.getByRole('button', {
+      name: /Credential Storage & Management Access/,
+    });
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
+    expect(document.getElementById('config-management-key')).toBeNull();
+    fireEvent.click(disclosure);
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true');
     expect(document.getElementById('config-management-key')).not.toBeNull();
+    expect(localStorage.getItem('config-management:config-credential-access-expanded')).toBe(
+      'true'
+    );
+
     const byId = new Map(CONFIG_PAGE_DEFINITIONS.map((page) => [page.id, page]));
     expect(configPageHasDirtyFields(byId.get('global-credentials')!, ['rmSecretKey'])).toBe(true);
     expect(configPageHasDirtyFields(byId.get('global-basics')!, ['rmSecretKey'])).toBe(false);
+
+    view.unmount();
+    renderEditor('/config?section=global-credentials');
+    expect(
+      screen
+        .getByRole('button', { name: /Credential Storage & Management Access/ })
+        .getAttribute('aria-expanded')
+    ).toBe('true');
+  });
+
+  test('opens the owning disclosure for deep links, dirty fields, and validation errors', () => {
+    const linked = renderEditor('/config?section=config-routing-priority-overrides');
+
+    expect(
+      document
+        .querySelector('#config-routing-priority-overrides button[aria-expanded]')
+        ?.getAttribute('aria-expanded')
+    ).toBe('true');
+    linked.unmount();
+
+    const dirty = renderEditor('/config?section=global-request', {
+      dirtyFields: ['errorResponseRewrites'],
+    });
+    const rewriteDisclosure = document.querySelector(
+      '#config-error-response-rewrites button[aria-expanded]'
+    );
+    expect(rewriteDisclosure?.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(rewriteDisclosure as HTMLButtonElement);
+    expect(rewriteDisclosure?.getAttribute('aria-expanded')).toBe('true');
+    dirty.unmount();
+
+    renderEditor('/config?section=global-request', {
+      validationErrors: { noCooldownStatusCodes: 'http_status_list' },
+    });
+    expect(
+      document
+        .querySelector('#config-no-cooldown-status-codes button[aria-expanded]')
+        ?.getAttribute('aria-expanded')
+    ).toBe('true');
   });
 
   test('restores Images disclosure defaults after async configuration loading', async () => {

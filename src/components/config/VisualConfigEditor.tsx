@@ -196,6 +196,60 @@ function SectionSubsection({
   );
 }
 
+function SettingsDisclosure({
+  id,
+  title,
+  description,
+  summary,
+  focusTarget,
+  targetIds = [],
+  dirty = false,
+  errorCount = 0,
+  children,
+}: {
+  id: string;
+  title: string;
+  description?: string;
+  summary?: ReactNode;
+  focusTarget?: string;
+  targetIds?: string[];
+  dirty?: boolean;
+  errorCount?: number;
+  children: ReactNode;
+}) {
+  const storageKey = `config-management:${id}-expanded`;
+  const [expandedPreference, setExpandedPreference] = useState(
+    () => localStorage.getItem(storageKey) === 'true'
+  );
+  const focusMatches =
+    focusTarget === id || Boolean(focusTarget && targetIds.includes(focusTarget));
+  const expanded = expandedPreference || focusMatches || dirty || errorCount > 0;
+
+  return (
+    <ConfigDisclosure
+      id={id}
+      title={title}
+      description={description}
+      summary={summary}
+      expanded={expanded}
+      onExpandedChange={(nextExpanded) => {
+        setExpandedPreference(nextExpanded);
+        localStorage.setItem(storageKey, String(nextExpanded));
+      }}
+      dirty={dirty}
+      errorCount={errorCount}
+    >
+      {children}
+    </ConfigDisclosure>
+  );
+}
+
+function hasDirtyConfigField(dirtyFields: string[], prefixes: string[]) {
+  return dirtyFields.some((field) =>
+    prefixes.some((prefix) => field === prefix || field.startsWith(`${prefix}.`))
+  );
+}
+
 function FieldShell({
   label,
   labelId,
@@ -807,6 +861,47 @@ export function VisualConfigEditor({
       ).length,
     [validationErrors]
   );
+  const credentialAccessDirty = hasDirtyConfigField(dirtyFields, ['rmSecretKey', 'authDir']);
+  const apiKeysDirty = hasDirtyConfigField(dirtyFields, ['apiKeysText']);
+  const authModelExclusionsDirty = hasDirtyConfigField(dirtyFields, ['authModelExclusions']);
+  const proxySettingsDirty = hasDirtyConfigField(dirtyFields, ['proxyUrl']);
+  const retrySettingsDirty = hasDirtyConfigField(dirtyFields, [
+    'requestRetry',
+    'maxRetryCredentials',
+    'maxRetryInterval',
+  ]);
+  const routingSettingsDirty = hasDirtyConfigField(dirtyFields, [
+    'routingStrategy',
+    'routingFillFirstRange',
+    'routingFillFirstPerAuthRpm',
+    'routingPerAuthRequestLimit',
+    'routingPerAuthRequestWindowMinutes',
+  ]);
+  const routingPriorityOverridesDirty = hasDirtyConfigField(dirtyFields, [
+    'routingPriorityOverrides',
+  ]);
+  const sessionSettingsDirty = hasDirtyConfigField(dirtyFields, [
+    'routingSessionAffinity',
+    'routingSessionAffinityFailover',
+    'routingSessionAffinityTTL',
+    'forceModelPrefix',
+    'wsAuth',
+  ]);
+  const nonRetryableErrorsDirty = hasDirtyConfigField(dirtyFields, ['nonRetryableErrors']);
+  const errorResponseRewritesDirty = hasDirtyConfigField(dirtyFields, ['errorResponseRewrites']);
+  const fixedErrorCooldownsDirty = hasDirtyConfigField(dirtyFields, ['fixedErrorCooldowns']);
+  const noCooldownStatusCodesDirty = hasDirtyConfigField(dirtyFields, ['noCooldownStatusCodes']);
+  const retrySettingsErrorCount = [
+    requestRetryError,
+    maxRetryCredentialsError,
+    maxRetryIntervalError,
+  ].filter(Boolean).length;
+  const routingSettingsErrorCount = [
+    routingFillFirstRangeError,
+    routingFillFirstPerAuthRpmError,
+    routingPerAuthRequestLimitError,
+    routingPerAuthRequestWindowMinutesError,
+  ].filter(Boolean).length;
   const imagesUnsupportedStatusCodeError = getValidationMessage(
     t,
     validationErrors?.['images.unsupportedStatusCode']
@@ -1851,27 +1946,50 @@ export function VisualConfigEditor({
             >
               <SectionStack>
                 <PageGroup active={activePageId === 'global-credentials'}>
-                  <Input
-                    id="config-management-key"
-                    label={t('config_management.visual.sections.remote.secret_key')}
-                    type="password"
-                    placeholder={t(
-                      'config_management.visual.sections.remote.secret_key_placeholder'
+                  <SettingsDisclosure
+                    id="config-credential-access"
+                    title={t(
+                      'config_management.settings_center.disclosures.credential_access.title'
                     )}
-                    value={values.rmSecretKey}
-                    onChange={(e) => onChange({ rmSecretKey: e.target.value })}
-                    disabled={disabled}
-                  />
-                  <Input
-                    id="config-auth-dir"
-                    label={t('config_management.visual.sections.auth.auth_dir')}
-                    placeholder="~/.cli-proxy-api"
-                    value={values.authDir}
-                    onChange={(e) => onChange({ authDir: e.target.value })}
-                    disabled={disabled}
-                    hint={t('config_management.visual.sections.auth.auth_dir_hint')}
-                  />
-                  <div id="config-api-keys" className={styles.subsection}>
+                    description={t(
+                      'config_management.settings_center.disclosures.credential_access.description'
+                    )}
+                    focusTarget={focusTarget}
+                    targetIds={['config-management-key', 'config-auth-dir']}
+                    dirty={credentialAccessDirty}
+                  >
+                    <SectionGrid>
+                      <Input
+                        id="config-management-key"
+                        label={t('config_management.visual.sections.remote.secret_key')}
+                        type="password"
+                        placeholder={t(
+                          'config_management.visual.sections.remote.secret_key_placeholder'
+                        )}
+                        value={values.rmSecretKey}
+                        onChange={(e) => onChange({ rmSecretKey: e.target.value })}
+                        disabled={disabled}
+                      />
+                      <Input
+                        id="config-auth-dir"
+                        label={t('config_management.visual.sections.auth.auth_dir')}
+                        placeholder="~/.cli-proxy-api"
+                        value={values.authDir}
+                        onChange={(e) => onChange({ authDir: e.target.value })}
+                        disabled={disabled}
+                        hint={t('config_management.visual.sections.auth.auth_dir_hint')}
+                      />
+                    </SectionGrid>
+                  </SettingsDisclosure>
+                  <SettingsDisclosure
+                    id="config-api-keys"
+                    title={t('config_management.settings_center.disclosures.api_keys.title')}
+                    description={t(
+                      'config_management.settings_center.disclosures.api_keys.description'
+                    )}
+                    focusTarget={focusTarget}
+                    dirty={apiKeysDirty}
+                  >
                     <ApiKeysCardEditor
                       value={values.apiKeysText}
                       savedValue={baselineValues.apiKeysText}
@@ -1879,7 +1997,7 @@ export function VisualConfigEditor({
                       active={activePageId === 'global-credentials'}
                       onChange={handleApiKeysTextChange}
                     />
-                  </div>
+                  </SettingsDisclosure>
                 </PageGroup>
                 <PageGroup active={activePageId === 'provider-codex'}>
                   <SectionSubsection
@@ -1896,15 +2014,19 @@ export function VisualConfigEditor({
                     </div>
                   </SectionSubsection>
                 </PageGroup>
-                <PageGroup
-                  id="config-auth-model-exclusions"
-                  active={activePageId === 'global-credentials'}
-                >
-                  <SectionSubsection
+                <PageGroup active={activePageId === 'global-credentials'}>
+                  <SettingsDisclosure
+                    id="config-auth-model-exclusions"
                     title={t('config_management.visual.sections.auth.auth_model_exclusions')}
                     description={t(
                       'config_management.visual.sections.auth.auth_model_exclusions_desc'
                     )}
+                    summary={t('config_management.settings_center.rules_summary', {
+                      count: values.authModelExclusions.length,
+                    })}
+                    focusTarget={focusTarget}
+                    dirty={authModelExclusionsDirty}
+                    errorCount={authModelExclusionsErrorCount}
                   >
                     <div className={styles.blockHeaderRow}>
                       <div className={styles.fieldHint}>
@@ -2081,7 +2203,7 @@ export function VisualConfigEditor({
                         })}
                       </div>
                     )}
-                  </SectionSubsection>
+                  </SettingsDisclosure>
                 </PageGroup>
                 <PageGroup id="config-codex-image-tool" active={activePageId === 'provider-codex'}>
                   <SectionSubsection
@@ -2322,735 +2444,790 @@ export function VisualConfigEditor({
             >
               <SectionStack>
                 <PageGroup active={activePageId === 'global-network'}>
-                  <SectionGrid>
-                    <div className={styles.proxyCheckPanel}>
-                      <div className={styles.proxyCheckRow}>
-                        <Input
-                          id="config-proxy-url"
-                          label={t('config_management.visual.sections.network.proxy_url')}
-                          placeholder="socks5://user:pass@127.0.0.1:1080/"
-                          value={values.proxyUrl}
-                          onChange={(e) => onChange({ proxyUrl: e.target.value })}
-                          disabled={disabled}
-                        />
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => void handleProxyCheck()}
-                          loading={proxyCheckLoading}
-                          disabled={disabled}
-                          className={styles.proxyCheckButton}
-                        >
-                          {t('config_management.visual.sections.network.proxy_check')}
-                        </Button>
+                  <SettingsDisclosure
+                    id="config-network-proxy"
+                    title={t('config_management.settings_center.disclosures.proxy.title')}
+                    description={t(
+                      'config_management.settings_center.disclosures.proxy.description'
+                    )}
+                    focusTarget={focusTarget}
+                    targetIds={['config-proxy-url', 'config-proxy-pools']}
+                    dirty={proxySettingsDirty}
+                  >
+                    <SectionGrid>
+                      <div className={styles.proxyCheckPanel}>
+                        <div className={styles.proxyCheckRow}>
+                          <Input
+                            id="config-proxy-url"
+                            label={t('config_management.visual.sections.network.proxy_url')}
+                            placeholder="socks5://user:pass@127.0.0.1:1080/"
+                            value={values.proxyUrl}
+                            onChange={(e) => onChange({ proxyUrl: e.target.value })}
+                            disabled={disabled}
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void handleProxyCheck()}
+                            loading={proxyCheckLoading}
+                            disabled={disabled}
+                            className={styles.proxyCheckButton}
+                          >
+                            {t('config_management.visual.sections.network.proxy_check')}
+                          </Button>
+                        </div>
+                        {(proxyCheckResult || proxyCheckError) && (
+                          <div
+                            className={`${styles.proxyCheckResult} ${
+                              proxyCheckResult?.ok
+                                ? styles.proxyCheckResultOk
+                                : styles.proxyCheckResultError
+                            }`}
+                          >
+                            {proxyCheckResult && (
+                              <>
+                                <div className={styles.proxyCheckStatus}>
+                                  {t(
+                                    `config_management.visual.sections.network.proxy_check_mode_${proxyCheckResult.mode}`,
+                                    { defaultValue: proxyCheckResult.mode }
+                                  )}
+                                </div>
+                                {proxyCheckResult.ok ? (
+                                  <div className={styles.proxyCheckMetrics}>
+                                    {proxyCheckResult.ip && (
+                                      <span>
+                                        {t(
+                                          'config_management.visual.sections.network.proxy_check_ip'
+                                        )}
+                                        : {proxyCheckResult.ip}
+                                      </span>
+                                    )}
+                                    {proxyCheckResult.loc && (
+                                      <span>
+                                        {t(
+                                          'config_management.visual.sections.network.proxy_check_loc'
+                                        )}
+                                        : {proxyCheckResult.loc}
+                                      </span>
+                                    )}
+                                    {proxyCheckResult.colo && (
+                                      <span>Colo: {proxyCheckResult.colo}</span>
+                                    )}
+                                    {proxyCheckResult.http && (
+                                      <span>HTTP: {proxyCheckResult.http}</span>
+                                    )}
+                                    {proxyCheckResult.tls && (
+                                      <span>TLS: {proxyCheckResult.tls}</span>
+                                    )}
+                                    {proxyCheckResult.elapsedMs !== null && (
+                                      <span>{proxyCheckResult.elapsedMs}ms</span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className={styles.proxyCheckMessage}>
+                                    {[proxyCheckResult.error, proxyCheckResult.message]
+                                      .filter(Boolean)
+                                      .join(' - ') ||
+                                      t(
+                                        'config_management.visual.sections.network.proxy_check_failed'
+                                      )}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            {proxyCheckError && (
+                              <div className={styles.proxyCheckMessage}>{proxyCheckError}</div>
+                            )}
+                          </div>
+                        )}
+                        <div id="config-proxy-pools" className={styles.providerHubActions}>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => navigate('/config/proxy-pools')}
+                          >
+                            {t('proxy_pools.title')}
+                            <IconExternalLink size={14} />
+                          </Button>
+                        </div>
                       </div>
-                      {(proxyCheckResult || proxyCheckError) && (
-                        <div
-                          className={`${styles.proxyCheckResult} ${
-                            proxyCheckResult?.ok
-                              ? styles.proxyCheckResultOk
-                              : styles.proxyCheckResultError
-                          }`}
+                    </SectionGrid>
+                  </SettingsDisclosure>
+                  <SettingsDisclosure
+                    id="config-network-retry"
+                    title={t('config_management.settings_center.disclosures.retry.title')}
+                    description={t(
+                      'config_management.settings_center.disclosures.retry.description'
+                    )}
+                    focusTarget={focusTarget}
+                    targetIds={[
+                      'config-request-retry',
+                      'config-max-retry-credentials',
+                      'config-max-retry-interval',
+                    ]}
+                    dirty={retrySettingsDirty}
+                    errorCount={retrySettingsErrorCount}
+                  >
+                    <SectionGrid>
+                      <Input
+                        id="config-request-retry"
+                        label={t('config_management.visual.sections.network.request_retry')}
+                        type="number"
+                        placeholder="3"
+                        value={values.requestRetry}
+                        onChange={(e) => onChange({ requestRetry: e.target.value })}
+                        disabled={disabled}
+                        hint={t('config_management.visual.sections.network.request_retry_hint')}
+                        error={requestRetryError}
+                      />
+                      <Input
+                        id="config-max-retry-credentials"
+                        label={t('config_management.visual.sections.network.max_retry_credentials')}
+                        type="number"
+                        placeholder="0"
+                        value={values.maxRetryCredentials}
+                        onChange={(e) => onChange({ maxRetryCredentials: e.target.value })}
+                        disabled={disabled}
+                        hint={t(
+                          'config_management.visual.sections.network.max_retry_credentials_hint'
+                        )}
+                        error={maxRetryCredentialsError}
+                      />
+                      <Input
+                        id="config-max-retry-interval"
+                        label={t('config_management.visual.sections.network.max_retry_interval')}
+                        type="number"
+                        placeholder="30"
+                        value={values.maxRetryInterval}
+                        onChange={(e) => onChange({ maxRetryInterval: e.target.value })}
+                        disabled={disabled}
+                        hint={t(
+                          'config_management.visual.sections.network.max_retry_interval_hint'
+                        )}
+                        error={maxRetryIntervalError}
+                      />
+                    </SectionGrid>
+                  </SettingsDisclosure>
+                  <SettingsDisclosure
+                    id="config-network-routing"
+                    title={t('config_management.settings_center.disclosures.routing.title')}
+                    description={t(
+                      'config_management.settings_center.disclosures.routing.description'
+                    )}
+                    focusTarget={focusTarget}
+                    targetIds={[
+                      'config-routing',
+                      'config-routing-per-auth-request-limit',
+                      'config-routing-per-auth-request-window-minutes',
+                    ]}
+                    dirty={routingSettingsDirty}
+                    errorCount={routingSettingsErrorCount}
+                  >
+                    <SectionGrid>
+                      <div id="config-routing" className={styles.pageGroup}>
+                        <FieldShell
+                          label={t('config_management.visual.sections.network.routing_strategy')}
+                          labelId={routingStrategyLabelId}
+                          hint={t(
+                            'config_management.visual.sections.network.routing_strategy_hint'
+                          )}
+                          hintId={routingStrategyHintId}
                         >
-                          {proxyCheckResult && (
-                            <>
-                              <div className={styles.proxyCheckStatus}>
-                                {t(
-                                  `config_management.visual.sections.network.proxy_check_mode_${proxyCheckResult.mode}`,
-                                  { defaultValue: proxyCheckResult.mode }
+                          <Select
+                            value={values.routingStrategy}
+                            options={[
+                              {
+                                value: 'round-robin',
+                                label: t(
+                                  'config_management.visual.sections.network.strategy_round_robin'
+                                ),
+                              },
+                              {
+                                value: 'fill-first',
+                                label: t(
+                                  'config_management.visual.sections.network.strategy_fill_first'
+                                ),
+                              },
+                              {
+                                value: 'random',
+                                label: t(
+                                  'config_management.visual.sections.network.strategy_random'
+                                ),
+                              },
+                            ]}
+                            id={`${routingStrategyLabelId}-select`}
+                            disabled={disabled}
+                            ariaLabelledBy={routingStrategyLabelId}
+                            ariaDescribedBy={routingStrategyHintId}
+                            onChange={(nextValue) =>
+                              onChange({
+                                routingStrategy: nextValue as VisualConfigValues['routingStrategy'],
+                              })
+                            }
+                          />
+                        </FieldShell>
+                      </div>
+                      <Input
+                        id="config-routing-per-auth-request-limit"
+                        label={t(
+                          'config_management.visual.sections.network.routing_per_auth_request_limit'
+                        )}
+                        type="number"
+                        min={0}
+                        placeholder="0"
+                        value={values.routingPerAuthRequestLimit}
+                        onChange={(event) =>
+                          onChange({ routingPerAuthRequestLimit: event.target.value })
+                        }
+                        disabled={disabled}
+                        hint={t(
+                          'config_management.visual.sections.network.routing_per_auth_request_limit_hint'
+                        )}
+                        error={routingPerAuthRequestLimitError}
+                      />
+                      <Input
+                        id="config-routing-per-auth-request-window-minutes"
+                        label={t(
+                          'config_management.visual.sections.network.routing_per_auth_request_window_minutes'
+                        )}
+                        type="number"
+                        min={1}
+                        placeholder="1"
+                        value={values.routingPerAuthRequestWindowMinutes}
+                        onChange={(event) =>
+                          onChange({ routingPerAuthRequestWindowMinutes: event.target.value })
+                        }
+                        disabled={disabled}
+                        hint={t(
+                          'config_management.visual.sections.network.routing_per_auth_request_window_minutes_hint'
+                        )}
+                        error={routingPerAuthRequestWindowMinutesError}
+                      />
+                      {values.routingStrategy === 'fill-first' && (
+                        <>
+                          <Input
+                            label={t(
+                              'config_management.visual.sections.network.routing_fill_first_range'
+                            )}
+                            type="number"
+                            min={1}
+                            placeholder="1"
+                            value={values.routingFillFirstRange}
+                            onChange={(e) => onChange({ routingFillFirstRange: e.target.value })}
+                            disabled={disabled}
+                            hint={t(
+                              'config_management.visual.sections.network.routing_fill_first_range_hint'
+                            )}
+                            error={routingFillFirstRangeError}
+                          />
+                          <Input
+                            label={t(
+                              'config_management.visual.sections.network.routing_fill_first_per_auth_rpm'
+                            )}
+                            type="number"
+                            min={0}
+                            placeholder="0"
+                            value={values.routingFillFirstPerAuthRpm}
+                            onChange={(e) =>
+                              onChange({ routingFillFirstPerAuthRpm: e.target.value })
+                            }
+                            disabled={disabled}
+                            hint={`${t(
+                              'config_management.visual.sections.network.routing_fill_first_per_auth_rpm_hint'
+                            )}${
+                              Number(values.routingPerAuthRequestLimit) > 0
+                                ? ` ${t(
+                                    'config_management.visual.sections.network.routing_generic_limit_precedence'
+                                  )}`
+                                : ''
+                            }`}
+                            error={routingFillFirstPerAuthRpmError}
+                          />
+                        </>
+                      )}
+                    </SectionGrid>
+                  </SettingsDisclosure>
+
+                  <SettingsDisclosure
+                    id="config-routing-priority-overrides"
+                    title={t('config_management.visual.sections.network.priority_overrides')}
+                    description={t(
+                      'config_management.visual.sections.network.priority_overrides_desc'
+                    )}
+                    summary={t('config_management.settings_center.rules_summary', {
+                      count: values.routingPriorityOverrides.length,
+                    })}
+                    focusTarget={focusTarget}
+                    dirty={routingPriorityOverridesDirty}
+                    errorCount={routingPriorityOverridesErrorCount}
+                  >
+                    <div className={styles.blockHeaderRow}>
+                      <div className={styles.fieldHint}>
+                        {t('config_management.visual.sections.network.priority_overrides_hint')}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={addRoutingPriorityOverride}
+                        disabled={disabled}
+                      >
+                        {t('config_management.visual.sections.network.priority_overrides_add')}
+                      </Button>
+                    </div>
+                    {values.routingPriorityOverrides.length === 0 ? (
+                      <div className={styles.emptyState}>
+                        {t('config_management.visual.sections.network.priority_overrides_empty')}
+                      </div>
+                    ) : (
+                      <div className={styles.blockStack}>
+                        {values.routingPriorityOverrides.map((rule, index) => {
+                          const priorityError = getRoutingPriorityOverrideError(
+                            rule.clientId,
+                            'priority'
+                          );
+                          const maxRetryCredentialsError = getRoutingPriorityOverrideError(
+                            rule.clientId,
+                            'maxRetryCredentials'
+                          );
+                          const fillFirstRangeError = getRoutingPriorityOverrideError(
+                            rule.clientId,
+                            'fillFirstRange'
+                          );
+                          const fillFirstPerAuthRpmError = getRoutingPriorityOverrideError(
+                            rule.clientId,
+                            'fillFirstPerAuthRpm'
+                          );
+                          const perAuthRequestLimitError = getRoutingPriorityOverrideError(
+                            rule.clientId,
+                            'perAuthRequestLimit'
+                          );
+                          const perAuthRequestWindowMinutesError = getRoutingPriorityOverrideError(
+                            rule.clientId,
+                            'perAuthRequestWindowMinutes'
+                          );
+                          const strategyLabelId = `routing-priority-${rule.clientId}-strategy-label`;
+                          const effectiveStrategy = rule.strategy || values.routingStrategy;
+                          const effectivePerAuthRequestLimit = Number(
+                            rule.perAuthRequestLimit.trim()
+                              ? rule.perAuthRequestLimit
+                              : values.routingPerAuthRequestLimit
+                          );
+
+                          return (
+                            <div key={rule.clientId} className={styles.ruleCard}>
+                              <div className={styles.ruleCardHeader}>
+                                <div className={styles.ruleCardTitle}>
+                                  {t(
+                                    'config_management.visual.sections.network.priority_overrides_rule',
+                                    {
+                                      index: index + 1,
+                                    }
+                                  )}
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeRoutingPriorityOverride(rule.clientId)}
+                                  disabled={disabled}
+                                >
+                                  {t('config_management.visual.common.delete')}
+                                </Button>
+                              </div>
+                              <div
+                                className={`${styles.priorityOverrideGrid} ${
+                                  effectiveStrategy === 'fill-first'
+                                    ? styles.priorityOverrideGridWithFill
+                                    : ''
+                                }`}
+                              >
+                                <Input
+                                  label={t(
+                                    'config_management.visual.sections.network.priority_overrides_priority'
+                                  )}
+                                  type="number"
+                                  placeholder="0"
+                                  value={rule.priority}
+                                  onChange={(event) =>
+                                    updateRoutingPriorityOverride(rule.clientId, {
+                                      priority: event.target.value,
+                                    })
+                                  }
+                                  disabled={disabled}
+                                  error={priorityError}
+                                />
+                                <FieldShell
+                                  label={t(
+                                    'config_management.visual.sections.network.priority_overrides_strategy'
+                                  )}
+                                  labelId={strategyLabelId}
+                                >
+                                  <Select
+                                    value={rule.strategy}
+                                    options={routingPriorityOverrideStrategyOptions}
+                                    disabled={disabled}
+                                    ariaLabelledBy={strategyLabelId}
+                                    onChange={(strategy) =>
+                                      updateRoutingPriorityOverride(rule.clientId, {
+                                        strategy: strategy as RoutingPriorityOverrideStrategy,
+                                      })
+                                    }
+                                  />
+                                </FieldShell>
+                                <Input
+                                  label={t(
+                                    'config_management.visual.sections.network.priority_overrides_max_retry_credentials'
+                                  )}
+                                  type="number"
+                                  placeholder={t(
+                                    'config_management.visual.sections.network.priority_overrides_inherit_global'
+                                  )}
+                                  value={rule.maxRetryCredentials}
+                                  onChange={(event) =>
+                                    updateRoutingPriorityOverride(rule.clientId, {
+                                      maxRetryCredentials: event.target.value,
+                                    })
+                                  }
+                                  disabled={disabled}
+                                  error={maxRetryCredentialsError}
+                                />
+                                <Input
+                                  label={t(
+                                    'config_management.visual.sections.network.priority_overrides_per_auth_request_limit'
+                                  )}
+                                  type="number"
+                                  min={0}
+                                  placeholder={t(
+                                    'config_management.visual.sections.network.priority_overrides_inherit_global'
+                                  )}
+                                  value={rule.perAuthRequestLimit}
+                                  onChange={(event) =>
+                                    updateRoutingPriorityOverride(rule.clientId, {
+                                      perAuthRequestLimit: event.target.value,
+                                    })
+                                  }
+                                  disabled={disabled}
+                                  hint={t(
+                                    'config_management.visual.sections.network.priority_overrides_per_auth_request_limit_hint'
+                                  )}
+                                  error={perAuthRequestLimitError}
+                                />
+                                <Input
+                                  label={t(
+                                    'config_management.visual.sections.network.priority_overrides_per_auth_request_window_minutes'
+                                  )}
+                                  type="number"
+                                  min={1}
+                                  placeholder={t(
+                                    'config_management.visual.sections.network.priority_overrides_inherit_global'
+                                  )}
+                                  value={rule.perAuthRequestWindowMinutes}
+                                  onChange={(event) =>
+                                    updateRoutingPriorityOverride(rule.clientId, {
+                                      perAuthRequestWindowMinutes: event.target.value,
+                                    })
+                                  }
+                                  disabled={disabled}
+                                  hint={t(
+                                    'config_management.visual.sections.network.priority_overrides_per_auth_request_window_minutes_hint'
+                                  )}
+                                  error={perAuthRequestWindowMinutesError}
+                                />
+                                {effectiveStrategy === 'fill-first' && (
+                                  <>
+                                    <Input
+                                      label={t(
+                                        'config_management.visual.sections.network.priority_overrides_fill_first_range'
+                                      )}
+                                      type="number"
+                                      min={1}
+                                      placeholder={t(
+                                        'config_management.visual.sections.network.priority_overrides_inherit_global'
+                                      )}
+                                      value={rule.fillFirstRange}
+                                      onChange={(event) =>
+                                        updateRoutingPriorityOverride(rule.clientId, {
+                                          fillFirstRange: event.target.value,
+                                        })
+                                      }
+                                      disabled={disabled}
+                                      hint={t(
+                                        'config_management.visual.sections.network.priority_overrides_fill_first_range_hint'
+                                      )}
+                                      error={fillFirstRangeError}
+                                    />
+                                    <Input
+                                      label={t(
+                                        'config_management.visual.sections.network.priority_overrides_fill_first_per_auth_rpm'
+                                      )}
+                                      type="number"
+                                      min={0}
+                                      placeholder={t(
+                                        'config_management.visual.sections.network.priority_overrides_inherit_global'
+                                      )}
+                                      value={rule.fillFirstPerAuthRpm}
+                                      onChange={(event) =>
+                                        updateRoutingPriorityOverride(rule.clientId, {
+                                          fillFirstPerAuthRpm: event.target.value,
+                                        })
+                                      }
+                                      disabled={disabled}
+                                      hint={`${t(
+                                        'config_management.visual.sections.network.priority_overrides_fill_first_per_auth_rpm_hint'
+                                      )}${
+                                        effectivePerAuthRequestLimit > 0
+                                          ? ` ${t(
+                                              'config_management.visual.sections.network.routing_generic_limit_precedence'
+                                            )}`
+                                          : ''
+                                      }`}
+                                      error={fillFirstPerAuthRpmError}
+                                    />
+                                  </>
                                 )}
                               </div>
-                              {proxyCheckResult.ok ? (
-                                <div className={styles.proxyCheckMetrics}>
-                                  {proxyCheckResult.ip && (
-                                    <span>
+                              <div className={styles.subscriptionOverrideSection}>
+                                <div className={styles.blockHeaderRow}>
+                                  <div>
+                                    <div className={styles.blockLabel}>
                                       {t(
-                                        'config_management.visual.sections.network.proxy_check_ip'
+                                        'config_management.visual.sections.network.priority_subscription_overrides'
                                       )}
-                                      : {proxyCheckResult.ip}
-                                    </span>
-                                  )}
-                                  {proxyCheckResult.loc && (
-                                    <span>
+                                    </div>
+                                    <div className={styles.fieldHint}>
                                       {t(
-                                        'config_management.visual.sections.network.proxy_check_loc'
+                                        'config_management.visual.sections.network.priority_subscription_overrides_hint'
                                       )}
-                                      : {proxyCheckResult.loc}
-                                    </span>
-                                  )}
-                                  {proxyCheckResult.colo && (
-                                    <span>Colo: {proxyCheckResult.colo}</span>
-                                  )}
-                                  {proxyCheckResult.http && (
-                                    <span>HTTP: {proxyCheckResult.http}</span>
-                                  )}
-                                  {proxyCheckResult.tls && <span>TLS: {proxyCheckResult.tls}</span>}
-                                  {proxyCheckResult.elapsedMs !== null && (
-                                    <span>{proxyCheckResult.elapsedMs}ms</span>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className={styles.proxyCheckMessage}>
-                                  {[proxyCheckResult.error, proxyCheckResult.message]
-                                    .filter(Boolean)
-                                    .join(' - ') ||
-                                    t(
-                                      'config_management.visual.sections.network.proxy_check_failed'
-                                    )}
-                                </div>
-                              )}
-                            </>
-                          )}
-                          {proxyCheckError && (
-                            <div className={styles.proxyCheckMessage}>{proxyCheckError}</div>
-                          )}
-                        </div>
-                      )}
-                      <div id="config-proxy-pools" className={styles.providerHubActions}>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => navigate('/config/proxy-pools')}
-                        >
-                          {t('proxy_pools.title')}
-                          <IconExternalLink size={14} />
-                        </Button>
-                      </div>
-                    </div>
-                    <Input
-                      id="config-request-retry"
-                      label={t('config_management.visual.sections.network.request_retry')}
-                      type="number"
-                      placeholder="3"
-                      value={values.requestRetry}
-                      onChange={(e) => onChange({ requestRetry: e.target.value })}
-                      disabled={disabled}
-                      hint={t('config_management.visual.sections.network.request_retry_hint')}
-                      error={requestRetryError}
-                    />
-                    <Input
-                      id="config-max-retry-credentials"
-                      label={t('config_management.visual.sections.network.max_retry_credentials')}
-                      type="number"
-                      placeholder="0"
-                      value={values.maxRetryCredentials}
-                      onChange={(e) => onChange({ maxRetryCredentials: e.target.value })}
-                      disabled={disabled}
-                      hint={t(
-                        'config_management.visual.sections.network.max_retry_credentials_hint'
-                      )}
-                      error={maxRetryCredentialsError}
-                    />
-                    <Input
-                      id="config-max-retry-interval"
-                      label={t('config_management.visual.sections.network.max_retry_interval')}
-                      type="number"
-                      placeholder="30"
-                      value={values.maxRetryInterval}
-                      onChange={(e) => onChange({ maxRetryInterval: e.target.value })}
-                      disabled={disabled}
-                      hint={t('config_management.visual.sections.network.max_retry_interval_hint')}
-                      error={maxRetryIntervalError}
-                    />
-                    <div id="config-routing" className={styles.pageGroup}>
-                      <FieldShell
-                        label={t('config_management.visual.sections.network.routing_strategy')}
-                        labelId={routingStrategyLabelId}
-                        hint={t('config_management.visual.sections.network.routing_strategy_hint')}
-                        hintId={routingStrategyHintId}
-                      >
-                        <Select
-                          value={values.routingStrategy}
-                          options={[
-                            {
-                              value: 'round-robin',
-                              label: t(
-                                'config_management.visual.sections.network.strategy_round_robin'
-                              ),
-                            },
-                            {
-                              value: 'fill-first',
-                              label: t(
-                                'config_management.visual.sections.network.strategy_fill_first'
-                              ),
-                            },
-                            {
-                              value: 'random',
-                              label: t('config_management.visual.sections.network.strategy_random'),
-                            },
-                          ]}
-                          id={`${routingStrategyLabelId}-select`}
-                          disabled={disabled}
-                          ariaLabelledBy={routingStrategyLabelId}
-                          ariaDescribedBy={routingStrategyHintId}
-                          onChange={(nextValue) =>
-                            onChange({
-                              routingStrategy: nextValue as VisualConfigValues['routingStrategy'],
-                            })
-                          }
-                        />
-                      </FieldShell>
-                    </div>
-                    <Input
-                      id="config-routing-per-auth-request-limit"
-                      label={t(
-                        'config_management.visual.sections.network.routing_per_auth_request_limit'
-                      )}
-                      type="number"
-                      min={0}
-                      placeholder="0"
-                      value={values.routingPerAuthRequestLimit}
-                      onChange={(event) =>
-                        onChange({ routingPerAuthRequestLimit: event.target.value })
-                      }
-                      disabled={disabled}
-                      hint={t(
-                        'config_management.visual.sections.network.routing_per_auth_request_limit_hint'
-                      )}
-                      error={routingPerAuthRequestLimitError}
-                    />
-                    <Input
-                      id="config-routing-per-auth-request-window-minutes"
-                      label={t(
-                        'config_management.visual.sections.network.routing_per_auth_request_window_minutes'
-                      )}
-                      type="number"
-                      min={1}
-                      placeholder="1"
-                      value={values.routingPerAuthRequestWindowMinutes}
-                      onChange={(event) =>
-                        onChange({ routingPerAuthRequestWindowMinutes: event.target.value })
-                      }
-                      disabled={disabled}
-                      hint={t(
-                        'config_management.visual.sections.network.routing_per_auth_request_window_minutes_hint'
-                      )}
-                      error={routingPerAuthRequestWindowMinutesError}
-                    />
-                    {values.routingStrategy === 'fill-first' && (
-                      <>
-                        <Input
-                          label={t(
-                            'config_management.visual.sections.network.routing_fill_first_range'
-                          )}
-                          type="number"
-                          min={1}
-                          placeholder="1"
-                          value={values.routingFillFirstRange}
-                          onChange={(e) => onChange({ routingFillFirstRange: e.target.value })}
-                          disabled={disabled}
-                          hint={t(
-                            'config_management.visual.sections.network.routing_fill_first_range_hint'
-                          )}
-                          error={routingFillFirstRangeError}
-                        />
-                        <Input
-                          label={t(
-                            'config_management.visual.sections.network.routing_fill_first_per_auth_rpm'
-                          )}
-                          type="number"
-                          min={0}
-                          placeholder="0"
-                          value={values.routingFillFirstPerAuthRpm}
-                          onChange={(e) => onChange({ routingFillFirstPerAuthRpm: e.target.value })}
-                          disabled={disabled}
-                          hint={`${t(
-                            'config_management.visual.sections.network.routing_fill_first_per_auth_rpm_hint'
-                          )}${
-                            Number(values.routingPerAuthRequestLimit) > 0
-                              ? ` ${t(
-                                  'config_management.visual.sections.network.routing_generic_limit_precedence'
-                                )}`
-                              : ''
-                          }`}
-                          error={routingFillFirstPerAuthRpmError}
-                        />
-                      </>
-                    )}
-                    <Input
-                      label={t('config_management.visual.sections.network.session_affinity_ttl')}
-                      placeholder="1h"
-                      value={values.routingSessionAffinityTTL}
-                      onChange={(e) => onChange({ routingSessionAffinityTTL: e.target.value })}
-                      disabled={disabled}
-                    />
-                  </SectionGrid>
-
-                  <div id="config-routing-priority-overrides">
-                    <SectionSubsection
-                      title={t('config_management.visual.sections.network.priority_overrides')}
-                      description={t(
-                        'config_management.visual.sections.network.priority_overrides_desc'
-                      )}
-                    >
-                      <div className={styles.blockHeaderRow}>
-                        <div className={styles.fieldHint}>
-                          {t('config_management.visual.sections.network.priority_overrides_hint')}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={addRoutingPriorityOverride}
-                          disabled={disabled}
-                        >
-                          {t('config_management.visual.sections.network.priority_overrides_add')}
-                        </Button>
-                      </div>
-                      {values.routingPriorityOverrides.length === 0 ? (
-                        <div className={styles.emptyState}>
-                          {t('config_management.visual.sections.network.priority_overrides_empty')}
-                        </div>
-                      ) : (
-                        <div className={styles.blockStack}>
-                          {values.routingPriorityOverrides.map((rule, index) => {
-                            const priorityError = getRoutingPriorityOverrideError(
-                              rule.clientId,
-                              'priority'
-                            );
-                            const maxRetryCredentialsError = getRoutingPriorityOverrideError(
-                              rule.clientId,
-                              'maxRetryCredentials'
-                            );
-                            const fillFirstRangeError = getRoutingPriorityOverrideError(
-                              rule.clientId,
-                              'fillFirstRange'
-                            );
-                            const fillFirstPerAuthRpmError = getRoutingPriorityOverrideError(
-                              rule.clientId,
-                              'fillFirstPerAuthRpm'
-                            );
-                            const perAuthRequestLimitError = getRoutingPriorityOverrideError(
-                              rule.clientId,
-                              'perAuthRequestLimit'
-                            );
-                            const perAuthRequestWindowMinutesError =
-                              getRoutingPriorityOverrideError(
-                                rule.clientId,
-                                'perAuthRequestWindowMinutes'
-                              );
-                            const strategyLabelId = `routing-priority-${rule.clientId}-strategy-label`;
-                            const effectiveStrategy = rule.strategy || values.routingStrategy;
-                            const effectivePerAuthRequestLimit = Number(
-                              rule.perAuthRequestLimit.trim()
-                                ? rule.perAuthRequestLimit
-                                : values.routingPerAuthRequestLimit
-                            );
-
-                            return (
-                              <div key={rule.clientId} className={styles.ruleCard}>
-                                <div className={styles.ruleCardHeader}>
-                                  <div className={styles.ruleCardTitle}>
-                                    {t(
-                                      'config_management.visual.sections.network.priority_overrides_rule',
-                                      {
-                                        index: index + 1,
-                                      }
-                                    )}
+                                    </div>
                                   </div>
                                   <Button
                                     type="button"
-                                    variant="ghost"
+                                    variant="secondary"
                                     size="sm"
-                                    onClick={() => removeRoutingPriorityOverride(rule.clientId)}
+                                    onClick={() => addRoutingSubscriptionOverride(rule.clientId)}
                                     disabled={disabled}
                                   >
-                                    {t('config_management.visual.common.delete')}
+                                    {t(
+                                      'config_management.visual.sections.network.priority_subscription_overrides_add'
+                                    )}
                                   </Button>
                                 </div>
-                                <div
-                                  className={`${styles.priorityOverrideGrid} ${
-                                    effectiveStrategy === 'fill-first'
-                                      ? styles.priorityOverrideGridWithFill
-                                      : ''
-                                  }`}
-                                >
-                                  <Input
-                                    label={t(
-                                      'config_management.visual.sections.network.priority_overrides_priority'
+                                {rule.subscriptionOverrides.length === 0 ? (
+                                  <div className={styles.emptyState}>
+                                    {t(
+                                      'config_management.visual.sections.network.priority_subscription_overrides_empty'
                                     )}
-                                    type="number"
-                                    placeholder="0"
-                                    value={rule.priority}
-                                    onChange={(event) =>
-                                      updateRoutingPriorityOverride(rule.clientId, {
-                                        priority: event.target.value,
-                                      })
-                                    }
-                                    disabled={disabled}
-                                    error={priorityError}
-                                  />
-                                  <FieldShell
-                                    label={t(
-                                      'config_management.visual.sections.network.priority_overrides_strategy'
-                                    )}
-                                    labelId={strategyLabelId}
-                                  >
-                                    <Select
-                                      value={rule.strategy}
-                                      options={routingPriorityOverrideStrategyOptions}
-                                      disabled={disabled}
-                                      ariaLabelledBy={strategyLabelId}
-                                      onChange={(strategy) =>
-                                        updateRoutingPriorityOverride(rule.clientId, {
-                                          strategy: strategy as RoutingPriorityOverrideStrategy,
-                                        })
-                                      }
-                                    />
-                                  </FieldShell>
-                                  <Input
-                                    label={t(
-                                      'config_management.visual.sections.network.priority_overrides_max_retry_credentials'
-                                    )}
-                                    type="number"
-                                    placeholder={t(
-                                      'config_management.visual.sections.network.priority_overrides_inherit_global'
-                                    )}
-                                    value={rule.maxRetryCredentials}
-                                    onChange={(event) =>
-                                      updateRoutingPriorityOverride(rule.clientId, {
-                                        maxRetryCredentials: event.target.value,
-                                      })
-                                    }
-                                    disabled={disabled}
-                                    error={maxRetryCredentialsError}
-                                  />
-                                  <Input
-                                    label={t(
-                                      'config_management.visual.sections.network.priority_overrides_per_auth_request_limit'
-                                    )}
-                                    type="number"
-                                    min={0}
-                                    placeholder={t(
-                                      'config_management.visual.sections.network.priority_overrides_inherit_global'
-                                    )}
-                                    value={rule.perAuthRequestLimit}
-                                    onChange={(event) =>
-                                      updateRoutingPriorityOverride(rule.clientId, {
-                                        perAuthRequestLimit: event.target.value,
-                                      })
-                                    }
-                                    disabled={disabled}
-                                    hint={t(
-                                      'config_management.visual.sections.network.priority_overrides_per_auth_request_limit_hint'
-                                    )}
-                                    error={perAuthRequestLimitError}
-                                  />
-                                  <Input
-                                    label={t(
-                                      'config_management.visual.sections.network.priority_overrides_per_auth_request_window_minutes'
-                                    )}
-                                    type="number"
-                                    min={1}
-                                    placeholder={t(
-                                      'config_management.visual.sections.network.priority_overrides_inherit_global'
-                                    )}
-                                    value={rule.perAuthRequestWindowMinutes}
-                                    onChange={(event) =>
-                                      updateRoutingPriorityOverride(rule.clientId, {
-                                        perAuthRequestWindowMinutes: event.target.value,
-                                      })
-                                    }
-                                    disabled={disabled}
-                                    hint={t(
-                                      'config_management.visual.sections.network.priority_overrides_per_auth_request_window_minutes_hint'
-                                    )}
-                                    error={perAuthRequestWindowMinutesError}
-                                  />
-                                  {effectiveStrategy === 'fill-first' && (
-                                    <>
-                                      <Input
-                                        label={t(
-                                          'config_management.visual.sections.network.priority_overrides_fill_first_range'
-                                        )}
-                                        type="number"
-                                        min={1}
-                                        placeholder={t(
-                                          'config_management.visual.sections.network.priority_overrides_inherit_global'
-                                        )}
-                                        value={rule.fillFirstRange}
-                                        onChange={(event) =>
-                                          updateRoutingPriorityOverride(rule.clientId, {
-                                            fillFirstRange: event.target.value,
-                                          })
-                                        }
-                                        disabled={disabled}
-                                        hint={t(
-                                          'config_management.visual.sections.network.priority_overrides_fill_first_range_hint'
-                                        )}
-                                        error={fillFirstRangeError}
-                                      />
-                                      <Input
-                                        label={t(
-                                          'config_management.visual.sections.network.priority_overrides_fill_first_per_auth_rpm'
-                                        )}
-                                        type="number"
-                                        min={0}
-                                        placeholder={t(
-                                          'config_management.visual.sections.network.priority_overrides_inherit_global'
-                                        )}
-                                        value={rule.fillFirstPerAuthRpm}
-                                        onChange={(event) =>
-                                          updateRoutingPriorityOverride(rule.clientId, {
-                                            fillFirstPerAuthRpm: event.target.value,
-                                          })
-                                        }
-                                        disabled={disabled}
-                                        hint={`${t(
-                                          'config_management.visual.sections.network.priority_overrides_fill_first_per_auth_rpm_hint'
-                                        )}${
-                                          effectivePerAuthRequestLimit > 0
-                                            ? ` ${t(
-                                                'config_management.visual.sections.network.routing_generic_limit_precedence'
-                                              )}`
-                                            : ''
-                                        }`}
-                                        error={fillFirstPerAuthRpmError}
-                                      />
-                                    </>
-                                  )}
-                                </div>
-                                <div className={styles.subscriptionOverrideSection}>
-                                  <div className={styles.blockHeaderRow}>
-                                    <div>
-                                      <div className={styles.blockLabel}>
-                                        {t(
-                                          'config_management.visual.sections.network.priority_subscription_overrides'
-                                        )}
-                                      </div>
-                                      <div className={styles.fieldHint}>
-                                        {t(
-                                          'config_management.visual.sections.network.priority_subscription_overrides_hint'
-                                        )}
-                                      </div>
-                                    </div>
-                                    <Button
-                                      type="button"
-                                      variant="secondary"
-                                      size="sm"
-                                      onClick={() => addRoutingSubscriptionOverride(rule.clientId)}
-                                      disabled={disabled}
-                                    >
-                                      {t(
-                                        'config_management.visual.sections.network.priority_subscription_overrides_add'
-                                      )}
-                                    </Button>
                                   </div>
-                                  {rule.subscriptionOverrides.length === 0 ? (
-                                    <div className={styles.emptyState}>
-                                      {t(
-                                        'config_management.visual.sections.network.priority_subscription_overrides_empty'
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className={styles.subscriptionOverrideList}>
-                                      {rule.subscriptionOverrides.map(
-                                        (subscriptionRule, subscriptionIndex) => {
-                                          const planTypesError =
-                                            getRoutingSubscriptionOverrideError(
-                                              rule.clientId,
-                                              subscriptionRule.clientId,
-                                              'planTypes'
-                                            );
-                                          const subscriptionLimitError =
-                                            getRoutingSubscriptionOverrideError(
-                                              rule.clientId,
-                                              subscriptionRule.clientId,
-                                              'perAuthRequestLimit'
-                                            );
-                                          const subscriptionWindowError =
-                                            getRoutingSubscriptionOverrideError(
-                                              rule.clientId,
-                                              subscriptionRule.clientId,
-                                              'perAuthRequestWindowMinutes'
-                                            );
-                                          const planTypesInputId = `routing-subscription-${subscriptionRule.clientId}-plan-types`;
-                                          const planTypesHintId = `${planTypesInputId}-hint`;
-                                          const planTypesErrorId = `${planTypesInputId}-error`;
-                                          const providersInputId = `routing-subscription-${subscriptionRule.clientId}-providers`;
-                                          const providersHintId = `${providersInputId}-hint`;
-                                          return (
-                                            <div
-                                              key={subscriptionRule.clientId}
-                                              className={styles.subscriptionOverrideItem}
-                                            >
-                                              <div className={styles.ruleCardHeader}>
-                                                <div className={styles.ruleCardTitle}>
-                                                  {t(
-                                                    'config_management.visual.sections.network.priority_subscription_overrides_rule',
-                                                    {
-                                                      index: subscriptionIndex + 1,
-                                                    }
-                                                  )}
-                                                </div>
-                                                <Button
-                                                  type="button"
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  onClick={() =>
-                                                    removeRoutingSubscriptionOverride(
-                                                      rule.clientId,
-                                                      subscriptionRule.clientId
-                                                    )
+                                ) : (
+                                  <div className={styles.subscriptionOverrideList}>
+                                    {rule.subscriptionOverrides.map(
+                                      (subscriptionRule, subscriptionIndex) => {
+                                        const planTypesError = getRoutingSubscriptionOverrideError(
+                                          rule.clientId,
+                                          subscriptionRule.clientId,
+                                          'planTypes'
+                                        );
+                                        const subscriptionLimitError =
+                                          getRoutingSubscriptionOverrideError(
+                                            rule.clientId,
+                                            subscriptionRule.clientId,
+                                            'perAuthRequestLimit'
+                                          );
+                                        const subscriptionWindowError =
+                                          getRoutingSubscriptionOverrideError(
+                                            rule.clientId,
+                                            subscriptionRule.clientId,
+                                            'perAuthRequestWindowMinutes'
+                                          );
+                                        const planTypesInputId = `routing-subscription-${subscriptionRule.clientId}-plan-types`;
+                                        const planTypesHintId = `${planTypesInputId}-hint`;
+                                        const planTypesErrorId = `${planTypesInputId}-error`;
+                                        const providersInputId = `routing-subscription-${subscriptionRule.clientId}-providers`;
+                                        const providersHintId = `${providersInputId}-hint`;
+                                        return (
+                                          <div
+                                            key={subscriptionRule.clientId}
+                                            className={styles.subscriptionOverrideItem}
+                                          >
+                                            <div className={styles.ruleCardHeader}>
+                                              <div className={styles.ruleCardTitle}>
+                                                {t(
+                                                  'config_management.visual.sections.network.priority_subscription_overrides_rule',
+                                                  {
+                                                    index: subscriptionIndex + 1,
                                                   }
-                                                  disabled={disabled}
-                                                >
-                                                  {t('config_management.visual.common.delete')}
-                                                </Button>
+                                                )}
                                               </div>
-                                              <div className={styles.subscriptionOverrideGrid}>
-                                                <FieldShell
-                                                  label={t(
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                  removeRoutingSubscriptionOverride(
+                                                    rule.clientId,
+                                                    subscriptionRule.clientId
+                                                  )
+                                                }
+                                                disabled={disabled}
+                                              >
+                                                {t('config_management.visual.common.delete')}
+                                              </Button>
+                                            </div>
+                                            <div className={styles.subscriptionOverrideGrid}>
+                                              <FieldShell
+                                                label={t(
+                                                  'config_management.visual.sections.network.priority_subscription_overrides_plan_types'
+                                                )}
+                                                htmlFor={planTypesInputId}
+                                                hint={t(
+                                                  'config_management.visual.sections.network.priority_subscription_overrides_plan_types_hint'
+                                                )}
+                                                hintId={planTypesHintId}
+                                                error={planTypesError}
+                                                errorId={planTypesErrorId}
+                                              >
+                                                <TagListEditor
+                                                  value={subscriptionRule.planTypes}
+                                                  disabled={disabled}
+                                                  inputId={planTypesInputId}
+                                                  inputAriaLabel={t(
                                                     'config_management.visual.sections.network.priority_subscription_overrides_plan_types'
                                                   )}
-                                                  htmlFor={planTypesInputId}
-                                                  hint={t(
-                                                    'config_management.visual.sections.network.priority_subscription_overrides_plan_types_hint'
+                                                  ariaDescribedBy={`${planTypesHintId}${
+                                                    planTypesError ? ` ${planTypesErrorId}` : ''
+                                                  }`}
+                                                  ariaInvalid={Boolean(planTypesError)}
+                                                  placeholder={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_plan_types_placeholder'
                                                   )}
-                                                  hintId={planTypesHintId}
-                                                  error={planTypesError}
-                                                  errorId={planTypesErrorId}
-                                                >
-                                                  <TagListEditor
-                                                    value={subscriptionRule.planTypes}
-                                                    disabled={disabled}
-                                                    inputId={planTypesInputId}
-                                                    inputAriaLabel={t(
-                                                      'config_management.visual.sections.network.priority_subscription_overrides_plan_types'
-                                                    )}
-                                                    ariaDescribedBy={`${planTypesHintId}${
-                                                      planTypesError ? ` ${planTypesErrorId}` : ''
-                                                    }`}
-                                                    ariaInvalid={Boolean(planTypesError)}
-                                                    placeholder={t(
-                                                      'config_management.visual.sections.network.priority_subscription_overrides_plan_types_placeholder'
-                                                    )}
-                                                    emptyLabel={t(
-                                                      'config_management.visual.sections.network.priority_subscription_overrides_plan_types_empty'
-                                                    )}
-                                                    onChange={(planTypes) =>
-                                                      updateRoutingSubscriptionOverride(
-                                                        rule.clientId,
-                                                        subscriptionRule.clientId,
-                                                        { planTypes }
-                                                      )
-                                                    }
-                                                  />
-                                                </FieldShell>
-                                                <FieldShell
-                                                  label={t(
+                                                  emptyLabel={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_plan_types_empty'
+                                                  )}
+                                                  onChange={(planTypes) =>
+                                                    updateRoutingSubscriptionOverride(
+                                                      rule.clientId,
+                                                      subscriptionRule.clientId,
+                                                      { planTypes }
+                                                    )
+                                                  }
+                                                />
+                                              </FieldShell>
+                                              <FieldShell
+                                                label={t(
+                                                  'config_management.visual.sections.network.priority_subscription_overrides_providers'
+                                                )}
+                                                htmlFor={providersInputId}
+                                                hint={t(
+                                                  'config_management.visual.sections.network.priority_subscription_overrides_providers_hint'
+                                                )}
+                                                hintId={providersHintId}
+                                              >
+                                                <TagListEditor
+                                                  value={subscriptionRule.providers}
+                                                  disabled={disabled}
+                                                  inputId={providersInputId}
+                                                  inputAriaLabel={t(
                                                     'config_management.visual.sections.network.priority_subscription_overrides_providers'
                                                   )}
-                                                  htmlFor={providersInputId}
-                                                  hint={t(
-                                                    'config_management.visual.sections.network.priority_subscription_overrides_providers_hint'
+                                                  ariaDescribedBy={providersHintId}
+                                                  placeholder={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_providers_placeholder'
                                                   )}
-                                                  hintId={providersHintId}
-                                                >
-                                                  <TagListEditor
-                                                    value={subscriptionRule.providers}
-                                                    disabled={disabled}
-                                                    inputId={providersInputId}
-                                                    inputAriaLabel={t(
-                                                      'config_management.visual.sections.network.priority_subscription_overrides_providers'
-                                                    )}
-                                                    ariaDescribedBy={providersHintId}
-                                                    placeholder={t(
-                                                      'config_management.visual.sections.network.priority_subscription_overrides_providers_placeholder'
-                                                    )}
-                                                    emptyLabel={t(
-                                                      'config_management.visual.sections.network.priority_subscription_overrides_providers_empty'
-                                                    )}
-                                                    onChange={(providers) =>
-                                                      updateRoutingSubscriptionOverride(
-                                                        rule.clientId,
-                                                        subscriptionRule.clientId,
-                                                        { providers }
-                                                      )
+                                                  emptyLabel={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_providers_empty'
+                                                  )}
+                                                  onChange={(providers) =>
+                                                    updateRoutingSubscriptionOverride(
+                                                      rule.clientId,
+                                                      subscriptionRule.clientId,
+                                                      { providers }
+                                                    )
+                                                  }
+                                                />
+                                              </FieldShell>
+                                              <Input
+                                                label={t(
+                                                  'config_management.visual.sections.network.priority_subscription_overrides_limit'
+                                                )}
+                                                type="number"
+                                                min={0}
+                                                placeholder={t(
+                                                  'config_management.visual.sections.network.priority_subscription_overrides_inherit_priority'
+                                                )}
+                                                value={subscriptionRule.perAuthRequestLimit}
+                                                onChange={(event) =>
+                                                  updateRoutingSubscriptionOverride(
+                                                    rule.clientId,
+                                                    subscriptionRule.clientId,
+                                                    {
+                                                      perAuthRequestLimit: event.target.value,
                                                     }
-                                                  />
-                                                </FieldShell>
-                                                <Input
-                                                  label={t(
-                                                    'config_management.visual.sections.network.priority_subscription_overrides_limit'
-                                                  )}
-                                                  type="number"
-                                                  min={0}
-                                                  placeholder={t(
-                                                    'config_management.visual.sections.network.priority_subscription_overrides_inherit_priority'
-                                                  )}
-                                                  value={subscriptionRule.perAuthRequestLimit}
-                                                  onChange={(event) =>
-                                                    updateRoutingSubscriptionOverride(
-                                                      rule.clientId,
-                                                      subscriptionRule.clientId,
-                                                      {
-                                                        perAuthRequestLimit: event.target.value,
-                                                      }
-                                                    )
-                                                  }
-                                                  disabled={disabled}
-                                                  hint={t(
-                                                    'config_management.visual.sections.network.priority_subscription_overrides_limit_hint'
-                                                  )}
-                                                  error={subscriptionLimitError}
-                                                />
-                                                <Input
-                                                  label={t(
-                                                    'config_management.visual.sections.network.priority_subscription_overrides_window'
-                                                  )}
-                                                  type="number"
-                                                  min={1}
-                                                  placeholder={t(
-                                                    'config_management.visual.sections.network.priority_subscription_overrides_inherit_priority'
-                                                  )}
-                                                  value={
-                                                    subscriptionRule.perAuthRequestWindowMinutes
-                                                  }
-                                                  onChange={(event) =>
-                                                    updateRoutingSubscriptionOverride(
-                                                      rule.clientId,
-                                                      subscriptionRule.clientId,
-                                                      {
-                                                        perAuthRequestWindowMinutes:
-                                                          event.target.value,
-                                                      }
-                                                    )
-                                                  }
-                                                  disabled={disabled}
-                                                  hint={t(
-                                                    'config_management.visual.sections.network.priority_subscription_overrides_window_hint'
-                                                  )}
-                                                  error={subscriptionWindowError}
-                                                />
-                                              </div>
+                                                  )
+                                                }
+                                                disabled={disabled}
+                                                hint={t(
+                                                  'config_management.visual.sections.network.priority_subscription_overrides_limit_hint'
+                                                )}
+                                                error={subscriptionLimitError}
+                                              />
+                                              <Input
+                                                label={t(
+                                                  'config_management.visual.sections.network.priority_subscription_overrides_window'
+                                                )}
+                                                type="number"
+                                                min={1}
+                                                placeholder={t(
+                                                  'config_management.visual.sections.network.priority_subscription_overrides_inherit_priority'
+                                                )}
+                                                value={subscriptionRule.perAuthRequestWindowMinutes}
+                                                onChange={(event) =>
+                                                  updateRoutingSubscriptionOverride(
+                                                    rule.clientId,
+                                                    subscriptionRule.clientId,
+                                                    {
+                                                      perAuthRequestWindowMinutes:
+                                                        event.target.value,
+                                                    }
+                                                  )
+                                                }
+                                                disabled={disabled}
+                                                hint={t(
+                                                  'config_management.visual.sections.network.priority_subscription_overrides_window_hint'
+                                                )}
+                                                error={subscriptionWindowError}
+                                              />
                                             </div>
-                                          );
-                                        }
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
+                                          </div>
+                                        );
+                                      }
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </SectionSubsection>
-                  </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </SettingsDisclosure>
                 </PageGroup>
 
-                <PageGroup
-                  id="config-non-retryable-errors"
-                  active={activePageId === 'global-request'}
-                >
-                  <SectionSubsection
+                <PageGroup active={activePageId === 'global-request'}>
+                  <SettingsDisclosure
+                    id="config-non-retryable-errors"
                     title={t('config_management.visual.sections.network.non_retryable_errors')}
                     description={t(
                       'config_management.visual.sections.network.non_retryable_errors_desc'
                     )}
+                    summary={t('config_management.settings_center.rules_summary', {
+                      count: values.nonRetryableErrors.length,
+                    })}
+                    focusTarget={focusTarget}
+                    dirty={nonRetryableErrorsDirty}
+                    errorCount={nonRetryableErrorsErrorCount}
                   >
                     <div className={styles.blockHeaderRow}>
                       <div className={styles.fieldHint}>
@@ -3167,31 +3344,28 @@ export function VisualConfigEditor({
                         })}
                       </div>
                     )}
-                  </SectionSubsection>
+                  </SettingsDisclosure>
                 </PageGroup>
 
-                <PageGroup
-                  id="config-error-response-rewrites"
-                  active={activePageId === 'global-request'}
-                >
-                  <SectionSubsection
+                <PageGroup active={activePageId === 'global-request'}>
+                  <SettingsDisclosure
+                    id="config-error-response-rewrites"
                     title={t('config_management.visual.sections.network.error_response_rewrites')}
                     description={t(
                       'config_management.visual.sections.network.error_response_rewrites_desc'
                     )}
+                    summary={t('config_management.settings_center.rules_summary', {
+                      count: values.errorResponseRewrites.length,
+                    })}
+                    focusTarget={focusTarget}
+                    dirty={errorResponseRewritesDirty}
+                    errorCount={errorResponseRewritesErrorCount}
                   >
                     <div className={styles.blockHeaderRow}>
-                      <div className={styles.blockHeaderCopy}>
-                        <div className={styles.fieldHint}>
-                          {t(
-                            'config_management.visual.sections.network.error_response_rewrites_hint'
-                          )}
-                        </div>
-                        {errorResponseRewritesErrorCount > 0 ? (
-                          <span className={styles.sectionIssueBadge}>
-                            {errorResponseRewritesErrorCount}
-                          </span>
-                        ) : null}
+                      <div className={styles.fieldHint}>
+                        {t(
+                          'config_management.visual.sections.network.error_response_rewrites_hint'
+                        )}
                       </div>
                       <Button
                         type="button"
@@ -3381,54 +3555,78 @@ export function VisualConfigEditor({
                         })}
                       </div>
                     )}
-                  </SectionSubsection>
+                  </SettingsDisclosure>
                 </PageGroup>
 
-                <SectionGrid>
-                  <PageGroup active={activePageId === 'global-network'}>
-                    <div id="config-force-model-prefix" className={styles.pageGroup}>
-                      <ToggleRow
-                        title={t('config_management.visual.sections.network.force_model_prefix')}
-                        description={t(
-                          'config_management.visual.sections.network.force_model_prefix_desc'
-                        )}
-                        checked={values.forceModelPrefix}
+                <PageGroup active={activePageId === 'global-network'}>
+                  <SettingsDisclosure
+                    id="config-network-session"
+                    title={t('config_management.settings_center.disclosures.session_access.title')}
+                    description={t(
+                      'config_management.settings_center.disclosures.session_access.description'
+                    )}
+                    focusTarget={focusTarget}
+                    targetIds={[
+                      'config-force-model-prefix',
+                      'config-session-affinity',
+                      'config-ws-auth',
+                    ]}
+                    dirty={sessionSettingsDirty}
+                  >
+                    <SectionGrid>
+                      <div id="config-force-model-prefix" className={styles.pageGroup}>
+                        <ToggleRow
+                          title={t('config_management.visual.sections.network.force_model_prefix')}
+                          description={t(
+                            'config_management.visual.sections.network.force_model_prefix_desc'
+                          )}
+                          checked={values.forceModelPrefix}
+                          disabled={disabled}
+                          onChange={(forceModelPrefix) => onChange({ forceModelPrefix })}
+                        />
+                      </div>
+                      <div id="config-session-affinity" className={styles.pageGroup}>
+                        <ToggleRow
+                          title={t('config_management.visual.sections.network.session_affinity')}
+                          checked={values.routingSessionAffinity}
+                          disabled={disabled}
+                          onChange={(routingSessionAffinity) =>
+                            onChange({ routingSessionAffinity })
+                          }
+                        />
+                        <ToggleRow
+                          title={t(
+                            'config_management.visual.sections.network.session_affinity_failover'
+                          )}
+                          description={t(
+                            'config_management.visual.sections.network.session_affinity_failover_desc'
+                          )}
+                          checked={values.routingSessionAffinityFailover}
+                          disabled={disabled}
+                          onChange={(routingSessionAffinityFailover) =>
+                            onChange({ routingSessionAffinityFailover })
+                          }
+                        />
+                      </div>
+                      <Input
+                        label={t('config_management.visual.sections.network.session_affinity_ttl')}
+                        placeholder="1h"
+                        value={values.routingSessionAffinityTTL}
+                        onChange={(e) => onChange({ routingSessionAffinityTTL: e.target.value })}
                         disabled={disabled}
-                        onChange={(forceModelPrefix) => onChange({ forceModelPrefix })}
                       />
-                    </div>
-                    <div id="config-session-affinity" className={styles.pageGroup}>
-                      <ToggleRow
-                        title={t('config_management.visual.sections.network.session_affinity')}
-                        checked={values.routingSessionAffinity}
-                        disabled={disabled}
-                        onChange={(routingSessionAffinity) => onChange({ routingSessionAffinity })}
-                      />
-                      <ToggleRow
-                        title={t(
-                          'config_management.visual.sections.network.session_affinity_failover'
-                        )}
-                        description={t(
-                          'config_management.visual.sections.network.session_affinity_failover_desc'
-                        )}
-                        checked={values.routingSessionAffinityFailover}
-                        disabled={disabled}
-                        onChange={(routingSessionAffinityFailover) =>
-                          onChange({ routingSessionAffinityFailover })
-                        }
-                      />
-                    </div>
-                    <div id="config-ws-auth" className={styles.pageGroup}>
-                      <ToggleRow
-                        title={t('config_management.visual.sections.network.ws_auth')}
-                        description={t('config_management.visual.sections.network.ws_auth_desc')}
-                        checked={values.wsAuth}
-                        disabled={disabled}
-                        onChange={(wsAuth) => onChange({ wsAuth })}
-                      />
-                    </div>
-                  </PageGroup>
-                </SectionGrid>
+                      <div id="config-ws-auth" className={styles.pageGroup}>
+                        <ToggleRow
+                          title={t('config_management.visual.sections.network.ws_auth')}
+                          description={t('config_management.visual.sections.network.ws_auth_desc')}
+                          checked={values.wsAuth}
+                          disabled={disabled}
+                          onChange={(wsAuth) => onChange({ wsAuth })}
+                        />
+                      </div>
+                    </SectionGrid>
+                  </SettingsDisclosure>
+                </PageGroup>
 
                 <PageGroup id="config-codex-fingerprint" active={activePageId === 'provider-codex'}>
                   <SectionGrid>
@@ -3679,15 +3877,19 @@ export function VisualConfigEditor({
                     />
                   </SectionGrid>
                 </PageGroup>
-                <PageGroup
-                  id="config-fixed-error-cooldowns"
-                  active={activePageId === 'global-request'}
-                >
-                  <SectionSubsection
+                <PageGroup active={activePageId === 'global-request'}>
+                  <SettingsDisclosure
+                    id="config-fixed-error-cooldowns"
                     title={t('config_management.visual.sections.quota.fixed_error_cooldowns')}
                     description={t(
                       'config_management.visual.sections.quota.fixed_error_cooldowns_desc'
                     )}
+                    summary={t('config_management.settings_center.rules_summary', {
+                      count: values.fixedErrorCooldowns.length,
+                    })}
+                    focusTarget={focusTarget}
+                    dirty={fixedErrorCooldownsDirty}
+                    errorCount={fixedErrorCooldownsErrorCount}
                   >
                     <div className={styles.blockHeaderRow}>
                       <div className={styles.fieldHint}>
@@ -3820,8 +4022,19 @@ export function VisualConfigEditor({
                         })}
                       </div>
                     )}
-                  </SectionSubsection>
-                  <div id="config-no-cooldown-status-codes">
+                  </SettingsDisclosure>
+                  <SettingsDisclosure
+                    id="config-no-cooldown-status-codes"
+                    title={t(
+                      'config_management.settings_center.disclosures.cooldown_exceptions.title'
+                    )}
+                    description={t(
+                      'config_management.settings_center.disclosures.cooldown_exceptions.description'
+                    )}
+                    focusTarget={focusTarget}
+                    dirty={noCooldownStatusCodesDirty}
+                    errorCount={noCooldownStatusCodesError ? 1 : 0}
+                  >
                     <FieldShell
                       label={t('config_management.visual.sections.quota.no_cooldown_status_codes')}
                       htmlFor={noCooldownStatusCodesInputId}
@@ -3846,7 +4059,7 @@ export function VisualConfigEditor({
                         />
                       </div>
                     </FieldShell>
-                  </div>
+                  </SettingsDisclosure>
                 </PageGroup>
               </SectionStack>
             </ConfigSection>

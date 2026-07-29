@@ -1653,6 +1653,37 @@
         "antigravity_credits": "Credits 重試",
         "antigravity_credits_desc": "控制 Antigravity Credits 用盡後的專屬重試行為。"
       },
+      "disclosures": {
+        "credential_access": {
+          "title": "憑證儲存與管理存取",
+          "description": "管理密鑰和認證檔案目錄。"
+        },
+        "api_keys": {
+          "title": "API 密鑰",
+          "description": "管理用戶端存取密鑰及其提供者限制。"
+        },
+        "proxy": {
+          "title": "代理與代理池",
+          "description": "設定全域代理、檢測連線並進入結構化憑證代理管理。"
+        },
+        "retry": {
+          "title": "請求重試與冷卻等待",
+          "description": "設定額外請求輪次、每輪憑證上限和冷卻等待上限。"
+        },
+        "routing": {
+          "title": "全域路由策略",
+          "description": "選擇憑證調度策略並設定通用憑證請求限制。"
+        },
+        "session_access": {
+          "title": "工作階段與協定選項",
+          "description": "設定工作階段黏性、模型前綴和 WebSocket 鑑權。"
+        },
+        "cooldown_exceptions": {
+          "title": "冷卻例外狀態碼",
+          "description": "未命中固定冷卻規則時，這些狀態碼不會觸發冷卻。"
+        }
+      },
+      "rules_summary": "{{count}} 條規則",
       "search_placeholder": "搜尋名稱、說明或 YAML key",
       "search_empty": "沒有符合的設定項目",
       "status_enabled": "已啟用",

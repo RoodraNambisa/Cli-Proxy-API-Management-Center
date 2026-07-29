@@ -1634,6 +1634,37 @@
         "antigravity_credits": "Credits 重试",
         "antigravity_credits_desc": "控制 Antigravity Credits 耗尽后的专属重试行为。"
       },
+      "disclosures": {
+        "credential_access": {
+          "title": "凭证存储与管理访问",
+          "description": "管理密钥和认证文件目录。"
+        },
+        "api_keys": {
+          "title": "API 密钥",
+          "description": "管理客户端访问密钥及其提供商限制。"
+        },
+        "proxy": {
+          "title": "代理与代理池",
+          "description": "设置全局代理、检测连通性并进入结构化凭证代理管理。"
+        },
+        "retry": {
+          "title": "请求重试与冷却等待",
+          "description": "设置额外请求轮次、每轮凭据上限和冷却等待上限。"
+        },
+        "routing": {
+          "title": "全局路由策略",
+          "description": "选择凭证调度策略并设置通用凭证请求限制。"
+        },
+        "session_access": {
+          "title": "会话与协议选项",
+          "description": "配置会话粘性、模型前缀和 WebSocket 鉴权。"
+        },
+        "cooldown_exceptions": {
+          "title": "冷却例外状态码",
+          "description": "未命中固定冷却规则时，这些状态码不会触发冷却。"
+        }
+      },
+      "rules_summary": "{{count}} 条规则",
       "search_placeholder": "搜索名称、说明或 YAML key",
       "search_empty": "没有匹配的配置项",
       "status_enabled": "已启用",

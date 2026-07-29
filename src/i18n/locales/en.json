@@ -1630,6 +1630,37 @@
         "antigravity_credits": "Credits Retry",
         "antigravity_credits_desc": "Controls Antigravity-specific retry behavior after Credits are exhausted."
       },
+      "disclosures": {
+        "credential_access": {
+          "title": "Credential Storage & Management Access",
+          "description": "Manage the management key and authentication file directory."
+        },
+        "api_keys": {
+          "title": "API Keys",
+          "description": "Manage client access keys and their provider restrictions."
+        },
+        "proxy": {
+          "title": "Proxy & Proxy Pools",
+          "description": "Set the global proxy, test connectivity, and open structured credential proxy management."
+        },
+        "retry": {
+          "title": "Request Retry & Cooldown Waiting",
+          "description": "Configure extra request rounds, per-round credential limits, and cooldown wait limits."
+        },
+        "routing": {
+          "title": "Global Routing Strategy",
+          "description": "Choose credential scheduling and configure general per-credential request limits."
+        },
+        "session_access": {
+          "title": "Session & Protocol Options",
+          "description": "Configure session affinity, model prefixes, and WebSocket authentication."
+        },
+        "cooldown_exceptions": {
+          "title": "Cooldown Exception Status Codes",
+          "description": "These status codes do not trigger cooldown when no fixed cooldown rule matches."
+        }
+      },
+      "rules_summary": "Rules: {{count}}",
       "search_placeholder": "Search names, descriptions, or YAML keys",
       "search_empty": "No matching configuration",
       "status_enabled": "Enabled",
