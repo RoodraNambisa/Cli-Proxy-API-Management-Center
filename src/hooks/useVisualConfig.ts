@@ -2131,6 +2131,13 @@ function getNextDirtyFields(
       nextValues.chatgptWebAutoRelogin === baselineValues.chatgptWebAutoRelogin
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebForceSessionRefreshOnImport')) {
+    updateDirty(
+      'chatgptWebForceSessionRefreshOnImport',
+      nextValues.chatgptWebForceSessionRefreshOnImport ===
+        baselineValues.chatgptWebForceSessionRefreshOnImport
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAutoDeleteDeadAuths')) {
     updateDirty(
       'chatgptWebAutoDeleteDeadAuths',
@@ -2762,6 +2769,9 @@ export function useVisualConfig() {
         codexHeaderDefaultsOriginator:
           typeof codexHeaderDefaults?.originator === 'string' ? codexHeaderDefaults.originator : '',
         chatgptWebAutoRelogin: Boolean(chatgptWeb?.['auto-relogin'] ?? chatgptWeb?.autoRelogin),
+        chatgptWebForceSessionRefreshOnImport:
+          (chatgptWeb?.['force-session-refresh-on-import'] ??
+            chatgptWeb?.forceSessionRefreshOnImport) !== false,
         chatgptWebAutoDeleteDeadAuths: parseBooleanValue(
           chatgptWeb?.['auto-delete-dead-auths'] ?? chatgptWeb?.autoDeleteDeadAuths
         ),
@@ -3148,11 +3158,21 @@ export function useVisualConfig() {
         if (
           docHas(doc, ['chatgpt-web']) ||
           values.chatgptWebAutoRelogin ||
+          !values.chatgptWebForceSessionRefreshOnImport ||
           values.chatgptWebAutoDeleteDeadAuths ||
           values.chatgptWebAutoDeleteDeadPriorities.length > 0
         ) {
           ensureMapInDoc(doc, ['chatgpt-web']);
           doc.setIn(['chatgpt-web', 'auto-relogin'], values.chatgptWebAutoRelogin);
+          if (
+            docHas(doc, ['chatgpt-web', 'force-session-refresh-on-import']) ||
+            !values.chatgptWebForceSessionRefreshOnImport
+          ) {
+            doc.setIn(
+              ['chatgpt-web', 'force-session-refresh-on-import'],
+              values.chatgptWebForceSessionRefreshOnImport
+            );
+          }
           const autoDeleteConfigured =
             docHas(doc, ['chatgpt-web', 'auto-delete-dead-auths']) ||
             docHas(doc, ['chatgpt-web', 'auto-delete-dead-priorities']) ||

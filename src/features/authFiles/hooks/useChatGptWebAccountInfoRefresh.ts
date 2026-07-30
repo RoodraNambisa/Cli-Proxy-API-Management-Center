@@ -34,6 +34,7 @@ const AUTOMATIC_RETRYABLE_ERRORS = new Set([
 type UseChatGptWebAccountInfoRefreshOptions = {
   active: boolean;
   disabled: boolean;
+  automaticRefreshEnabled?: boolean;
   connectionGenerationKey?: string;
   visibleScopeKey: string;
   visibleNames: string[];
@@ -133,6 +134,7 @@ const createStalledRefreshTask = (
 export function useChatGptWebAccountInfoRefresh({
   active,
   disabled,
+  automaticRefreshEnabled = true,
   connectionGenerationKey = '',
   visibleScopeKey,
   visibleNames,
@@ -144,6 +146,7 @@ export function useChatGptWebAccountInfoRefresh({
   const mountedRef = useRef(true);
   const activeRef = useRef(active);
   const disabledRef = useRef(disabled);
+  const automaticRefreshEnabledRef = useRef(automaticRefreshEnabled);
   const timersRef = useRef(new Map<number, () => void>());
   const activeTasksRef = useRef(new Map<string, TrackedRefreshTask>());
   const activeRunsRef = useRef(new Map<number, ActiveRefreshRun>());
@@ -168,6 +171,7 @@ export function useChatGptWebAccountInfoRefresh({
   const unsupportedRef = useRef(initiallyUnsupported);
   activeRef.current = active;
   disabledRef.current = disabled;
+  automaticRefreshEnabledRef.current = automaticRefreshEnabled;
   connectionGenerationKeyRef.current = connectionGenerationKey;
   const visibleNamesKey = JSON.stringify(
     Array.from(new Set(visibleNames.map((name) => name.trim()).filter(Boolean)))
@@ -222,6 +226,7 @@ export function useChatGptWebAccountInfoRefresh({
         !abortController.signal.aborted &&
         isLifecycleCurrent() &&
         !unsupportedRef.current &&
+        (automaticGeneration === undefined || automaticRefreshEnabledRef.current) &&
         (automaticGeneration === undefined ||
           automaticGenerationRef.current === automaticGeneration),
     };
@@ -598,7 +603,13 @@ export function useChatGptWebAccountInfoRefresh({
     const generation = automaticGenerationRef.current + 1;
     automaticGenerationRef.current = generation;
     const isCurrent = () => mountedRef.current && automaticGenerationRef.current === generation;
-    if (!active || disabled || unsupported || pendingNames.length === 0) {
+    if (
+      !active ||
+      disabled ||
+      !automaticRefreshEnabled ||
+      unsupported ||
+      pendingNames.length === 0
+    ) {
       return () => {
         if (automaticGenerationRef.current === generation) {
           automaticGenerationRef.current += 1;
@@ -660,6 +671,7 @@ export function useChatGptWebAccountInfoRefresh({
   }, [
     abortActiveRuns,
     active,
+    automaticRefreshEnabled,
     cancelTrackedTasks,
     createRunControl,
     disabled,

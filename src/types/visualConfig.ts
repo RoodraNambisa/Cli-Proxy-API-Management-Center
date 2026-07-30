@@ -264,6 +264,7 @@ export type VisualConfigValues = {
   codexHeaderDefaultsBetaFeatures: string;
   codexHeaderDefaultsOriginator: string;
   chatgptWebAutoRelogin: boolean;
+  chatgptWebForceSessionRefreshOnImport: boolean;
   chatgptWebAutoDeleteDeadAuths: boolean;
   chatgptWebAutoDeleteDeadPriorities: string[];
   chatgptWebImageUpstreamModel: string;
@@ -337,6 +338,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexHeaderDefaultsBetaFeatures: '',
   codexHeaderDefaultsOriginator: '',
   chatgptWebAutoRelogin: false,
+  chatgptWebForceSessionRefreshOnImport: true,
   chatgptWebAutoDeleteDeadAuths: false,
   chatgptWebAutoDeleteDeadPriorities: [],
   chatgptWebImageUpstreamModel: 'gpt-5-5',

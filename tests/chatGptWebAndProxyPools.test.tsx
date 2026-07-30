@@ -656,6 +656,25 @@ describe('ChatGPT Web management compatibility', () => {
     });
   });
 
+  test('defaults Session refresh on import to enabled and preserves an explicit disable', () => {
+    const initialYaml = 'chatgpt-web:\n  auto-relogin: false\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+    expect(result.current.visualValues.chatgptWebForceSessionRefreshOnImport).toBe(true);
+    act(() =>
+      result.current.setVisualValues({
+        chatgptWebForceSessionRefreshOnImport: false,
+      })
+    );
+
+    expect(parse(result.current.applyVisualChangesToYaml(initialYaml))).toMatchObject({
+      'chatgpt-web': {
+        'force-session-refresh-on-import': false,
+      },
+    });
+  });
+
   test('reads and writes ChatGPT Web dead credential cleanup priorities', () => {
     const initialYaml =
       'chatgpt-web:\n  auto-delete-dead-auths: false\n  auto-delete-dead-priorities: []\n';

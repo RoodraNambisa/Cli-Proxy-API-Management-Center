@@ -1811,6 +1811,21 @@ export function VisualConfigEditor({
                 disabled={disabled}
                 onChange={(chatgptWebAutoRelogin) => onChange({ chatgptWebAutoRelogin })}
               />
+              <div id="config-chatgpt-web-force-session-refresh-on-import">
+                <ToggleRow
+                  title={t(
+                    'config_management.settings_center.chatgpt_web.force_session_refresh_on_import'
+                  )}
+                  description={t(
+                    'config_management.settings_center.chatgpt_web.force_session_refresh_on_import_description'
+                  )}
+                  checked={values.chatgptWebForceSessionRefreshOnImport}
+                  disabled={disabled}
+                  onChange={(chatgptWebForceSessionRefreshOnImport) =>
+                    onChange({ chatgptWebForceSessionRefreshOnImport })
+                  }
+                />
+              </div>
               <div id="config-chatgpt-web-auto-delete-dead">
                 <ToggleRow
                   title={t('config_management.settings_center.chatgpt_web.auto_delete_dead_auths')}

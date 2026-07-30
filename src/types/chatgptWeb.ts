@@ -93,6 +93,7 @@ export interface ChatGptWebReloginResponse {
 }
 
 export interface ChatGptWebAccountInfoConfig {
+  'auto-refresh-enabled'?: boolean;
   'refresh-workers': number;
   'refresh-queue-size': number;
   'refresh-ttl-minutes': number;

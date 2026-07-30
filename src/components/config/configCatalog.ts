@@ -138,6 +138,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     descriptionKey: 'config_management.settings_center.pages.provider_chatgpt_web.description',
     dirtyPrefixes: [
       'chatgptWebAutoRelogin',
+      'chatgptWebForceSessionRefreshOnImport',
       'chatgptWebAutoDeleteDead',
       'chatgptWebImageUpstreamModel',
       'chatgptWebIgnoreUnsupportedImageParams',
@@ -511,6 +512,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['死亡账号', '自动删除凭证', 'dead auth'],
   },
   {
+    id: 'config-chatgpt-web-force-session-refresh-on-import',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.force_session_refresh_on_import',
+    yamlKeys: ['chatgpt-web.force-session-refresh-on-import'],
+    aliases: ['session import', '导入刷新', 'session 刷新'],
+  },
+  {
     id: 'config-chatgpt-web-auto-delete-dead-priorities',
     pageId: 'provider-chatgpt-web',
     labelKey: 'config_management.settings_center.chatgpt_web.auto_delete_dead_priorities',
@@ -530,6 +538,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'chatgpt_web.account_info.title',
     yamlKeys: [
       'chatgpt-web.account-info',
+      'chatgpt-web.account-info.auto-refresh-enabled',
       'chatgpt-web.account-info.refresh-workers',
       'chatgpt-web.account-info.refresh-queue-size',
       'chatgpt-web.account-info.refresh-ttl-minutes',

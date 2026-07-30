@@ -367,6 +367,41 @@ describe('ChatGPT Web account info and image quota', () => {
     expect(getAccountInfo).toHaveBeenNthCalledWith(2, saveConnection, expect.any(AbortSignal));
   });
 
+  test('defaults a missing auto-refresh field to enabled and saves the disabled switch', async () => {
+    const initial = createSnapshot();
+    const updated = {
+      ...initial,
+      config: { ...initial.config, 'auto-refresh-enabled': false },
+    };
+    const getAccountInfo = vi
+      .spyOn(chatGptWebApi, 'getAccountInfo')
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(updated);
+    const patchAccountInfo = vi.spyOn(chatGptWebApi, 'patchAccountInfo').mockResolvedValue({});
+    const ref = createRef<ChatGptWebAccountInfoPanelHandle>();
+
+    render(<ChatGptWebAccountInfoPanel ref={ref} />);
+
+    await waitFor(() => expect(getAccountInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
+    const toggle = screen.getByRole('checkbox', {
+      name: 'chatgpt_web.account_info.auto_refresh_enabled',
+    }) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    fireEvent.click(toggle);
+
+    await act(async () => {
+      await ref.current?.save();
+    });
+
+    expect(patchAccountInfo).toHaveBeenCalledWith(
+      { 'auto-refresh-enabled': false },
+      expect.any(Object)
+    );
+    await waitFor(() => expect(getAccountInfo).toHaveBeenCalledTimes(2));
+    expect(toggle.checked).toBe(false);
+  });
+
   test('restarts an aborted initial settings load during StrictMode effect replay', async () => {
     const getAccountInfo = vi
       .spyOn(chatGptWebApi, 'getAccountInfo')
@@ -1330,6 +1365,38 @@ describe('ChatGPT Web account info and image quota', () => {
     expect(result.current.manualLiveMessage).toContain(
       'auth_files.chatgpt_web_account_refresh_success'
     );
+  });
+
+  test('stops current-page auto refresh while keeping selected force refresh available', async () => {
+    vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(createSnapshot());
+    const start = vi
+      .spyOn(chatGptWebApi, 'startAccountInfoRefreshTask')
+      .mockImplementation(async (names) => createCompletedTask(names));
+    const reloadFiles = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() =>
+      useChatGptWebAccountInfoRefresh({
+        active: true,
+        disabled: false,
+        automaticRefreshEnabled: false,
+        visibleScopeKey: 'page-1',
+        visibleNames: ['visible-web.json'],
+        selectedNames: ['selected-web.json'],
+        reloadFiles,
+      })
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 400));
+    });
+    expect(start).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.refreshSelected();
+    });
+
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(start).toHaveBeenCalledWith(['selected-web.json'], true, expect.any(Object));
+    expect(reloadFiles).toHaveBeenCalledTimes(1);
   });
 
   test('submits automatic refresh when the pool is saturated so the backend can return fresh', async () => {

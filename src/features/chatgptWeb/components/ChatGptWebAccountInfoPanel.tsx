@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { IconRefreshCw } from '@/components/ui/icons';
 import { apiClient, chatGptWebApi } from '@/services/api';
 import { useNotificationStore } from '@/stores';
@@ -29,6 +30,7 @@ import {
 import styles from './ChatGptWebSentinelPanel.module.scss';
 
 type AccountInfoDraft = {
+  autoRefreshEnabled: boolean;
   workers: string;
   queueSize: string;
   ttlMinutes: string;
@@ -37,7 +39,8 @@ type AccountInfoDraft = {
 };
 
 type AccountInfoField = keyof AccountInfoDraft;
-type AccountInfoValidationErrors = Partial<Record<AccountInfoField, string>>;
+type AccountInfoNumericField = Exclude<AccountInfoField, 'autoRefreshEnabled'>;
+type AccountInfoValidationErrors = Partial<Record<AccountInfoNumericField, string>>;
 
 type ConnectionGeneration = {
   key: string;
@@ -106,7 +109,7 @@ const ACCOUNT_INFO_FIELDS = [
     errorKey: 'chatgpt_web.account_info.validation_retries',
   },
 ] as const satisfies ReadonlyArray<{
-  field: AccountInfoField;
+  field: AccountInfoNumericField;
   labelKey: string;
   configKey: keyof ChatGptWebAccountInfoConfig;
   min: number;
@@ -115,6 +118,7 @@ const ACCOUNT_INFO_FIELDS = [
 }>;
 
 const DEFAULT_DRAFT: AccountInfoDraft = {
+  autoRefreshEnabled: true,
   workers: '4',
   queueSize: '256',
   ttlMinutes: '15',
@@ -123,6 +127,7 @@ const DEFAULT_DRAFT: AccountInfoDraft = {
 };
 
 const toDraft = (snapshot: ChatGptWebAccountInfoSnapshot): AccountInfoDraft => ({
+  autoRefreshEnabled: snapshot.config['auto-refresh-enabled'] !== false,
   workers: String(snapshot.config['refresh-workers']),
   queueSize: String(snapshot.config['refresh-queue-size']),
   ttlMinutes: String(snapshot.config['refresh-ttl-minutes']),
@@ -144,7 +149,9 @@ const readConfig = (
   errors: AccountInfoValidationErrors;
 } => {
   const errors: AccountInfoValidationErrors = {};
-  const parsed = {} as ChatGptWebAccountInfoConfig;
+  const parsed = {
+    'auto-refresh-enabled': draft.autoRefreshEnabled,
+  } as ChatGptWebAccountInfoConfig;
   for (const definition of ACCOUNT_INFO_FIELDS) {
     const value = parseInteger(draft[definition.field], definition.min, definition.max);
     if (value === null) {
@@ -164,6 +171,9 @@ const buildPatch = (
   dirtyFields: ReadonlySet<AccountInfoField>
 ): ChatGptWebAccountInfoConfigPatch => {
   const patch: ChatGptWebAccountInfoConfigPatch = {};
+  if (dirtyFields.has('autoRefreshEnabled')) {
+    patch['auto-refresh-enabled'] = next['auto-refresh-enabled'];
+  }
   for (const definition of ACCOUNT_INFO_FIELDS) {
     if (dirtyFields.has(definition.field)) {
       patch[definition.configKey] = next[definition.configKey];
@@ -325,6 +335,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
             if (!dirtyFieldsRef.current.has(definition.field)) {
               merged[definition.field] = nextDraft[definition.field];
             }
+          }
+          if (!dirtyFieldsRef.current.has('autoRefreshEnabled')) {
+            merged.autoRefreshEnabled = nextDraft.autoRefreshEnabled;
           }
           return merged;
         });
@@ -827,7 +840,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   }, []);
 
   const updateDraftField = useCallback(
-    (field: AccountInfoField, value: string) => {
+    (field: AccountInfoNumericField, value: string) => {
       const latestSnapshot = snapshotRef.current;
       const baselineValue = latestSnapshot ? toDraft(latestSnapshot)[field] : undefined;
       const nextDirtyFields = new Set(dirtyFieldsRef.current);
@@ -839,6 +852,24 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       replaceDirtyFields(nextDirtyFields);
       if (nextDirtyFields.size === 0) setGenerationConflictState(false);
       setDraft((current) => ({ ...current, [field]: value }));
+    },
+    [replaceDirtyFields, setGenerationConflictState]
+  );
+
+  const updateAutoRefreshEnabled = useCallback(
+    (value: boolean) => {
+      const baselineValue = snapshotRef.current
+        ? toDraft(snapshotRef.current).autoRefreshEnabled
+        : undefined;
+      const nextDirtyFields = new Set(dirtyFieldsRef.current);
+      if (baselineValue === value) {
+        nextDirtyFields.delete('autoRefreshEnabled');
+      } else {
+        nextDirtyFields.add('autoRefreshEnabled');
+      }
+      replaceDirtyFields(nextDirtyFields);
+      if (nextDirtyFields.size === 0) setGenerationConflictState(false);
+      setDraft((current) => ({ ...current, autoRefreshEnabled: value }));
     },
     [replaceDirtyFields, setGenerationConflictState]
   );
@@ -869,6 +900,11 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
         title={t('chatgpt_web.account_info.title')}
         description={t('chatgpt_web.account_info.description')}
         summary={t('chatgpt_web.account_info.summary', {
+          state: t(
+            draft.autoRefreshEnabled
+              ? 'chatgpt_web.account_info.auto_refresh_on'
+              : 'chatgpt_web.account_info.auto_refresh_off'
+          ),
           workers: draft.workers,
           ttl: draft.ttlMinutes,
         })}
@@ -912,6 +948,19 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
               </Button>
             </div>
           ) : null}
+
+          <div className={styles.runtimeRow}>
+            <div>
+              <strong>{t('chatgpt_web.account_info.auto_refresh_enabled')}</strong>
+              <span>{t('chatgpt_web.account_info.auto_refresh_enabled_description')}</span>
+            </div>
+            <ToggleSwitch
+              checked={draft.autoRefreshEnabled}
+              onChange={updateAutoRefreshEnabled}
+              disabled={controlsDisabled}
+              ariaLabel={t('chatgpt_web.account_info.auto_refresh_enabled')}
+            />
+          </div>
 
           <div className={styles.settingsGrid}>
             {ACCOUNT_INFO_FIELDS.map((definition) => {
