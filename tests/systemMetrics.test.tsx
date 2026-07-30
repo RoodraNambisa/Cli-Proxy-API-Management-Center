@@ -219,6 +219,8 @@ describe('system metrics and filesystem capacity', () => {
     expect(
       await screen.findByText('chatgpt_web.usage_cache.resource_guard_unsupported')
     ).toBeTruthy();
+    expect(screen.getByText('chatgpt_web.usage_cache.path_hint_legacy')).toBeTruthy();
+    expect(screen.getByText('chatgpt_web.usage_cache.security_notice_legacy')).toBeTruthy();
     fireEvent.change(document.getElementById('chatgpt-web-usage-max-disk') as HTMLInputElement, {
       target: { value: '2048' },
     });
@@ -353,6 +355,83 @@ describe('system metrics and filesystem capacity', () => {
     expect(
       screen.queryByText('chatgpt_web.usage_cache.connection_changed_draft_retained')
     ).toBeNull();
+  });
+
+  test('blocks a dirty draft when polling observes changed server configuration', async () => {
+    localStorage.setItem('config-management:chatgpt-web-usage-cache-expanded', 'true');
+    const firstSnapshot = createUsageSnapshot(undefined);
+    firstSnapshot['usage-cache']['orphan-retention-minutes'] = 60;
+    firstSnapshot.stats.orphan_directory_count = 0;
+    const secondSnapshot = createUsageSnapshot(undefined);
+    secondSnapshot['usage-cache']['orphan-retention-minutes'] = 120;
+    secondSnapshot.stats.orphan_directory_count = 0;
+    const getUsageCache = vi
+      .spyOn(chatGptWebApi, 'getUsageCache')
+      .mockResolvedValueOnce(firstSnapshot)
+      .mockResolvedValueOnce(secondSnapshot);
+    const patchUsageCache = vi.spyOn(chatGptWebApi, 'patchUsageCache').mockResolvedValue({});
+    const panelRef = createRef<ChatGptWebUsageCachePanelHandle>();
+
+    render(<ChatGptWebUsageCachePanel ref={panelRef} />);
+    await screen.findByDisplayValue('60');
+    fireEvent.change(document.getElementById('chatgpt-web-usage-max-disk') as HTMLInputElement, {
+      target: { value: '2048' },
+    });
+    await act(async () => {
+      await panelRef.current?.reload();
+    });
+
+    expect(getUsageCache).toHaveBeenCalledTimes(2);
+    expect(
+      screen.getByText('chatgpt_web.usage_cache.server_configuration_changed_draft_retained')
+    ).toBeTruthy();
+    expect((screen.getByDisplayValue('60') as HTMLInputElement).value).toBe('60');
+    await act(async () => {
+      expect(await panelRef.current?.save()).toBe(false);
+    });
+    expect(patchUsageCache).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('chatgpt_web.usage_cache.reset'));
+    await waitFor(() =>
+      expect((screen.getByDisplayValue('120') as HTMLInputElement).value).toBe('120')
+    );
+  });
+
+  test('does not overwrite edits made after a background reload starts', async () => {
+    localStorage.setItem('config-management:chatgpt-web-usage-cache-expanded', 'true');
+    const snapshot = createUsageSnapshot(undefined);
+    snapshot['usage-cache']['orphan-retention-minutes'] = 60;
+    snapshot.stats.orphan_directory_count = 0;
+    let resolveReload: ((value: ChatGptWebUsageSnapshot) => void) | undefined;
+    const getUsageCache = vi
+      .spyOn(chatGptWebApi, 'getUsageCache')
+      .mockResolvedValueOnce(snapshot)
+      .mockImplementationOnce(
+        () =>
+          new Promise<ChatGptWebUsageSnapshot>((resolve) => {
+            resolveReload = resolve;
+          })
+      );
+    const panelRef = createRef<ChatGptWebUsageCachePanelHandle>();
+
+    render(<ChatGptWebUsageCachePanel ref={panelRef} />);
+    await screen.findByDisplayValue('60');
+    let reloadPromise: Promise<void> | undefined;
+    act(() => {
+      reloadPromise = panelRef.current?.reload();
+    });
+    await waitFor(() => expect(getUsageCache).toHaveBeenCalledTimes(2));
+    fireEvent.change(document.getElementById('chatgpt-web-usage-max-disk') as HTMLInputElement, {
+      target: { value: '2048' },
+    });
+    await act(async () => {
+      resolveReload?.(snapshot);
+      await reloadPromise;
+    });
+
+    expect(
+      (document.getElementById('chatgpt-web-usage-max-disk') as HTMLInputElement).value
+    ).toBe('2048');
   });
 
   test('polls while mounted and stops after leaving the system page', async () => {

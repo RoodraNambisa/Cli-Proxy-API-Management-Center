@@ -564,6 +564,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'chatgpt-web.usage-cache.resource-guard-enabled',
       'chatgpt-web.usage-cache.min-available-disk-mb',
       'chatgpt-web.usage-cache.max-filesystem-used-percent',
+      'chatgpt-web.usage-cache.orphan-retention-minutes',
       'chatgpt-web.usage-cache.path',
       'chatgpt-web.image-usage.auto-output-quality',
     ],

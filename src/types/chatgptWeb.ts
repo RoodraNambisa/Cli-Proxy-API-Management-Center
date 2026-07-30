@@ -210,6 +210,7 @@ export interface ChatGptWebUsageCacheSettings {
   'resource-guard-enabled'?: boolean;
   'min-available-disk-mb'?: number;
   'max-filesystem-used-percent'?: number;
+  'orphan-retention-minutes'?: number;
   path: string;
 }
 
@@ -232,6 +233,18 @@ export interface ChatGptWebUsageCacheStats {
   capacity_rejections: number;
   resource_rejections?: number;
   write_errors: number;
+  instance_directory?: string;
+  ownership_status?: string;
+  orphan_directory_count?: number;
+  orphan_file_count?: number;
+  orphan_bytes?: number;
+  legacy_directory_count?: number;
+  legacy_file_count?: number;
+  legacy_bytes?: number;
+  cleanup_count?: number;
+  cleanup_errors?: number;
+  last_cleanup_at?: string | null;
+  retained_orphan_bytes?: number;
 }
 
 export interface ChatGptWebUsageSnapshot extends ChatGptWebUsageConfig {

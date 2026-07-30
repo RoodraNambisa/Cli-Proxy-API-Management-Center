@@ -31,11 +31,12 @@ type UsageDraft = {
   resourceGuardEnabled: boolean;
   minAvailableDiskMB: string;
   maxFilesystemUsedPercent: string;
+  orphanRetentionMinutes: string;
   path: string;
   autoQuality: ChatGptWebImageUsageQuality;
 };
 
-type ResourceGuardSupport = 'unknown' | 'supported' | 'unsupported';
+type FeatureSupport = 'unknown' | 'supported' | 'unsupported';
 
 export type ChatGptWebUsageCachePanelHandle = {
   save: () => Promise<boolean>;
@@ -57,6 +58,7 @@ type ChatGptWebUsageCachePanelProps = {
 const DISCLOSURE_STORAGE_KEY = 'config-management:chatgpt-web-usage-cache-expanded';
 const POLL_INTERVAL_MS = 5000;
 const MAX_USAGE_CACHE_MEGABYTES = 8_796_093_022_207;
+const MAX_ORPHAN_RETENTION_MINUTES = 10_080;
 
 const DEFAULT_DRAFT: UsageDraft = {
   estimate: true,
@@ -66,6 +68,7 @@ const DEFAULT_DRAFT: UsageDraft = {
   resourceGuardEnabled: true,
   minAvailableDiskMB: '1024',
   maxFilesystemUsedPercent: '95',
+  orphanRetentionMinutes: '0',
   path: '',
   autoQuality: 'medium',
 };
@@ -78,6 +81,7 @@ const toDraft = (snapshot: ChatGptWebUsageSnapshot): UsageDraft => ({
   resourceGuardEnabled: snapshot['usage-cache']['resource-guard-enabled'] ?? true,
   minAvailableDiskMB: String(snapshot['usage-cache']['min-available-disk-mb'] ?? 1024),
   maxFilesystemUsedPercent: String(snapshot['usage-cache']['max-filesystem-used-percent'] ?? 95),
+  orphanRetentionMinutes: String(snapshot['usage-cache']['orphan-retention-minutes'] ?? 0),
   path: snapshot['usage-cache'].path,
   autoQuality: snapshot['image-usage']['auto-output-quality'],
 });
@@ -86,6 +90,10 @@ const hasResourceGuardSupport = (snapshot: ChatGptWebUsageSnapshot): boolean =>
   snapshot['usage-cache']['resource-guard-enabled'] !== undefined &&
   snapshot['usage-cache']['min-available-disk-mb'] !== undefined &&
   snapshot['usage-cache']['max-filesystem-used-percent'] !== undefined;
+
+const hasOrphanCleanupSupport = (snapshot: ChatGptWebUsageSnapshot): boolean =>
+  snapshot['usage-cache']['orphan-retention-minutes'] !== undefined &&
+  snapshot.stats.orphan_directory_count !== undefined;
 
 const parsePositiveInteger = (value: string): number | null => {
   const parsed = Number(value.trim());
@@ -101,7 +109,8 @@ const parseNonNegativeInteger = (value: string): number | null => {
 
 const readConfig = (
   draft: UsageDraft,
-  resourceGuardSupported: boolean
+  resourceGuardSupported: boolean,
+  orphanCleanupSupported: boolean
 ): { config: ChatGptWebUsageConfig | null; errorKey: string | null } => {
   const thresholdMB = parsePositiveInteger(draft.thresholdMB);
   if (thresholdMB === null || thresholdMB > MAX_USAGE_CACHE_MEGABYTES) {
@@ -128,6 +137,13 @@ const readConfig = (
   ) {
     return { config: null, errorKey: 'chatgpt_web.usage_cache.validation_max_used' };
   }
+  const orphanRetentionMinutes = parseNonNegativeInteger(draft.orphanRetentionMinutes);
+  if (
+    orphanCleanupSupported &&
+    (orphanRetentionMinutes === null || orphanRetentionMinutes > MAX_ORPHAN_RETENTION_MINUTES)
+  ) {
+    return { config: null, errorKey: 'chatgpt_web.usage_cache.validation_orphan_retention' };
+  }
   const usageCache: ChatGptWebUsageConfig['usage-cache'] = {
     enabled: draft.cacheEnabled,
     'disk-threshold-mb': thresholdMB,
@@ -138,6 +154,9 @@ const readConfig = (
     usageCache['resource-guard-enabled'] = draft.resourceGuardEnabled;
     usageCache['min-available-disk-mb'] = minAvailableDiskMB ?? 0;
     usageCache['max-filesystem-used-percent'] = maxFilesystemUsedPercent ?? 95;
+  }
+  if (orphanCleanupSupported) {
+    usageCache['orphan-retention-minutes'] = orphanRetentionMinutes ?? 0;
   }
   return {
     config: {
@@ -156,6 +175,23 @@ const formatBytes = (value: number): string => {
   return `${(value / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
 };
 
+const formatTimestamp = (value: string | null | undefined, locale: string): string => {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? '-'
+    : new Intl.DateTimeFormat(locale, {
+        dateStyle: 'medium',
+        timeStyle: 'medium',
+      }).format(parsed);
+};
+
+const ownershipStatusKey = (status?: string): string => {
+  if (status === 'owned') return 'chatgpt_web.usage_cache.ownership_owned';
+  if (status) return 'chatgpt_web.usage_cache.ownership_unknown';
+  return 'chatgpt_web.usage_cache.not_initialized';
+};
+
 export const ChatGptWebUsageCachePanel = forwardRef<
   ChatGptWebUsageCachePanelHandle,
   ChatGptWebUsageCachePanelProps
@@ -171,7 +207,7 @@ export const ChatGptWebUsageCachePanel = forwardRef<
   },
   ref
 ) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
   const requestSequenceRef = useRef(0);
   const connectionGenerationKeyRef = useRef(connectionGenerationKey);
@@ -182,25 +218,34 @@ export const ChatGptWebUsageCachePanel = forwardRef<
   }
   const previousConnectionGenerationKeyRef = useRef(connectionGenerationKey);
   const hasLoadedRef = useRef(false);
+  const snapshotRef = useRef<ChatGptWebUsageSnapshot | null>(null);
+  const draftVersionRef = useRef(0);
   const [snapshot, setSnapshot] = useState<ChatGptWebUsageSnapshot | null>(null);
   const [draft, setDraftState] = useState<UsageDraft>(DEFAULT_DRAFT);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState('');
-  const [resourceGuardSupport, setResourceGuardSupport] = useState<ResourceGuardSupport>('unknown');
+  const [resourceGuardSupport, setResourceGuardSupport] = useState<FeatureSupport>('unknown');
+  const [orphanCleanupSupport, setOrphanCleanupSupport] = useState<FeatureSupport>('unknown');
   const [connectionConflict, setConnectionConflict] = useState(false);
+  const [serverConfigConflict, setServerConfigConflict] = useState(false);
   const [expanded, setExpanded] = useState(
     () => localStorage.getItem(DISCLOSURE_STORAGE_KEY) === 'true'
   );
 
   const setDraft = useCallback((next: UsageDraft | ((current: UsageDraft) => UsageDraft)) => {
-    setDraftState(next);
+    setDraftState((current) => {
+      const resolved = typeof next === 'function' ? next(current) : next;
+      draftVersionRef.current += 1;
+      return resolved;
+    });
   }, []);
 
   const loadSnapshot = useCallback(
     async (options: { notify?: boolean; preserveDraft?: boolean; background?: boolean } = {}) => {
       const requestSequence = ++requestSequenceRef.current;
       const requestGenerationKey = connectionGenerationKeyRef.current;
+      const draftVersion = draftVersionRef.current;
       if (!options.background) setLoading(true);
       try {
         const next = await chatGptWebApi.getUsageCache();
@@ -209,10 +254,24 @@ export const ChatGptWebUsageCachePanel = forwardRef<
           requestGenerationKey !== connectionGenerationKeyRef.current
         )
           return null;
+        const previousSnapshot = snapshotRef.current;
+        const preserveDraft = options.preserveDraft || draftVersion !== draftVersionRef.current;
+        if (
+          preserveDraft &&
+          previousSnapshot &&
+          JSON.stringify(toDraft(previousSnapshot)) !== JSON.stringify(toDraft(next))
+        ) {
+          setServerConfigConflict(true);
+        }
+        snapshotRef.current = next;
         setSnapshot(next);
         snapshotGenerationKeyRef.current = requestGenerationKey;
         setResourceGuardSupport(hasResourceGuardSupport(next) ? 'supported' : 'unsupported');
-        if (!options.preserveDraft) setDraft(toDraft(next));
+        setOrphanCleanupSupport(hasOrphanCleanupSupport(next) ? 'supported' : 'unsupported');
+        if (!preserveDraft) {
+          setDraft(toDraft(next));
+          setServerConfigConflict(false);
+        }
         setLoadError('');
         return next;
       } catch (error) {
@@ -240,29 +299,36 @@ export const ChatGptWebUsageCachePanel = forwardRef<
   );
 
   const resourceGuardSupported = resourceGuardSupport === 'supported';
+  const orphanCleanupSupported = orphanCleanupSupport === 'supported';
   const parsedDraft = useMemo(
-    () => readConfig(draft, resourceGuardSupported),
-    [draft, resourceGuardSupported]
+    () => readConfig(draft, resourceGuardSupported, orphanCleanupSupported),
+    [draft, orphanCleanupSupported, resourceGuardSupported]
   );
   const snapshotDirty = snapshot
     ? JSON.stringify(draft) !== JSON.stringify(toDraft(snapshot))
     : false;
-  const dirty = connectionConflict || snapshotDirty;
+  const dirty = connectionConflict || serverConfigConflict || snapshotDirty;
   const errorCount =
-    (parsedDraft.errorKey ? 1 : 0) + (loadError ? 1 : 0) + (connectionConflict ? 1 : 0);
+    (parsedDraft.errorKey ? 1 : 0) +
+    (loadError ? 1 : 0) +
+    (connectionConflict ? 1 : 0) +
+    (serverConfigConflict ? 1 : 0);
   const controlsDisabled = disabled || externalSaving || loading || saving || !snapshot;
 
   useEffect(() => {
     if (previousConnectionGenerationKeyRef.current !== connectionGenerationKey) {
       previousConnectionGenerationKeyRef.current = connectionGenerationKey;
       hasLoadedRef.current = false;
+      snapshotRef.current = null;
       setSnapshot(null);
       snapshotGenerationKeyRef.current = null;
       if (!dirty) setDraft(DEFAULT_DRAFT);
       setLoading(false);
       setLoadError('');
       setResourceGuardSupport('unknown');
+      setOrphanCleanupSupport('unknown');
       setConnectionConflict(dirty);
+      setServerConfigConflict(false);
     }
     if (disabled || !active || hasLoadedRef.current) return;
     hasLoadedRef.current = true;
@@ -309,6 +375,7 @@ export const ChatGptWebUsageCachePanel = forwardRef<
     if (!dirty) return true;
     if (
       connectionConflict ||
+      serverConfigConflict ||
       snapshotGenerationKeyRef.current !== connectionGenerationKeyRef.current ||
       !snapshot ||
       !parsedDraft.config ||
@@ -328,8 +395,10 @@ export const ChatGptWebUsageCachePanel = forwardRef<
           stats: snapshot.stats,
           filesystem: snapshot.filesystem,
         };
+        snapshotRef.current = fallbackSnapshot;
         setSnapshot(fallbackSnapshot);
         setDraft(toDraft(fallbackSnapshot));
+        setServerConfigConflict(false);
         showNotification(t('chatgpt_web.usage_cache.saved_refresh_failed'), 'warning');
       }
       return true;
@@ -348,6 +417,7 @@ export const ChatGptWebUsageCachePanel = forwardRef<
     loadSnapshot,
     parsedDraft.config,
     saving,
+    serverConfigConflict,
     setDraft,
     showNotification,
     snapshot,
@@ -358,13 +428,14 @@ export const ChatGptWebUsageCachePanel = forwardRef<
     if (!snapshot) return;
     setDraft(toDraft(snapshot));
     setConnectionConflict(false);
+    setServerConfigConflict(false);
   }, [setDraft, snapshot]);
 
   const runValidation = useCallback(() => {
-    const valid = parsedDraft.config !== null && !connectionConflict;
+    const valid = parsedDraft.config !== null && !connectionConflict && !serverConfigConflict;
     if (!valid) setExpanded(true);
     return valid;
-  }, [connectionConflict, parsedDraft.config]);
+  }, [connectionConflict, parsedDraft.config, serverConfigConflict]);
 
   useImperativeHandle(
     ref,
@@ -588,6 +659,27 @@ export const ChatGptWebUsageCachePanel = forwardRef<
               </label>
             </>
           ) : null}
+          {orphanCleanupSupported ? (
+            <label htmlFor="chatgpt-web-usage-orphan-retention">
+              <span>{t('chatgpt_web.usage_cache.orphan_retention')}</span>
+              <input
+                id="chatgpt-web-usage-orphan-retention"
+                type="number"
+                min={0}
+                max={MAX_ORPHAN_RETENTION_MINUTES}
+                step={1}
+                value={draft.orphanRetentionMinutes}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    orphanRetentionMinutes: event.target.value,
+                  }))
+                }
+                disabled={controlsDisabled}
+              />
+              <small>{t('chatgpt_web.usage_cache.orphan_retention_hint')}</small>
+            </label>
+          ) : null}
           <label className={styles.pathField} htmlFor="chatgpt-web-usage-path">
             <span>{t('chatgpt_web.usage_cache.path')}</span>
             <input
@@ -600,7 +692,13 @@ export const ChatGptWebUsageCachePanel = forwardRef<
               }
               disabled={controlsDisabled || !draft.estimate || !draft.cacheEnabled}
             />
-            <small>{t('chatgpt_web.usage_cache.path_hint')}</small>
+            <small>
+              {t(
+                orphanCleanupSupported
+                  ? 'chatgpt_web.usage_cache.path_hint'
+                  : 'chatgpt_web.usage_cache.path_hint_legacy'
+              )}
+            </small>
           </label>
         </div>
 
@@ -614,12 +712,23 @@ export const ChatGptWebUsageCachePanel = forwardRef<
             {t('chatgpt_web.usage_cache.connection_changed_draft_retained')}
           </p>
         ) : null}
+        {serverConfigConflict ? (
+          <p className={styles.validationError} role="alert">
+            {t('chatgpt_web.usage_cache.server_configuration_changed_draft_retained')}
+          </p>
+        ) : null}
         {resourcePressure ? (
           <p className={styles.validationError} role="status">
             {t('chatgpt_web.usage_cache.resource_pressure')}
           </p>
         ) : null}
-        <p className={styles.securityNotice}>{t('chatgpt_web.usage_cache.security_notice')}</p>
+        <p className={styles.securityNotice}>
+          {t(
+            orphanCleanupSupported
+              ? 'chatgpt_web.usage_cache.security_notice'
+              : 'chatgpt_web.usage_cache.security_notice_legacy'
+          )}
+        </p>
 
         <div className={styles.statusHeading}>
           <div>
@@ -686,6 +795,44 @@ export const ChatGptWebUsageCachePanel = forwardRef<
                 </div>
               ))}
             </dl>
+            {orphanCleanupSupported ? (
+              <div className={styles.ownership}>
+                <div className={styles.filesystemHeading}>
+                  <div>
+                    <span>{t('chatgpt_web.usage_cache.instance_directory')}</span>
+                    <strong>{stats?.instance_directory || '-'}</strong>
+                  </div>
+                  <span className={styles.filesystemState}>
+                    {t(ownershipStatusKey(stats?.ownership_status))}
+                  </span>
+                </div>
+                <dl className={styles.statusGrid}>
+                  {[
+                    ['orphan_directories', stats?.orphan_directory_count ?? 0],
+                    ['orphan_files', stats?.orphan_file_count ?? 0],
+                    ['orphan_bytes', formatBytes(stats?.orphan_bytes ?? 0)],
+                    ['retained_orphan_bytes', formatBytes(stats?.retained_orphan_bytes ?? 0)],
+                    ['legacy_directories', stats?.legacy_directory_count ?? 0],
+                    ['legacy_files', stats?.legacy_file_count ?? 0],
+                    ['legacy_bytes', formatBytes(stats?.legacy_bytes ?? 0)],
+                    ['cleanup_count', stats?.cleanup_count ?? 0],
+                    ['cleanup_errors', stats?.cleanup_errors ?? 0],
+                    [
+                      'last_cleanup_at',
+                      formatTimestamp(
+                        stats?.last_cleanup_at,
+                        i18n.resolvedLanguage || i18n.language || 'en'
+                      ),
+                    ],
+                  ].map(([key, value]) => (
+                    <div key={key}>
+                      <dt>{t(`chatgpt_web.usage_cache.status.${key}`)}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ) : null}
             <div className={styles.filesystem}>
               <div className={styles.filesystemHeading}>
                 <div>
