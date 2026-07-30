@@ -18,6 +18,7 @@ import {
   IconChevronUp,
   IconPlus,
   IconRefreshCw,
+  IconSlidersHorizontal,
   IconTrash2,
 } from '@/components/ui/icons';
 import { useNotificationStore } from '@/stores';
@@ -45,9 +46,15 @@ import {
 import { maskApiKey } from '@/utils/format';
 import { isValidApiKeyCharset } from '@/utils/validation';
 import { apiKeysApi } from '@/services/api/apiKeys';
+import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
 
 /** Minimum character count before the expand/collapse toggle appears. */
 const EXPAND_THRESHOLD = 30;
+
+type TagListSuggestionOption = {
+  value: string;
+  label: string;
+};
 
 /** Auto-expanding textarea that collapses back to a single-line input on demand. */
 function ExpandableInput({
@@ -230,24 +237,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const [providerGroupsError, setProviderGroupsError] = useState('');
   const [providerGroupUpdating, setProviderGroupUpdating] = useState<string | null>(null);
 
-  const baseProviderOptions = useMemo(
-    () => [
-      { value: 'codex', label: 'Codex' },
-      { value: 'chatgpt-web', label: 'ChatGPT Web' },
-      { value: 'xai', label: 'Grok' },
-      { value: 'claude', label: 'Claude' },
-      { value: 'antigravity', label: 'Antigravity' },
-      { value: 'gemini', label: 'Gemini API' },
-      { value: 'gemini-interactions', label: 'Google Interactions' },
-      { value: 'aistudio', label: 'AI Studio' },
-      { value: 'vertex', label: 'Vertex' },
-      { value: 'kimi', label: 'Kimi' },
-      { value: 'iflow', label: 'iFlow' },
-      { value: 'qwen', label: 'Qwen' },
-      { value: 'openai-compatibility', label: 'OpenAI Compatibility' },
-    ],
-    []
-  );
+  const baseProviderOptions = useMemo(() => [...RUNTIME_PROVIDER_OPTIONS], []);
 
   const providerOptions = useMemo(() => {
     const options = [...baseProviderOptions];
@@ -659,6 +649,10 @@ export const TagListEditor = memo(function TagListEditor({
   ariaDescribedBy,
   ariaInvalid,
   emptyLabel,
+  suggestionOptions = [],
+  suggestionButtonLabel,
+  suggestionTitle,
+  suggestionDescription,
   onChange,
 }: {
   value: string[];
@@ -669,11 +663,26 @@ export const TagListEditor = memo(function TagListEditor({
   ariaDescribedBy?: string;
   ariaInvalid?: boolean;
   emptyLabel?: string;
+  suggestionOptions?: readonly TagListSuggestionOption[];
+  suggestionButtonLabel?: string;
+  suggestionTitle?: string;
+  suggestionDescription?: string;
   onChange: (next: string[]) => void;
 }) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState('');
+  const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
+  const [selectedSuggestionKeys, setSelectedSuggestionKeys] = useState<Set<string>>(new Set());
   const items = useMemo(() => value.map((item) => item.trim()).filter(Boolean), [value]);
+  const availableSuggestionOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return suggestionOptions.filter((option) => {
+      const key = option.value.trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [suggestionOptions]);
 
   const emitChange = (next: string[]) => {
     const seen = new Set<string>();
@@ -708,6 +717,40 @@ export const TagListEditor = memo(function TagListEditor({
     const [item] = next.splice(index, 1);
     next.splice(nextIndex, 0, item);
     emitChange(next);
+  };
+  const openSuggestionModal = () => {
+    const itemKeys = new Set(items.map((item) => item.toLowerCase()));
+    setSelectedSuggestionKeys(
+      new Set(
+        availableSuggestionOptions
+          .filter((option) => itemKeys.has(option.value.trim().toLowerCase()))
+          .map((option) => option.value.trim().toLowerCase())
+      )
+    );
+    setSuggestionModalOpen(true);
+  };
+  const toggleSuggestion = (value: string, checked: boolean) => {
+    const key = value.trim().toLowerCase();
+    setSelectedSuggestionKeys((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(key);
+      } else {
+        next.delete(key);
+      }
+      return next;
+    });
+  };
+  const applySuggestions = () => {
+    const suggestionKeys = new Set(
+      availableSuggestionOptions.map((option) => option.value.trim().toLowerCase())
+    );
+    const customItems = items.filter((item) => !suggestionKeys.has(item.toLowerCase()));
+    const selectedItems = availableSuggestionOptions
+      .filter((option) => selectedSuggestionKeys.has(option.value.trim().toLowerCase()))
+      .map((option) => option.value);
+    emitChange([...customItems, ...selectedItems]);
+    setSuggestionModalOpen(false);
   };
 
   return (
@@ -774,11 +817,74 @@ export const TagListEditor = memo(function TagListEditor({
           }}
           onBlur={addDraft}
         />
-        <Button type="button" variant="secondary" size="sm" onClick={addDraft} disabled={disabled}>
-          <IconPlus size={14} />
-          {t('common.add')}
-        </Button>
+        <div className={styles.tagListInputActions}>
+          {availableSuggestionOptions.length > 0 ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={openSuggestionModal}
+              disabled={disabled}
+            >
+              <IconSlidersHorizontal size={14} />
+              {suggestionButtonLabel}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={addDraft}
+            disabled={disabled}
+          >
+            <IconPlus size={14} />
+            {t('common.add')}
+          </Button>
+        </div>
       </div>
+      <Modal
+        open={suggestionModalOpen}
+        onClose={() => setSuggestionModalOpen(false)}
+        title={suggestionTitle ?? suggestionButtonLabel}
+        width={640}
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setSuggestionModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="button" onClick={applySuggestions}>
+              {t('common.confirm')}
+            </Button>
+          </>
+        }
+      >
+        <div className={styles.tagSuggestionModal}>
+          {suggestionDescription ? (
+            <p className={styles.tagSuggestionDescription}>{suggestionDescription}</p>
+          ) : null}
+          <div className={styles.tagSuggestionOptions}>
+            {availableSuggestionOptions.map((option) => {
+              const optionKey = option.value.trim().toLowerCase();
+              return (
+                <SelectionCheckbox
+                  key={optionKey}
+                  checked={selectedSuggestionKeys.has(optionKey)}
+                  disabled={disabled}
+                  ariaLabel={`${option.label} (${option.value})`}
+                  label={
+                    <span className={styles.tagSuggestionOptionLabel}>
+                      <span>{option.label}</span>
+                      <code>{option.value}</code>
+                    </span>
+                  }
+                  onChange={(checked) => toggleSuggestion(option.value, checked)}
+                  className={styles.tagSuggestionOption}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 });

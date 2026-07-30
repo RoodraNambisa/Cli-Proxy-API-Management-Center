@@ -985,6 +985,58 @@
   align-items: center;
 }
 
+.tagListInputActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tagSuggestionModal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tagSuggestionDescription {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.tagSuggestionOptions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tagSuggestionOption {
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
+}
+
+.tagSuggestionOptionLabel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+
+  code {
+    color: var(--text-tertiary);
+    font-size: 11px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+}
+
 .codexCustomModelFieldGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1329,6 +1381,15 @@
   .tagListInputRow :global(.btn) {
     width: 100%;
     justify-content: center;
+  }
+
+  .tagListInputActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tagSuggestionOptions {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

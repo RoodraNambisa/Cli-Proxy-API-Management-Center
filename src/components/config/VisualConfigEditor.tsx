@@ -75,6 +75,7 @@ import {
   StringListEditor,
   TagListEditor,
 } from './VisualConfigEditorBlocks';
+import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
 import styles from './VisualConfigEditor.module.scss';
 
 type VisualPage = ConfigPageDefinition & {
@@ -676,6 +677,131 @@ export function VisualConfigEditor({
 }: VisualConfigEditorProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const routingPlanTypeSuggestionOptions = useMemo(
+    () => [
+      {
+        value: 'free',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_free'
+        ),
+      },
+      {
+        value: 'plus',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_plus'
+        ),
+      },
+      {
+        value: 'pro',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_pro'
+        ),
+      },
+      {
+        value: 'team',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_team'
+        ),
+      },
+      {
+        value: 'business',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_business'
+        ),
+      },
+      {
+        value: 'enterprise',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_enterprise'
+        ),
+      },
+      {
+        value: 'go',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_go'
+        ),
+      },
+      {
+        value: 'k12',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_k12'
+        ),
+      },
+      {
+        value: 'free_workspace',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_free_workspace'
+        ),
+      },
+      {
+        value: 'prolite',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_prolite'
+        ),
+      },
+      {
+        value: 'education',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_education'
+        ),
+      },
+      {
+        value: 'edu',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_edu'
+        ),
+      },
+      {
+        value: 'edu_plus',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_edu_plus'
+        ),
+      },
+      {
+        value: 'edu_pro',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_edu_pro'
+        ),
+      },
+      {
+        value: 'enterprise_cbp_automation',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_enterprise_cbp_automation'
+        ),
+      },
+      {
+        value: 'enterprise_cbp_usage_based',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_enterprise_cbp_usage_based'
+        ),
+      },
+      {
+        value: 'finserv',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_finserv'
+        ),
+      },
+      {
+        value: 'hc',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_hc'
+        ),
+      },
+      {
+        value: 'quorum',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_quorum'
+        ),
+      },
+      {
+        value: 'sci',
+        label: t(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_type_sci'
+        ),
+      },
+    ],
+    [t]
+  );
   const codexAgentIdentityConversionVisible = useFrontendFeatureStore(
     (state) => state.visibility.codexAgentIdentityConversion
   );
@@ -3106,6 +3232,18 @@ export function VisualConfigEditor({
                                                   emptyLabel={t(
                                                     'config_management.visual.sections.network.priority_subscription_overrides_plan_types_empty'
                                                   )}
+                                                  suggestionOptions={
+                                                    routingPlanTypeSuggestionOptions
+                                                  }
+                                                  suggestionButtonLabel={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_plan_types_choose'
+                                                  )}
+                                                  suggestionTitle={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_plan_types_choose_title'
+                                                  )}
+                                                  suggestionDescription={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_plan_types_choose_desc'
+                                                  )}
                                                   onChange={(planTypes) =>
                                                     updateRoutingSubscriptionOverride(
                                                       rule.clientId,
@@ -3138,6 +3276,16 @@ export function VisualConfigEditor({
                                                   )}
                                                   emptyLabel={t(
                                                     'config_management.visual.sections.network.priority_subscription_overrides_providers_empty'
+                                                  )}
+                                                  suggestionOptions={RUNTIME_PROVIDER_OPTIONS}
+                                                  suggestionButtonLabel={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_providers_choose'
+                                                  )}
+                                                  suggestionTitle={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_providers_choose_title'
+                                                  )}
+                                                  suggestionDescription={t(
+                                                    'config_management.visual.sections.network.priority_subscription_overrides_providers_choose_desc'
                                                   )}
                                                   onChange={(providers) =>
                                                     updateRoutingSubscriptionOverride(

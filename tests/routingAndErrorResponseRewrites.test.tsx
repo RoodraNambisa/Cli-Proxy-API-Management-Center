@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { parse } from 'yaml';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
@@ -304,7 +312,7 @@ describe('routing request limits and error response rewrites', () => {
     ]);
   });
 
-  test('adds, edits, and removes subscription request limits in the visual editor', () => {
+  test('selects common plan types and providers without dropping custom values', async () => {
     const initialValues = cloneValues();
     initialValues.routingPriorityOverrides = [
       {
@@ -362,11 +370,48 @@ describe('routing request limits and error response rewrites', () => {
     expect(describedBy).toHaveLength(2);
     describedBy.forEach((id) => expect(document.getElementById(id)).not.toBeNull());
 
-    fireEvent.change(planTypesInput, { target: { value: 'pro,plus' } });
+    fireEvent.change(planTypesInput, { target: { value: 'custom-plan' } });
     fireEvent.keyDown(planTypesInput, { key: 'Enter', code: 'Enter' });
     expect(planTypesInput.getAttribute('aria-invalid')).toBeNull();
-    fireEvent.change(providersInput, { target: { value: 'codex' } });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'config_management.visual.sections.network.priority_subscription_overrides_plan_types_choose',
+      })
+    );
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: 'config_management.visual.sections.network.priority_subscription_overrides_plan_type_plus (plus)',
+      })
+    );
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: 'config_management.visual.sections.network.priority_subscription_overrides_plan_type_pro (pro)',
+      })
+    );
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: 'config_management.visual.sections.network.priority_subscription_overrides_plan_type_k12 (k12)',
+      })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'common.confirm' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByText(
+          'config_management.visual.sections.network.priority_subscription_overrides_plan_types_choose_title'
+        )
+      ).toBeNull()
+    );
+
+    fireEvent.change(providersInput, { target: { value: 'custom-runtime' } });
     fireEvent.keyDown(providersInput, { key: 'Enter', code: 'Enter' });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'config_management.visual.sections.network.priority_subscription_overrides_providers_choose',
+      })
+    );
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Codex (codex)' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'ChatGPT Web (chatgpt-web)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common.confirm' }));
 
     const title = screen.getByText(
       'config_management.visual.sections.network.priority_subscription_overrides_rule'
@@ -388,8 +433,8 @@ describe('routing request limits and error response rewrites', () => {
     );
 
     expect(readValues().routingPriorityOverrides[0].subscriptionOverrides[0]).toMatchObject({
-      planTypes: ['pro', 'plus'],
-      providers: ['codex'],
+      planTypes: ['custom-plan', 'plus', 'pro', 'k12'],
+      providers: ['custom-runtime', 'codex', 'chatgpt-web'],
       perAuthRequestLimit: '20',
       perAuthRequestWindowMinutes: '5',
     });
