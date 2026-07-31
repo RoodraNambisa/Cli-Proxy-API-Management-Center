@@ -236,6 +236,50 @@ describe('system metrics and filesystem capacity', () => {
       'max-disk-size-mb': 2048,
       path: '/tmp/usage-cache',
     });
+    expect(payload?.['image-usage']['fallback-usage']).toBeUndefined();
+  });
+
+  test('edits and saves fixed image usage fallback values', async () => {
+    localStorage.setItem('config-management:chatgpt-web-usage-cache-expanded', 'true');
+    const snapshot = createUsageSnapshot(undefined);
+    snapshot['estimate-token-usage'] = false;
+    snapshot['image-usage']['fallback-usage'] = {
+      enabled: false,
+      'input-text-tokens': 0,
+      'input-image-tokens': 0,
+      'output-text-tokens': 0,
+      'output-image-tokens': 2000,
+    };
+    vi.spyOn(chatGptWebApi, 'getUsageCache').mockResolvedValue(snapshot);
+    const patchUsageCache = vi.spyOn(chatGptWebApi, 'patchUsageCache').mockResolvedValue({});
+    const panelRef = createRef<ChatGptWebUsageCachePanelHandle>();
+
+    render(<ChatGptWebUsageCachePanel ref={panelRef} />);
+    const enabled = await screen.findByLabelText('chatgpt_web.usage_cache.fallback_enabled');
+    fireEvent.click(enabled);
+    fireEvent.change(
+      document.getElementById('chatgpt-web-usage-fallbackOutputImageTokens') as HTMLInputElement,
+      { target: { value: '2400' } }
+    );
+    await act(async () => {
+      expect(await panelRef.current?.save()).toBe(true);
+    });
+
+    expect(patchUsageCache).toHaveBeenCalledWith(
+      expect.objectContaining({
+        'estimate-token-usage': false,
+        'image-usage': {
+          'auto-output-quality': 'medium',
+          'fallback-usage': {
+            enabled: true,
+            'input-text-tokens': 0,
+            'input-image-tokens': 0,
+            'output-text-tokens': 0,
+            'output-image-tokens': 2400,
+          },
+        },
+      })
+    );
   });
 
   test('redetects resource guard support after switching server connections', async () => {
@@ -429,9 +473,9 @@ describe('system metrics and filesystem capacity', () => {
       await reloadPromise;
     });
 
-    expect(
-      (document.getElementById('chatgpt-web-usage-max-disk') as HTMLInputElement).value
-    ).toBe('2048');
+    expect((document.getElementById('chatgpt-web-usage-max-disk') as HTMLInputElement).value).toBe(
+      '2048'
+    );
   });
 
   test('polls while mounted and stops after leaving the system page', async () => {

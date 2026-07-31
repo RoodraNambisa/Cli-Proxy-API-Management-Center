@@ -861,7 +861,7 @@
   gap: 4px;
   flex-wrap: wrap;
 
-  span {
+  > span {
     padding: 2px 6px;
     border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
     border-radius: 4px;
@@ -870,6 +870,21 @@
     font-size: 9px;
     font-weight: 650;
   }
+}
+
+.chatGptWebImageQuotaRefreshButton:global(.btn.btn-sm) {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  padding: 0;
+  border-radius: 6px;
+  gap: 0;
+}
+
+.chatGptWebImageQuotaRefreshButton:global(.btn.btn-sm) > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .chatGptWebImageQuotaGrid {

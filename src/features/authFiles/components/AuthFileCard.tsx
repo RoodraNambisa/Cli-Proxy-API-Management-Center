@@ -66,6 +66,9 @@ export type AuthFileCardProps = {
   statusUpdating: Record<string, boolean>;
   xaiFieldsUpdating: Record<string, Partial<Record<XaiAuthFileField, boolean>>>;
   chatGptWebReloginUpdating?: Record<string, boolean>;
+  chatGptWebAccountInfoRefreshing?: boolean;
+  chatGptWebAccountInfoRefreshBusy?: boolean;
+  chatGptWebAccountInfoRefreshUnsupported?: boolean;
   restoring?: Record<string, boolean>;
   codexIdentityConversionVisible?: boolean;
   codexIdentityConverting?: boolean;
@@ -81,6 +84,7 @@ export type AuthFileCardProps = {
   onToggleStatus: (file: AuthFileItem, enabled: boolean) => void;
   onToggleXaiField: (file: AuthFileItem, field: XaiAuthFileField, value: boolean) => void;
   onChatGptWebRelogin?: (file: AuthFileItem) => void;
+  onChatGptWebAccountInfoRefresh?: (file: AuthFileItem) => void;
   onRestore?: (file: AuthFileItem) => void;
   onConvertCodexAuthMode?: (file: AuthFileItem, targetMode: CodexAuthMode) => void;
   onToggleSelect: (name: string) => void;
@@ -105,6 +109,9 @@ export function AuthFileCard(props: AuthFileCardProps) {
     statusUpdating,
     xaiFieldsUpdating,
     chatGptWebReloginUpdating = {},
+    chatGptWebAccountInfoRefreshing = false,
+    chatGptWebAccountInfoRefreshBusy = false,
+    chatGptWebAccountInfoRefreshUnsupported = false,
     restoring = {},
     codexIdentityConversionVisible = false,
     codexIdentityConverting = false,
@@ -120,6 +127,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     onToggleStatus,
     onToggleXaiField,
     onChatGptWebRelogin = () => {},
+    onChatGptWebAccountInfoRefresh = () => {},
     onRestore = () => {},
     onConvertCodexAuthMode,
     onToggleSelect,
@@ -627,12 +635,33 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   </div>
                   <div className={styles.chatGptWebImageQuotaFlags}>
                     {chatGptWebAccountType ? <span>{chatGptWebAccountType}</span> : null}
-                    {imageQuotaRefreshing ? (
+                    {imageQuotaRefreshing || chatGptWebAccountInfoRefreshing ? (
                       <span>{t('auth_files.chatgpt_web_image_quota_refreshing')}</span>
                     ) : null}
                     {imageQuotaStale ? (
                       <span>{t('auth_files.chatgpt_web_image_quota_stale')}</span>
                     ) : null}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onChatGptWebAccountInfoRefresh(file)}
+                      className={styles.chatGptWebImageQuotaRefreshButton}
+                      title={
+                        chatGptWebAccountInfoRefreshUnsupported
+                          ? t('auth_files.chatgpt_web_account_refresh_unsupported')
+                          : t('auth_files.chatgpt_web_account_refresh_one')
+                      }
+                      aria-label={t('auth_files.chatgpt_web_account_refresh_one')}
+                      disabled={
+                        disableControls ||
+                        chatGptWebAccountInfoRefreshBusy ||
+                        chatGptWebAccountInfoRefreshUnsupported
+                      }
+                      loading={chatGptWebAccountInfoRefreshing}
+                    >
+                      {!chatGptWebAccountInfoRefreshing ? <IconRefreshCw size={13} /> : null}
+                    </Button>
                   </div>
                 </div>
                 {!compact ? (

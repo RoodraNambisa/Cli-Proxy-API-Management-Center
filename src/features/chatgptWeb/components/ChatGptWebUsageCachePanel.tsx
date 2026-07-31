@@ -34,6 +34,11 @@ type UsageDraft = {
   orphanRetentionMinutes: string;
   path: string;
   autoQuality: ChatGptWebImageUsageQuality;
+  fallbackEnabled: boolean;
+  fallbackInputTextTokens: string;
+  fallbackInputImageTokens: string;
+  fallbackOutputTextTokens: string;
+  fallbackOutputImageTokens: string;
 };
 
 type FeatureSupport = 'unknown' | 'supported' | 'unsupported';
@@ -71,20 +76,40 @@ const DEFAULT_DRAFT: UsageDraft = {
   orphanRetentionMinutes: '0',
   path: '',
   autoQuality: 'medium',
+  fallbackEnabled: false,
+  fallbackInputTextTokens: '0',
+  fallbackInputImageTokens: '0',
+  fallbackOutputTextTokens: '0',
+  fallbackOutputImageTokens: '2000',
 };
 
-const toDraft = (snapshot: ChatGptWebUsageSnapshot): UsageDraft => ({
-  estimate: snapshot['estimate-token-usage'],
-  cacheEnabled: snapshot['usage-cache'].enabled,
-  thresholdMB: String(snapshot['usage-cache']['disk-threshold-mb']),
-  maxDiskMB: String(snapshot['usage-cache']['max-disk-size-mb']),
-  resourceGuardEnabled: snapshot['usage-cache']['resource-guard-enabled'] ?? true,
-  minAvailableDiskMB: String(snapshot['usage-cache']['min-available-disk-mb'] ?? 1024),
-  maxFilesystemUsedPercent: String(snapshot['usage-cache']['max-filesystem-used-percent'] ?? 95),
-  orphanRetentionMinutes: String(snapshot['usage-cache']['orphan-retention-minutes'] ?? 0),
-  path: snapshot['usage-cache'].path,
-  autoQuality: snapshot['image-usage']['auto-output-quality'],
-});
+const FALLBACK_TOKEN_FIELDS = [
+  ['fallbackInputTextTokens', 'fallback_input_text'],
+  ['fallbackInputImageTokens', 'fallback_input_image'],
+  ['fallbackOutputTextTokens', 'fallback_output_text'],
+  ['fallbackOutputImageTokens', 'fallback_output_image'],
+] as const;
+
+const toDraft = (snapshot: ChatGptWebUsageSnapshot): UsageDraft => {
+  const fallback = snapshot['image-usage']['fallback-usage'];
+  return {
+    estimate: snapshot['estimate-token-usage'],
+    cacheEnabled: snapshot['usage-cache'].enabled,
+    thresholdMB: String(snapshot['usage-cache']['disk-threshold-mb']),
+    maxDiskMB: String(snapshot['usage-cache']['max-disk-size-mb']),
+    resourceGuardEnabled: snapshot['usage-cache']['resource-guard-enabled'] ?? true,
+    minAvailableDiskMB: String(snapshot['usage-cache']['min-available-disk-mb'] ?? 1024),
+    maxFilesystemUsedPercent: String(snapshot['usage-cache']['max-filesystem-used-percent'] ?? 95),
+    orphanRetentionMinutes: String(snapshot['usage-cache']['orphan-retention-minutes'] ?? 0),
+    path: snapshot['usage-cache'].path,
+    autoQuality: snapshot['image-usage']['auto-output-quality'],
+    fallbackEnabled: fallback?.enabled ?? false,
+    fallbackInputTextTokens: String(fallback?.['input-text-tokens'] ?? 0),
+    fallbackInputImageTokens: String(fallback?.['input-image-tokens'] ?? 0),
+    fallbackOutputTextTokens: String(fallback?.['output-text-tokens'] ?? 0),
+    fallbackOutputImageTokens: String(fallback?.['output-image-tokens'] ?? 2000),
+  };
+};
 
 const hasResourceGuardSupport = (snapshot: ChatGptWebUsageSnapshot): boolean =>
   snapshot['usage-cache']['resource-guard-enabled'] !== undefined &&
@@ -94,6 +119,9 @@ const hasResourceGuardSupport = (snapshot: ChatGptWebUsageSnapshot): boolean =>
 const hasOrphanCleanupSupport = (snapshot: ChatGptWebUsageSnapshot): boolean =>
   snapshot['usage-cache']['orphan-retention-minutes'] !== undefined &&
   snapshot.stats.orphan_directory_count !== undefined;
+
+const hasFallbackUsageSupport = (snapshot: ChatGptWebUsageSnapshot): boolean =>
+  snapshot['image-usage']['fallback-usage'] !== undefined;
 
 const parsePositiveInteger = (value: string): number | null => {
   const parsed = Number(value.trim());
@@ -110,7 +138,8 @@ const parseNonNegativeInteger = (value: string): number | null => {
 const readConfig = (
   draft: UsageDraft,
   resourceGuardSupported: boolean,
-  orphanCleanupSupported: boolean
+  orphanCleanupSupported: boolean,
+  fallbackUsageSupported: boolean
 ): { config: ChatGptWebUsageConfig | null; errorKey: string | null } => {
   const thresholdMB = parsePositiveInteger(draft.thresholdMB);
   if (thresholdMB === null || thresholdMB > MAX_USAGE_CACHE_MEGABYTES) {
@@ -144,6 +173,15 @@ const readConfig = (
   ) {
     return { config: null, errorKey: 'chatgpt_web.usage_cache.validation_orphan_retention' };
   }
+  const fallbackValues = [
+    draft.fallbackInputTextTokens,
+    draft.fallbackInputImageTokens,
+    draft.fallbackOutputTextTokens,
+    draft.fallbackOutputImageTokens,
+  ].map(parseNonNegativeInteger);
+  if (fallbackUsageSupported && fallbackValues.some((value) => value === null)) {
+    return { config: null, errorKey: 'chatgpt_web.usage_cache.validation_fallback_tokens' };
+  }
   const usageCache: ChatGptWebUsageConfig['usage-cache'] = {
     enabled: draft.cacheEnabled,
     'disk-threshold-mb': thresholdMB,
@@ -158,11 +196,23 @@ const readConfig = (
   if (orphanCleanupSupported) {
     usageCache['orphan-retention-minutes'] = orphanRetentionMinutes ?? 0;
   }
+  const imageUsage: ChatGptWebUsageConfig['image-usage'] = {
+    'auto-output-quality': draft.autoQuality,
+  };
+  if (fallbackUsageSupported) {
+    imageUsage['fallback-usage'] = {
+      enabled: draft.fallbackEnabled,
+      'input-text-tokens': fallbackValues[0] ?? 0,
+      'input-image-tokens': fallbackValues[1] ?? 0,
+      'output-text-tokens': fallbackValues[2] ?? 0,
+      'output-image-tokens': fallbackValues[3] ?? 0,
+    };
+  }
   return {
     config: {
       'estimate-token-usage': draft.estimate,
       'usage-cache': usageCache,
-      'image-usage': { 'auto-output-quality': draft.autoQuality },
+      'image-usage': imageUsage,
     },
     errorKey: null,
   };
@@ -227,6 +277,7 @@ export const ChatGptWebUsageCachePanel = forwardRef<
   const [loadError, setLoadError] = useState('');
   const [resourceGuardSupport, setResourceGuardSupport] = useState<FeatureSupport>('unknown');
   const [orphanCleanupSupport, setOrphanCleanupSupport] = useState<FeatureSupport>('unknown');
+  const [fallbackUsageSupport, setFallbackUsageSupport] = useState<FeatureSupport>('unknown');
   const [connectionConflict, setConnectionConflict] = useState(false);
   const [serverConfigConflict, setServerConfigConflict] = useState(false);
   const [expanded, setExpanded] = useState(
@@ -268,6 +319,7 @@ export const ChatGptWebUsageCachePanel = forwardRef<
         snapshotGenerationKeyRef.current = requestGenerationKey;
         setResourceGuardSupport(hasResourceGuardSupport(next) ? 'supported' : 'unsupported');
         setOrphanCleanupSupport(hasOrphanCleanupSupport(next) ? 'supported' : 'unsupported');
+        setFallbackUsageSupport(hasFallbackUsageSupport(next) ? 'supported' : 'unsupported');
         if (!preserveDraft) {
           setDraft(toDraft(next));
           setServerConfigConflict(false);
@@ -300,9 +352,10 @@ export const ChatGptWebUsageCachePanel = forwardRef<
 
   const resourceGuardSupported = resourceGuardSupport === 'supported';
   const orphanCleanupSupported = orphanCleanupSupport === 'supported';
+  const fallbackUsageSupported = fallbackUsageSupport === 'supported';
   const parsedDraft = useMemo(
-    () => readConfig(draft, resourceGuardSupported, orphanCleanupSupported),
-    [draft, orphanCleanupSupported, resourceGuardSupported]
+    () => readConfig(draft, resourceGuardSupported, orphanCleanupSupported, fallbackUsageSupported),
+    [draft, fallbackUsageSupported, orphanCleanupSupported, resourceGuardSupported]
   );
   const snapshotDirty = snapshot
     ? JSON.stringify(draft) !== JSON.stringify(toDraft(snapshot))
@@ -327,6 +380,7 @@ export const ChatGptWebUsageCachePanel = forwardRef<
       setLoadError('');
       setResourceGuardSupport('unknown');
       setOrphanCleanupSupport('unknown');
+      setFallbackUsageSupport('unknown');
       setConnectionConflict(dirty);
       setServerConfigConflict(false);
     }
@@ -487,7 +541,9 @@ export const ChatGptWebUsageCachePanel = forwardRef<
           ? draft.cacheEnabled
             ? t('chatgpt_web.usage_cache.summary_hybrid')
             : t('chatgpt_web.usage_cache.summary_memory')
-          : t('chatgpt_web.usage_cache.summary_disabled')
+          : fallbackUsageSupported && draft.fallbackEnabled
+            ? t('chatgpt_web.usage_cache.summary_fallback')
+            : t('chatgpt_web.usage_cache.summary_disabled')
       }
       expanded={dirty || expanded || errorCount > 0}
       onExpandedChange={handleExpandedChange}
@@ -520,6 +576,48 @@ export const ChatGptWebUsageCachePanel = forwardRef<
             ariaLabel={t('chatgpt_web.usage_cache.estimate')}
           />
         </div>
+
+        {fallbackUsageSupport === 'supported' ? (
+          <>
+            <div className={styles.toggleRow}>
+              <div>
+                <strong>{t('chatgpt_web.usage_cache.fallback_enabled')}</strong>
+                <span>{t('chatgpt_web.usage_cache.fallback_enabled_description')}</span>
+              </div>
+              <ToggleSwitch
+                checked={draft.fallbackEnabled}
+                onChange={(fallbackEnabled) =>
+                  setDraft((current) => ({ ...current, fallbackEnabled }))
+                }
+                disabled={controlsDisabled || draft.estimate}
+                ariaLabel={t('chatgpt_web.usage_cache.fallback_enabled')}
+              />
+            </div>
+            <div className={styles.settingsGrid}>
+              {FALLBACK_TOKEN_FIELDS.map(([field, labelKey]) => (
+                <label key={field} htmlFor={`chatgpt-web-usage-${field}`}>
+                  <span>{t(`chatgpt_web.usage_cache.${labelKey}`)}</span>
+                  <input
+                    id={`chatgpt-web-usage-${field}`}
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={draft[field]}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, [field]: event.target.value }))
+                    }
+                    disabled={controlsDisabled || draft.estimate || !draft.fallbackEnabled}
+                  />
+                  <small>{t(`chatgpt_web.usage_cache.${labelKey}_hint`)}</small>
+                </label>
+              ))}
+            </div>
+          </>
+        ) : fallbackUsageSupport === 'unsupported' && !draft.estimate ? (
+          <p className={styles.securityNotice}>
+            {t('chatgpt_web.usage_cache.fallback_unsupported')}
+          </p>
+        ) : null}
 
         <div className={styles.toggleRow}>
           <div>

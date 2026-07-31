@@ -165,6 +165,7 @@ export function useChatGptWebAccountInfoRefresh({
     connectionGenerationKey,
   });
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [manualRefreshingNames, setManualRefreshingNames] = useState<string[]>([]);
   const [manualLiveMessage, setManualLiveMessage] = useState('');
   const initiallyUnsupported = isChatGptWebAccountInfoUnsupported(connectionGenerationKey);
   const [unsupported, setUnsupported] = useState(initiallyUnsupported);
@@ -240,6 +241,7 @@ export function useChatGptWebAccountInfoRefresh({
     if (mountedRef.current) {
       setUnsupported(true);
       setManualRefreshing(false);
+      setManualRefreshingNames([]);
     }
   }, [abortActiveRuns, cancelTrackedTasks]);
 
@@ -274,6 +276,7 @@ export function useChatGptWebAccountInfoRefresh({
         abortActiveRuns();
         cancelTrackedTasks();
         setManualRefreshing(false);
+        setManualRefreshingNames([]);
       }
       setUnsupported(nextUnsupported);
     };
@@ -291,6 +294,7 @@ export function useChatGptWebAccountInfoRefresh({
     abortActiveRuns();
     cancelTrackedTasks();
     setManualRefreshing(false);
+    setManualRefreshingNames([]);
   }, [abortActiveRuns, active, cancelTrackedTasks, disabled]);
 
   useEffect(() => {
@@ -313,6 +317,7 @@ export function useChatGptWebAccountInfoRefresh({
       automaticScopeNamesRef.current.clear();
       automaticallyRefreshedNamesRef.current.clear();
       setManualRefreshing(false);
+      setManualRefreshingNames([]);
       setManualLiveMessage('');
       const cachedUnsupported = isChatGptWebAccountInfoUnsupported(connectionGenerationKey);
       unsupportedRef.current = cachedUnsupported;
@@ -683,72 +688,87 @@ export function useChatGptWebAccountInfoRefresh({
     waitForPoll,
   ]);
 
-  const refreshSelected = useCallback(async () => {
-    if (
-      manualRunGenerationRef.current !== null ||
-      !active ||
-      disabled ||
-      unsupportedRef.current ||
-      selectedNames.length === 0
-    ) {
-      return;
-    }
-    const control = createRunControl();
-    manualRunGenerationRef.current = control.generation;
-    setManualLiveMessage('');
-    setManualRefreshing(true);
-    try {
-      const tasks = await runRefresh(selectedNames, true, control);
-      if (!control.isCurrent() || tasks.length === 0) return;
-      const latestResults = new Map(
-        tasks.flatMap((task) => task.results ?? []).map((result) => [result.name, result])
-      );
-      const finalResults = selectedNames
-        .map((name) => latestResults.get(name))
-        .filter((result): result is NonNullable<typeof result> => result !== undefined);
-      const taskFailed = tasks.some(
-        (task) => task.state === 'failed' || task.state === 'completed_with_errors'
-      );
+  const refreshNames = useCallback(
+    async (names: string[]) => {
+      const targetNames = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
       if (
-        finalResults.length === selectedNames.length &&
-        finalResults.every((result) => ['updated', 'unchanged', 'fresh'].includes(result.status))
+        manualRunGenerationRef.current !== null ||
+        !active ||
+        disabled ||
+        unsupportedRef.current ||
+        targetNames.length === 0
       ) {
-        const message = t('auth_files.chatgpt_web_account_refresh_success', {
-          count: selectedNames.length,
-        });
-        setManualLiveMessage(message);
-        showNotification(message, 'success');
-      } else if (finalResults.some((result) => result.status === 'partial')) {
-        const message = t('auth_files.chatgpt_web_account_refresh_partial');
-        setManualLiveMessage(message);
-        showNotification(message, 'warning');
-      } else if (taskFailed || finalResults.some((result) => result.status !== 'canceled')) {
-        const message = t('auth_files.chatgpt_web_account_refresh_failed');
-        setManualLiveMessage(message);
-        showNotification(message, 'error');
-      }
-    } catch (error) {
-      if (!control.isLifecycleCurrent() || manualRunGenerationRef.current !== control.generation) {
         return;
       }
-      const routeUnsupported = unsupportedRef.current;
-      const message = routeUnsupported
-        ? t('auth_files.chatgpt_web_account_refresh_unsupported')
-        : `${t('auth_files.chatgpt_web_account_refresh_failed')}: ${getChatGptWebErrorMessage(error, t)}`;
-      if (mountedRef.current) setManualLiveMessage(message);
-      showNotification(message, routeUnsupported ? 'warning' : 'error');
-    } finally {
-      if (mountedRef.current && manualRunGenerationRef.current === control.generation) {
-        manualRunGenerationRef.current = null;
-        setManualRefreshing(false);
+      const control = createRunControl();
+      manualRunGenerationRef.current = control.generation;
+      setManualLiveMessage('');
+      setManualRefreshing(true);
+      setManualRefreshingNames(targetNames);
+      try {
+        const tasks = await runRefresh(targetNames, true, control);
+        if (!control.isCurrent() || tasks.length === 0) return;
+        const latestResults = new Map(
+          tasks.flatMap((task) => task.results ?? []).map((result) => [result.name, result])
+        );
+        const finalResults = targetNames
+          .map((name) => latestResults.get(name))
+          .filter((result): result is NonNullable<typeof result> => result !== undefined);
+        const taskFailed = tasks.some(
+          (task) => task.state === 'failed' || task.state === 'completed_with_errors'
+        );
+        if (
+          finalResults.length === targetNames.length &&
+          finalResults.every((result) => ['updated', 'unchanged', 'fresh'].includes(result.status))
+        ) {
+          const message = t('auth_files.chatgpt_web_account_refresh_success', {
+            count: targetNames.length,
+          });
+          setManualLiveMessage(message);
+          showNotification(message, 'success');
+        } else if (finalResults.some((result) => result.status === 'partial')) {
+          const message = t('auth_files.chatgpt_web_account_refresh_partial');
+          setManualLiveMessage(message);
+          showNotification(message, 'warning');
+        } else if (taskFailed || finalResults.some((result) => result.status !== 'canceled')) {
+          const message = t('auth_files.chatgpt_web_account_refresh_failed');
+          setManualLiveMessage(message);
+          showNotification(message, 'error');
+        }
+      } catch (error) {
+        if (
+          !control.isLifecycleCurrent() ||
+          manualRunGenerationRef.current !== control.generation
+        ) {
+          return;
+        }
+        const routeUnsupported = unsupportedRef.current;
+        const message = routeUnsupported
+          ? t('auth_files.chatgpt_web_account_refresh_unsupported')
+          : `${t('auth_files.chatgpt_web_account_refresh_failed')}: ${getChatGptWebErrorMessage(error, t)}`;
+        if (mountedRef.current) setManualLiveMessage(message);
+        showNotification(message, routeUnsupported ? 'warning' : 'error');
+      } finally {
+        if (mountedRef.current && manualRunGenerationRef.current === control.generation) {
+          manualRunGenerationRef.current = null;
+          setManualRefreshing(false);
+          setManualRefreshingNames([]);
+        }
       }
-    }
-  }, [active, createRunControl, disabled, runRefresh, selectedNames, showNotification, t]);
+    },
+    [active, createRunControl, disabled, runRefresh, showNotification, t]
+  );
+
+  const refreshSelected = useCallback(async () => {
+    await refreshNames(selectedNames);
+  }, [refreshNames, selectedNames]);
 
   return {
     manualRefreshing,
+    manualRefreshingNames,
     manualLiveMessage,
     unsupported,
+    refreshNames,
     refreshSelected,
   };
 }

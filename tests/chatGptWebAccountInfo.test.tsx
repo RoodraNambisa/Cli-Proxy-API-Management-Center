@@ -1367,6 +1367,47 @@ describe('ChatGPT Web account info and image quota', () => {
     );
   });
 
+  test('refreshes explicit names and blocks a second manual run until completion', async () => {
+    vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(createSnapshot());
+    let completeTask: ((task: ChatGptWebAccountInfoRefreshTask) => void) | undefined;
+    const start = vi.spyOn(chatGptWebApi, 'startAccountInfoRefreshTask').mockReturnValue(
+      new Promise<ChatGptWebAccountInfoRefreshTask>((resolve) => {
+        completeTask = resolve;
+      })
+    );
+    const { result } = renderHook(() =>
+      useChatGptWebAccountInfoRefresh({
+        active: true,
+        disabled: false,
+        automaticRefreshEnabled: false,
+        visibleScopeKey: 'page-1',
+        visibleNames: [],
+        selectedNames: [],
+        reloadFiles: vi.fn().mockResolvedValue(undefined),
+      })
+    );
+
+    let firstRun: Promise<void> | undefined;
+    act(() => {
+      firstRun = result.current.refreshNames(['single-web.json']);
+    });
+    await waitFor(() => expect(result.current.manualRefreshing).toBe(true));
+    expect(result.current.manualRefreshingNames).toEqual(['single-web.json']);
+    expect(start).toHaveBeenCalledWith(['single-web.json'], true, expect.any(Object));
+
+    await act(async () => {
+      await result.current.refreshNames(['ignored-web.json']);
+    });
+    expect(start).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      completeTask?.(createCompletedTask(['single-web.json']));
+      await firstRun;
+    });
+    expect(result.current.manualRefreshing).toBe(false);
+    expect(result.current.manualRefreshingNames).toEqual([]);
+  });
+
   test('stops current-page auto refresh while keeping selected force refresh available', async () => {
     vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(createSnapshot());
     const start = vi

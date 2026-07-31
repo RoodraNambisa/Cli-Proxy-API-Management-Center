@@ -487,6 +487,7 @@ describe('ChatGPT Web management compatibility', () => {
 
   test('renders lifecycle separately from cooldown and exposes all Web credential actions', () => {
     const onRelogin = vi.fn();
+    const onAccountInfoRefresh = vi.fn();
     const props = createCardProps({
       name: 'chatgpt-web.json',
       type: 'chatgpt-web',
@@ -512,7 +513,11 @@ describe('ChatGPT Web management compatibility', () => {
 
     render(
       <MemoryRouter>
-        <AuthFileCard {...props} onChatGptWebRelogin={onRelogin} />
+        <AuthFileCard
+          {...props}
+          onChatGptWebRelogin={onRelogin}
+          onChatGptWebAccountInfoRefresh={onAccountInfoRefresh}
+        />
       </MemoryRouter>
     );
 
@@ -529,12 +534,16 @@ describe('ChatGPT Web management compatibility', () => {
     const reloginButton = screen.getByRole('button', {
       name: 'auth_files.chatgpt_web_relogin',
     });
+    const accountInfoRefreshButton = screen.getByRole('button', {
+      name: 'auth_files.chatgpt_web_account_refresh_one',
+    });
     expect(reloginButton.textContent).toBe('');
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'auth_files.batch_select_all' }));
     fireEvent.click(screen.getByTitle('auth_files.models_button'));
     fireEvent.click(screen.getByTitle('auth_files.download_button'));
     fireEvent.click(screen.getByTitle('auth_files.prefix_proxy_button'));
+    fireEvent.click(accountInfoRefreshButton);
     fireEvent.click(reloginButton);
     fireEvent.click(screen.getByTitle('auth_files.delete_button'));
 
@@ -547,6 +556,9 @@ describe('ChatGPT Web management compatibility', () => {
       expect.objectContaining({ name: 'chatgpt-web.json' })
     );
     expect(onRelogin).toHaveBeenCalledWith(expect.objectContaining({ name: 'chatgpt-web.json' }));
+    expect(onAccountInfoRefresh).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'chatgpt-web.json' })
+    );
     expect(props.onDelete).toHaveBeenCalledWith('chatgpt-web.json');
   });
 

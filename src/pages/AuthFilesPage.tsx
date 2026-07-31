@@ -1016,8 +1016,10 @@ export function AuthFilesPage() {
   ]);
   const {
     manualRefreshing: chatGptWebAccountInfoRefreshing,
+    manualRefreshingNames: chatGptWebAccountInfoRefreshingNames,
     manualLiveMessage: chatGptWebAccountInfoLiveMessage,
     unsupported: chatGptWebAccountInfoUnsupported,
+    refreshNames: refreshChatGptWebAccountInfoNames,
     refreshSelected: refreshSelectedChatGptWebAccountInfo,
   } = useChatGptWebAccountInfoRefresh({
     active: isCurrentLayer && !loading && uiStateHydrated,
@@ -1029,6 +1031,10 @@ export function AuthFilesPage() {
     selectedNames: selectedChatGptWebNames,
     reloadFiles: refreshFilesInBackground,
   });
+  const chatGptWebAccountInfoRefreshingNameSet = useMemo(
+    () => new Set(chatGptWebAccountInfoRefreshingNames),
+    [chatGptWebAccountInfoRefreshingNames]
+  );
   const selectedCodexIdentityTargets = useMemo(() => {
     const toAgentIdentity: string[] = [];
     const toOauth: string[] = [];
@@ -1839,6 +1845,11 @@ export function AuthFilesPage() {
                     statusUpdating={statusUpdating}
                     xaiFieldsUpdating={xaiFieldsUpdating}
                     chatGptWebReloginUpdating={chatGptWebReloginUpdating}
+                    chatGptWebAccountInfoRefreshing={chatGptWebAccountInfoRefreshingNameSet.has(
+                      file.name
+                    )}
+                    chatGptWebAccountInfoRefreshBusy={chatGptWebAccountInfoRefreshing}
+                    chatGptWebAccountInfoRefreshUnsupported={chatGptWebAccountInfoUnsupported}
                     restoring={restoring}
                     codexIdentityConversionVisible={codexAgentIdentityConversionVisible}
                     codexIdentityConverting={
@@ -1856,6 +1867,9 @@ export function AuthFilesPage() {
                     onToggleStatus={handleStatusToggle}
                     onToggleXaiField={handleXaiFieldToggle}
                     onChatGptWebRelogin={handleChatGptWebRelogin}
+                    onChatGptWebAccountInfoRefresh={(target) =>
+                      void refreshChatGptWebAccountInfoNames([target.name])
+                    }
                     onRestore={handleRestore}
                     onConvertCodexAuthMode={
                       codexAgentIdentityConversionVisible

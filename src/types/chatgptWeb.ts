@@ -204,6 +204,14 @@ export interface ChatGptWebSentinelSnapshot extends ChatGptWebSentinelConfig {
 
 export type ChatGptWebImageUsageQuality = 'low' | 'medium' | 'high';
 
+export interface ChatGptWebImageUsageFallback {
+  enabled: boolean;
+  'input-text-tokens': number;
+  'input-image-tokens': number;
+  'output-text-tokens': number;
+  'output-image-tokens': number;
+}
+
 export interface ChatGptWebUsageCacheSettings {
   enabled: boolean;
   'disk-threshold-mb': number;
@@ -220,6 +228,7 @@ export interface ChatGptWebUsageConfig {
   'usage-cache': ChatGptWebUsageCacheSettings;
   'image-usage': {
     'auto-output-quality': ChatGptWebImageUsageQuality;
+    'fallback-usage'?: ChatGptWebImageUsageFallback;
   };
 }
 
