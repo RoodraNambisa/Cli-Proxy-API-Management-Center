@@ -471,6 +471,20 @@ describe('ChatGPT Web management compatibility', () => {
     );
   });
 
+  test('renders a specific message when OAuth authorization has no continuation', () => {
+    const error = Object.assign(new Error('chatgpt web authentication failed'), {
+      data: {
+        error_category: 'authorization_completion_required',
+        failure_stage: 'password_verify',
+        attempts: 1,
+      },
+    });
+
+    expect(getChatGptWebErrorMessage(error, (key) => key)).toBe(
+      'chatgpt_web.errors.authorization_completion_required'
+    );
+  });
+
   test('extracts safe stage and attempt diagnostics from nested management errors', () => {
     const messages = getChatGptWebErrorDiagnosticMessages(
       {

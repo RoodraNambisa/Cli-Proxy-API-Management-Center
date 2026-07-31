@@ -95,6 +95,9 @@ export const getChatGptWebErrorMessage = (error: unknown, translate: Translate):
   if (diagnostics.category === 'cloudflare_challenge') {
     return translate('chatgpt_web.errors.cloudflare_challenge');
   }
+  if (diagnostics.category === 'authorization_completion_required') {
+    return translate('chatgpt_web.errors.authorization_completion_required');
+  }
   if (diagnostics.category === 'login_proxy_invalid') {
     return translate('chatgpt_web.errors.login_proxy_invalid');
   }

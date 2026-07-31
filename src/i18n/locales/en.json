@@ -2731,6 +2731,7 @@
     "errors": {
       "sentinel_sdk_busy": "SDK solver pool is busy",
       "cloudflare_challenge": "A Cloudflare challenge blocked login",
+      "authorization_completion_required": "No confirmed Cloudflare challenge was detected; OAuth login returned no continuation and may require additional user verification",
       "login_proxy_invalid": "The login proxy configuration is invalid"
     },
     "diagnostics_stage": "Stage: {{stage}}",

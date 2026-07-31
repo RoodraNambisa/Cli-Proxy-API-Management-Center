@@ -2730,6 +2730,7 @@
     "errors": {
       "sentinel_sdk_busy": "Пул решателей SDK занят",
       "cloudflare_challenge": "Проверка Cloudflare заблокировала вход",
+      "authorization_completion_required": "Подтверждённая проверка Cloudflare не обнаружена; OAuth-вход не вернул адрес продолжения и может требовать дополнительной проверки",
       "login_proxy_invalid": "Недопустимая конфигурация прокси входа"
     },
     "diagnostics_stage": "Этап: {{stage}}",

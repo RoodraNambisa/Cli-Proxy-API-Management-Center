@@ -2735,6 +2735,7 @@
     "errors": {
       "sentinel_sdk_busy": "SDK 求解池繁忙",
       "cloudflare_challenge": "Cloudflare 验证阻止了登录",
+      "authorization_completion_required": "未检测到可确认的 Cloudflare 验证；OAuth 登录未返回继续地址，可能需要额外的人工验证",
       "login_proxy_invalid": "登录代理配置无效"
     },
     "diagnostics_stage": "阶段：{{stage}}",
