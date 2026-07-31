@@ -27,6 +27,8 @@ export interface ChatGptWebLoginResult {
   error_category?: string;
   error?: string;
   http_status?: number;
+  failure_stage?: string;
+  attempts?: number;
 }
 
 export interface ChatGptWebLoginTask {
@@ -90,7 +92,22 @@ export interface ChatGptWebReloginResponse {
   warning?: string;
   error_category?: string;
   error?: string;
+  failure_stage?: string;
+  attempts?: number;
 }
+
+export interface ChatGptWebLoginProxyConfig {
+  enabled: boolean;
+  'url-template': string;
+  'placeholder-charset': string;
+  'rotate-on-retry': boolean;
+  'request-attempts': number;
+  'flow-attempts': number;
+  'retry-delay-milliseconds': number;
+  'acquisition-timeout-seconds': number;
+}
+
+export type ChatGptWebLoginProxyConfigPatch = Partial<ChatGptWebLoginProxyConfig>;
 
 export interface ChatGptWebAccountInfoConfig {
   'auto-refresh-enabled'?: boolean;

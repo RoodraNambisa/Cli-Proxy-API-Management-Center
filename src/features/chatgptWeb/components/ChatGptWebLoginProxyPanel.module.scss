@@ -1,0 +1,147 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-lg;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+
+  > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+
+  span {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+.templateField,
+.settingsGrid label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  > span {
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 650;
+  }
+
+  > small {
+    color: var(--text-tertiary);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+}
+
+.templateInputRow {
+  display: flex;
+  align-items: stretch;
+  gap: $spacing-sm;
+
+  input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+}
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $spacing-md;
+}
+
+.templateField input,
+.settingsGrid input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  outline: none;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+
+  &:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 14%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    background: var(--bg-secondary);
+    color: var(--text-tertiary);
+    opacity: 0.75;
+  }
+}
+
+.securityNotice,
+.unsupported {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--warning-color) 28%, var(--border-color));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--warning-color) 7%, var(--bg-primary));
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.unsupported {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.validationError {
+  margin: -8px 0 0;
+  color: var(--failure-badge-text);
+  font-size: 12px;
+}
+
+.loading {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  border: 1px dashed var(--border-color);
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+@include mobile {
+  .toggleRow,
+  .templateInputRow,
+  .unsupported {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settingsGrid {
+    grid-template-columns: 1fr;
+  }
+}

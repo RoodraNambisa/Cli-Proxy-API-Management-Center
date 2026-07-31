@@ -8,6 +8,7 @@ const harness = vi.hoisted(() => ({
   releaseDirty: false,
   auditDirty: false,
   accountInfoDirty: false,
+  loginProxyDirty: false,
   sentinelDirty: false,
   usageCacheDirty: false,
   mergedYaml: 'request-retry: 1\n',
@@ -21,6 +22,8 @@ const harness = vi.hoisted(() => ({
   auditReload: vi.fn(),
   accountInfoSave: vi.fn(),
   accountInfoReload: vi.fn(),
+  loginProxySave: vi.fn(),
+  loginProxyReload: vi.fn(),
   sentinelSave: vi.fn(),
   sentinelReload: vi.fn(),
   usageCacheSave: vi.fn(),
@@ -336,6 +339,49 @@ vi.mock('@/features/chatgptWeb/components/ChatGptWebUsageCachePanel', async () =
   };
 });
 
+vi.mock('@/features/chatgptWeb/components/ChatGptWebLoginProxyPanel', async () => {
+  const React = await import('react');
+  type Props = {
+    onDirtyChange?: (dirty: boolean) => void;
+    onErrorCountChange?: (count: number) => void;
+  };
+  type Handle = {
+    save: () => Promise<boolean>;
+    reload: () => Promise<void>;
+    reset: () => void;
+    validate: () => boolean;
+  };
+
+  return {
+    ChatGptWebLoginProxyPanel: React.forwardRef<Handle, Props>(function MockLoginProxyPanel(
+      { onDirtyChange, onErrorCountChange },
+      ref
+    ) {
+      React.useEffect(() => {
+        onDirtyChange?.(harness.loginProxyDirty);
+        onErrorCountChange?.(0);
+      }, [onDirtyChange, onErrorCountChange]);
+      React.useImperativeHandle(
+        ref,
+        () => ({
+          save: async () => {
+            const success = (await harness.loginProxySave()) !== false;
+            if (success) onDirtyChange?.(false);
+            return success;
+          },
+          reload: async () => {
+            await harness.loginProxyReload();
+          },
+          reset: vi.fn(),
+          validate: () => true,
+        }),
+        [onDirtyChange]
+      );
+      return <div>login-proxy-panel</div>;
+    }),
+  };
+});
+
 vi.mock('@/components/config/DiffModal', () => ({
   DiffModal: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
     open ? (
@@ -366,6 +412,7 @@ describe('ConfigPage save coordination', () => {
     harness.releaseDirty = false;
     harness.auditDirty = false;
     harness.accountInfoDirty = false;
+    harness.loginProxyDirty = false;
     harness.sentinelDirty = false;
     harness.usageCacheDirty = false;
     harness.pageTransitionLayer = null;
@@ -383,6 +430,8 @@ describe('ConfigPage save coordination', () => {
     harness.auditReload.mockResolvedValue(undefined);
     harness.accountInfoSave.mockResolvedValue(true);
     harness.accountInfoReload.mockResolvedValue(undefined);
+    harness.loginProxySave.mockResolvedValue(true);
+    harness.loginProxyReload.mockResolvedValue(undefined);
     harness.sentinelSave.mockResolvedValue(true);
     harness.sentinelReload.mockResolvedValue(undefined);
     harness.usageCacheSave.mockResolvedValue(true);
@@ -476,6 +525,22 @@ describe('ConfigPage save coordination', () => {
     );
   });
 
+  test('saves the ChatGPT Web login proxy through the unified sidecar flow', async () => {
+    harness.loginProxyDirty = true;
+    harness.fetchYaml
+      .mockResolvedValueOnce('chatgpt-web: {}\n')
+      .mockResolvedValueOnce('chatgpt-web:\n  login-proxy:\n    enabled: true\n');
+
+    renderPage();
+    await clickSave();
+
+    await waitFor(() => expect(harness.loginProxySave).toHaveBeenCalledTimes(1));
+    expect(harness.saveYaml).not.toHaveBeenCalled();
+    expect(harness.loadVisualValues).toHaveBeenLastCalledWith(
+      'chatgpt-web:\n  login-proxy:\n    enabled: true\n'
+    );
+  });
+
   test('reloads clean request-body panels after saving YAML', async () => {
     harness.visualDirty = true;
     harness.fetchYaml
@@ -491,6 +556,7 @@ describe('ConfigPage save coordination', () => {
     expect(harness.releaseReload).toHaveBeenCalledTimes(1);
     expect(harness.auditReload).toHaveBeenCalledTimes(1);
     expect(harness.accountInfoReload).toHaveBeenCalledTimes(1);
+    expect(harness.loginProxyReload).toHaveBeenCalledTimes(1);
     expect(harness.sentinelReload).toHaveBeenCalledTimes(1);
     expect(harness.usageCacheReload).toHaveBeenCalledTimes(1);
     expect(harness.releaseReload.mock.invocationCallOrder[0]).toBeGreaterThan(

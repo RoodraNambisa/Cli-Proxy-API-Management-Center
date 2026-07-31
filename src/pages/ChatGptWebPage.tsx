@@ -21,7 +21,12 @@ import type {
 } from '@/types';
 import { isChatGptWebLoginTaskTerminal, isChatGptWebMutationTaskTerminal } from '@/types';
 import { formatDateTime, formatFileSize } from '@/utils/format';
-import { getChatGptWebErrorMessage, isChatGptWebSentinelBusyError } from '@/utils/chatgptWeb';
+import {
+  getChatGptWebErrorDiagnosticMessages,
+  getChatGptWebErrorDiagnostics,
+  getChatGptWebErrorMessage,
+  isChatGptWebSentinelBusyError,
+} from '@/utils/chatgptWeb';
 import styles from './ChatGptWebPage.module.scss';
 
 const POLL_INTERVAL_MS = 1500;
@@ -578,9 +583,16 @@ export function ChatGptWebPage() {
                 <tbody>
                   {sortedResults.map((result) => {
                     const sentinelBusy = isChatGptWebSentinelBusyError(result, result.http_status);
+                    const diagnostics = getChatGptWebErrorDiagnostics(result);
+                    const categorized =
+                      diagnostics.category === 'cloudflare_challenge' ||
+                      diagnostics.category === 'login_proxy_invalid';
                     const message = sentinelBusy
                       ? t('chatgpt_web.errors.sentinel_sdk_busy')
-                      : result.error;
+                      : categorized
+                        ? getChatGptWebErrorMessage(result, t)
+                        : result.error || diagnostics.category;
+                    const diagnosticMessages = getChatGptWebErrorDiagnosticMessages(result, t);
                     return (
                       <tr key={`${result.line}-${result.email}`}>
                         <td>{result.line}</td>
@@ -592,10 +604,14 @@ export function ChatGptWebPage() {
                         </td>
                         <td>{sentinelBusy ? '-' : result.lifecycle_state || '-'}</td>
                         <td className={styles.messageCell}>
-                          {message
-                            ? [result.http_status ? `HTTP ${result.http_status}` : '', message]
+                          {message || diagnosticMessages.length > 0
+                            ? [
+                                result.http_status ? `HTTP ${result.http_status}` : '',
+                                message,
+                                ...diagnosticMessages,
+                              ]
                                 .filter(Boolean)
-                                .join(' ')
+                                .join(' · ')
                             : result.name || '-'}
                         </td>
                       </tr>

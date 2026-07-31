@@ -509,6 +509,28 @@ describe('configuration settings center', () => {
       '/config?section=config-chatgpt-web-account-info'
     );
   });
+
+  test('searches login proxy and fallback Usage keys on the ChatGPT Web config page', () => {
+    const view = renderEditor('/config?section=global-basics');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'chatgpt-web.login-proxy.url-template' },
+    });
+    fireEvent.click(screen.getByText('chatgpt_web.login_proxy.title'));
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-chatgpt-web-login-proxy'
+    );
+
+    view.unmount();
+    renderEditor('/config?section=global-basics');
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'chatgpt-web.image-usage.fallback-usage.output-image-tokens' },
+    });
+    fireEvent.click(screen.getByText('chatgpt_web.usage_cache.title'));
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-chatgpt-web-usage-cache'
+    );
+  });
 });
 
 describe('ConfigDisclosure', () => {

@@ -4,6 +4,8 @@ import type {
   ChatGptWebAccountInfoRefreshTask,
   ChatGptWebAccountInfoSnapshot,
   ChatGptWebLoginTask,
+  ChatGptWebLoginProxyConfig,
+  ChatGptWebLoginProxyConfigPatch,
   ChatGptWebMutationTask,
   ChatGptWebReloginResponse,
   ChatGptWebSentinelConfig,
@@ -40,6 +42,18 @@ export const chatGptWebApi = {
 
   cancelLoginTask(id: string): Promise<ChatGptWebLoginTask> {
     return apiClient.delete(`/chatgpt-web/login-tasks/${encodeURIComponent(id)}`);
+  },
+
+  getLoginProxy(): Promise<ChatGptWebLoginProxyConfig> {
+    return apiClient.get('/chatgpt-web/login-proxy');
+  },
+
+  putLoginProxy(config: ChatGptWebLoginProxyConfig): Promise<unknown> {
+    return apiClient.put('/chatgpt-web/login-proxy', config);
+  },
+
+  patchLoginProxy(config: ChatGptWebLoginProxyConfigPatch): Promise<unknown> {
+    return apiClient.patch('/chatgpt-web/login-proxy', config);
   },
 
   startImportTask(files: File[]): Promise<ChatGptWebMutationTask> {

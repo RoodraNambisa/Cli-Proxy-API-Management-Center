@@ -1,8 +1,13 @@
+import { createRef } from 'react';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { parse } from 'yaml';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthFileCard, type AuthFileCardProps } from '@/features/authFiles/components/AuthFileCard';
+import {
+  ChatGptWebLoginProxyPanel,
+  type ChatGptWebLoginProxyPanelHandle,
+} from '@/features/chatgptWeb/components/ChatGptWebLoginProxyPanel';
 import { ChatGptWebSentinelPanel } from '@/features/chatgptWeb/components/ChatGptWebSentinelPanel';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
 import enLocale from '@/i18n/locales/en.json';
@@ -16,11 +21,15 @@ import { proxyPoolsApi } from '@/services/api/proxyPools';
 import { useAuthStore, useNotificationStore } from '@/stores';
 import type {
   AuthFileItem,
+  ChatGptWebLoginProxyConfig,
   ChatGptWebLoginTask,
   ChatGptWebMutationTask,
   ChatGptWebSentinelSnapshot,
 } from '@/types';
-import { getChatGptWebErrorMessage } from '@/utils/chatgptWeb';
+import {
+  getChatGptWebErrorDiagnosticMessages,
+  getChatGptWebErrorMessage,
+} from '@/utils/chatgptWeb';
 import { normalizeModelList } from '@/utils/models';
 
 vi.mock('react-i18next', async (importOriginal) => {
@@ -113,6 +122,20 @@ const createSentinelSnapshot = (
   ...overrides,
 });
 
+const createLoginProxyConfig = (
+  overrides: Partial<ChatGptWebLoginProxyConfig> = {}
+): ChatGptWebLoginProxyConfig => ({
+  enabled: false,
+  'url-template': '',
+  'placeholder-charset': '',
+  'rotate-on-retry': true,
+  'request-attempts': 3,
+  'flow-attempts': 2,
+  'retry-delay-milliseconds': 800,
+  'acquisition-timeout-seconds': 90,
+  ...overrides,
+});
+
 describe('ChatGPT Web management compatibility', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -147,6 +170,120 @@ describe('ChatGPT Web management compatibility', () => {
       'sdk-cache-versions': 4,
     });
     expect(patch).toHaveBeenCalledWith('/chatgpt-web/sentinel', { 'sdk-workers': 3 });
+  });
+
+  test('uses the dedicated login proxy GET, PUT, and PATCH endpoints without masking values', async () => {
+    const template = 'http://user-session-{12}:secret@proxy.example:59999';
+    const snapshot = createLoginProxyConfig({
+      enabled: true,
+      'url-template': template,
+    });
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue(snapshot);
+    const put = vi.spyOn(apiClient, 'put').mockResolvedValue({ status: 'ok' });
+    const patch = vi.spyOn(apiClient, 'patch').mockResolvedValue({ status: 'ok' });
+
+    await expect(chatGptWebApi.getLoginProxy()).resolves.toEqual(snapshot);
+    await chatGptWebApi.putLoginProxy(snapshot);
+    await chatGptWebApi.patchLoginProxy({ 'url-template': template });
+
+    expect(get).toHaveBeenCalledWith('/chatgpt-web/login-proxy');
+    expect(put).toHaveBeenCalledWith('/chatgpt-web/login-proxy', snapshot);
+    expect(patch).toHaveBeenCalledWith('/chatgpt-web/login-proxy', {
+      'url-template': template,
+    });
+  });
+
+  test('shows, copies, and saves the complete login proxy template without browser persistence', async () => {
+    const template = 'http://user-session-{12}:secret@proxy.example:59999';
+    const initial = createLoginProxyConfig();
+    const updated = createLoginProxyConfig({
+      enabled: true,
+      'url-template': template,
+    });
+    const getLoginProxy = vi
+      .spyOn(chatGptWebApi, 'getLoginProxy')
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(updated);
+    const patchLoginProxy = vi
+      .spyOn(chatGptWebApi, 'patchLoginProxy')
+      .mockResolvedValue({ status: 'ok' });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    localStorage.setItem('config-management:chatgpt-web-login-proxy-expanded', 'true');
+    const panelRef = createRef<ChatGptWebLoginProxyPanelHandle>();
+
+    render(<ChatGptWebLoginProxyPanel ref={panelRef} />);
+
+    const templateInput = (await waitFor(() => {
+      const input = document.getElementById('chatgpt-web-login-proxy-template');
+      expect(input).not.toBeNull();
+      expect((input as HTMLInputElement).disabled).toBe(false);
+      return input;
+    })) as HTMLInputElement;
+    fireEvent.click(screen.getByRole('checkbox', { name: 'chatgpt_web.login_proxy.enabled' }));
+    fireEvent.change(templateInput, { target: { value: template } });
+    fireEvent.click(screen.getByRole('button', { name: 'chatgpt_web.login_proxy.copy' }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(template));
+    expect(
+      Array.from({ length: localStorage.length }, (_, index) =>
+        localStorage.getItem(localStorage.key(index) ?? '')
+      ).join('\n')
+    ).not.toContain(template);
+
+    let saved = false;
+    await act(async () => {
+      saved = (await panelRef.current?.save()) ?? false;
+    });
+
+    expect(saved).toBe(true);
+    expect(patchLoginProxy).toHaveBeenCalledWith(updated);
+    expect(getLoginProxy).toHaveBeenCalledTimes(2);
+  });
+
+  test('blocks invalid login proxy templates before sending a management update', async () => {
+    vi.spyOn(chatGptWebApi, 'getLoginProxy').mockResolvedValue(
+      createLoginProxyConfig({
+        enabled: true,
+        'url-template': 'http://user-{3}:secret@proxy.example:80',
+      })
+    );
+    const patchLoginProxy = vi
+      .spyOn(chatGptWebApi, 'patchLoginProxy')
+      .mockResolvedValue({ status: 'ok' });
+    localStorage.setItem('config-management:chatgpt-web-login-proxy-expanded', 'true');
+    const panelRef = createRef<ChatGptWebLoginProxyPanelHandle>();
+
+    render(<ChatGptWebLoginProxyPanel ref={panelRef} />);
+
+    await waitFor(() =>
+      expect(
+        (document.getElementById('chatgpt-web-login-proxy-template') as HTMLInputElement | null)
+          ?.disabled
+      ).toBe(false)
+    );
+    expect(panelRef.current?.validate()).toBe(true);
+    fireEvent.change(document.getElementById('chatgpt-web-login-proxy-template')!, {
+      target: { value: 'http://proxy-{3}.example:59999' },
+    });
+
+    expect(screen.getByText('chatgpt_web.login_proxy.validation_template_url')).not.toBeNull();
+    expect(panelRef.current?.validate()).toBe(false);
+    await expect(panelRef.current?.save()).resolves.toBe(false);
+    expect(patchLoginProxy).not.toHaveBeenCalled();
+  });
+
+  test('shows an upgrade hint when the connected backend lacks login proxy management', async () => {
+    vi.spyOn(chatGptWebApi, 'getLoginProxy').mockRejectedValue(
+      Object.assign(new Error('not found'), { status: 404 })
+    );
+
+    render(<ChatGptWebLoginProxyPanel />);
+
+    expect(await screen.findByText('chatgpt_web.login_proxy.unsupported')).not.toBeNull();
   });
 
   test('defers the Sentinel status request until its config page becomes active', async () => {
@@ -203,7 +340,7 @@ describe('ChatGPT Web management compatibility', () => {
       'chatgpt-web-sentinel-cache-versions'
     ) as HTMLInputElement;
 
-    expect(runtimeSwitch.checked).toBe(false);
+    await waitFor(() => expect(runtimeSwitch.checked).toBe(false));
     expect(workers.disabled).toBe(true);
     expect(queueSize.disabled).toBe(true);
     expect(cacheVersions.disabled).toBe(true);
@@ -280,6 +417,44 @@ describe('ChatGPT Web management compatibility', () => {
     expect(screen.queryByText('dead')).toBeNull();
   });
 
+  test('renders Cloudflare login diagnostics without exposing the backend error text', async () => {
+    vi.spyOn(chatGptWebApi, 'startLoginTaskText').mockResolvedValue({
+      ...createLoginTask(),
+      state: 'completed_with_errors',
+      processed: 1,
+      failed: 1,
+      results: [
+        {
+          line: 1,
+          email: 'blocked@example.com',
+          status: 'failed',
+          error_category: 'cloudflare_challenge',
+          error: 'RAW_CHALLENGE_RESPONSE_MUST_NOT_RENDER',
+          http_status: 403,
+          failure_stage: 'authorize',
+          attempts: 2,
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <ChatGptWebPage />
+      </MemoryRouter>
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'chatgpt_web.manual_input_label' }), {
+      target: { value: 'blocked@example.com---password---' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web.start_task/ }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/chatgpt_web\.errors\.cloudflare_challenge/)).not.toBeNull()
+    );
+    expect(document.body.textContent).toContain('chatgpt_web.diagnostics_stage');
+    expect(document.body.textContent).toContain('chatgpt_web.diagnostics_attempts');
+    expect(document.body.textContent).not.toContain('RAW_CHALLENGE_RESPONSE_MUST_NOT_RENDER');
+  });
+
   test('recognizes the nested 503 Sentinel busy response without exposing its raw message', () => {
     const error = Object.assign(new Error('temporary runtime failure'), {
       status: 503,
@@ -294,6 +469,29 @@ describe('ChatGPT Web management compatibility', () => {
     expect(getChatGptWebErrorMessage(error, (key) => key)).toBe(
       'chatgpt_web.errors.sentinel_sdk_busy'
     );
+  });
+
+  test('extracts safe stage and attempt diagnostics from nested management errors', () => {
+    const messages = getChatGptWebErrorDiagnosticMessages(
+      {
+        status: 403,
+        data: {
+          error_category: 'cloudflare_challenge',
+          failure_stage: 'authorize',
+          attempts: 2,
+        },
+      },
+      (key, options) => {
+        if (key === 'chatgpt_web.failure_stages.authorize') return 'OAuth authorize';
+        if (key === 'chatgpt_web.diagnostics_stage') return `Stage: ${options?.stage}`;
+        if (key === 'chatgpt_web.diagnostics_attempts') {
+          return `Attempts: ${options?.count}`;
+        }
+        return key;
+      }
+    );
+
+    expect(messages).toEqual(['Stage: OAuth authorize', 'Attempts: 2']);
   });
 
   test('uploads the selected file directly without reading or converting its contents', async () => {
