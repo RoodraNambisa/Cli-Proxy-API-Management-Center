@@ -22,17 +22,20 @@ const CHATGPT_WEB_RELOGIN_TIMEOUT_MS = 2 * 60 * 1000;
 const accountInfoTaskConnections = new Map<string, ApiClientConnectionSnapshot>();
 
 export const chatGptWebApi = {
-  startLoginTask(file: File): Promise<ChatGptWebLoginTask> {
+  startLoginTask(file: File, targetName?: string): Promise<ChatGptWebLoginTask> {
     const formData = new FormData();
     formData.append('file', file, file.name);
+    if (targetName?.trim()) formData.append('name', targetName.trim());
     return apiClient.postForm('/chatgpt-web/login-tasks', formData);
   },
 
-  startLoginTaskText(accountText: string): Promise<ChatGptWebLoginTask> {
+  startLoginTaskText(accountText: string, targetName?: string): Promise<ChatGptWebLoginTask> {
+    const name = targetName?.trim();
     return apiClient.post('/chatgpt-web/login-tasks', accountText, {
       headers: {
         'Content-Type': 'text/plain;charset=UTF-8',
       },
+      ...(name ? { params: { name } } : {}),
     });
   },
 
@@ -56,9 +59,12 @@ export const chatGptWebApi = {
     return apiClient.patch('/chatgpt-web/login-proxy', config);
   },
 
-  startImportTask(files: File[]): Promise<ChatGptWebMutationTask> {
+  startImportTask(files: File[], targetNames?: string[]): Promise<ChatGptWebMutationTask> {
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file, file.name));
+    if (targetNames) {
+      targetNames.forEach((name) => formData.append('names', name.trim()));
+    }
     return apiClient.postForm('/chatgpt-web/import-tasks', formData, {
       timeout: AUTH_FILE_UPLOAD_TIMEOUT_MS,
     });

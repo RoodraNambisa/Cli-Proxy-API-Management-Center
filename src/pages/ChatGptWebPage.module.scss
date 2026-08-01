@@ -225,6 +225,11 @@
   margin-top: $spacing-md;
 }
 
+.targetNameField {
+  max-width: 520px;
+  margin-top: $spacing-md;
+}
+
 .selectedFileList {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -235,9 +240,8 @@
   > div {
     min-width: 0;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-sm;
+    flex-direction: column;
+    gap: 8px;
     padding: 8px 10px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -258,6 +262,19 @@
     color: var(--text-tertiary);
     font-size: 11px;
   }
+}
+
+.selectedFileMeta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+}
+
+.selectedFileItem :global(.form-group) {
+  width: 100%;
+  margin: 0;
 }
 
 .filePicker {

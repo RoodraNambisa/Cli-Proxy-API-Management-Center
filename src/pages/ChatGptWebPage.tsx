@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ChatGptWebMutationTaskPanel } from '@/features/chatgptWeb/components/ChatGptWebMutationTaskPanel';
 import {
@@ -31,6 +32,23 @@ import styles from './ChatGptWebPage.module.scss';
 
 const POLL_INTERVAL_MS = 1500;
 
+const normalizeTargetName = (value: string): string => {
+  const name = value.trim();
+  if (!name) return '';
+  return name.toLowerCase().endsWith('.json') ? name : `${name}.json`;
+};
+
+const isInvalidTargetName = (value: string): boolean => {
+  const name = normalizeTargetName(value);
+  return Boolean(
+    name &&
+    (new TextEncoder().encode(name).byteLength > 255 ||
+      name.includes('/') ||
+      name.includes('\\') ||
+      name.includes('\0'))
+  );
+};
+
 type AccountInputMode = 'manual' | 'file';
 type ChatGptWebPageMode = 'login' | 'import';
 
@@ -46,7 +64,9 @@ export function ChatGptWebPage() {
   const [inputMode, setInputMode] = useState<AccountInputMode>('manual');
   const [accountText, setAccountText] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [loginTargetName, setLoginTargetName] = useState('');
   const [importFiles, setImportFiles] = useState<File[]>([]);
+  const [importTargetNames, setImportTargetNames] = useState<string[]>([]);
   const [task, setTask] = useState<ChatGptWebLoginTask | null>(null);
   const [importTask, setImportTask] = useState<ChatGptWebMutationTask | null>(null);
   const [starting, setStarting] = useState(false);
@@ -64,6 +84,7 @@ export function ChatGptWebPage() {
 
   const clearImportFiles = useCallback(() => {
     setImportFiles([]);
+    setImportTargetNames([]);
     if (importInputRef.current) importInputRef.current.value = '';
   }, []);
 
@@ -168,21 +189,58 @@ export function ChatGptWebPage() {
   };
 
   const handleImportFilesChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setImportFiles(Array.from(event.target.files ?? []));
+    const selectedFiles = Array.from(event.target.files ?? []);
+    setImportFiles(selectedFiles);
+    setImportTargetNames(selectedFiles.map(() => ''));
   };
+
+  const manualAccountCount = useMemo(
+    () => accountText.split(/\r?\n/).filter((line) => line.trim()).length,
+    [accountText]
+  );
+  const loginTargetNameError = useMemo(() => {
+    if (!loginTargetName.trim()) return '';
+    if (isInvalidTargetName(loginTargetName)) return t('chatgpt_web.custom_name_invalid');
+    if (inputMode === 'manual' && manualAccountCount !== 1) {
+      return t('chatgpt_web.custom_name_single_account');
+    }
+    return '';
+  }, [inputMode, loginTargetName, manualAccountCount, t]);
+  const importTargetNameErrors = useMemo(() => {
+    const normalized = importTargetNames.map(normalizeTargetName);
+    const counts = new Map<string, number>();
+    normalized.forEach((name) => {
+      if (!name) return;
+      const key = name.toLowerCase();
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return importTargetNames.map((name, index) => {
+      if (isInvalidTargetName(name)) return t('chatgpt_web.custom_name_invalid');
+      const normalizedName = normalized[index];
+      if (normalizedName && (counts.get(normalizedName.toLowerCase()) ?? 0) > 1) {
+        return t('chatgpt_web.custom_name_duplicate');
+      }
+      return '';
+    });
+  }, [importTargetNames, t]);
 
   const handleStart = async () => {
     if (starting) return;
 
+    const targetName = loginTargetName.trim();
     const startRequest = (() => {
       if (inputMode === 'manual') {
         if (!accountText.trim()) return null;
         const submittedText = accountText;
-        return () => chatGptWebApi.startLoginTaskText(submittedText);
+        return targetName
+          ? () => chatGptWebApi.startLoginTaskText(submittedText, targetName)
+          : () => chatGptWebApi.startLoginTaskText(submittedText);
       }
       if (!file) return null;
       const selectedFile = file;
-      return () => chatGptWebApi.startLoginTask(selectedFile);
+      return targetName
+        ? () => chatGptWebApi.startLoginTask(selectedFile, targetName)
+        : () => chatGptWebApi.startLoginTask(selectedFile);
     })();
 
     if (!startRequest) return;
@@ -190,6 +248,7 @@ export function ChatGptWebPage() {
     try {
       const nextTask: ChatGptWebLoginTask = await startRequest();
       setAccountText('');
+      setLoginTargetName('');
       clearFile();
       setTask(nextTask);
       showNotification(t('chatgpt_web.task_started'), 'success');
@@ -232,7 +291,12 @@ export function ChatGptWebPage() {
     const selectedFiles = [...importFiles];
     setImportStarting(true);
     try {
-      const nextTask = await chatGptWebApi.startImportTask(selectedFiles);
+      const submittedTargetNames = importTargetNames.some((name) => name.trim())
+        ? [...importTargetNames]
+        : undefined;
+      const nextTask = submittedTargetNames
+        ? await chatGptWebApi.startImportTask(selectedFiles, submittedTargetNames)
+        : await chatGptWebApi.startImportTask(selectedFiles);
       importPollErrorNotifiedRef.current = false;
       clearImportFiles();
       setImportTask(nextTask);
@@ -278,6 +342,7 @@ export function ChatGptWebPage() {
   );
   const anyTaskActive = taskActive || importTaskActive;
   const hasInput = inputMode === 'manual' ? Boolean(accountText.trim()) : Boolean(file);
+  const importNamesValid = importTargetNameErrors.every((error) => !error);
   const inputDisabled = disabled || starting || anyTaskActive;
   const stateLabel = task ? t(`chatgpt_web.states.${task.state as ChatGptWebLoginTaskState}`) : '';
   const sortedResults = useMemo(
@@ -415,6 +480,20 @@ export function ChatGptWebPage() {
             </div>
           )}
 
+          <div className={styles.targetNameField}>
+            <Input
+              label={t('chatgpt_web.custom_name_label')}
+              hint={t('chatgpt_web.custom_name_hint')}
+              error={loginTargetNameError || undefined}
+              value={loginTargetName}
+              placeholder={t('chatgpt_web.custom_name_placeholder')}
+              onChange={(event) => setLoginTargetName(event.target.value)}
+              disabled={inputDisabled}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
+
           <div className={styles.submitRow}>
             {inputMode === 'manual' && accountText ? (
               <Button
@@ -431,7 +510,7 @@ export function ChatGptWebPage() {
             <Button
               onClick={handleStart}
               loading={starting}
-              disabled={disabled || !hasInput || anyTaskActive}
+              disabled={disabled || !hasInput || Boolean(loginTargetNameError) || anyTaskActive}
             >
               <IconKey size={16} />
               {t('chatgpt_web.start_task')}
@@ -491,9 +570,31 @@ export function ChatGptWebPage() {
             {importFiles.length > 0 ? (
               <div className={styles.selectedFileList}>
                 {importFiles.map((selectedFile, index) => (
-                  <div key={`${selectedFile.name}-${selectedFile.size}-${index}`}>
-                    <span title={selectedFile.name}>{selectedFile.name}</span>
-                    <small>{formatFileSize(selectedFile.size)}</small>
+                  <div
+                    className={styles.selectedFileItem}
+                    key={`${selectedFile.name}-${selectedFile.size}-${index}`}
+                  >
+                    <div className={styles.selectedFileMeta}>
+                      <span title={selectedFile.name}>{selectedFile.name}</span>
+                      <small>{formatFileSize(selectedFile.size)}</small>
+                    </div>
+                    <Input
+                      label={t('chatgpt_web.custom_name_label')}
+                      hint={t('chatgpt_web.custom_name_short_hint')}
+                      error={importTargetNameErrors[index] || undefined}
+                      value={importTargetNames[index] ?? ''}
+                      placeholder={t('chatgpt_web.custom_name_placeholder')}
+                      onChange={(event) =>
+                        setImportTargetNames((current) =>
+                          current.map((name, targetIndex) =>
+                            targetIndex === index ? event.target.value : name
+                          )
+                        )
+                      }
+                      disabled={disabled || importStarting || anyTaskActive}
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
                   </div>
                 ))}
               </div>
@@ -503,7 +604,7 @@ export function ChatGptWebPage() {
             <Button
               onClick={handleImportStart}
               loading={importStarting}
-              disabled={disabled || importFiles.length === 0 || anyTaskActive}
+              disabled={disabled || importFiles.length === 0 || !importNamesValid || anyTaskActive}
             >
               <IconUpload size={16} />
               {t('chatgpt_web.start_import_task')}

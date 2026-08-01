@@ -515,7 +515,7 @@ describe('ChatGPT Web management compatibility', () => {
     });
     const textSpy = vi.spyOn(file, 'text');
 
-    await chatGptWebApi.startLoginTask(file);
+    await chatGptWebApi.startLoginTask(file, 'workspace-login');
 
     expect(textSpy).not.toHaveBeenCalled();
     expect(postForm).toHaveBeenCalledTimes(1);
@@ -529,6 +529,7 @@ describe('ChatGPT Web management compatibility', () => {
       size: file.size,
       type: file.type,
     });
+    expect((body as FormData).get('name')).toBe('workspace-login');
   });
 
   test('submits pasted account text as an unmodified text/plain body', async () => {
@@ -536,10 +537,11 @@ describe('ChatGPT Web management compatibility', () => {
     const accountText =
       'first@example.com---password---JBSWY3DPEHPK3PXP\nsecond@example.com---password---';
 
-    await chatGptWebApi.startLoginTaskText(accountText);
+    await chatGptWebApi.startLoginTaskText(accountText, 'workspace-login.json');
 
     expect(post).toHaveBeenCalledWith('/chatgpt-web/login-tasks', accountText, {
       headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      params: { name: 'workspace-login.json' },
     });
   });
 
@@ -553,7 +555,7 @@ describe('ChatGPT Web management compatibility', () => {
       new File(['{}'], 'second.json', { type: 'application/json' }),
     ];
 
-    await chatGptWebApi.startImportTask(files);
+    await chatGptWebApi.startImportTask(files, ['workspace-a', 'workspace-b.json']);
     await chatGptWebApi.getImportTask('task id');
     await chatGptWebApi.cancelImportTask('task id');
 
@@ -565,6 +567,7 @@ describe('ChatGPT Web management compatibility', () => {
       'first.json',
       'second.json',
     ]);
+    expect((body as FormData).getAll('names')).toEqual(['workspace-a', 'workspace-b.json']);
     expect(get).toHaveBeenCalledWith('/chatgpt-web/import-tasks/task%20id');
     expect(remove).toHaveBeenCalledWith('/chatgpt-web/import-tasks/task%20id');
   });
@@ -604,6 +607,26 @@ describe('ChatGPT Web management compatibility', () => {
     expect(screen.getByText('chatgpt_web.choose_file')).not.toBeNull();
   });
 
+  test('validates custom credential names by UTF-8 byte length', () => {
+    render(
+      <MemoryRouter>
+        <ChatGptWebPage />
+      </MemoryRouter>
+    );
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'chatgpt_web.manual_input_label' }), {
+      target: { value: 'person@example.com---password---' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'chatgpt_web.custom_name_label' }), {
+      target: { value: '名'.repeat(84) },
+    });
+
+    expect(screen.getByText('chatgpt_web.custom_name_invalid')).not.toBeNull();
+    expect(
+      screen.getByRole('button', { name: /chatgpt_web\.start_task/ }).hasAttribute('disabled')
+    ).toBe(true);
+  });
+
   test('switches to multi-file Web JSON import and clears file references after creation', async () => {
     const startImportTask = vi
       .spyOn(chatGptWebApi, 'startImportTask')
@@ -628,10 +651,17 @@ describe('ChatGPT Web management compatibility', () => {
     fireEvent.change(input as HTMLInputElement, { target: { files } });
     expect(screen.getByText('first.json')).not.toBeNull();
     expect(screen.getByText('second.json')).not.toBeNull();
+    const targetNameInputs = screen.getAllByRole('textbox', {
+      name: 'chatgpt_web.custom_name_label',
+    });
+    fireEvent.change(targetNameInputs[0], { target: { value: 'workspace-a' } });
+    fireEvent.change(targetNameInputs[1], { target: { value: 'workspace-b.json' } });
 
     fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.start_import_task/ }));
 
-    await waitFor(() => expect(startImportTask).toHaveBeenCalledWith(files));
+    await waitFor(() =>
+      expect(startImportTask).toHaveBeenCalledWith(files, ['workspace-a', 'workspace-b.json'])
+    );
     await waitFor(() => expect(screen.queryByText('chatgpt_web.import_files_selected')).toBeNull());
     expect(screen.getByText('chatgpt_web.choose_json_files')).not.toBeNull();
     expect(document.body.textContent).not.toContain('secret-a');
@@ -654,6 +684,10 @@ describe('ChatGPT Web management compatibility', () => {
       name: 'chatgpt_web.manual_input_label',
     }) as HTMLTextAreaElement;
     fireEvent.change(input, { target: { value: accountText } });
+    const targetNameInput = screen.getByRole('textbox', {
+      name: 'chatgpt_web.custom_name_label',
+    }) as HTMLInputElement;
+    fireEvent.change(targetNameInput, { target: { value: 'workspace-login' } });
 
     const storageBeforeSubmit = [localStorage, sessionStorage]
       .flatMap((storage) =>
@@ -666,8 +700,11 @@ describe('ChatGPT Web management compatibility', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /chatgpt_web.start_task/ }));
 
-    await waitFor(() => expect(startLoginTaskText).toHaveBeenCalledWith(accountText));
+    await waitFor(() =>
+      expect(startLoginTaskText).toHaveBeenCalledWith(accountText, 'workspace-login')
+    );
     await waitFor(() => expect(input.value).toBe(''));
+    expect(targetNameInput.value).toBe('');
 
     const storageAfterSubmit = [localStorage, sessionStorage]
       .flatMap((storage) =>
