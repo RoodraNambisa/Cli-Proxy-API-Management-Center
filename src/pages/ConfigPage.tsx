@@ -935,6 +935,7 @@ export function ConfigPage() {
                 chatGptWebSentinelErrorCount +
                 chatGptWebUsageCacheErrorCount
               }
+              chatGptWebConnectionGenerationKey={connectionGenerationKey}
               renderRequestBodyPanels={({ focusTarget }) => (
                 <>
                   <RequestBodyReleaseCard

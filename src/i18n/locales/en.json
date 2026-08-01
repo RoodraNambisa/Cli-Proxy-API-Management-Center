@@ -1694,6 +1694,8 @@
         "force_session_refresh_on_import_description": "When enabled, refresh through Session even if the imported Access Token is still valid. When disabled, refresh only if the Token is missing or expired.",
         "auto_delete_dead_auths": "Automatically delete dead credentials",
         "auto_delete_dead_auths_description": "Use the staggered background maintenance queue only after ChatGPT Web confirms that the account lifecycle is dead. Cooling, exhausted image quota, and interaction-required accounts are not deleted.",
+        "auto_delete_dead_runtime_count": "Automatically deleted during this server run",
+        "auto_delete_dead_runtime_count_hint": "Resets when the server restarts",
         "auto_delete_dead_priorities": "Priorities to delete",
         "auto_delete_dead_priorities_description": "Delete dead credentials only when their integer priority exactly matches this list. Leave empty to match every priority.",
         "auto_delete_dead_priorities_placeholder": "For example: 1, 0, -1",

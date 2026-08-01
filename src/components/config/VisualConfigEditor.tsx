@@ -62,6 +62,7 @@ import type {
 } from '@/types/visualConfig';
 import { makeClientId } from '@/types/visualConfig';
 import { configApi, type ProxyUrlCheckResult } from '@/services/api/config';
+import { chatGptWebApi } from '@/services/api/chatgptWeb';
 import { useFrontendFeatureStore } from '@/stores';
 import {
   isAuthModelExclusionAllMode,
@@ -115,10 +116,13 @@ interface VisualConfigEditorProps {
   requestBodyErrorCount?: number;
   chatGptWebSentinelDirty?: boolean;
   chatGptWebSentinelErrorCount?: number;
+  chatGptWebConnectionGenerationKey?: string;
   renderRequestBodyPanels?: (options: { focusTarget?: string }) => ReactNode;
   renderChatGptWebSentinel?: (options: { active: boolean; focusTarget?: string }) => ReactNode;
   onChange: (values: Partial<VisualConfigValues>) => void;
 }
+
+const CHATGPT_WEB_AUTO_DELETE_STATS_POLL_MS = 15_000;
 
 function getValidationMessage(
   t: ReturnType<typeof useTranslation>['t'],
@@ -671,6 +675,7 @@ export function VisualConfigEditor({
   requestBodyErrorCount = 0,
   chatGptWebSentinelDirty = false,
   chatGptWebSentinelErrorCount = 0,
+  chatGptWebConnectionGenerationKey = '',
   renderRequestBodyPanels,
   renderChatGptWebSentinel,
   onChange,
@@ -814,6 +819,7 @@ export function VisualConfigEditor({
     const persisted = localStorage.getItem('config-management:visual-page');
     return isConfigPageId(persisted) ? persisted : DEFAULT_CONFIG_PAGE_ID;
   });
+  const [chatGptWebAutoDeletedCount, setChatGptWebAutoDeletedCount] = useState<number | null>(null);
   const [configSearchQuery, setConfigSearchQuery] = useState('');
   const [focusTarget, setFocusTarget] = useState<string | undefined>(
     () => resolveConfigSection(sectionParam)?.targetId
@@ -840,6 +846,42 @@ export function VisualConfigEditor({
   const [proxyCheckLoading, setProxyCheckLoading] = useState(false);
   const [proxyCheckResult, setProxyCheckResult] = useState<ProxyUrlCheckResult | null>(null);
   const [proxyCheckError, setProxyCheckError] = useState('');
+
+  useEffect(() => {
+    setChatGptWebAutoDeletedCount(null);
+    if (
+      disabled ||
+      activePageId !== 'provider-chatgpt-web' ||
+      chatGptWebConnectionGenerationKey.trim() === ''
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    let disposed = false;
+    let loadingStats = false;
+    const loadStats = async () => {
+      if (loadingStats) return;
+      loadingStats = true;
+      try {
+        const stats = await chatGptWebApi.getAutoDeleteDeadStats(controller.signal);
+        if (disposed) return;
+        const count = Number(stats.deleted_count);
+        setChatGptWebAutoDeletedCount(Number.isSafeInteger(count) && count >= 0 ? count : null);
+      } catch {
+        if (!disposed) setChatGptWebAutoDeletedCount(null);
+      } finally {
+        loadingStats = false;
+      }
+    };
+    void loadStats();
+    const timer = window.setInterval(() => void loadStats(), CHATGPT_WEB_AUTO_DELETE_STATS_POLL_MS);
+    return () => {
+      disposed = true;
+      controller.abort();
+      window.clearInterval(timer);
+    };
+  }, [activePageId, chatGptWebConnectionGenerationKey, disabled]);
   const proxyUrlDirty = values.proxyUrl !== baselineValues.proxyUrl;
   const collapseLegacyImagesSettings =
     values.images.native.generations.enabled && values.images.native.edits.enabled;
@@ -1883,6 +1925,23 @@ export function VisualConfigEditor({
                     onChange({ chatgptWebAutoDeleteDeadAuths })
                   }
                 />
+                <div className={styles.autoDeleteRuntimeCount} role="status" aria-live="polite">
+                  <span>
+                    {t(
+                      'config_management.settings_center.chatgpt_web.auto_delete_dead_runtime_count'
+                    )}
+                  </span>
+                  <strong>
+                    {chatGptWebAutoDeletedCount === null
+                      ? '—'
+                      : chatGptWebAutoDeletedCount.toLocaleString()}
+                  </strong>
+                  <small>
+                    {t(
+                      'config_management.settings_center.chatgpt_web.auto_delete_dead_runtime_count_hint'
+                    )}
+                  </small>
+                </div>
                 <div id="config-chatgpt-web-auto-delete-dead-priorities">
                   <FieldShell
                     label={t(

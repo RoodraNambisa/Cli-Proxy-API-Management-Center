@@ -96,6 +96,10 @@ export interface ChatGptWebReloginResponse {
   attempts?: number;
 }
 
+export interface ChatGptWebAutoDeleteDeadStats {
+  deleted_count: number;
+}
+
 export interface ChatGptWebLoginProxyConfig {
   enabled: boolean;
   'url-template': string;

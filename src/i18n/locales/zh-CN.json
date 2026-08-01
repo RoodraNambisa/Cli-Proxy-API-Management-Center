@@ -1698,6 +1698,8 @@
         "force_session_refresh_on_import_description": "开启后，即使上传的 Access Token 仍有效也会通过 Session 刷新；关闭后仅在 Token 缺失或已过期时刷新。",
         "auto_delete_dead_auths": "自动删除死亡凭证",
         "auto_delete_dead_auths_description": "仅在 ChatGPT Web 已确认账号生命周期为死亡时，交由后台维护队列错峰删除凭证。不会删除普通冷却、图片额度耗尽或需要人工验证的账号。",
+        "auto_delete_dead_runtime_count": "本次服务运行期间已自动删除",
+        "auto_delete_dead_runtime_count_hint": "服务重启后清零",
         "auto_delete_dead_priorities": "自动删除的优先级",
         "auto_delete_dead_priorities_description": "仅删除精确命中这些整数优先级的死亡凭证；留空表示所有优先级。",
         "auto_delete_dead_priorities_placeholder": "例如 1、0、-1",

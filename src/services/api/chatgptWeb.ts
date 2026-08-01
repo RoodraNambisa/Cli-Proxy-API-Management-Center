@@ -3,6 +3,7 @@ import type {
   ChatGptWebAccountInfoConfigPatch,
   ChatGptWebAccountInfoRefreshTask,
   ChatGptWebAccountInfoSnapshot,
+  ChatGptWebAutoDeleteDeadStats,
   ChatGptWebLoginTask,
   ChatGptWebLoginProxyConfig,
   ChatGptWebLoginProxyConfigPatch,
@@ -22,6 +23,12 @@ const CHATGPT_WEB_RELOGIN_TIMEOUT_MS = 2 * 60 * 1000;
 const accountInfoTaskConnections = new Map<string, ApiClientConnectionSnapshot>();
 
 export const chatGptWebApi = {
+  getAutoDeleteDeadStats(signal?: AbortSignal): Promise<ChatGptWebAutoDeleteDeadStats> {
+    return signal
+      ? apiClient.get('/chatgpt-web/auto-delete-dead/stats', { signal })
+      : apiClient.get('/chatgpt-web/auto-delete-dead/stats');
+  },
+
   startLoginTask(file: File, targetName?: string): Promise<ChatGptWebLoginTask> {
     const formData = new FormData();
     formData.append('file', file, file.name);

@@ -10,6 +10,7 @@ import {
   configPageHasDirtyFields,
 } from '@/components/config/configCatalog';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
+import { chatGptWebApi } from '@/services/api/chatgptWeb';
 import {
   DEFAULT_FRONTEND_FEATURE_VISIBILITY,
   FRONTEND_FEATURE_VISIBILITY_STORAGE_KEY,
@@ -59,6 +60,10 @@ const translations: Record<string, string> = {
     'Image aspect ratio and output size',
   'config_management.settings_center.chatgpt_web.adapt_size_to_aspect_ratio':
     'Adapt size to a Web aspect ratio',
+  'config_management.settings_center.chatgpt_web.auto_delete_dead_runtime_count':
+    'Automatically deleted during this server run',
+  'config_management.settings_center.chatgpt_web.auto_delete_dead_runtime_count_hint':
+    'Resets when the server restarts',
   'config_management.settings_center.chatgpt_web.resize_to_requested_size':
     'Resize to the requested dimensions',
   'config_management.settings_center.chatgpt_web.aspect_ratio_max_error_percent':
@@ -119,6 +124,7 @@ function renderEditor(
 
 describe('configuration settings center', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     useFrontendFeatureStore.setState({
       visibility: { ...DEFAULT_FRONTEND_FEATURE_VISIBILITY },
     });
@@ -290,6 +296,33 @@ describe('configuration settings center', () => {
       'config_management.settings_center.chatgpt_web.auto_delete_dead_priorities_placeholder'
     ) as HTMLInputElement;
     expect(input.disabled).toBe(false);
+  });
+
+  test('shows the process-local automatic dead credential deletion count', async () => {
+    vi.spyOn(chatGptWebApi, 'getAutoDeleteDeadStats').mockResolvedValue({ deleted_count: 12 });
+
+    renderEditor('/config?section=provider-chatgpt-web', {
+      chatGptWebConnectionGenerationKey: 'connected-1',
+    });
+
+    expect(screen.getByText('Automatically deleted during this server run')).not.toBeNull();
+    await waitFor(() => expect(screen.getByText('12')).not.toBeNull());
+    expect(screen.getByText('Resets when the server restarts')).not.toBeNull();
+    expect(chatGptWebApi.getAutoDeleteDeadStats).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not poll automatic deletion stats while the editor is disabled', async () => {
+    const getStats = vi
+      .spyOn(chatGptWebApi, 'getAutoDeleteDeadStats')
+      .mockResolvedValue({ deleted_count: 1 });
+
+    renderEditor('/config?section=provider-chatgpt-web', {
+      chatGptWebConnectionGenerationKey: 'disconnected-1',
+      disabled: true,
+    });
+    await act(async () => undefined);
+
+    expect(getStats).not.toHaveBeenCalled();
   });
 
   test('shows dirty and validation indicators on the owning navigation page', () => {

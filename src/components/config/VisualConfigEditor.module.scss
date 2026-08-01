@@ -636,6 +636,25 @@
   line-height: 1.55;
 }
 
+.autoDeleteRuntimeCount {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 2px 14px;
+  color: var(--text-secondary);
+  font-size: 12px;
+
+  strong {
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+
+  small {
+    color: var(--text-tertiary);
+  }
+}
+
 .fieldShell {
   display: flex;
   flex-direction: column;

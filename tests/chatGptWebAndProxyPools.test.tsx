@@ -1066,6 +1066,8 @@ describe('ChatGPT Web management compatibility', () => {
       const labels = locale.config_management.settings_center.chatgpt_web;
       expect(labels.auto_delete_dead_auths).toBeTruthy();
       expect(labels.auto_delete_dead_auths_description).toBeTruthy();
+      expect(labels.auto_delete_dead_runtime_count).toBeTruthy();
+      expect(labels.auto_delete_dead_runtime_count_hint).toBeTruthy();
       expect(labels.auto_delete_dead_priorities).toBeTruthy();
       expect(labels.auto_delete_dead_priorities_description).toBeTruthy();
       expect(labels.auto_delete_dead_priorities_placeholder).toBeTruthy();
