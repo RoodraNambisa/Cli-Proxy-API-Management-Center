@@ -1530,7 +1530,15 @@ export function VisualConfigEditor({
         ]),
       'provider-antigravity': 0,
       'provider-chatgpt-web':
-        chatGptWebSentinelErrorCount + countErrors(['chatgptWebAutoDeleteDeadPriorities']),
+        chatGptWebSentinelErrorCount +
+        countErrors([
+          'chatgptWebAutoDeleteDeadPriorities',
+          'chatgptWebAspectRatioMaxErrorPercent',
+          'chatgptWebMaxResizeEdgePixels',
+          'chatgptWebResizeToRequestedSize',
+          'chatgptWebResizeFilter',
+          'chatgptWebMaxImageResponseMegabytes',
+        ]),
       'provider-grok': 0,
       'advanced-payload': hasPayloadValidationErrors ? 1 : 0,
     }),

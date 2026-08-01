@@ -73,6 +73,8 @@ const translations: Record<string, string> = {
   'config_management.settings_center.search_placeholder': 'Search configuration',
   'config_management.status_dirty_short': 'Unsaved',
   'config_management.visual.validation_blocked_short': 'Fix errors',
+  'config_management.visual.validation.validation_blocked':
+    'Fix validation errors before saving',
 };
 
 let scrollIntoViewMock = vi.fn();
@@ -513,6 +515,18 @@ describe('configuration settings center', () => {
       chatgptWebAdaptSizeToAspectRatio: false,
       chatgptWebResizeToRequestedSize: false,
     });
+  });
+
+  test('counts ChatGPT Web image resize validation errors on the provider page', () => {
+    renderEditor('/config?section=provider-chatgpt-web', {
+      validationErrors: {
+        chatgptWebAspectRatioMaxErrorPercent: 'number_range_0_10',
+        chatgptWebMaxImageResponseMegabytes: 'integer_range_1_256',
+      },
+    });
+
+    expect(screen.getByText('Fix validation errors before saving')).not.toBeNull();
+    expect(screen.getAllByText('2')).toHaveLength(2);
   });
 
   test('searches Sentinel SDK keys and opens the ChatGPT Web config page', () => {
