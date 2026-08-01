@@ -16,6 +16,11 @@ export type VisualConfigFieldPath =
   | 'maxRetryInterval'
   | 'noCooldownStatusCodes'
   | 'chatgptWebAutoDeleteDeadPriorities'
+  | 'chatgptWebAspectRatioMaxErrorPercent'
+  | 'chatgptWebMaxResizeEdgePixels'
+  | 'chatgptWebResizeToRequestedSize'
+  | 'chatgptWebResizeFilter'
+  | 'chatgptWebMaxImageResponseMegabytes'
   | 'routingFillFirstRange'
   | 'routingFillFirstPerAuthRpm'
   | 'routingPerAuthRequestLimit'
@@ -66,7 +71,12 @@ export type VisualConfigValidationErrorCode =
   | 'http_status_list'
   | 'codex_custom_model_id_required'
   | 'codex_custom_model_id_duplicate'
-  | 'codex_custom_model_groups_required';
+  | 'codex_custom_model_groups_required'
+  | 'number_range_0_10'
+  | 'integer_range_1_3840'
+  | 'integer_range_1_256'
+  | 'resize_requires_aspect_adaptation'
+  | 'resize_filter';
 
 export type VisualConfigValidationErrors = Partial<
   Record<VisualConfigFieldPath | string, VisualConfigValidationErrorCode>
@@ -269,6 +279,12 @@ export type VisualConfigValues = {
   chatgptWebAutoDeleteDeadPriorities: string[];
   chatgptWebImageUpstreamModel: string;
   chatgptWebIgnoreUnsupportedImageParams: boolean;
+  chatgptWebAdaptSizeToAspectRatio: boolean;
+  chatgptWebAspectRatioMaxErrorPercent: string;
+  chatgptWebResizeToRequestedSize: boolean;
+  chatgptWebResizeFilter: string;
+  chatgptWebMaxResizeEdgePixels: string;
+  chatgptWebMaxImageResponseMegabytes: string;
   requestRetry: string;
   maxRetryCredentials: string;
   maxRetryInterval: string;
@@ -343,6 +359,12 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebAutoDeleteDeadPriorities: [],
   chatgptWebImageUpstreamModel: 'gpt-5-5',
   chatgptWebIgnoreUnsupportedImageParams: false,
+  chatgptWebAdaptSizeToAspectRatio: false,
+  chatgptWebAspectRatioMaxErrorPercent: '1',
+  chatgptWebResizeToRequestedSize: false,
+  chatgptWebResizeFilter: 'catmull-rom',
+  chatgptWebMaxResizeEdgePixels: '3840',
+  chatgptWebMaxImageResponseMegabytes: '128',
   requestRetry: '',
   maxRetryCredentials: '',
   maxRetryInterval: '',

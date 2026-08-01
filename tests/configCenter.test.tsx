@@ -55,6 +55,14 @@ const translations: Record<string, string> = {
   'config_management.settings_center.disclosures.cooldown_exceptions.description':
     'Manage cooldown exceptions',
   'config_management.settings_center.chatgpt_web.login_tasks': 'Open account login tasks',
+  'config_management.settings_center.chatgpt_web.image_size_title':
+    'Image aspect ratio and output size',
+  'config_management.settings_center.chatgpt_web.adapt_size_to_aspect_ratio':
+    'Adapt size to a Web aspect ratio',
+  'config_management.settings_center.chatgpt_web.resize_to_requested_size':
+    'Resize to the requested dimensions',
+  'config_management.settings_center.chatgpt_web.aspect_ratio_max_error_percent':
+    'Maximum aspect-ratio error (%)',
   'config_management.settings_center.frontend_features.title': 'Frontend feature visibility',
   'config_management.settings_center.frontend_features.codex_agent_identity':
     'Show Codex Agent Identity conversion tools',
@@ -480,6 +488,33 @@ describe('configuration settings center', () => {
     expect(screen.queryByRole('button', { name: /structured prox/i })).toBeNull();
   });
 
+  test('links exact image resizing to ChatGPT Web aspect-ratio adaptation', () => {
+    const defaultView = renderEditor('/config?section=provider-chatgpt-web');
+
+    expect(screen.getByLabelText('Maximum aspect-ratio error (%)')).toHaveProperty(
+      'disabled',
+      true
+    );
+    expect(
+      screen.getByRole('checkbox', { name: 'Resize to the requested dimensions' })
+    ).toHaveProperty('disabled', true);
+
+    defaultView.unmount();
+    const values = cloneValues();
+    values.chatgptWebAdaptSizeToAspectRatio = true;
+    values.chatgptWebResizeToRequestedSize = true;
+    const onChange = vi.fn();
+    renderEditor('/config?section=provider-chatgpt-web', { values, onChange });
+
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Adapt size to a Web aspect ratio' })
+    );
+    expect(onChange).toHaveBeenCalledWith({
+      chatgptWebAdaptSizeToAspectRatio: false,
+      chatgptWebResizeToRequestedSize: false,
+    });
+  });
+
   test('searches Sentinel SDK keys and opens the ChatGPT Web config page', () => {
     renderEditor('/config?section=global-basics', {
       renderChatGptWebSentinel: ({ active }) =>
@@ -507,6 +542,19 @@ describe('configuration settings center', () => {
 
     expect(screen.getByTestId('location').textContent).toBe(
       '/config?section=config-chatgpt-web-account-info'
+    );
+  });
+
+  test('searches ChatGPT Web image resize leaf keys', () => {
+    renderEditor('/config?section=global-basics');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'images.chatgpt-web.max-image-response-megabytes' },
+    });
+    fireEvent.click(screen.getAllByText('Image aspect ratio and output size')[0]!);
+
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-chatgpt-web-adapt-size-to-aspect-ratio'
     );
   });
 

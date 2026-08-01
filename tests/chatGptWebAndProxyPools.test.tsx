@@ -1075,16 +1075,28 @@ describe('ChatGPT Web management compatibility', () => {
 
   test('reads and writes ChatGPT Web image compatibility settings', () => {
     const initialYaml =
-      'images:\n  chatgpt-web:\n    upstream-model: gpt-5-5-custom\n    ignore-unsupported-params: false\n';
+      'images:\n  chatgpt-web:\n    upstream-model: gpt-5-5-custom\n    ignore-unsupported-params: false\n    adapt-size-to-aspect-ratio: true\n    aspect-ratio-max-error-percent: 0.5\n    resize-to-requested-size: true\n    resize-filter: approx-bilinear\n    max-resize-edge-pixels: 2048\n    max-image-response-megabytes: 96\n';
     const { result } = renderHook(() => useVisualConfig());
 
     act(() => result.current.loadVisualValuesFromYaml(initialYaml));
     expect(result.current.visualValues.chatgptWebImageUpstreamModel).toBe('gpt-5-5-custom');
     expect(result.current.visualValues.chatgptWebIgnoreUnsupportedImageParams).toBe(false);
+    expect(result.current.visualValues.chatgptWebAdaptSizeToAspectRatio).toBe(true);
+    expect(result.current.visualValues.chatgptWebAspectRatioMaxErrorPercent).toBe('0.5');
+    expect(result.current.visualValues.chatgptWebResizeToRequestedSize).toBe(true);
+    expect(result.current.visualValues.chatgptWebResizeFilter).toBe('approx-bilinear');
+    expect(result.current.visualValues.chatgptWebMaxResizeEdgePixels).toBe('2048');
+    expect(result.current.visualValues.chatgptWebMaxImageResponseMegabytes).toBe('96');
     act(() =>
       result.current.setVisualValues({
         chatgptWebImageUpstreamModel: 'gpt-5-5',
         chatgptWebIgnoreUnsupportedImageParams: true,
+        chatgptWebAdaptSizeToAspectRatio: true,
+        chatgptWebAspectRatioMaxErrorPercent: '1.25',
+        chatgptWebResizeToRequestedSize: true,
+        chatgptWebResizeFilter: 'catmull-rom',
+        chatgptWebMaxResizeEdgePixels: '3840',
+        chatgptWebMaxImageResponseMegabytes: '128',
       })
     );
 
@@ -1093,9 +1105,51 @@ describe('ChatGPT Web management compatibility', () => {
         'chatgpt-web': {
           'upstream-model': 'gpt-5-5',
           'ignore-unsupported-params': true,
+          'adapt-size-to-aspect-ratio': true,
+          'aspect-ratio-max-error-percent': 1.25,
+          'resize-to-requested-size': true,
+          'resize-filter': 'catmull-rom',
+          'max-resize-edge-pixels': 3840,
+          'max-image-response-megabytes': 128,
         },
       },
     });
+  });
+
+  test('validates ChatGPT Web image ratio and resize settings', () => {
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() =>
+      result.current.setVisualValues({
+        chatgptWebAdaptSizeToAspectRatio: false,
+        chatgptWebAspectRatioMaxErrorPercent: '10.1',
+        chatgptWebResizeToRequestedSize: true,
+        chatgptWebResizeFilter: 'nearest-neighbor',
+        chatgptWebMaxResizeEdgePixels: '3841',
+        chatgptWebMaxImageResponseMegabytes: '0',
+      })
+    );
+
+    expect(result.current.visualValidationErrors).toMatchObject({
+      chatgptWebAspectRatioMaxErrorPercent: 'number_range_0_10',
+      chatgptWebResizeToRequestedSize: 'resize_requires_aspect_adaptation',
+      chatgptWebResizeFilter: 'resize_filter',
+      chatgptWebMaxResizeEdgePixels: 'integer_range_1_3840',
+      chatgptWebMaxImageResponseMegabytes: 'integer_range_1_256',
+    });
+  });
+
+  test('defines ChatGPT Web image resize labels in every locale', () => {
+    for (const locale of [enLocale, ruLocale, zhCNLocale, zhTWLocale]) {
+      const labels = locale.config_management.settings_center.chatgpt_web;
+      expect(labels.image_size_title).toBeTruthy();
+      expect(labels.adapt_size_to_aspect_ratio).toBeTruthy();
+      expect(labels.aspect_ratio_max_error_percent).toBeTruthy();
+      expect(labels.resize_to_requested_size).toBeTruthy();
+      expect(labels.resize_filter).toBeTruthy();
+      expect(labels.max_resize_edge_pixels).toBeTruthy();
+      expect(labels.max_image_response_megabytes).toBeTruthy();
+    }
   });
 
   test('deduplicates the same image model registered by Codex and ChatGPT Web', () => {

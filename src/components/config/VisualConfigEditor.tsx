@@ -917,6 +917,23 @@ export function VisualConfigEditor({
     ],
     [t]
   );
+  const chatGptWebResizeFilterOptions = useMemo(
+    () => [
+      {
+        value: 'catmull-rom',
+        label: t(
+          'config_management.settings_center.chatgpt_web.resize_filter_catmull_rom'
+        ),
+      },
+      {
+        value: 'approx-bilinear',
+        label: t(
+          'config_management.settings_center.chatgpt_web.resize_filter_approx_bilinear'
+        ),
+      },
+    ],
+    [t]
+  );
 
   const portError = getValidationMessage(t, validationErrors?.port);
   const rmAccessPathError = getValidationMessage(t, validationErrors?.rmAccessPath);
@@ -951,6 +968,26 @@ export function VisualConfigEditor({
   const chatGptWebAutoDeleteDeadPrioritiesError = getValidationMessage(
     t,
     validationErrors?.chatgptWebAutoDeleteDeadPriorities
+  );
+  const chatGptWebAspectRatioMaxErrorPercentError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebAspectRatioMaxErrorPercent
+  );
+  const chatGptWebMaxResizeEdgePixelsError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebMaxResizeEdgePixels
+  );
+  const chatGptWebResizeToRequestedSizeError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebResizeToRequestedSize
+  );
+  const chatGptWebResizeFilterError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebResizeFilter
+  );
+  const chatGptWebMaxImageResponseMegabytesError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebMaxImageResponseMegabytes
   );
   const fixedErrorCooldownsErrorCount = useMemo(
     () =>
@@ -1892,6 +1929,136 @@ export function VisualConfigEditor({
                   onChange({ chatgptWebIgnoreUnsupportedImageParams })
                 }
               />
+              <SectionSubsection
+                title={t('config_management.settings_center.chatgpt_web.image_size_title')}
+                description={t(
+                  'config_management.settings_center.chatgpt_web.image_size_description'
+                )}
+              >
+                <SectionStack>
+                  <div id="config-chatgpt-web-adapt-size-to-aspect-ratio">
+                    <ToggleRow
+                      title={t(
+                        'config_management.settings_center.chatgpt_web.adapt_size_to_aspect_ratio'
+                      )}
+                      description={t(
+                        'config_management.settings_center.chatgpt_web.adapt_size_to_aspect_ratio_description'
+                      )}
+                      checked={values.chatgptWebAdaptSizeToAspectRatio}
+                      disabled={disabled}
+                      onChange={(chatgptWebAdaptSizeToAspectRatio) =>
+                        onChange({
+                          chatgptWebAdaptSizeToAspectRatio,
+                          ...(chatgptWebAdaptSizeToAspectRatio
+                            ? {}
+                            : { chatgptWebResizeToRequestedSize: false }),
+                        })
+                      }
+                    />
+                  </div>
+                  <SectionGrid>
+                    <Input
+                      id="config-chatgpt-web-aspect-ratio-max-error-percent"
+                      type="number"
+                      min={0}
+                      max={10}
+                      step={0.1}
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.aspect_ratio_max_error_percent'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.aspect_ratio_max_error_percent_description'
+                      )}
+                      error={chatGptWebAspectRatioMaxErrorPercentError}
+                      value={values.chatgptWebAspectRatioMaxErrorPercent}
+                      disabled={disabled || !values.chatgptWebAdaptSizeToAspectRatio}
+                      onChange={(event) =>
+                        onChange({ chatgptWebAspectRatioMaxErrorPercent: event.target.value })
+                      }
+                    />
+                    <Input
+                      id="config-chatgpt-web-max-resize-edge-pixels"
+                      type="number"
+                      min={1}
+                      max={3840}
+                      step={1}
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.max_resize_edge_pixels'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.max_resize_edge_pixels_description'
+                      )}
+                      error={chatGptWebMaxResizeEdgePixelsError}
+                      value={values.chatgptWebMaxResizeEdgePixels}
+                      disabled={disabled || !values.chatgptWebAdaptSizeToAspectRatio}
+                      onChange={(event) =>
+                        onChange({ chatgptWebMaxResizeEdgePixels: event.target.value })
+                      }
+                    />
+                  </SectionGrid>
+                  <div id="config-chatgpt-web-resize-to-requested-size">
+                    <ToggleRow
+                      title={t(
+                        'config_management.settings_center.chatgpt_web.resize_to_requested_size'
+                      )}
+                      description={t(
+                        'config_management.settings_center.chatgpt_web.resize_to_requested_size_description'
+                      )}
+                      checked={values.chatgptWebResizeToRequestedSize}
+                      disabled={disabled || !values.chatgptWebAdaptSizeToAspectRatio}
+                      onChange={(chatgptWebResizeToRequestedSize) =>
+                        onChange({ chatgptWebResizeToRequestedSize })
+                      }
+                    />
+                    {chatGptWebResizeToRequestedSizeError ? (
+                      <div className="error-box">{chatGptWebResizeToRequestedSizeError}</div>
+                    ) : null}
+                  </div>
+                  <SectionGrid>
+                    <FieldShell
+                      label={t('config_management.settings_center.chatgpt_web.resize_filter')}
+                      htmlFor="config-chatgpt-web-resize-filter"
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.resize_filter_description'
+                      )}
+                      error={chatGptWebResizeFilterError}
+                    >
+                      <Select
+                        id="config-chatgpt-web-resize-filter"
+                        value={values.chatgptWebResizeFilter}
+                        options={chatGptWebResizeFilterOptions}
+                        disabled={
+                          disabled ||
+                          !values.chatgptWebAdaptSizeToAspectRatio ||
+                          !values.chatgptWebResizeToRequestedSize
+                        }
+                        onChange={(chatgptWebResizeFilter) =>
+                          onChange({ chatgptWebResizeFilter })
+                        }
+                      />
+                    </FieldShell>
+                    <Input
+                      id="config-chatgpt-web-max-image-response-megabytes"
+                      type="number"
+                      min={1}
+                      max={256}
+                      step={1}
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.max_image_response_megabytes'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.max_image_response_megabytes_description'
+                      )}
+                      error={chatGptWebMaxImageResponseMegabytesError}
+                      value={values.chatgptWebMaxImageResponseMegabytes}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({ chatgptWebMaxImageResponseMegabytes: event.target.value })
+                      }
+                    />
+                  </SectionGrid>
+                </SectionStack>
+              </SectionSubsection>
               <div className={styles.providerHubActions}>
                 <Button
                   type="button"

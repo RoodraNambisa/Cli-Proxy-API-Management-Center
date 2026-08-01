@@ -215,6 +215,18 @@ function setIntFromStringInDoc(doc: YamlDocument, path: YamlPath, value: unknown
   }
 }
 
+function setNumberFromStringInDoc(doc: YamlDocument, path: YamlPath, value: unknown): void {
+  const safe = typeof value === 'string' ? value : '';
+  const trimmed = safe.trim();
+  if (trimmed === '') {
+    if (docHas(doc, path)) doc.deleteIn(path);
+    return;
+  }
+
+  const parsed = Number(trimmed);
+  if (Number.isFinite(parsed)) doc.setIn(path, parsed);
+}
+
 function parseIntegerList(raw: unknown): string {
   if (!Array.isArray(raw)) return '';
 
@@ -1205,6 +1217,30 @@ function getPositiveIntegerError(value: string): 'positive_integer' | undefined 
   return Number(trimmed) > 0 ? undefined : 'positive_integer';
 }
 
+function getNumberRangeError(
+  value: string,
+  min: number,
+  max: number,
+  errorCode: 'number_range_0_10'
+): 'number_range_0_10' | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return errorCode;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed >= min && parsed <= max ? undefined : errorCode;
+}
+
+function getIntegerRangeError(
+  value: string,
+  min: number,
+  max: number,
+  errorCode: 'integer_range_1_3840' | 'integer_range_1_256'
+): 'integer_range_1_3840' | 'integer_range_1_256' | undefined {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return errorCode;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) && parsed >= min && parsed <= max ? undefined : errorCode;
+}
+
 function getHttpStatusListError(value: string): 'integer_list' | 'http_status_list' | undefined {
   const parsed = parseIntegerListText(value);
   if (!parsed.valid) return 'integer_list';
@@ -1473,6 +1509,33 @@ export function getVisualConfigValidationErrors(
     noCooldownStatusCodes: getHttpStatusListError(values.noCooldownStatusCodes),
     chatgptWebAutoDeleteDeadPriorities: getSafeIntegerStringListError(
       values.chatgptWebAutoDeleteDeadPriorities
+    ),
+    chatgptWebAspectRatioMaxErrorPercent: getNumberRangeError(
+      values.chatgptWebAspectRatioMaxErrorPercent,
+      0,
+      10,
+      'number_range_0_10'
+    ),
+    chatgptWebMaxResizeEdgePixels: getIntegerRangeError(
+      values.chatgptWebMaxResizeEdgePixels,
+      1,
+      3840,
+      'integer_range_1_3840'
+    ),
+    chatgptWebResizeToRequestedSize:
+      values.chatgptWebResizeToRequestedSize && !values.chatgptWebAdaptSizeToAspectRatio
+        ? 'resize_requires_aspect_adaptation'
+        : undefined,
+    chatgptWebResizeFilter: ['catmull-rom', 'approx-bilinear'].includes(
+      values.chatgptWebResizeFilter
+    )
+      ? undefined
+      : 'resize_filter',
+    chatgptWebMaxImageResponseMegabytes: getIntegerRangeError(
+      values.chatgptWebMaxImageResponseMegabytes,
+      1,
+      256,
+      'integer_range_1_256'
     ),
     routingFillFirstRange: routingFillFirstRangeError,
     routingFillFirstPerAuthRpm: routingFillFirstPerAuthRpmError,
@@ -2166,6 +2229,46 @@ function getNextDirtyFields(
         baselineValues.chatgptWebIgnoreUnsupportedImageParams
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAdaptSizeToAspectRatio')) {
+    updateDirty(
+      'chatgptWebAdaptSizeToAspectRatio',
+      nextValues.chatgptWebAdaptSizeToAspectRatio ===
+        baselineValues.chatgptWebAdaptSizeToAspectRatio
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAspectRatioMaxErrorPercent')) {
+    updateDirty(
+      'chatgptWebAspectRatioMaxErrorPercent',
+      nextValues.chatgptWebAspectRatioMaxErrorPercent ===
+        baselineValues.chatgptWebAspectRatioMaxErrorPercent
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebResizeToRequestedSize')) {
+    updateDirty(
+      'chatgptWebResizeToRequestedSize',
+      nextValues.chatgptWebResizeToRequestedSize ===
+        baselineValues.chatgptWebResizeToRequestedSize
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebResizeFilter')) {
+    updateDirty(
+      'chatgptWebResizeFilter',
+      nextValues.chatgptWebResizeFilter === baselineValues.chatgptWebResizeFilter
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebMaxResizeEdgePixels')) {
+    updateDirty(
+      'chatgptWebMaxResizeEdgePixels',
+      nextValues.chatgptWebMaxResizeEdgePixels === baselineValues.chatgptWebMaxResizeEdgePixels
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebMaxImageResponseMegabytes')) {
+    updateDirty(
+      'chatgptWebMaxImageResponseMegabytes',
+      nextValues.chatgptWebMaxImageResponseMegabytes ===
+        baselineValues.chatgptWebMaxImageResponseMegabytes
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'requestRetry')) {
     updateDirty('requestRetry', nextValues.requestRetry === baselineValues.requestRetry);
   }
@@ -2788,6 +2891,34 @@ export function useVisualConfig() {
           imagesChatGPTWeb?.['ignore-unsupported-params'] ??
           imagesChatGPTWeb?.ignoreUnsupportedParams
         ),
+        chatgptWebAdaptSizeToAspectRatio: parseBooleanValue(
+          imagesChatGPTWeb?.['adapt-size-to-aspect-ratio'] ??
+          imagesChatGPTWeb?.adaptSizeToAspectRatio
+        ),
+        chatgptWebAspectRatioMaxErrorPercent: String(
+          imagesChatGPTWeb?.['aspect-ratio-max-error-percent'] ??
+            imagesChatGPTWeb?.aspectRatioMaxErrorPercent ??
+            DEFAULT_VISUAL_VALUES.chatgptWebAspectRatioMaxErrorPercent
+        ),
+        chatgptWebResizeToRequestedSize: parseBooleanValue(
+          imagesChatGPTWeb?.['resize-to-requested-size'] ??
+          imagesChatGPTWeb?.resizeToRequestedSize
+        ),
+        chatgptWebResizeFilter: String(
+          imagesChatGPTWeb?.['resize-filter'] ??
+            imagesChatGPTWeb?.resizeFilter ??
+            DEFAULT_VISUAL_VALUES.chatgptWebResizeFilter
+        ),
+        chatgptWebMaxResizeEdgePixels: String(
+          imagesChatGPTWeb?.['max-resize-edge-pixels'] ??
+            imagesChatGPTWeb?.maxResizeEdgePixels ??
+            DEFAULT_VISUAL_VALUES.chatgptWebMaxResizeEdgePixels
+        ),
+        chatgptWebMaxImageResponseMegabytes: String(
+          imagesChatGPTWeb?.['max-image-response-megabytes'] ??
+            imagesChatGPTWeb?.maxImageResponseMegabytes ??
+            DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes
+        ),
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryCredentials: String(parsed['max-retry-credentials'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
@@ -3379,6 +3510,17 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel ||
           values.chatgptWebIgnoreUnsupportedImageParams !==
             DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
+          values.chatgptWebAdaptSizeToAspectRatio !==
+            DEFAULT_VISUAL_VALUES.chatgptWebAdaptSizeToAspectRatio ||
+          values.chatgptWebAspectRatioMaxErrorPercent !==
+            DEFAULT_VISUAL_VALUES.chatgptWebAspectRatioMaxErrorPercent ||
+          values.chatgptWebResizeToRequestedSize !==
+            DEFAULT_VISUAL_VALUES.chatgptWebResizeToRequestedSize ||
+          values.chatgptWebResizeFilter !== DEFAULT_VISUAL_VALUES.chatgptWebResizeFilter ||
+          values.chatgptWebMaxResizeEdgePixels !==
+            DEFAULT_VISUAL_VALUES.chatgptWebMaxResizeEdgePixels ||
+          values.chatgptWebMaxImageResponseMegabytes !==
+            DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes ||
           docHas(doc, ['images', 'chatgpt-web']) ||
           docHas(doc, ['images', 'native']) ||
           !areNativeImagesEqual(values.images.native, imagesDefaults.native);
@@ -3425,7 +3567,18 @@ export function useVisualConfig() {
             values.chatgptWebImageUpstreamModel !==
               DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel ||
             values.chatgptWebIgnoreUnsupportedImageParams !==
-              DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams
+              DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
+            values.chatgptWebAdaptSizeToAspectRatio !==
+              DEFAULT_VISUAL_VALUES.chatgptWebAdaptSizeToAspectRatio ||
+            values.chatgptWebAspectRatioMaxErrorPercent !==
+              DEFAULT_VISUAL_VALUES.chatgptWebAspectRatioMaxErrorPercent ||
+            values.chatgptWebResizeToRequestedSize !==
+              DEFAULT_VISUAL_VALUES.chatgptWebResizeToRequestedSize ||
+            values.chatgptWebResizeFilter !== DEFAULT_VISUAL_VALUES.chatgptWebResizeFilter ||
+            values.chatgptWebMaxResizeEdgePixels !==
+              DEFAULT_VISUAL_VALUES.chatgptWebMaxResizeEdgePixels ||
+            values.chatgptWebMaxImageResponseMegabytes !==
+              DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes
           ) {
             ensureMapInDoc(doc, ['images', 'chatgpt-web']);
             setStringInDoc(
@@ -3436,6 +3589,34 @@ export function useVisualConfig() {
             doc.setIn(
               ['images', 'chatgpt-web', 'ignore-unsupported-params'],
               values.chatgptWebIgnoreUnsupportedImageParams
+            );
+            doc.setIn(
+              ['images', 'chatgpt-web', 'adapt-size-to-aspect-ratio'],
+              values.chatgptWebAdaptSizeToAspectRatio
+            );
+            setNumberFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'aspect-ratio-max-error-percent'],
+              values.chatgptWebAspectRatioMaxErrorPercent
+            );
+            doc.setIn(
+              ['images', 'chatgpt-web', 'resize-to-requested-size'],
+              values.chatgptWebResizeToRequestedSize
+            );
+            setStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'resize-filter'],
+              values.chatgptWebResizeFilter
+            );
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'max-resize-edge-pixels'],
+              values.chatgptWebMaxResizeEdgePixels
+            );
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'max-image-response-megabytes'],
+              values.chatgptWebMaxImageResponseMegabytes
             );
             deleteIfMapEmpty(doc, ['images', 'chatgpt-web']);
           }
