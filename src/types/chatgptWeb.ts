@@ -115,6 +115,7 @@ export type ChatGptWebLoginProxyConfigPatch = Partial<ChatGptWebLoginProxyConfig
 
 export interface ChatGptWebAccountInfoConfig {
   'auto-refresh-enabled'?: boolean;
+  'periodic-refresh-minutes'?: number;
   'refresh-workers': number;
   'refresh-queue-size': number;
   'refresh-ttl-minutes': number;

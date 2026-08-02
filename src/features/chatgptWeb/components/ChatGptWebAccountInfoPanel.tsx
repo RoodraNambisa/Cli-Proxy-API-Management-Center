@@ -31,6 +31,7 @@ import styles from './ChatGptWebSentinelPanel.module.scss';
 
 type AccountInfoDraft = {
   autoRefreshEnabled: boolean;
+  periodicMinutes: string;
   workers: string;
   queueSize: string;
   ttlMinutes: string;
@@ -68,6 +69,14 @@ const DISCLOSURE_STORAGE_KEY = 'config-management:chatgpt-web-account-info-expan
 const POLL_INTERVAL_MS = 5000;
 
 const ACCOUNT_INFO_FIELDS = [
+  {
+    field: 'periodicMinutes',
+    labelKey: 'periodic_refresh_minutes',
+    configKey: 'periodic-refresh-minutes',
+    min: 0,
+    max: 10080,
+    errorKey: 'chatgpt_web.account_info.validation_periodic',
+  },
   {
     field: 'workers',
     labelKey: 'refresh_workers',
@@ -119,6 +128,7 @@ const ACCOUNT_INFO_FIELDS = [
 
 const DEFAULT_DRAFT: AccountInfoDraft = {
   autoRefreshEnabled: true,
+  periodicMinutes: '',
   workers: '4',
   queueSize: '256',
   ttlMinutes: '15',
@@ -126,14 +136,19 @@ const DEFAULT_DRAFT: AccountInfoDraft = {
   maxRetries: '3',
 };
 
-const toDraft = (snapshot: ChatGptWebAccountInfoSnapshot): AccountInfoDraft => ({
-  autoRefreshEnabled: snapshot.config['auto-refresh-enabled'] !== false,
-  workers: String(snapshot.config['refresh-workers']),
-  queueSize: String(snapshot.config['refresh-queue-size']),
-  ttlMinutes: String(snapshot.config['refresh-ttl-minutes']),
-  jitterSeconds: String(snapshot.config['recovery-jitter-seconds']),
-  maxRetries: String(snapshot.config['max-retries']),
-});
+const toDraft = (snapshot: ChatGptWebAccountInfoSnapshot): AccountInfoDraft => {
+  const periodicMinutes = snapshot.config['periodic-refresh-minutes'];
+  return {
+    autoRefreshEnabled: snapshot.config['auto-refresh-enabled'] !== false,
+    periodicMinutes:
+      typeof periodicMinutes === 'number' && periodicMinutes > 0 ? String(periodicMinutes) : '',
+    workers: String(snapshot.config['refresh-workers']),
+    queueSize: String(snapshot.config['refresh-queue-size']),
+    ttlMinutes: String(snapshot.config['refresh-ttl-minutes']),
+    jitterSeconds: String(snapshot.config['recovery-jitter-seconds']),
+    maxRetries: String(snapshot.config['max-retries']),
+  };
+};
 
 const parseInteger = (value: string, min: number, max: number): number | null => {
   const normalized = value.trim();
@@ -153,7 +168,11 @@ const readConfig = (
     'auto-refresh-enabled': draft.autoRefreshEnabled,
   } as ChatGptWebAccountInfoConfig;
   for (const definition of ACCOUNT_INFO_FIELDS) {
-    const value = parseInteger(draft[definition.field], definition.min, definition.max);
+    const rawValue = draft[definition.field];
+    const value =
+      definition.field === 'periodicMinutes' && rawValue.trim() === ''
+        ? 0
+        : parseInteger(rawValue, definition.min, definition.max);
     if (value === null) {
       errors[definition.field] = definition.errorKey;
     } else {
@@ -552,6 +571,12 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     !snapshot ||
     !generationReady ||
     generationConflict;
+  const periodicRefreshSupported = snapshot?.config['periodic-refresh-minutes'] !== undefined;
+  const periodicMinutes = parseInteger(draft.periodicMinutes, 0, 10080);
+  const periodicSummary =
+    periodicMinutes !== null && periodicMinutes > 0
+      ? t('chatgpt_web.account_info.periodic_every', { minutes: periodicMinutes })
+      : t('chatgpt_web.account_info.periodic_off');
   const resetDisabled = externalSaving || saving;
 
   useEffect(() => {
@@ -907,6 +932,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
           ),
           workers: draft.workers,
           ttl: draft.ttlMinutes,
+          periodic: periodicSummary,
         })}
         expanded={dirty || expanded || errorCount > 0}
         onExpandedChange={handleExpandedChange}
@@ -967,7 +993,10 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
               const inputId = `chatgpt-web-account-info-${definition.field}`;
               const hintId = `${inputId}-hint`;
               const errorId = `${inputId}-error`;
+              const unsupportedId = `${inputId}-unsupported`;
               const errorKey = parsedDraft.errors[definition.field];
+              const fieldUnsupported =
+                definition.field === 'periodicMinutes' && !periodicRefreshSupported;
               return (
                 <label key={definition.field} htmlFor={inputId}>
                   <span>{t(`chatgpt_web.account_info.${definition.labelKey}`)}</span>
@@ -979,13 +1008,24 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
                     step={1}
                     value={draft[definition.field]}
                     onChange={(event) => updateDraftField(definition.field, event.target.value)}
-                    disabled={controlsDisabled}
+                    disabled={controlsDisabled || fieldUnsupported}
                     aria-invalid={Boolean(errorKey)}
-                    aria-describedby={errorKey ? `${hintId} ${errorId}` : hintId}
+                    aria-describedby={[
+                      hintId,
+                      fieldUnsupported ? unsupportedId : '',
+                      errorKey ? errorId : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
                   />
                   <small id={hintId}>
                     {t(`chatgpt_web.account_info.${definition.labelKey}_hint`)}
                   </small>
+                  {fieldUnsupported ? (
+                    <small id={unsupportedId}>
+                      {t('chatgpt_web.account_info.periodic_unsupported')}
+                    </small>
+                  ) : null}
                   {errorKey ? (
                     <small id={errorId} className={styles.validationError} role="alert">
                       {t(errorKey)}

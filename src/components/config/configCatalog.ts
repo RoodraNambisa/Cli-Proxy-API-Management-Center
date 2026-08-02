@@ -565,13 +565,22 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     yamlKeys: [
       'chatgpt-web.account-info',
       'chatgpt-web.account-info.auto-refresh-enabled',
+      'chatgpt-web.account-info.periodic-refresh-minutes',
       'chatgpt-web.account-info.refresh-workers',
       'chatgpt-web.account-info.refresh-queue-size',
       'chatgpt-web.account-info.refresh-ttl-minutes',
       'chatgpt-web.account-info.recovery-jitter-seconds',
       'chatgpt-web.account-info.max-retries',
     ],
-    aliases: ['account info', 'image quota', '账号信息', '图片额度', '刷新池'],
+    aliases: [
+      'account info',
+      'image quota',
+      'periodic refresh',
+      '账号信息',
+      '图片额度',
+      '周期查询',
+      '刷新池',
+    ],
   },
   {
     id: 'config-chatgpt-web-sentinel',

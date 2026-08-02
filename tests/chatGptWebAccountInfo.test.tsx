@@ -45,6 +45,7 @@ vi.mock('react-i18next', async (importOriginal) => {
 
 const createSnapshot = (): ChatGptWebAccountInfoSnapshot => ({
   config: {
+    'periodic-refresh-minutes': 0,
     'refresh-workers': 4,
     'refresh-queue-size': 256,
     'refresh-ttl-minutes': 15,
@@ -327,6 +328,9 @@ describe('ChatGPT Web account info and image quota', () => {
       expect(locale.chatgpt_web.account_info.connection_changed_draft_retained).toBeTruthy();
       expect(locale.chatgpt_web.account_info.connection_snapshot_stale).toBeTruthy();
       expect(locale.chatgpt_web.account_info.confirm_draft).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.periodic_refresh_minutes).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.periodic_refresh_minutes_hint).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.periodic_unsupported).toBeTruthy();
     }
   });
 
@@ -400,6 +404,106 @@ describe('ChatGPT Web account info and image quota', () => {
     );
     await waitFor(() => expect(getAccountInfo).toHaveBeenCalledTimes(2));
     expect(toggle.checked).toBe(false);
+  });
+
+  test.each([
+    ['a blank value', ''],
+    ['an explicit zero', '0'],
+  ])('saves %s as a disabled periodic check', async (_label, value) => {
+    const initial = createSnapshot();
+    initial.config['periodic-refresh-minutes'] = 30;
+    const updated = createSnapshot();
+    const getAccountInfo = vi
+      .spyOn(chatGptWebApi, 'getAccountInfo')
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(updated);
+    const patchAccountInfo = vi.spyOn(chatGptWebApi, 'patchAccountInfo').mockResolvedValue({});
+    const ref = createRef<ChatGptWebAccountInfoPanelHandle>();
+
+    render(<ChatGptWebAccountInfoPanel ref={ref} />);
+
+    await waitFor(() => expect(getAccountInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
+    const periodic = document.getElementById(
+      'chatgpt-web-account-info-periodicMinutes'
+    ) as HTMLInputElement;
+    expect(periodic.value).toBe('30');
+    fireEvent.change(periodic, { target: { value } });
+    expect(validatePanel(ref.current)).toBe(true);
+
+    await act(async () => {
+      expect(await ref.current?.save()).toBe(true);
+    });
+
+    expect(patchAccountInfo).toHaveBeenCalledWith(
+      { 'periodic-refresh-minutes': 0 },
+      expect.any(Object)
+    );
+  });
+
+  test('validates the periodic range and saves a positive interval', async () => {
+    const initial = createSnapshot();
+    const updated = createSnapshot();
+    updated.config['periodic-refresh-minutes'] = 10080;
+    const getAccountInfo = vi
+      .spyOn(chatGptWebApi, 'getAccountInfo')
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(updated);
+    const patchAccountInfo = vi.spyOn(chatGptWebApi, 'patchAccountInfo').mockResolvedValue({});
+    const ref = createRef<ChatGptWebAccountInfoPanelHandle>();
+
+    render(<ChatGptWebAccountInfoPanel ref={ref} />);
+
+    await waitFor(() => expect(getAccountInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
+    const periodic = document.getElementById(
+      'chatgpt-web-account-info-periodicMinutes'
+    ) as HTMLInputElement;
+    for (const value of ['-1', '10081', '1.5']) {
+      fireEvent.change(periodic, { target: { value } });
+      expect(validatePanel(ref.current)).toBe(false);
+    }
+    for (const value of ['1', '10080']) {
+      fireEvent.change(periodic, { target: { value } });
+      expect(validatePanel(ref.current)).toBe(true);
+    }
+
+    await act(async () => {
+      expect(await ref.current?.save()).toBe(true);
+    });
+
+    expect(patchAccountInfo).toHaveBeenCalledWith(
+      { 'periodic-refresh-minutes': 10080 },
+      expect.any(Object)
+    );
+  });
+
+  test('disables only the periodic field when an older backend omits it', async () => {
+    const legacy = createSnapshot();
+    delete legacy.config['periodic-refresh-minutes'];
+    const getAccountInfo = vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(legacy);
+    const patchAccountInfo = vi.spyOn(chatGptWebApi, 'patchAccountInfo').mockResolvedValue({});
+    const ref = createRef<ChatGptWebAccountInfoPanelHandle>();
+
+    render(<ChatGptWebAccountInfoPanel ref={ref} />);
+
+    await waitFor(() => expect(getAccountInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
+    const periodic = document.getElementById(
+      'chatgpt-web-account-info-periodicMinutes'
+    ) as HTMLInputElement;
+    const workers = document.getElementById('chatgpt-web-account-info-workers') as HTMLInputElement;
+    expect(periodic.value).toBe('');
+    expect(periodic.disabled).toBe(true);
+    expect(workers.disabled).toBe(false);
+    expect(screen.getByText('chatgpt_web.account_info.periodic_unsupported')).not.toBeNull();
+    fireEvent.change(workers, { target: { value: '6' } });
+
+    await act(async () => {
+      expect(await ref.current?.save()).toBe(true);
+    });
+
+    expect(patchAccountInfo).toHaveBeenCalledWith({ 'refresh-workers': 6 }, expect.any(Object));
   });
 
   test('restarts an aborted initial settings load during StrictMode effect replay', async () => {
