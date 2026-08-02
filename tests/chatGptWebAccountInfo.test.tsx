@@ -1408,8 +1408,10 @@ describe('ChatGPT Web account info and image quota', () => {
     expect(result.current.manualRefreshingNames).toEqual([]);
   });
 
-  test('stops current-page auto refresh while keeping selected force refresh available', async () => {
-    vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(createSnapshot());
+  test('does not refresh the current page when visible refresh inputs are omitted', async () => {
+    const getAccountInfo = vi
+      .spyOn(chatGptWebApi, 'getAccountInfo')
+      .mockResolvedValue(createSnapshot());
     const start = vi
       .spyOn(chatGptWebApi, 'startAccountInfoRefreshTask')
       .mockImplementation(async (names) => createCompletedTask(names));
@@ -1418,9 +1420,6 @@ describe('ChatGPT Web account info and image quota', () => {
       useChatGptWebAccountInfoRefresh({
         active: true,
         disabled: false,
-        automaticRefreshEnabled: false,
-        visibleScopeKey: 'page-1',
-        visibleNames: ['visible-web.json'],
         selectedNames: ['selected-web.json'],
         reloadFiles,
       })
@@ -1429,6 +1428,7 @@ describe('ChatGPT Web account info and image quota', () => {
     await act(async () => {
       await new Promise((resolve) => window.setTimeout(resolve, 400));
     });
+    expect(getAccountInfo).not.toHaveBeenCalled();
     expect(start).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -1437,6 +1437,7 @@ describe('ChatGPT Web account info and image quota', () => {
 
     expect(start).toHaveBeenCalledTimes(1);
     expect(start).toHaveBeenCalledWith(['selected-web.json'], true, expect.any(Object));
+    expect(getAccountInfo).toHaveBeenCalledTimes(1);
     expect(reloadFiles).toHaveBeenCalledTimes(1);
   });
 

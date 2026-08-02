@@ -2804,10 +2804,10 @@
     },
     "account_info": {
       "title": "帳號資訊與圖片配額",
-      "description": "設定帳號類型與圖片配額的有界更新池；只依目前頁面、手動選取或後端恢復排程更新。",
+      "description": "設定帳號資訊與圖片配額更新工作的有界 Worker 池；工作只由後端事件或手動操作觸發。",
       "summary": "{{state}} · {{workers}} 個 Worker · TTL {{ttl}} 分鐘",
       "auto_refresh_enabled": "自動更新帳號資訊與圖片配額",
-      "auto_refresh_enabled_description": "開啟後依目前頁面、圖片配額錯誤和恢復排程自動更新；關閉後仍可手動更新選取的憑證。",
+      "auto_refresh_enabled_description": "開啟後，圖片配額錯誤和恢復排程可觸發更新；關閉後只允許手動更新。",
       "auto_refresh_on": "自動更新",
       "auto_refresh_off": "已關閉",
       "refresh_workers": "更新 Worker 數量",

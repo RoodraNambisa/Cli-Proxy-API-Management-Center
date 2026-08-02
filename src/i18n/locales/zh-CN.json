@@ -2785,10 +2785,10 @@
     },
     "account_info": {
       "title": "账号信息与图片额度",
-      "description": "配置账号类型和图片额度的有界刷新池；只按当前页、手动选择或后端恢复计划刷新。",
+      "description": "配置账号信息与图片额度刷新任务的有界 Worker 池；任务仅由后端事件或手动操作触发。",
       "summary": "{{state}} · {{workers}} 个 Worker · TTL {{ttl}} 分钟",
       "auto_refresh_enabled": "自动刷新账号信息与图片额度",
-      "auto_refresh_enabled_description": "开启后按当前页、图片额度错误和恢复计划自动刷新；关闭后仍可手动刷新选中凭证。",
+      "auto_refresh_enabled_description": "开启后，图片额度错误和恢复计划可触发刷新；关闭后只允许手动刷新。",
       "auto_refresh_on": "自动刷新",
       "auto_refresh_off": "已关闭",
       "refresh_workers": "刷新 Worker 数量",

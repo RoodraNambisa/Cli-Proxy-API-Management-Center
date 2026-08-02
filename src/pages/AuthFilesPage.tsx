@@ -68,11 +68,6 @@ import { useAuthFilesStatusBarCache } from '@/features/authFiles/hooks/useAuthFi
 import { useAuthFilesUsageSummary } from '@/features/authFiles/hooks/useAuthFilesUsageSummary';
 import { useChatGptWebAccountInfoRefresh } from '@/features/authFiles/hooks/useChatGptWebAccountInfoRefresh';
 import {
-  clearChatGptWebAccountInfoUnsupported,
-  isChatGptWebAccountInfoUnsupported,
-  markChatGptWebAccountInfoUnsupported,
-} from '@/features/chatgptWeb/accountInfoCapability';
-import {
   ALL_PLAN_FILTER,
   ALL_PRIORITY_FILTER,
   UNSET_PRIORITY_FILTER,
@@ -96,8 +91,6 @@ import {
   useQuotaStore,
   useThemeStore,
 } from '@/stores';
-import { apiClient } from '@/services/api/client';
-import { chatGptWebApi } from '@/services/api/chatgptWeb';
 import type { CodexPlanTypeRefreshTask } from '@/types';
 import { getStatusFromError } from '@/utils/quota';
 import { normalizeAuthIndex } from '@/utils/usage';
@@ -932,41 +925,6 @@ export function AuthFilesPage() {
     [pageItems]
   );
   const selectedNames = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
-  const currentPageChatGptWebNames = useMemo(
-    () => pageItems.filter(isChatGptWebAccountInfoRefreshable).map((file) => file.name),
-    [pageItems]
-  );
-  const currentPageChatGptWebNamesKey = JSON.stringify(currentPageChatGptWebNames);
-  const [chatGptWebAutomaticRefreshEnabled, setChatGptWebAutomaticRefreshEnabled] = useState(false);
-  const chatGptWebAccountInfoVisibleScopeKey = useMemo(
-    () =>
-      JSON.stringify([
-        currentPage,
-        pageSize,
-        filter,
-        planFilter,
-        priorityFilter,
-        problemOnly,
-        enabledOnly,
-        disabledOnly,
-        compactMode,
-        normalizedSearch,
-        sortMode,
-      ]),
-    [
-      compactMode,
-      disabledOnly,
-      enabledOnly,
-      filter,
-      currentPage,
-      pageSize,
-      planFilter,
-      priorityFilter,
-      problemOnly,
-      normalizedSearch,
-      sortMode,
-    ]
-  );
   const selectedChatGptWebNames = useMemo(
     () =>
       files
@@ -974,46 +932,6 @@ export function AuthFilesPage() {
         .map((file) => file.name),
     [files, selectedFiles]
   );
-  useEffect(() => {
-    setChatGptWebAutomaticRefreshEnabled(false);
-    if (
-      !isCurrentLayer ||
-      loading ||
-      !uiStateHydrated ||
-      disableControls ||
-      currentPageChatGptWebNames.length === 0 ||
-      isChatGptWebAccountInfoUnsupported(connectionGenerationKey)
-    ) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const connection = apiClient.captureConnection();
-    void chatGptWebApi
-      .getAccountInfo(connection, controller.signal)
-      .then((snapshot) => {
-        if (controller.signal.aborted) return;
-        clearChatGptWebAccountInfoUnsupported(connectionGenerationKey);
-        setChatGptWebAutomaticRefreshEnabled(snapshot.config['auto-refresh-enabled'] !== false);
-      })
-      .catch((error) => {
-        if (controller.signal.aborted) return;
-        if (getStatusFromError(error) === 404) {
-          markChatGptWebAccountInfoUnsupported(connectionGenerationKey);
-        }
-        setChatGptWebAutomaticRefreshEnabled(false);
-      });
-
-    return () => controller.abort();
-  }, [
-    connectionGenerationKey,
-    currentPageChatGptWebNames.length,
-    currentPageChatGptWebNamesKey,
-    disableControls,
-    isCurrentLayer,
-    loading,
-    uiStateHydrated,
-  ]);
   const {
     manualRefreshing: chatGptWebAccountInfoRefreshing,
     manualRefreshingNames: chatGptWebAccountInfoRefreshingNames,
@@ -1024,10 +942,7 @@ export function AuthFilesPage() {
   } = useChatGptWebAccountInfoRefresh({
     active: isCurrentLayer && !loading && uiStateHydrated,
     disabled: disableControls,
-    automaticRefreshEnabled: chatGptWebAutomaticRefreshEnabled,
     connectionGenerationKey,
-    visibleScopeKey: chatGptWebAccountInfoVisibleScopeKey,
-    visibleNames: currentPageChatGptWebNames,
     selectedNames: selectedChatGptWebNames,
     reloadFiles: refreshFilesInBackground,
   });

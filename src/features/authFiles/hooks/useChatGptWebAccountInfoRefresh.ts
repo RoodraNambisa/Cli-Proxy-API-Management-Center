@@ -36,8 +36,8 @@ type UseChatGptWebAccountInfoRefreshOptions = {
   disabled: boolean;
   automaticRefreshEnabled?: boolean;
   connectionGenerationKey?: string;
-  visibleScopeKey: string;
-  visibleNames: string[];
+  visibleScopeKey?: string;
+  visibleNames?: string[];
   selectedNames: string[];
   reloadFiles: () => Promise<unknown>;
 };
@@ -136,8 +136,8 @@ export function useChatGptWebAccountInfoRefresh({
   disabled,
   automaticRefreshEnabled = true,
   connectionGenerationKey = '',
-  visibleScopeKey,
-  visibleNames,
+  visibleScopeKey = '',
+  visibleNames = [],
   selectedNames,
   reloadFiles,
 }: UseChatGptWebAccountInfoRefreshOptions) {

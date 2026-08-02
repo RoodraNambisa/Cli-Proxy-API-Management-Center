@@ -2781,10 +2781,10 @@
     },
     "account_info": {
       "title": "Account info and image quota",
-      "description": "Configure the bounded account and image quota refresh pool. Refreshes only visible, selected, or recovery-scheduled credentials.",
+      "description": "Configure bounded workers for event-triggered and manual account and image quota refreshes.",
       "summary": "{{state}} · {{workers}} workers · {{ttl}} min TTL",
       "auto_refresh_enabled": "Automatically refresh account info and image quota",
-      "auto_refresh_enabled_description": "Automatically refresh for visible credentials, image quota errors, and recovery schedules. Manual refresh remains available when disabled.",
+      "auto_refresh_enabled_description": "When enabled, image quota errors and recovery schedules trigger refreshes. When disabled, only manual refresh is available.",
       "auto_refresh_on": "Auto refresh",
       "auto_refresh_off": "Disabled",
       "refresh_workers": "Refresh workers",
