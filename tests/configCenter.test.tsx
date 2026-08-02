@@ -58,8 +58,12 @@ const translations: Record<string, string> = {
   'config_management.settings_center.chatgpt_web.login_tasks': 'Open account login tasks',
   'config_management.settings_center.chatgpt_web.image_size_title':
     'Image aspect ratio and output size',
+  'config_management.settings_center.chatgpt_web.image_size_status_adapted':
+    'Aspect-ratio adaptation',
+  'config_management.settings_center.chatgpt_web.image_size_status_strict': 'Strict size mode',
   'config_management.settings_center.chatgpt_web.adapt_size_to_aspect_ratio':
     'Adapt size to a Web aspect ratio',
+  'config_management.settings_center.chatgpt_web.strict_size': 'Strict size mode',
   'config_management.settings_center.chatgpt_web.auto_delete_dead_runtime_count':
     'Automatically deleted during this server run',
   'config_management.settings_center.chatgpt_web.auto_delete_dead_runtime_count_hint':
@@ -78,8 +82,7 @@ const translations: Record<string, string> = {
   'config_management.settings_center.search_placeholder': 'Search configuration',
   'config_management.status_dirty_short': 'Unsaved',
   'config_management.visual.validation_blocked_short': 'Fix errors',
-  'config_management.visual.validation.validation_blocked':
-    'Fix validation errors before saving',
+  'config_management.visual.validation.validation_blocked': 'Fix validation errors before saving',
 };
 
 let scrollIntoViewMock = vi.fn();
@@ -526,7 +529,19 @@ describe('configuration settings center', () => {
   test('links exact image resizing to ChatGPT Web aspect-ratio adaptation', () => {
     const defaultView = renderEditor('/config?section=provider-chatgpt-web');
 
+    const disclosure = screen.getByRole('button', {
+      name: /Image aspect ratio and output size/,
+    });
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(disclosure);
+    expect(localStorage.getItem('config-management:config-chatgpt-web-image-size-expanded')).toBe(
+      'true'
+    );
     expect(screen.getByLabelText('Maximum aspect-ratio error (%)')).toHaveProperty(
+      'disabled',
+      true
+    );
+    expect(screen.getByRole('checkbox', { name: 'Strict size mode' })).toHaveProperty(
       'disabled',
       true
     );
@@ -541,13 +556,55 @@ describe('configuration settings center', () => {
     const onChange = vi.fn();
     renderEditor('/config?section=provider-chatgpt-web', { values, onChange });
 
-    fireEvent.click(
-      screen.getByRole('checkbox', { name: 'Adapt size to a Web aspect ratio' })
-    );
+    const strictToggle = screen.getByRole('checkbox', { name: 'Strict size mode' });
+    expect((strictToggle as HTMLInputElement).disabled).toBe(false);
+    fireEvent.click(strictToggle);
+    expect(onChange).toHaveBeenCalledWith({ chatgptWebStrictSize: true });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Adapt size to a Web aspect ratio' }));
     expect(onChange).toHaveBeenCalledWith({
       chatgptWebAdaptSizeToAspectRatio: false,
+      chatgptWebStrictSize: false,
       chatgptWebResizeToRequestedSize: false,
     });
+  });
+
+  test('opens ChatGPT Web image size settings for dirty state and validation errors', () => {
+    const dirtyView = renderEditor('/config?section=provider-chatgpt-web', {
+      dirtyFields: ['chatgptWebStrictSize'],
+    });
+
+    expect(
+      screen
+        .getByRole('button', { name: /Image aspect ratio and output size/ })
+        .getAttribute('aria-expanded')
+    ).toBe('true');
+    dirtyView.unmount();
+
+    renderEditor('/config?section=provider-chatgpt-web', {
+      validationErrors: {
+        chatgptWebStrictSize: 'strict_size_requires_aspect_adaptation',
+      },
+    });
+    expect(
+      screen
+        .getByRole('button', { name: /Image aspect ratio and output size/ })
+        .getAttribute('aria-expanded')
+    ).toBe('true');
+  });
+
+  test('summarizes strict ChatGPT Web image size mode while collapsed', () => {
+    const values = cloneValues();
+    values.chatgptWebAdaptSizeToAspectRatio = true;
+    values.chatgptWebStrictSize = true;
+    renderEditor('/config?section=provider-chatgpt-web', { values });
+
+    expect(
+      screen
+        .getByRole('button', { name: /Image aspect ratio and output size/ })
+        .getAttribute('aria-expanded')
+    ).toBe('false');
+    expect(screen.getByText('Strict size mode')).not.toBeNull();
   });
 
   test('counts ChatGPT Web image resize validation errors on the provider page', () => {
@@ -559,7 +616,7 @@ describe('configuration settings center', () => {
     });
 
     expect(screen.getByText('Fix validation errors before saving')).not.toBeNull();
-    expect(screen.getAllByText('2')).toHaveLength(2);
+    expect(screen.getAllByText('2')).toHaveLength(3);
   });
 
   test('searches Sentinel SDK keys and opens the ChatGPT Web config page', () => {
@@ -603,6 +660,11 @@ describe('configuration settings center', () => {
     expect(screen.getByTestId('location').textContent).toBe(
       '/config?section=config-chatgpt-web-adapt-size-to-aspect-ratio'
     );
+    expect(
+      screen
+        .getByRole('button', { name: /Image aspect ratio and output size/ })
+        .getAttribute('aria-expanded')
+    ).toBe('true');
   });
 
   test('searches login proxy and fallback Usage keys on the ChatGPT Web config page', () => {

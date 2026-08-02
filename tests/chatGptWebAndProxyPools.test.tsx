@@ -1077,13 +1077,14 @@ describe('ChatGPT Web management compatibility', () => {
 
   test('reads and writes ChatGPT Web image compatibility settings', () => {
     const initialYaml =
-      'images:\n  chatgpt-web:\n    upstream-model: gpt-5-5-custom\n    ignore-unsupported-params: false\n    adapt-size-to-aspect-ratio: true\n    aspect-ratio-max-error-percent: 0.5\n    resize-to-requested-size: true\n    resize-filter: approx-bilinear\n    max-resize-edge-pixels: 2048\n    max-image-response-megabytes: 96\n';
+      'images:\n  chatgpt-web:\n    upstream-model: gpt-5-5-custom\n    ignore-unsupported-params: false\n    adapt-size-to-aspect-ratio: true\n    strict-size: true\n    aspect-ratio-max-error-percent: 0.5\n    resize-to-requested-size: true\n    resize-filter: approx-bilinear\n    max-resize-edge-pixels: 2048\n    max-image-response-megabytes: 96\n';
     const { result } = renderHook(() => useVisualConfig());
 
     act(() => result.current.loadVisualValuesFromYaml(initialYaml));
     expect(result.current.visualValues.chatgptWebImageUpstreamModel).toBe('gpt-5-5-custom');
     expect(result.current.visualValues.chatgptWebIgnoreUnsupportedImageParams).toBe(false);
     expect(result.current.visualValues.chatgptWebAdaptSizeToAspectRatio).toBe(true);
+    expect(result.current.visualValues.chatgptWebStrictSize).toBe(true);
     expect(result.current.visualValues.chatgptWebAspectRatioMaxErrorPercent).toBe('0.5');
     expect(result.current.visualValues.chatgptWebResizeToRequestedSize).toBe(true);
     expect(result.current.visualValues.chatgptWebResizeFilter).toBe('approx-bilinear');
@@ -1094,6 +1095,7 @@ describe('ChatGPT Web management compatibility', () => {
         chatgptWebImageUpstreamModel: 'gpt-5-5',
         chatgptWebIgnoreUnsupportedImageParams: true,
         chatgptWebAdaptSizeToAspectRatio: true,
+        chatgptWebStrictSize: true,
         chatgptWebAspectRatioMaxErrorPercent: '1.25',
         chatgptWebResizeToRequestedSize: true,
         chatgptWebResizeFilter: 'catmull-rom',
@@ -1108,6 +1110,7 @@ describe('ChatGPT Web management compatibility', () => {
           'upstream-model': 'gpt-5-5',
           'ignore-unsupported-params': true,
           'adapt-size-to-aspect-ratio': true,
+          'strict-size': true,
           'aspect-ratio-max-error-percent': 1.25,
           'resize-to-requested-size': true,
           'resize-filter': 'catmull-rom',
@@ -1124,6 +1127,7 @@ describe('ChatGPT Web management compatibility', () => {
     act(() =>
       result.current.setVisualValues({
         chatgptWebAdaptSizeToAspectRatio: false,
+        chatgptWebStrictSize: true,
         chatgptWebAspectRatioMaxErrorPercent: '10.1',
         chatgptWebResizeToRequestedSize: true,
         chatgptWebResizeFilter: 'nearest-neighbor',
@@ -1134,6 +1138,7 @@ describe('ChatGPT Web management compatibility', () => {
 
     expect(result.current.visualValidationErrors).toMatchObject({
       chatgptWebAspectRatioMaxErrorPercent: 'number_range_0_10',
+      chatgptWebStrictSize: 'strict_size_requires_aspect_adaptation',
       chatgptWebResizeToRequestedSize: 'resize_requires_aspect_adaptation',
       chatgptWebResizeFilter: 'resize_filter',
       chatgptWebMaxResizeEdgePixels: 'integer_range_1_3840',
@@ -1146,6 +1151,10 @@ describe('ChatGPT Web management compatibility', () => {
       const labels = locale.config_management.settings_center.chatgpt_web;
       expect(labels.image_size_title).toBeTruthy();
       expect(labels.adapt_size_to_aspect_ratio).toBeTruthy();
+      expect(labels.strict_size).toBeTruthy();
+      expect(labels.strict_size_description).toBeTruthy();
+      expect(labels.image_size_status_adapted).toBeTruthy();
+      expect(labels.image_size_status_strict).toBeTruthy();
       expect(labels.aspect_ratio_max_error_percent).toBeTruthy();
       expect(labels.resize_to_requested_size).toBeTruthy();
       expect(labels.resize_filter).toBeTruthy();

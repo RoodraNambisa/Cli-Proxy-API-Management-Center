@@ -16,6 +16,7 @@ export type VisualConfigFieldPath =
   | 'maxRetryInterval'
   | 'noCooldownStatusCodes'
   | 'chatgptWebAutoDeleteDeadPriorities'
+  | 'chatgptWebStrictSize'
   | 'chatgptWebAspectRatioMaxErrorPercent'
   | 'chatgptWebMaxResizeEdgePixels'
   | 'chatgptWebResizeToRequestedSize'
@@ -75,6 +76,7 @@ export type VisualConfigValidationErrorCode =
   | 'number_range_0_10'
   | 'integer_range_1_3840'
   | 'integer_range_1_256'
+  | 'strict_size_requires_aspect_adaptation'
   | 'resize_requires_aspect_adaptation'
   | 'resize_filter';
 
@@ -280,6 +282,7 @@ export type VisualConfigValues = {
   chatgptWebImageUpstreamModel: string;
   chatgptWebIgnoreUnsupportedImageParams: boolean;
   chatgptWebAdaptSizeToAspectRatio: boolean;
+  chatgptWebStrictSize: boolean;
   chatgptWebAspectRatioMaxErrorPercent: string;
   chatgptWebResizeToRequestedSize: boolean;
   chatgptWebResizeFilter: string;
@@ -360,6 +363,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebImageUpstreamModel: 'gpt-5-5',
   chatgptWebIgnoreUnsupportedImageParams: false,
   chatgptWebAdaptSizeToAspectRatio: false,
+  chatgptWebStrictSize: false,
   chatgptWebAspectRatioMaxErrorPercent: '1',
   chatgptWebResizeToRequestedSize: false,
   chatgptWebResizeFilter: 'catmull-rom',

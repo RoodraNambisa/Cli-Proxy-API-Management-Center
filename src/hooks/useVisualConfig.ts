@@ -1522,6 +1522,10 @@ export function getVisualConfigValidationErrors(
       3840,
       'integer_range_1_3840'
     ),
+    chatgptWebStrictSize:
+      values.chatgptWebStrictSize && !values.chatgptWebAdaptSizeToAspectRatio
+        ? 'strict_size_requires_aspect_adaptation'
+        : undefined,
     chatgptWebResizeToRequestedSize:
       values.chatgptWebResizeToRequestedSize && !values.chatgptWebAdaptSizeToAspectRatio
         ? 'resize_requires_aspect_adaptation'
@@ -2236,6 +2240,12 @@ function getNextDirtyFields(
         baselineValues.chatgptWebAdaptSizeToAspectRatio
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebStrictSize')) {
+    updateDirty(
+      'chatgptWebStrictSize',
+      nextValues.chatgptWebStrictSize === baselineValues.chatgptWebStrictSize
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAspectRatioMaxErrorPercent')) {
     updateDirty(
       'chatgptWebAspectRatioMaxErrorPercent',
@@ -2246,8 +2256,7 @@ function getNextDirtyFields(
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebResizeToRequestedSize')) {
     updateDirty(
       'chatgptWebResizeToRequestedSize',
-      nextValues.chatgptWebResizeToRequestedSize ===
-        baselineValues.chatgptWebResizeToRequestedSize
+      nextValues.chatgptWebResizeToRequestedSize === baselineValues.chatgptWebResizeToRequestedSize
     );
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebResizeFilter')) {
@@ -2893,7 +2902,10 @@ export function useVisualConfig() {
         ),
         chatgptWebAdaptSizeToAspectRatio: parseBooleanValue(
           imagesChatGPTWeb?.['adapt-size-to-aspect-ratio'] ??
-          imagesChatGPTWeb?.adaptSizeToAspectRatio
+            imagesChatGPTWeb?.adaptSizeToAspectRatio
+        ),
+        chatgptWebStrictSize: parseBooleanValue(
+          imagesChatGPTWeb?.['strict-size'] ?? imagesChatGPTWeb?.strictSize
         ),
         chatgptWebAspectRatioMaxErrorPercent: String(
           imagesChatGPTWeb?.['aspect-ratio-max-error-percent'] ??
@@ -2901,8 +2913,7 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebAspectRatioMaxErrorPercent
         ),
         chatgptWebResizeToRequestedSize: parseBooleanValue(
-          imagesChatGPTWeb?.['resize-to-requested-size'] ??
-          imagesChatGPTWeb?.resizeToRequestedSize
+          imagesChatGPTWeb?.['resize-to-requested-size'] ?? imagesChatGPTWeb?.resizeToRequestedSize
         ),
         chatgptWebResizeFilter: String(
           imagesChatGPTWeb?.['resize-filter'] ??
@@ -3512,6 +3523,7 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
           values.chatgptWebAdaptSizeToAspectRatio !==
             DEFAULT_VISUAL_VALUES.chatgptWebAdaptSizeToAspectRatio ||
+          values.chatgptWebStrictSize !== DEFAULT_VISUAL_VALUES.chatgptWebStrictSize ||
           values.chatgptWebAspectRatioMaxErrorPercent !==
             DEFAULT_VISUAL_VALUES.chatgptWebAspectRatioMaxErrorPercent ||
           values.chatgptWebResizeToRequestedSize !==
@@ -3570,6 +3582,7 @@ export function useVisualConfig() {
               DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
             values.chatgptWebAdaptSizeToAspectRatio !==
               DEFAULT_VISUAL_VALUES.chatgptWebAdaptSizeToAspectRatio ||
+            values.chatgptWebStrictSize !== DEFAULT_VISUAL_VALUES.chatgptWebStrictSize ||
             values.chatgptWebAspectRatioMaxErrorPercent !==
               DEFAULT_VISUAL_VALUES.chatgptWebAspectRatioMaxErrorPercent ||
             values.chatgptWebResizeToRequestedSize !==
@@ -3594,6 +3607,7 @@ export function useVisualConfig() {
               ['images', 'chatgpt-web', 'adapt-size-to-aspect-ratio'],
               values.chatgptWebAdaptSizeToAspectRatio
             );
+            doc.setIn(['images', 'chatgpt-web', 'strict-size'], values.chatgptWebStrictSize);
             setNumberFromStringInDoc(
               doc,
               ['images', 'chatgpt-web', 'aspect-ratio-max-error-percent'],

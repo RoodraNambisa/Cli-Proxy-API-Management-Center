@@ -963,15 +963,11 @@ export function VisualConfigEditor({
     () => [
       {
         value: 'catmull-rom',
-        label: t(
-          'config_management.settings_center.chatgpt_web.resize_filter_catmull_rom'
-        ),
+        label: t('config_management.settings_center.chatgpt_web.resize_filter_catmull_rom'),
       },
       {
         value: 'approx-bilinear',
-        label: t(
-          'config_management.settings_center.chatgpt_web.resize_filter_approx_bilinear'
-        ),
+        label: t('config_management.settings_center.chatgpt_web.resize_filter_approx_bilinear'),
       },
     ],
     [t]
@@ -1015,6 +1011,7 @@ export function VisualConfigEditor({
     t,
     validationErrors?.chatgptWebAspectRatioMaxErrorPercent
   );
+  const chatGptWebStrictSizeError = getValidationMessage(t, validationErrors?.chatgptWebStrictSize);
   const chatGptWebMaxResizeEdgePixelsError = getValidationMessage(
     t,
     validationErrors?.chatgptWebMaxResizeEdgePixels
@@ -1096,6 +1093,23 @@ export function VisualConfigEditor({
   const errorResponseRewritesDirty = hasDirtyConfigField(dirtyFields, ['errorResponseRewrites']);
   const fixedErrorCooldownsDirty = hasDirtyConfigField(dirtyFields, ['fixedErrorCooldowns']);
   const noCooldownStatusCodesDirty = hasDirtyConfigField(dirtyFields, ['noCooldownStatusCodes']);
+  const chatGptWebImageSizeDirty = hasDirtyConfigField(dirtyFields, [
+    'chatgptWebAdaptSizeToAspectRatio',
+    'chatgptWebStrictSize',
+    'chatgptWebAspectRatioMaxErrorPercent',
+    'chatgptWebMaxResizeEdgePixels',
+    'chatgptWebResizeToRequestedSize',
+    'chatgptWebResizeFilter',
+    'chatgptWebMaxImageResponseMegabytes',
+  ]);
+  const chatGptWebImageSizeErrorCount = [
+    chatGptWebStrictSizeError,
+    chatGptWebAspectRatioMaxErrorPercentError,
+    chatGptWebMaxResizeEdgePixelsError,
+    chatGptWebResizeToRequestedSizeError,
+    chatGptWebResizeFilterError,
+    chatGptWebMaxImageResponseMegabytesError,
+  ].filter(Boolean).length;
   const retrySettingsErrorCount = [
     requestRetryError,
     maxRetryCredentialsError,
@@ -1575,6 +1589,7 @@ export function VisualConfigEditor({
         chatGptWebSentinelErrorCount +
         countErrors([
           'chatgptWebAutoDeleteDeadPriorities',
+          'chatgptWebStrictSize',
           'chatgptWebAspectRatioMaxErrorPercent',
           'chatgptWebMaxResizeEdgePixels',
           'chatgptWebResizeToRequestedSize',
@@ -1996,11 +2011,31 @@ export function VisualConfigEditor({
                   onChange({ chatgptWebIgnoreUnsupportedImageParams })
                 }
               />
-              <SectionSubsection
+              <SettingsDisclosure
+                id="config-chatgpt-web-image-size"
                 title={t('config_management.settings_center.chatgpt_web.image_size_title')}
                 description={t(
                   'config_management.settings_center.chatgpt_web.image_size_description'
                 )}
+                summary={t(
+                  values.chatgptWebStrictSize
+                    ? 'config_management.settings_center.chatgpt_web.image_size_status_strict'
+                    : values.chatgptWebAdaptSizeToAspectRatio
+                      ? 'config_management.settings_center.chatgpt_web.image_size_status_adapted'
+                      : 'config_management.settings_center.status_disabled'
+                )}
+                focusTarget={focusTarget}
+                targetIds={[
+                  'config-chatgpt-web-adapt-size-to-aspect-ratio',
+                  'config-chatgpt-web-strict-size',
+                  'config-chatgpt-web-aspect-ratio-max-error-percent',
+                  'config-chatgpt-web-max-resize-edge-pixels',
+                  'config-chatgpt-web-resize-to-requested-size',
+                  'config-chatgpt-web-resize-filter',
+                  'config-chatgpt-web-max-image-response-megabytes',
+                ]}
+                dirty={chatGptWebImageSizeDirty}
+                errorCount={chatGptWebImageSizeErrorCount}
               >
                 <SectionStack>
                   <div id="config-chatgpt-web-adapt-size-to-aspect-ratio">
@@ -2018,10 +2053,27 @@ export function VisualConfigEditor({
                           chatgptWebAdaptSizeToAspectRatio,
                           ...(chatgptWebAdaptSizeToAspectRatio
                             ? {}
-                            : { chatgptWebResizeToRequestedSize: false }),
+                            : {
+                                chatgptWebStrictSize: false,
+                                chatgptWebResizeToRequestedSize: false,
+                              }),
                         })
                       }
                     />
+                  </div>
+                  <div id="config-chatgpt-web-strict-size">
+                    <ToggleRow
+                      title={t('config_management.settings_center.chatgpt_web.strict_size')}
+                      description={t(
+                        'config_management.settings_center.chatgpt_web.strict_size_description'
+                      )}
+                      checked={values.chatgptWebStrictSize}
+                      disabled={disabled || !values.chatgptWebAdaptSizeToAspectRatio}
+                      onChange={(chatgptWebStrictSize) => onChange({ chatgptWebStrictSize })}
+                    />
+                    {chatGptWebStrictSizeError ? (
+                      <div className="error-box">{chatGptWebStrictSizeError}</div>
+                    ) : null}
                   </div>
                   <SectionGrid>
                     <Input
@@ -2099,9 +2151,7 @@ export function VisualConfigEditor({
                           !values.chatgptWebAdaptSizeToAspectRatio ||
                           !values.chatgptWebResizeToRequestedSize
                         }
-                        onChange={(chatgptWebResizeFilter) =>
-                          onChange({ chatgptWebResizeFilter })
-                        }
+                        onChange={(chatgptWebResizeFilter) => onChange({ chatgptWebResizeFilter })}
                       />
                     </FieldShell>
                     <Input
@@ -2125,7 +2175,7 @@ export function VisualConfigEditor({
                     />
                   </SectionGrid>
                 </SectionStack>
-              </SectionSubsection>
+              </SettingsDisclosure>
               <div className={styles.providerHubActions}>
                 <Button
                   type="button"
