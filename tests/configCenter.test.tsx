@@ -61,6 +61,7 @@ const translations: Record<string, string> = {
   'config_management.settings_center.chatgpt_web.image_size_status_adapted':
     'Aspect-ratio adaptation',
   'config_management.settings_center.chatgpt_web.image_size_status_strict': 'Strict size mode',
+  'config_management.settings_center.chatgpt_web.image_size_status_max_n': 'Max n',
   'config_management.settings_center.chatgpt_web.adapt_size_to_aspect_ratio':
     'Adapt size to a Web aspect ratio',
   'config_management.settings_center.chatgpt_web.strict_size': 'Strict size mode',
@@ -72,6 +73,7 @@ const translations: Record<string, string> = {
     'Resize to the requested dimensions',
   'config_management.settings_center.chatgpt_web.aspect_ratio_max_error_percent':
     'Maximum aspect-ratio error (%)',
+  'config_management.settings_center.chatgpt_web.max_n': 'Maximum ChatGPT Web image count (n)',
   'config_management.settings_center.frontend_features.title': 'Frontend feature visibility',
   'config_management.settings_center.frontend_features.codex_agent_identity':
     'Show Codex Agent Identity conversion tools',
@@ -548,6 +550,10 @@ describe('configuration settings center', () => {
     expect(
       screen.getByRole('checkbox', { name: 'Resize to the requested dimensions' })
     ).toHaveProperty('disabled', true);
+    expect(screen.getByLabelText('Maximum ChatGPT Web image count (n)')).toHaveProperty(
+      'disabled',
+      false
+    );
 
     defaultView.unmount();
     const values = cloneValues();
@@ -605,6 +611,7 @@ describe('configuration settings center', () => {
         .getAttribute('aria-expanded')
     ).toBe('false');
     expect(screen.getByText('Strict size mode')).not.toBeNull();
+    expect(screen.getByText(/Max n 1/)).not.toBeNull();
   });
 
   test('counts ChatGPT Web image resize validation errors on the provider page', () => {
@@ -612,11 +619,12 @@ describe('configuration settings center', () => {
       validationErrors: {
         chatgptWebAspectRatioMaxErrorPercent: 'number_range_0_10',
         chatgptWebMaxImageResponseMegabytes: 'integer_range_1_256',
+        chatgptWebMaxN: 'integer_range_1_10',
       },
     });
 
     expect(screen.getByText('Fix validation errors before saving')).not.toBeNull();
-    expect(screen.getAllByText('2')).toHaveLength(3);
+    expect(screen.getAllByText('3')).toHaveLength(3);
   });
 
   test('searches Sentinel SDK keys and opens the ChatGPT Web config page', () => {

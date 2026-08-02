@@ -22,6 +22,7 @@ export type VisualConfigFieldPath =
   | 'chatgptWebResizeToRequestedSize'
   | 'chatgptWebResizeFilter'
   | 'chatgptWebMaxImageResponseMegabytes'
+  | 'chatgptWebMaxN'
   | 'routingFillFirstRange'
   | 'routingFillFirstPerAuthRpm'
   | 'routingPerAuthRequestLimit'
@@ -76,6 +77,7 @@ export type VisualConfigValidationErrorCode =
   | 'number_range_0_10'
   | 'integer_range_1_3840'
   | 'integer_range_1_256'
+  | 'integer_range_1_10'
   | 'strict_size_requires_aspect_adaptation'
   | 'resize_requires_aspect_adaptation'
   | 'resize_filter';
@@ -288,6 +290,7 @@ export type VisualConfigValues = {
   chatgptWebResizeFilter: string;
   chatgptWebMaxResizeEdgePixels: string;
   chatgptWebMaxImageResponseMegabytes: string;
+  chatgptWebMaxN: string;
   requestRetry: string;
   maxRetryCredentials: string;
   maxRetryInterval: string;
@@ -369,6 +372,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebResizeFilter: 'catmull-rom',
   chatgptWebMaxResizeEdgePixels: '3840',
   chatgptWebMaxImageResponseMegabytes: '128',
+  chatgptWebMaxN: '1',
   requestRetry: '',
   maxRetryCredentials: '',
   maxRetryInterval: '',

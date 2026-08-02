@@ -149,6 +149,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebResizeFilter',
       'chatgptWebMaxResizeEdgePixels',
       'chatgptWebMaxImageResponseMegabytes',
+      'chatgptWebMaxN',
     ],
   },
   {
@@ -551,8 +552,19 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.resize-filter',
       'images.chatgpt-web.max-resize-edge-pixels',
       'images.chatgpt-web.max-image-response-megabytes',
+      'images.chatgpt-web.max-n',
     ],
-    aliases: ['aspect ratio', 'resize', '比例适配', '严格模式', '精确缩放', 'response budget'],
+    aliases: [
+      'aspect ratio',
+      'resize',
+      'max n',
+      'image count',
+      '比例适配',
+      '严格模式',
+      '精确缩放',
+      '最大生成数量',
+      'response budget',
+    ],
   },
   {
     id: 'config-chatgpt-web-account-info',

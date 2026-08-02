@@ -1028,6 +1028,7 @@ export function VisualConfigEditor({
     t,
     validationErrors?.chatgptWebMaxImageResponseMegabytes
   );
+  const chatGptWebMaxNError = getValidationMessage(t, validationErrors?.chatgptWebMaxN);
   const fixedErrorCooldownsErrorCount = useMemo(
     () =>
       Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('fixedErrorCooldowns.'))
@@ -1101,6 +1102,7 @@ export function VisualConfigEditor({
     'chatgptWebResizeToRequestedSize',
     'chatgptWebResizeFilter',
     'chatgptWebMaxImageResponseMegabytes',
+    'chatgptWebMaxN',
   ]);
   const chatGptWebImageSizeErrorCount = [
     chatGptWebStrictSizeError,
@@ -1109,6 +1111,7 @@ export function VisualConfigEditor({
     chatGptWebResizeToRequestedSizeError,
     chatGptWebResizeFilterError,
     chatGptWebMaxImageResponseMegabytesError,
+    chatGptWebMaxNError,
   ].filter(Boolean).length;
   const retrySettingsErrorCount = [
     requestRetryError,
@@ -1595,6 +1598,7 @@ export function VisualConfigEditor({
           'chatgptWebResizeToRequestedSize',
           'chatgptWebResizeFilter',
           'chatgptWebMaxImageResponseMegabytes',
+          'chatgptWebMaxN',
         ]),
       'provider-grok': 0,
       'advanced-payload': hasPayloadValidationErrors ? 1 : 0,
@@ -2017,13 +2021,26 @@ export function VisualConfigEditor({
                 description={t(
                   'config_management.settings_center.chatgpt_web.image_size_description'
                 )}
-                summary={t(
-                  values.chatgptWebStrictSize
-                    ? 'config_management.settings_center.chatgpt_web.image_size_status_strict'
-                    : values.chatgptWebAdaptSizeToAspectRatio
-                      ? 'config_management.settings_center.chatgpt_web.image_size_status_adapted'
-                      : 'config_management.settings_center.status_disabled'
-                )}
+                summary={
+                  <>
+                    <span>
+                      {t(
+                        values.chatgptWebStrictSize
+                          ? 'config_management.settings_center.chatgpt_web.image_size_status_strict'
+                          : values.chatgptWebAdaptSizeToAspectRatio
+                            ? 'config_management.settings_center.chatgpt_web.image_size_status_adapted'
+                            : 'config_management.settings_center.status_disabled'
+                      )}
+                    </span>
+                    <span>
+                      {' · '}
+                      {t(
+                        'config_management.settings_center.chatgpt_web.image_size_status_max_n'
+                      )}{' '}
+                      {values.chatgptWebMaxN}
+                    </span>
+                  </>
+                }
                 focusTarget={focusTarget}
                 targetIds={[
                   'config-chatgpt-web-adapt-size-to-aspect-ratio',
@@ -2033,6 +2050,7 @@ export function VisualConfigEditor({
                   'config-chatgpt-web-resize-to-requested-size',
                   'config-chatgpt-web-resize-filter',
                   'config-chatgpt-web-max-image-response-megabytes',
+                  'config-chatgpt-web-max-n',
                 ]}
                 dirty={chatGptWebImageSizeDirty}
                 errorCount={chatGptWebImageSizeErrorCount}
@@ -2172,6 +2190,19 @@ export function VisualConfigEditor({
                       onChange={(event) =>
                         onChange({ chatgptWebMaxImageResponseMegabytes: event.target.value })
                       }
+                    />
+                    <Input
+                      id="config-chatgpt-web-max-n"
+                      type="number"
+                      min={1}
+                      max={10}
+                      step={1}
+                      label={t('config_management.settings_center.chatgpt_web.max_n')}
+                      hint={t('config_management.settings_center.chatgpt_web.max_n_description')}
+                      error={chatGptWebMaxNError}
+                      value={values.chatgptWebMaxN}
+                      disabled={disabled}
+                      onChange={(event) => onChange({ chatgptWebMaxN: event.target.value })}
                     />
                   </SectionGrid>
                 </SectionStack>

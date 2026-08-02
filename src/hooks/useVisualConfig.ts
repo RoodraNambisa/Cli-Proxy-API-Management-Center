@@ -1233,8 +1233,8 @@ function getIntegerRangeError(
   value: string,
   min: number,
   max: number,
-  errorCode: 'integer_range_1_3840' | 'integer_range_1_256'
-): 'integer_range_1_3840' | 'integer_range_1_256' | undefined {
+  errorCode: 'integer_range_1_3840' | 'integer_range_1_256' | 'integer_range_1_10'
+): 'integer_range_1_3840' | 'integer_range_1_256' | 'integer_range_1_10' | undefined {
   const trimmed = value.trim();
   if (!/^\d+$/.test(trimmed)) return errorCode;
   const parsed = Number(trimmed);
@@ -1541,6 +1541,7 @@ export function getVisualConfigValidationErrors(
       256,
       'integer_range_1_256'
     ),
+    chatgptWebMaxN: getIntegerRangeError(values.chatgptWebMaxN, 1, 10, 'integer_range_1_10'),
     routingFillFirstRange: routingFillFirstRangeError,
     routingFillFirstPerAuthRpm: routingFillFirstPerAuthRpmError,
     routingPerAuthRequestLimit: routingPerAuthRequestLimitError,
@@ -2278,6 +2279,9 @@ function getNextDirtyFields(
         baselineValues.chatgptWebMaxImageResponseMegabytes
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebMaxN')) {
+    updateDirty('chatgptWebMaxN', nextValues.chatgptWebMaxN === baselineValues.chatgptWebMaxN);
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'requestRetry')) {
     updateDirty('requestRetry', nextValues.requestRetry === baselineValues.requestRetry);
   }
@@ -2930,6 +2934,11 @@ export function useVisualConfig() {
             imagesChatGPTWeb?.maxImageResponseMegabytes ??
             DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes
         ),
+        chatgptWebMaxN: String(
+          imagesChatGPTWeb?.['max-n'] ??
+            imagesChatGPTWeb?.maxN ??
+            DEFAULT_VISUAL_VALUES.chatgptWebMaxN
+        ),
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryCredentials: String(parsed['max-retry-credentials'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
@@ -3533,6 +3542,7 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebMaxResizeEdgePixels ||
           values.chatgptWebMaxImageResponseMegabytes !==
             DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes ||
+          values.chatgptWebMaxN !== DEFAULT_VISUAL_VALUES.chatgptWebMaxN ||
           docHas(doc, ['images', 'chatgpt-web']) ||
           docHas(doc, ['images', 'native']) ||
           !areNativeImagesEqual(values.images.native, imagesDefaults.native);
@@ -3591,7 +3601,8 @@ export function useVisualConfig() {
             values.chatgptWebMaxResizeEdgePixels !==
               DEFAULT_VISUAL_VALUES.chatgptWebMaxResizeEdgePixels ||
             values.chatgptWebMaxImageResponseMegabytes !==
-              DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes
+              DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes ||
+            values.chatgptWebMaxN !== DEFAULT_VISUAL_VALUES.chatgptWebMaxN
           ) {
             ensureMapInDoc(doc, ['images', 'chatgpt-web']);
             setStringInDoc(
@@ -3632,6 +3643,7 @@ export function useVisualConfig() {
               ['images', 'chatgpt-web', 'max-image-response-megabytes'],
               values.chatgptWebMaxImageResponseMegabytes
             );
+            setIntFromStringInDoc(doc, ['images', 'chatgpt-web', 'max-n'], values.chatgptWebMaxN);
             deleteIfMapEmpty(doc, ['images', 'chatgpt-web']);
           }
           if (
