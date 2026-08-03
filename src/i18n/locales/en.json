@@ -2896,7 +2896,7 @@
       "title": "Sentinel SDK",
       "description": "Configure on-demand fallback to the real Sentinel SDK and inspect the current solver pool state.",
       "runtime_enabled": "Enable real Sentinel SDK fallback",
-      "runtime_enabled_description": "Regular requests still prefer the Go VM. The SDK starts on demand only after a compatibility failure or when Session Observer requires it.",
+      "runtime_enabled_description": "Regular requests prefer the Go VM. A compatibility fallback can enable SDK priority until a fixed expiry; hits do not extend it, and Go VM is retried after expiry. Session Observer starts only when required.",
       "workers": "SDK workers",
       "workers_hint": "Range 0–16; 0 lets the backend choose automatically.",
       "automatic": "Automatic",
@@ -2933,6 +2933,9 @@
         "sdk_sha256": "SDK SHA-256",
         "source_cache_entries": "Source cache entries",
         "bytecode_cache_entries": "Bytecode cache entries",
+        "compatibility_fallback_count": "Real compatibility fallbacks",
+        "sdk_preferred_hit_count": "SDK priority hits",
+        "session_observer_count": "Session Observer starts",
         "fallback_count": "Fallback count",
         "last_error": "Last error"
       }

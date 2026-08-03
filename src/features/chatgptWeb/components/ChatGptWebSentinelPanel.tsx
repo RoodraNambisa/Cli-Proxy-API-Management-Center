@@ -288,6 +288,12 @@ export const ChatGptWebSentinelPanel = forwardRef<
     [active, disabled, handleReset, handleSave, loadSnapshot, runValidation]
   );
 
+  const hasSplitSDKCounters =
+    snapshot !== null &&
+    typeof snapshot.compatibility_fallback_count === 'number' &&
+    typeof snapshot.sdk_preferred_hit_count === 'number' &&
+    typeof snapshot.session_observer_count === 'number';
+
   const statusItems = snapshot
     ? [
         {
@@ -314,7 +320,22 @@ export const ChatGptWebSentinelPanel = forwardRef<
         { key: 'sdk_sha256', value: snapshot.sdk_sha256 || '-' },
         { key: 'source_cache_entries', value: snapshot.source_cache_entries },
         { key: 'bytecode_cache_entries', value: snapshot.bytecode_cache_entries },
-        { key: 'fallback_count', value: snapshot.fallback_count },
+        ...(hasSplitSDKCounters
+          ? [
+              {
+                key: 'compatibility_fallback_count',
+                value: snapshot.compatibility_fallback_count as number,
+              },
+              {
+                key: 'sdk_preferred_hit_count',
+                value: snapshot.sdk_preferred_hit_count as number,
+              },
+              {
+                key: 'session_observer_count',
+                value: snapshot.session_observer_count as number,
+              },
+            ]
+          : [{ key: 'fallback_count', value: snapshot.fallback_count }]),
         {
           key: 'last_error',
           value:

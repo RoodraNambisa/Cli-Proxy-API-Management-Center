@@ -2900,7 +2900,7 @@
       "title": "Sentinel SDK",
       "description": "配置真实 Sentinel SDK 的按需回退，并查看当前求解池运行状态。",
       "runtime_enabled": "启用真实 Sentinel SDK 回退",
-      "runtime_enabled_description": "普通请求仍优先使用 Go VM，仅在兼容失败或 Session Observer 必需时按需启动。",
+      "runtime_enabled_description": "普通请求优先使用 Go VM；兼容回退可建立固定过期的 SDK 优先缓存，命中不会续期，到期后重新尝试 Go VM。Session Observer 仅在必需时启动。",
       "workers": "SDK Worker 数量",
       "workers_hint": "范围 0–16；0 表示由后端自动决定。",
       "automatic": "自动",
@@ -2937,6 +2937,9 @@
         "sdk_sha256": "SDK SHA-256",
         "source_cache_entries": "源码缓存条目",
         "bytecode_cache_entries": "字节码缓存条目",
+        "compatibility_fallback_count": "真实兼容回退",
+        "sdk_preferred_hit_count": "SDK 优先命中",
+        "session_observer_count": "Session Observer 启动次数",
         "fallback_count": "回退次数",
         "last_error": "最近错误"
       }

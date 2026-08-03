@@ -2895,7 +2895,7 @@
       "title": "Sentinel SDK",
       "description": "Настройка резервного запуска настоящего Sentinel SDK по требованию и просмотр состояния пула решателей.",
       "runtime_enabled": "Включить резервный Sentinel SDK",
-      "runtime_enabled_description": "Обычные запросы по-прежнему используют Go VM. SDK запускается по требованию только при ошибке совместимости или необходимости Session Observer.",
+      "runtime_enabled_description": "Обычные запросы сначала используют Go VM. Резервный запуск при несовместимости включает приоритет SDK до фиксированного срока; попадания не продлевают его, после чего Go VM проверяется снова. Session Observer запускается только при необходимости.",
       "workers": "Рабочие процессы SDK",
       "workers_hint": "Диапазон 0–16; 0 — автоматический выбор сервером.",
       "automatic": "Автоматически",
@@ -2932,6 +2932,9 @@
         "sdk_sha256": "SHA-256 SDK",
         "source_cache_entries": "Записи кэша исходника",
         "bytecode_cache_entries": "Записи кэша байткода",
+        "compatibility_fallback_count": "Реальные откаты совместимости",
+        "sdk_preferred_hit_count": "Попадания приоритета SDK",
+        "session_observer_count": "Запуски Session Observer",
         "fallback_count": "Число резервных запусков",
         "last_error": "Последняя ошибка"
       }

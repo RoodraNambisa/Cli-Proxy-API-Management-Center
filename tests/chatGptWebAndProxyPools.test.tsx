@@ -319,6 +319,9 @@ describe('ChatGPT Web management compatibility', () => {
         queued: 3,
         sdk_version: 'sentinel-v1',
         sdk_sha256: 'safe-sha256',
+        compatibility_fallback_count: 4,
+        sdk_preferred_hit_count: 5,
+        session_observer_count: 6,
         fallback_count: 9,
       })
     );
@@ -347,6 +350,7 @@ describe('ChatGPT Web management compatibility', () => {
     expect(screen.getByText('chatgpt_web.sentinel.automatic')).not.toBeNull();
     expect(screen.getByText('chatgpt_web.sentinel.initialized_lazy')).not.toBeNull();
     expect(screen.getByText('chatgpt_web.errors.sentinel_sdk_busy')).not.toBeNull();
+    expect(screen.getByText('chatgpt_web.sentinel.status.fallback_count')).not.toBeNull();
     expect(document.body.textContent).not.toContain('SENTINEL_SOURCE_MUST_NOT_RENDER');
     expect(document.body.textContent).not.toContain('SENTINEL_CHALLENGE_MUST_NOT_RENDER');
 
@@ -365,6 +369,21 @@ describe('ChatGPT Web management compatibility', () => {
     expect(screen.getByText('sentinel-v1')).not.toBeNull();
     expect(screen.getByText('safe-sha256')).not.toBeNull();
     expect(screen.getByText('2 / 4')).not.toBeNull();
+    expect(
+      screen.getByText('chatgpt_web.sentinel.status.compatibility_fallback_count')
+    ).not.toBeNull();
+    expect(screen.getByText('chatgpt_web.sentinel.status.sdk_preferred_hit_count')).not.toBeNull();
+    expect(screen.getByText('chatgpt_web.sentinel.status.session_observer_count')).not.toBeNull();
+    expect(screen.queryByText('chatgpt_web.sentinel.status.fallback_count')).toBeNull();
+    expect(
+      document.querySelector('[data-field="compatibility_fallback_count"] dd')?.textContent
+    ).toBe('4');
+    expect(document.querySelector('[data-field="sdk_preferred_hit_count"] dd')?.textContent).toBe(
+      '5'
+    );
+    expect(document.querySelector('[data-field="session_observer_count"] dd')?.textContent).toBe(
+      '6'
+    );
   });
 
   test('does not load or render Sentinel settings on the account-login task page', () => {
