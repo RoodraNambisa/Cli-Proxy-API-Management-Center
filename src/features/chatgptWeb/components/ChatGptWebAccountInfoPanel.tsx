@@ -12,15 +12,18 @@ import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-import { IconRefreshCw } from '@/components/ui/icons';
+import { IconRefreshCw, IconTrash2 } from '@/components/ui/icons';
 import { apiClient, chatGptWebApi } from '@/services/api';
 import { useNotificationStore } from '@/stores';
 import type {
   ChatGptWebAccountInfoConfig,
   ChatGptWebAccountInfoConfigPatch,
+  ChatGptWebAccountInfoDiagnosticRecord,
+  ChatGptWebAccountInfoDiagnosticsSnapshot,
   ChatGptWebAccountInfoSnapshot,
 } from '@/types';
 import { getChatGptWebErrorMessage } from '@/utils/chatgptWeb';
+import { formatDateTime } from '@/utils/format';
 import {
   clearChatGptWebAccountInfoUnsupported,
   isChatGptWebAccountInfoUnsupported,
@@ -31,6 +34,7 @@ import styles from './ChatGptWebSentinelPanel.module.scss';
 
 type AccountInfoDraft = {
   autoRefreshEnabled: boolean;
+  diagnosticsEnabled: boolean;
   periodicMinutes: string;
   workers: string;
   queueSize: string;
@@ -40,7 +44,10 @@ type AccountInfoDraft = {
 };
 
 type AccountInfoField = keyof AccountInfoDraft;
-type AccountInfoNumericField = Exclude<AccountInfoField, 'autoRefreshEnabled'>;
+type AccountInfoNumericField = Exclude<
+  AccountInfoField,
+  'autoRefreshEnabled' | 'diagnosticsEnabled'
+>;
 type AccountInfoValidationErrors = Partial<Record<AccountInfoNumericField, string>>;
 
 type ConnectionGeneration = {
@@ -66,6 +73,8 @@ type ChatGptWebAccountInfoPanelProps = {
 };
 
 const DISCLOSURE_STORAGE_KEY = 'config-management:chatgpt-web-account-info-expanded';
+const DIAGNOSTICS_DISCLOSURE_STORAGE_KEY =
+  'config-management:chatgpt-web-account-info-diagnostics-expanded';
 const POLL_INTERVAL_MS = 5000;
 
 const ACCOUNT_INFO_FIELDS = [
@@ -128,6 +137,7 @@ const ACCOUNT_INFO_FIELDS = [
 
 const DEFAULT_DRAFT: AccountInfoDraft = {
   autoRefreshEnabled: true,
+  diagnosticsEnabled: false,
   periodicMinutes: '',
   workers: '4',
   queueSize: '256',
@@ -140,6 +150,7 @@ const toDraft = (snapshot: ChatGptWebAccountInfoSnapshot): AccountInfoDraft => {
   const periodicMinutes = snapshot.config['periodic-refresh-minutes'];
   return {
     autoRefreshEnabled: snapshot.config['auto-refresh-enabled'] !== false,
+    diagnosticsEnabled: snapshot.config['diagnostics-enabled'] === true,
     periodicMinutes:
       typeof periodicMinutes === 'number' && periodicMinutes > 0 ? String(periodicMinutes) : '',
     workers: String(snapshot.config['refresh-workers']),
@@ -166,6 +177,7 @@ const readConfig = (
   const errors: AccountInfoValidationErrors = {};
   const parsed = {
     'auto-refresh-enabled': draft.autoRefreshEnabled,
+    'diagnostics-enabled': draft.diagnosticsEnabled,
   } as ChatGptWebAccountInfoConfig;
   for (const definition of ACCOUNT_INFO_FIELDS) {
     const rawValue = draft[definition.field];
@@ -193,6 +205,9 @@ const buildPatch = (
   if (dirtyFields.has('autoRefreshEnabled')) {
     patch['auto-refresh-enabled'] = next['auto-refresh-enabled'];
   }
+  if (dirtyFields.has('diagnosticsEnabled')) {
+    patch['diagnostics-enabled'] = next['diagnostics-enabled'];
+  }
   for (const definition of ACCOUNT_INFO_FIELDS) {
     if (dirtyFields.has(definition.field)) {
       patch[definition.configKey] = next[definition.configKey];
@@ -213,6 +228,91 @@ const isSameGeneration = (
 ): boolean =>
   left !== null && right !== null && left.key === right.key && left.version === right.version;
 
+function DiagnosticRecord({ record }: { record: ChatGptWebAccountInfoDiagnosticRecord }) {
+  const { t } = useTranslation();
+  const remainingRange = (() => {
+    if (typeof record.last_remaining !== 'number') return '';
+    if (
+      typeof record.min_remaining === 'number' &&
+      typeof record.max_remaining === 'number' &&
+      record.min_remaining !== record.max_remaining
+    ) {
+      return `${record.min_remaining} – ${record.max_remaining} (${t(
+        'chatgpt_web.account_info.diagnostics.latest_value',
+        { value: record.last_remaining }
+      )})`;
+    }
+    return String(record.last_remaining);
+  })();
+  const candidateFields: Array<[string, string | number]> = [
+    ['phase', record.phase],
+    ['stage', record.stage],
+    ['reason', record.reason],
+    ['error_type', record.error_type ?? ''],
+    ['http_status', record.http_status ?? ''],
+    ['content_type', record.content_type ?? ''],
+    [
+      'cloudflare',
+      typeof record.cloudflare === 'boolean'
+        ? t(record.cloudflare ? 'common.yes' : 'common.no')
+        : '',
+    ],
+    ['body_kind', record.body_kind ?? ''],
+    ['accounts_kind', record.accounts_kind ?? ''],
+    [
+      'limits_progress',
+      record.limits_progress_kind
+        ? `${record.limits_progress_kind} (${record.limits_progress_count ?? 0})`
+        : '',
+    ],
+    [
+      'image_quota_feature_present',
+      typeof record.image_quota_feature_present === 'boolean'
+        ? t(record.image_quota_feature_present ? 'common.yes' : 'common.no')
+        : '',
+    ],
+    ['image_quota_remaining_kind', record.image_quota_remaining_kind ?? ''],
+    ['remaining_range', remainingRange],
+    [
+      'image_quota_reset_after',
+      record.image_quota_reset_after ? formatDateTime(record.image_quota_reset_after) : '',
+    ],
+    ['error_envelope_kind', record.error_envelope_kind ?? ''],
+    ['response_bytes', record.response_bytes],
+    ['content_length', record.content_length ?? ''],
+    ['upstream_error_code', record.upstream_error_code ?? ''],
+    ['first_seen', formatDateTime(record.first_seen)],
+    ['last_seen', formatDateTime(record.last_seen)],
+    ['last_auth_index', record.last_auth_index ?? ''],
+    ['last_attempt', record.last_attempt ?? ''],
+  ];
+  const fields = candidateFields.filter(([, value]) => value !== '');
+
+  return (
+    <article className={styles.diagnosticRecord}>
+      <header>
+        <div>
+          <strong>{record.reason}</strong>
+          <span>
+            {record.phase} · {record.stage}
+          </span>
+        </div>
+        <span className={styles.diagnosticCount}>
+          {t('chatgpt_web.account_info.diagnostics.count', { count: record.count })}
+        </span>
+      </header>
+      <dl className={styles.diagnosticDetails}>
+        {fields.map(([key, value]) => (
+          <div key={key} data-field={key}>
+            <dt>{t(`chatgpt_web.account_info.diagnostics.fields.${key}`)}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </article>
+  );
+}
+
 export const ChatGptWebAccountInfoPanel = forwardRef<
   ChatGptWebAccountInfoPanelHandle,
   ChatGptWebAccountInfoPanelProps
@@ -230,6 +330,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
 ) {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
+  const showConfirmation = useNotificationStore((state) => state.showConfirmation);
   const connectionGenerationKeyRef = useRef(connectionGenerationKey);
   const connectionGenerationVersionRef = useRef(0);
   if (connectionGenerationKeyRef.current !== connectionGenerationKey) {
@@ -257,6 +358,8 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     promise: Promise<ChatGptWebAccountInfoSnapshot | null>;
   } | null>(null);
   const saveRefreshAbortRef = useRef<AbortController | null>(null);
+  const diagnosticsAbortRef = useRef<AbortController | null>(null);
+  const diagnosticsLoadedRef = useRef(false);
   const savingRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -282,8 +385,18 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   const [loadError, setLoadError] = useState('');
   const [unsupported, setUnsupported] = useState(initiallyUnsupported);
   const [liveMessage, setLiveMessage] = useState('');
+  const [diagnostics, setDiagnostics] = useState<ChatGptWebAccountInfoDiagnosticsSnapshot | null>(
+    null
+  );
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
+  const [diagnosticsClearing, setDiagnosticsClearing] = useState(false);
+  const [diagnosticsError, setDiagnosticsError] = useState('');
+  const [diagnosticsEndpointUnsupported, setDiagnosticsEndpointUnsupported] = useState(false);
   const [expanded, setExpanded] = useState(
     () => localStorage.getItem(DISCLOSURE_STORAGE_KEY) === 'true'
+  );
+  const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(
+    () => localStorage.getItem(DIAGNOSTICS_DISCLOSURE_STORAGE_KEY) === 'true'
   );
 
   const replaceDirtyFields = useCallback((next: Set<AccountInfoField>) => {
@@ -321,6 +434,13 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     abortController.abort();
   }, []);
 
+  const abortDiagnosticsRequest = useCallback(() => {
+    const abortController = diagnosticsAbortRef.current;
+    if (!abortController) return;
+    diagnosticsAbortRef.current = null;
+    abortController.abort();
+  }, []);
+
   const readConnectionGeneration = useCallback(
     (): ConnectionGeneration => ({
       key: connectionGenerationKeyRef.current,
@@ -347,6 +467,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       snapshotGenerationRef.current = generation;
       setSnapshot(next);
       setSnapshotGeneration(generation);
+      setDiagnostics((current) =>
+        current ? { ...current, enabled: nextDraft.diagnosticsEnabled } : current
+      );
       if (preserveDirty && dirtyFieldsRef.current.size > 0) {
         setDraft((current) => {
           const merged = { ...current };
@@ -357,6 +480,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
           }
           if (!dirtyFieldsRef.current.has('autoRefreshEnabled')) {
             merged.autoRefreshEnabled = nextDraft.autoRefreshEnabled;
+          }
+          if (!dirtyFieldsRef.current.has('diagnosticsEnabled')) {
+            merged.diagnosticsEnabled = nextDraft.diagnosticsEnabled;
           }
           return merged;
         });
@@ -496,6 +622,65 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     ]
   );
 
+  const loadDiagnostics = useCallback(
+    async (notify = true): Promise<ChatGptWebAccountInfoDiagnosticsSnapshot | null> => {
+      if (snapshotRef.current?.config['diagnostics-enabled'] === undefined) return null;
+      const generation = readConnectionGeneration();
+      const connection = apiClient.captureConnection();
+      abortDiagnosticsRequest();
+      const abortController = new AbortController();
+      diagnosticsAbortRef.current = abortController;
+      diagnosticsLoadedRef.current = true;
+      setDiagnosticsLoading(true);
+      setDiagnosticsError('');
+      try {
+        const next = await chatGptWebApi.getAccountInfoDiagnostics(
+          connection,
+          abortController.signal
+        );
+        if (abortController.signal.aborted || !isConnectionGenerationCurrent(generation)) {
+          return null;
+        }
+        setDiagnostics(next);
+        setDiagnosticsEndpointUnsupported(false);
+        setLiveMessage(t('chatgpt_web.account_info.diagnostics.loaded'));
+        return next;
+      } catch (error) {
+        if (abortController.signal.aborted || !isConnectionGenerationCurrent(generation)) {
+          return null;
+        }
+        if (getErrorStatus(error) === 404) {
+          setDiagnosticsEndpointUnsupported(true);
+          setDiagnosticsError('');
+          return null;
+        }
+        const message = getChatGptWebErrorMessage(error, t);
+        setDiagnosticsError(message);
+        if (notify) {
+          showNotification(
+            `${t('chatgpt_web.account_info.diagnostics.load_failed')}: ${message}`,
+            'error'
+          );
+        }
+        return null;
+      } finally {
+        if (diagnosticsAbortRef.current === abortController) {
+          diagnosticsAbortRef.current = null;
+        }
+        if (mountedRef.current && isConnectionGenerationCurrent(generation)) {
+          setDiagnosticsLoading(false);
+        }
+      }
+    },
+    [
+      abortDiagnosticsRequest,
+      isConnectionGenerationCurrent,
+      readConnectionGeneration,
+      showNotification,
+      t,
+    ]
+  );
+
   useEffect(() => {
     const previous = previousAvailabilityRef.current;
     const connectionChanged = previous.connectionGenerationVersion !== connectionGenerationVersion;
@@ -510,11 +695,18 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       requestSequenceRef.current += 1;
       abortSnapshotRequest();
       abortSaveRefresh();
+      abortDiagnosticsRequest();
       hasLoadedRef.current = false;
+      diagnosticsLoadedRef.current = false;
       snapshotGenerationRef.current = null;
       setSnapshotGeneration(null);
       setLoading(false);
       setLoadError('');
+      setDiagnostics(null);
+      setDiagnosticsError('');
+      setDiagnosticsEndpointUnsupported(false);
+      setDiagnosticsLoading(false);
+      setDiagnosticsClearing(false);
       setUnsupportedState(isChatGptWebAccountInfoUnsupported(connectionGenerationKey));
       const retainedDirty = dirtyFieldsRef.current.size > 0 || savingRef.current;
       setGenerationConflictState(retainedDirty);
@@ -528,7 +720,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       requestSequenceRef.current += 1;
       abortSnapshotRequest();
       abortSaveRefresh();
+      abortDiagnosticsRequest();
       setLoading(false);
+      setDiagnosticsLoading(false);
       return;
     }
     if (!hasLoadedRef.current) {
@@ -543,6 +737,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   }, [
     active,
     abortSaveRefresh,
+    abortDiagnosticsRequest,
     abortSnapshotRequest,
     connectionGenerationKey,
     connectionGenerationVersion,
@@ -572,12 +767,48 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     !generationReady ||
     generationConflict;
   const periodicRefreshSupported = snapshot?.config['periodic-refresh-minutes'] !== undefined;
+  const diagnosticsConfigSupported = snapshot?.config['diagnostics-enabled'] !== undefined;
+  const diagnosticsSupported = diagnosticsConfigSupported && !diagnosticsEndpointUnsupported;
   const periodicMinutes = parseInteger(draft.periodicMinutes, 0, 10080);
   const periodicSummary =
     periodicMinutes !== null && periodicMinutes > 0
       ? t('chatgpt_web.account_info.periodic_every', { minutes: periodicMinutes })
       : t('chatgpt_web.account_info.periodic_off');
   const resetDisabled = externalSaving || saving;
+  const diagnosticsSummary = diagnostics
+    ? t('chatgpt_web.account_info.diagnostics.summary_counts', {
+        unique: diagnostics.unique_count,
+        total: diagnostics.total_count,
+        evicted: diagnostics.evicted_count,
+      })
+    : t(
+        diagnosticsSupported
+          ? draft.diagnosticsEnabled
+            ? 'chatgpt_web.account_info.diagnostics.summary_enabled'
+            : 'chatgpt_web.account_info.diagnostics.summary_disabled'
+          : 'chatgpt_web.account_info.diagnostics.summary_unsupported'
+      );
+
+  useEffect(() => {
+    if (
+      !diagnosticsExpanded ||
+      !diagnosticsSupported ||
+      diagnosticsLoadedRef.current ||
+      disabled ||
+      !active ||
+      !generationReady
+    ) {
+      return;
+    }
+    void loadDiagnostics(false);
+  }, [
+    active,
+    diagnosticsExpanded,
+    diagnosticsSupported,
+    disabled,
+    generationReady,
+    loadDiagnostics,
+  ]);
 
   useEffect(() => {
     if (
@@ -606,8 +837,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       requestSequenceRef.current += 1;
       abortSnapshotRequest();
       abortSaveRefresh();
+      abortDiagnosticsRequest();
     };
-  }, [abortSaveRefresh, abortSnapshotRequest]);
+  }, [abortDiagnosticsRequest, abortSaveRefresh, abortSnapshotRequest]);
 
   useEffect(() => {
     const synchronizeUnsupported = (key: string, nextUnsupported: boolean) => {
@@ -618,7 +850,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
         requestSequenceRef.current += 1;
         abortSnapshotRequest();
         abortSaveRefresh();
+        abortDiagnosticsRequest();
         setLoading(false);
+        setDiagnosticsLoading(false);
       }
     };
     synchronizeUnsupported(
@@ -626,7 +860,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       isChatGptWebAccountInfoUnsupported(connectionGenerationKeyRef.current)
     );
     return subscribeChatGptWebAccountInfoCapability(synchronizeUnsupported);
-  }, [abortSaveRefresh, abortSnapshotRequest]);
+  }, [abortDiagnosticsRequest, abortSaveRefresh, abortSnapshotRequest]);
 
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -864,6 +1098,11 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     localStorage.setItem(DISCLOSURE_STORAGE_KEY, String(nextExpanded));
   }, []);
 
+  const handleDiagnosticsExpandedChange = useCallback((nextExpanded: boolean) => {
+    setDiagnosticsExpanded(nextExpanded);
+    localStorage.setItem(DIAGNOSTICS_DISCLOSURE_STORAGE_KEY, String(nextExpanded));
+  }, []);
+
   const updateDraftField = useCallback(
     (field: AccountInfoNumericField, value: string) => {
       const latestSnapshot = snapshotRef.current;
@@ -898,6 +1137,69 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     },
     [replaceDirtyFields, setGenerationConflictState]
   );
+
+  const updateDiagnosticsEnabled = useCallback(
+    (value: boolean) => {
+      const baselineValue = snapshotRef.current
+        ? toDraft(snapshotRef.current).diagnosticsEnabled
+        : undefined;
+      const nextDirtyFields = new Set(dirtyFieldsRef.current);
+      if (baselineValue === value) {
+        nextDirtyFields.delete('diagnosticsEnabled');
+      } else {
+        nextDirtyFields.add('diagnosticsEnabled');
+      }
+      replaceDirtyFields(nextDirtyFields);
+      if (nextDirtyFields.size === 0) setGenerationConflictState(false);
+      setDraft((current) => ({ ...current, diagnosticsEnabled: value }));
+    },
+    [replaceDirtyFields, setGenerationConflictState]
+  );
+
+  const handleClearDiagnostics = useCallback(() => {
+    if (!diagnosticsSupported || diagnosticsClearing) return;
+    const clearGeneration = readConnectionGeneration();
+    const clearConnection = apiClient.captureConnection();
+    showConfirmation({
+      title: t('chatgpt_web.account_info.diagnostics.clear_title'),
+      message: t('chatgpt_web.account_info.diagnostics.clear_confirm'),
+      confirmText: t('chatgpt_web.account_info.diagnostics.clear_button'),
+      variant: 'danger',
+      onConfirm: async () => {
+        if (!isConnectionGenerationCurrent(clearGeneration)) return;
+        setDiagnosticsClearing(true);
+        try {
+          const next = await chatGptWebApi.clearAccountInfoDiagnostics(clearConnection);
+          if (!isConnectionGenerationCurrent(clearGeneration)) return;
+          diagnosticsLoadedRef.current = true;
+          setDiagnostics(next);
+          setDiagnosticsError('');
+          showNotification(t('chatgpt_web.account_info.diagnostics.clear_success'), 'success');
+        } catch (error) {
+          if (!isConnectionGenerationCurrent(clearGeneration)) return;
+          showNotification(
+            `${t('chatgpt_web.account_info.diagnostics.clear_failed')}: ${getChatGptWebErrorMessage(
+              error,
+              t
+            )}`,
+            'error'
+          );
+        } finally {
+          if (mountedRef.current && isConnectionGenerationCurrent(clearGeneration)) {
+            setDiagnosticsClearing(false);
+          }
+        }
+      },
+    });
+  }, [
+    diagnosticsClearing,
+    diagnosticsSupported,
+    isConnectionGenerationCurrent,
+    readConnectionGeneration,
+    showConfirmation,
+    showNotification,
+    t,
+  ]);
 
   const statusItems = snapshot
     ? [
@@ -985,6 +1287,24 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
               onChange={updateAutoRefreshEnabled}
               disabled={controlsDisabled}
               ariaLabel={t('chatgpt_web.account_info.auto_refresh_enabled')}
+            />
+          </div>
+
+          <div className={styles.runtimeRow}>
+            <div>
+              <strong>{t('chatgpt_web.account_info.diagnostics.enabled')}</strong>
+              <span>{t('chatgpt_web.account_info.diagnostics.enabled_description')}</span>
+              {!diagnosticsSupported ? (
+                <span className={styles.validationError}>
+                  {t('chatgpt_web.account_info.diagnostics.unsupported')}
+                </span>
+              ) : null}
+            </div>
+            <ToggleSwitch
+              checked={draft.diagnosticsEnabled}
+              onChange={updateDiagnosticsEnabled}
+              disabled={controlsDisabled || !diagnosticsSupported}
+              ariaLabel={t('chatgpt_web.account_info.diagnostics.enabled')}
             />
           </div>
 
@@ -1092,6 +1412,103 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
               ))}
             </dl>
           )}
+
+          <ConfigDisclosure
+            id="config-chatgpt-web-account-info-diagnostics"
+            title={t('chatgpt_web.account_info.diagnostics.title')}
+            description={t('chatgpt_web.account_info.diagnostics.description')}
+            summary={diagnosticsSummary}
+            expanded={diagnosticsExpanded}
+            onExpandedChange={handleDiagnosticsExpandedChange}
+            actions={
+              diagnosticsExpanded && diagnosticsSupported ? (
+                <div className={styles.diagnosticsActions}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    loading={diagnosticsLoading}
+                    disabled={
+                      disabled ||
+                      externalSaving ||
+                      saving ||
+                      diagnosticsClearing ||
+                      !generationReady
+                    }
+                    onClick={() => void loadDiagnostics()}
+                  >
+                    <IconRefreshCw size={15} />
+                    {t('common.refresh')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    loading={diagnosticsClearing}
+                    disabled={
+                      disabled ||
+                      externalSaving ||
+                      saving ||
+                      diagnosticsLoading ||
+                      !generationReady ||
+                      !diagnostics ||
+                      diagnostics.total_count === 0
+                    }
+                    onClick={handleClearDiagnostics}
+                  >
+                    <IconTrash2 size={15} />
+                    {t('chatgpt_web.account_info.diagnostics.clear_button')}
+                  </Button>
+                </div>
+              ) : undefined
+            }
+          >
+            <div className={styles.diagnosticsContent} aria-busy={diagnosticsLoading}>
+              {!diagnosticsSupported ? (
+                <div className={styles.statusEmpty}>
+                  <span>{t('chatgpt_web.account_info.diagnostics.unsupported')}</span>
+                </div>
+              ) : diagnosticsError ? (
+                <div className={styles.statusEmpty} role="alert">
+                  <span>
+                    {t('chatgpt_web.account_info.diagnostics.load_failed')}: {diagnosticsError}
+                  </span>
+                </div>
+              ) : !diagnostics ? (
+                <div className={styles.statusEmpty}>
+                  {diagnosticsLoading ? <LoadingSpinner size={18} /> : null}
+                  <span>{t('chatgpt_web.account_info.diagnostics.loading')}</span>
+                </div>
+              ) : (
+                <>
+                  <dl className={styles.diagnosticsStats}>
+                    {[
+                      ['unique_count', diagnostics.unique_count],
+                      ['total_count', diagnostics.total_count],
+                      ['evicted_count', diagnostics.evicted_count],
+                      ['capacity', diagnostics.capacity],
+                    ].map(([key, value]) => (
+                      <div key={key}>
+                        <dt>{t(`chatgpt_web.account_info.diagnostics.stats.${key}`)}</dt>
+                        <dd>{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  {diagnostics.records.length === 0 ? (
+                    <div className={styles.statusEmpty}>
+                      <span>{t('chatgpt_web.account_info.diagnostics.empty')}</span>
+                    </div>
+                  ) : (
+                    <div className={styles.diagnosticsList}>
+                      {diagnostics.records.map((record) => (
+                        <DiagnosticRecord key={record.id} record={record} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </ConfigDisclosure>
         </div>
       </ConfigDisclosure>
     </>

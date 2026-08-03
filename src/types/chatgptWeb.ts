@@ -115,6 +115,7 @@ export type ChatGptWebLoginProxyConfigPatch = Partial<ChatGptWebLoginProxyConfig
 
 export interface ChatGptWebAccountInfoConfig {
   'auto-refresh-enabled'?: boolean;
+  'diagnostics-enabled'?: boolean;
   'periodic-refresh-minutes'?: number;
   'refresh-workers': number;
   'refresh-queue-size': number;
@@ -140,6 +141,45 @@ export interface ChatGptWebAccountInfoSnapshot {
 }
 
 export type ChatGptWebAccountInfoConfigPatch = Partial<ChatGptWebAccountInfoConfig>;
+
+export interface ChatGptWebAccountInfoDiagnosticRecord {
+  id: string;
+  phase: string;
+  stage: string;
+  reason: string;
+  error_type?: string;
+  http_status?: number;
+  content_type?: string;
+  cloudflare: boolean;
+  body_kind?: string;
+  accounts_kind?: string;
+  limits_progress_kind?: string;
+  limits_progress_count?: number;
+  image_quota_feature_present?: boolean;
+  image_quota_remaining_kind?: string;
+  last_remaining?: number;
+  min_remaining?: number;
+  max_remaining?: number;
+  image_quota_reset_after?: string;
+  error_envelope_kind?: string;
+  response_bytes: number;
+  content_length: number;
+  upstream_error_code?: string;
+  count: number;
+  first_seen: string;
+  last_seen: string;
+  last_auth_index?: string;
+  last_attempt?: number;
+}
+
+export interface ChatGptWebAccountInfoDiagnosticsSnapshot {
+  enabled: boolean;
+  capacity: number;
+  unique_count: number;
+  total_count: number;
+  evicted_count: number;
+  records: ChatGptWebAccountInfoDiagnosticRecord[];
+}
 
 export type ChatGptWebAccountInfoRefreshTaskState =
   | 'queued'

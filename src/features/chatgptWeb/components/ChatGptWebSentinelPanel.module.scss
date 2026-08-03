@@ -241,6 +241,133 @@
   font-size: 13px;
 }
 
+.diagnosticsActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.diagnosticsContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.diagnosticsStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+
+  > div {
+    min-width: 0;
+    padding: 10px 12px;
+    border-right: 1px solid var(--border-color);
+
+    &:last-child {
+      border-right: 0;
+    }
+  }
+
+  dt {
+    margin-bottom: 4px;
+    color: var(--text-tertiary);
+    font-size: 11px;
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 700;
+  }
+}
+
+.diagnosticsList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.diagnosticRecord {
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background: var(--bg-primary);
+
+  > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-md;
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--bg-secondary) 74%, transparent);
+
+    > div {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    strong {
+      overflow-wrap: anywhere;
+      color: var(--text-primary);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+    }
+
+    span {
+      color: var(--text-tertiary);
+      font-size: 11px;
+    }
+  }
+}
+
+.diagnosticCount {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-primary));
+  color: var(--primary-color) !important;
+  font-weight: 700;
+}
+
+.diagnosticDetails {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+
+  > div {
+    min-width: 0;
+    padding: 9px 12px;
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+
+    &:nth-child(3n) {
+      border-right: 0;
+    }
+  }
+
+  dt {
+    margin-bottom: 3px;
+    color: var(--text-tertiary);
+    font-size: 10px;
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--text-primary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+}
+
 @include mobile {
   .panel {
     padding: $spacing-md;
@@ -255,8 +382,20 @@
   }
 
   .settingsGrid,
-  .statusGrid {
+  .statusGrid,
+  .diagnosticsStats,
+  .diagnosticDetails {
     grid-template-columns: 1fr;
+  }
+
+  .diagnosticsActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .diagnosticsStats > div,
+  .diagnosticDetails > div {
+    border-right: 0;
   }
 
   .statusGrid [data-field='last_error'] {

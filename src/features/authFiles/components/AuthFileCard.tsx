@@ -298,7 +298,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const imageQuotaRemainingRaw = file.image_quota_remaining;
   const imageQuotaRemaining =
     typeof imageQuotaRemainingRaw === 'number' && Number.isFinite(imageQuotaRemainingRaw)
-      ? Math.max(0, imageQuotaRemainingRaw)
+      ? imageQuotaRemainingRaw
       : null;
   const imageQuotaExhausted = imageQuotaState === 'exhausted';
   const imageQuotaModelCooldown =

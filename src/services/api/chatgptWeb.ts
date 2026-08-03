@@ -1,6 +1,7 @@
 import type {
   ChatGptWebAccountInfoConfig,
   ChatGptWebAccountInfoConfigPatch,
+  ChatGptWebAccountInfoDiagnosticsSnapshot,
   ChatGptWebAccountInfoRefreshTask,
   ChatGptWebAccountInfoSnapshot,
   ChatGptWebAutoDeleteDeadStats,
@@ -137,6 +138,26 @@ export const chatGptWebApi = {
     return connection
       ? apiClient.patchAtConnection(connection, '/chatgpt-web/account-info', config)
       : apiClient.patch('/chatgpt-web/account-info', config);
+  },
+
+  getAccountInfoDiagnostics(
+    connection?: ApiClientConnectionSnapshot,
+    signal?: AbortSignal
+  ): Promise<ChatGptWebAccountInfoDiagnosticsSnapshot> {
+    const path = '/chatgpt-web/account-info/diagnostics';
+    if (connection) {
+      return signal
+        ? apiClient.getAtConnection(connection, path, { signal })
+        : apiClient.getAtConnection(connection, path);
+    }
+    return signal ? apiClient.get(path, { signal }) : apiClient.get(path);
+  },
+
+  clearAccountInfoDiagnostics(
+    connection?: ApiClientConnectionSnapshot
+  ): Promise<ChatGptWebAccountInfoDiagnosticsSnapshot> {
+    const path = '/chatgpt-web/account-info/diagnostics';
+    return connection ? apiClient.deleteAtConnection(connection, path) : apiClient.delete(path);
   },
 
   startAccountInfoRefreshTask(

@@ -573,6 +573,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     yamlKeys: [
       'chatgpt-web.account-info',
       'chatgpt-web.account-info.auto-refresh-enabled',
+      'chatgpt-web.account-info.diagnostics-enabled',
       'chatgpt-web.account-info.periodic-refresh-minutes',
       'chatgpt-web.account-info.refresh-workers',
       'chatgpt-web.account-info.refresh-queue-size',
@@ -588,6 +589,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       '图片额度',
       '周期查询',
       '刷新池',
+      '内存诊断',
+      'diagnostics',
     ],
   },
   {

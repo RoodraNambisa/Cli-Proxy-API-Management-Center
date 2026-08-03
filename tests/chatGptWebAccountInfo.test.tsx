@@ -1,6 +1,14 @@
 import { StrictMode, createRef } from 'react';
 import { AxiosError } from 'axios';
-import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { AuthFileCard, type AuthFileCardProps } from '@/features/authFiles/components/AuthFileCard';
@@ -27,6 +35,7 @@ import zhCNLocale from '@/i18n/locales/zh-CN.json';
 import zhTWLocale from '@/i18n/locales/zh-TW.json';
 import type {
   AuthFileItem,
+  ChatGptWebAccountInfoDiagnosticsSnapshot,
   ChatGptWebAccountInfoRefreshTask,
   ChatGptWebAccountInfoSnapshot,
 } from '@/types';
@@ -45,6 +54,7 @@ vi.mock('react-i18next', async (importOriginal) => {
 
 const createSnapshot = (): ChatGptWebAccountInfoSnapshot => ({
   config: {
+    'diagnostics-enabled': false,
     'periodic-refresh-minutes': 0,
     'refresh-workers': 4,
     'refresh-queue-size': 256,
@@ -62,6 +72,41 @@ const createSnapshot = (): ChatGptWebAccountInfoSnapshot => ({
     failed_count: 1,
     last_error: '',
   },
+});
+
+const createDiagnosticsSnapshot = (): ChatGptWebAccountInfoDiagnosticsSnapshot => ({
+  enabled: true,
+  capacity: 100,
+  unique_count: 1,
+  total_count: 3,
+  evicted_count: 0,
+  records: [
+    {
+      id: 'safe-record',
+      phase: 'quota',
+      stage: 'parse',
+      reason: 'quota_remaining_invalid',
+      http_status: 200,
+      content_type: 'application/json',
+      cloudflare: false,
+      body_kind: 'json_object',
+      limits_progress_kind: 'array',
+      limits_progress_count: 1,
+      image_quota_feature_present: true,
+      image_quota_remaining_kind: 'number',
+      last_remaining: -2,
+      min_remaining: -2,
+      max_remaining: -1,
+      image_quota_reset_after: '2026-08-04T00:00:00Z',
+      response_bytes: 321,
+      content_length: 321,
+      count: 3,
+      first_seen: '2026-08-03T00:00:00Z',
+      last_seen: '2026-08-03T00:01:00Z',
+      last_auth_index: 'safe-index',
+      last_attempt: 2,
+    },
+  ],
 });
 
 const createCompletedTask = (names: string[] = ['web.json']): ChatGptWebAccountInfoRefreshTask => ({
@@ -122,6 +167,7 @@ describe('ChatGPT Web account info and image quota', () => {
       managementKey: '',
     });
     useAuthStore.setState({ connectionStatus: 'connected' });
+    useNotificationStore.getState().hideConfirmation();
     useNotificationStore.setState({ showNotification: vi.fn() });
   });
 
@@ -171,6 +217,29 @@ describe('ChatGPT Web account info and image quota', () => {
       '/chatgpt-web/account-info/refresh-tasks/task%20id'
     );
     expect(apiClient.captureConnection).toHaveBeenCalledTimes(1);
+  });
+
+  test('uses scoped in-memory diagnostics endpoints', async () => {
+    const snapshot = createDiagnosticsSnapshot();
+    const cleared = { ...snapshot, unique_count: 0, total_count: 0, records: [] };
+    const connection = {
+      apiBase: 'https://diagnostics.example/v0/management',
+      managementKey: 'secret',
+      timeout: 30_000,
+    };
+    const get = vi.spyOn(apiClient, 'getAtConnection').mockResolvedValue(snapshot);
+    const remove = vi.spyOn(apiClient, 'deleteAtConnection').mockResolvedValue(cleared);
+    const abortController = new AbortController();
+
+    expect(
+      await chatGptWebApi.getAccountInfoDiagnostics(connection, abortController.signal)
+    ).toEqual(snapshot);
+    expect(await chatGptWebApi.clearAccountInfoDiagnostics(connection)).toEqual(cleared);
+
+    expect(get).toHaveBeenCalledWith(connection, '/chatgpt-web/account-info/diagnostics', {
+      signal: abortController.signal,
+    });
+    expect(remove).toHaveBeenCalledWith(connection, '/chatgpt-web/account-info/diagnostics');
   });
 
   test('isolates scoped task responses from the current connection global events', async () => {
@@ -331,6 +400,10 @@ describe('ChatGPT Web account info and image quota', () => {
       expect(locale.chatgpt_web.account_info.periodic_refresh_minutes).toBeTruthy();
       expect(locale.chatgpt_web.account_info.periodic_refresh_minutes_hint).toBeTruthy();
       expect(locale.chatgpt_web.account_info.periodic_unsupported).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.diagnostics.enabled).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.diagnostics.description).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.diagnostics.clear_confirm).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.diagnostics.fields.remaining_range).toBeTruthy();
     }
   });
 
@@ -404,6 +477,116 @@ describe('ChatGPT Web account info and image quota', () => {
     );
     await waitFor(() => expect(getAccountInfo).toHaveBeenCalledTimes(2));
     expect(toggle.checked).toBe(false);
+  });
+
+  test('saves the in-memory diagnostics switch independently', async () => {
+    const initial = createSnapshot();
+    const updated = {
+      ...initial,
+      config: { ...initial.config, 'diagnostics-enabled': true },
+    };
+    vi.spyOn(chatGptWebApi, 'getAccountInfo')
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(updated);
+    const patchAccountInfo = vi.spyOn(chatGptWebApi, 'patchAccountInfo').mockResolvedValue({});
+    const ref = createRef<ChatGptWebAccountInfoPanelHandle>();
+
+    render(<ChatGptWebAccountInfoPanel ref={ref} />);
+
+    await waitFor(() => expect(chatGptWebApi.getAccountInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
+    const toggle = screen.getByRole('checkbox', {
+      name: 'chatgpt_web.account_info.diagnostics.enabled',
+    }) as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+    fireEvent.click(toggle);
+
+    await act(async () => {
+      expect(await ref.current?.save()).toBe(true);
+    });
+
+    expect(patchAccountInfo).toHaveBeenCalledWith(
+      { 'diagnostics-enabled': true },
+      expect.any(Object)
+    );
+    expect(toggle.checked).toBe(true);
+  });
+
+  test('loads diagnostics once on expansion and only refreshes or clears them manually', async () => {
+    const accountInfo = createSnapshot();
+    accountInfo.config['diagnostics-enabled'] = true;
+    const diagnostics = createDiagnosticsSnapshot();
+    const cleared = { ...diagnostics, unique_count: 0, total_count: 0, records: [] };
+    vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(accountInfo);
+    const getDiagnostics = vi
+      .spyOn(chatGptWebApi, 'getAccountInfoDiagnostics')
+      .mockResolvedValue(diagnostics);
+    const clearDiagnostics = vi
+      .spyOn(chatGptWebApi, 'clearAccountInfoDiagnostics')
+      .mockResolvedValue(cleared);
+
+    render(<ChatGptWebAccountInfoPanel />);
+
+    await waitFor(() => expect(chatGptWebApi.getAccountInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
+    expect(getDiagnostics).not.toHaveBeenCalled();
+
+    const diagnosticsToggle = screen.getByRole('button', {
+      name: /chatgpt_web\.account_info\.diagnostics\.title/,
+    });
+    fireEvent.click(diagnosticsToggle);
+    await waitFor(() => expect(getDiagnostics).toHaveBeenCalledTimes(1));
+    expect(screen.getAllByText('quota_remaining_invalid')).toHaveLength(2);
+    expect(screen.getByText(/^-2 – -1/)).not.toBeNull();
+
+    fireEvent.click(diagnosticsToggle);
+    fireEvent.click(diagnosticsToggle);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(getDiagnostics).toHaveBeenCalledTimes(1);
+
+    const diagnosticsSection = document.getElementById(
+      'config-chatgpt-web-account-info-diagnostics'
+    ) as HTMLElement;
+    fireEvent.click(within(diagnosticsSection).getByRole('button', { name: 'common.refresh' }));
+    await waitFor(() => expect(getDiagnostics).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(
+      within(diagnosticsSection).getByRole('button', {
+        name: 'chatgpt_web.account_info.diagnostics.clear_button',
+      })
+    );
+    const confirmation = useNotificationStore.getState().confirmation.options;
+    expect(confirmation?.message).toBe('chatgpt_web.account_info.diagnostics.clear_confirm');
+    await act(async () => {
+      await confirmation?.onConfirm();
+    });
+    expect(clearDiagnostics).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('chatgpt_web.account_info.diagnostics.empty')).not.toBeNull();
+  });
+
+  test('disables diagnostics controls when an older backend omits the capability', async () => {
+    const legacy = createSnapshot();
+    delete legacy.config['diagnostics-enabled'];
+    vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(legacy);
+    const getDiagnostics = vi.spyOn(chatGptWebApi, 'getAccountInfoDiagnostics');
+
+    render(<ChatGptWebAccountInfoPanel />);
+
+    await waitFor(() => expect(chatGptWebApi.getAccountInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
+    const toggle = screen.getByRole('checkbox', {
+      name: 'chatgpt_web.account_info.diagnostics.enabled',
+    }) as HTMLInputElement;
+    expect(toggle.disabled).toBe(true);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /chatgpt_web\.account_info\.diagnostics\.title/,
+      })
+    );
+    expect(screen.getAllByText('chatgpt_web.account_info.diagnostics.unsupported').length).toBe(2);
+    expect(getDiagnostics).not.toHaveBeenCalled();
   });
 
   test.each([
@@ -3039,7 +3222,7 @@ describe('ChatGPT Web account info and image quota', () => {
             lifecycle_state: 'active',
             account_type: 'oauth',
             plan_type: 'team',
-            image_quota_remaining: 0,
+            image_quota_remaining: -2,
             image_quota_reset_at: '2026-07-27T01:00:00Z',
             quota_state: 'exhausted',
             quota_updated_at: '2026-07-27T00:30:00Z',
@@ -3055,6 +3238,9 @@ describe('ChatGPT Web account info and image quota', () => {
     );
 
     expect(screen.getByText('exhausted')).not.toBeNull();
+    expect(
+      screen.getByText(/auth_files\.chatgpt_web_image_quota_remaining/).parentElement?.textContent
+    ).toContain('-2');
     expect(screen.getByText('auth_files.chatgpt_web_image_quota_stale')).not.toBeNull();
     expect(screen.getAllByText('team').length).toBeGreaterThan(0);
     expect(screen.getAllByText('oauth').length).toBeGreaterThanOrEqual(2);
@@ -3140,7 +3326,7 @@ describe('ChatGPT Web account info and image quota', () => {
           account_type: 'oauth',
           plan_type: 'team',
           quota_state: 'exhausted',
-          image_quota_remaining: 7,
+          image_quota_remaining: -1,
           quota_stale: true,
           image_quota_reset_at: '2026-07-27T01:00:00Z',
           quota_next_refresh_at: '2026-07-27T01:00:30Z',
@@ -3171,7 +3357,7 @@ describe('ChatGPT Web account info and image quota', () => {
     expect(screen.getAllByText('auth_files.chatgpt_web_image_quota_model_badge')).toHaveLength(1);
     expect(screen.getByText(/auth_files\.chatgpt_web_plan_type/).textContent).toContain('team');
     expect(screen.getByText(/auth_files\.chatgpt_web_image_quota_remaining/).textContent).toContain(
-      '7'
+      '-1'
     );
     expect(screen.getByText('auth_files.chatgpt_web_image_quota_stale')).not.toBeNull();
   });

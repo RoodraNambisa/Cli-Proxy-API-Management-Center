@@ -178,7 +178,7 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
               const imageQuotaRemaining =
                 typeof imageQuotaRemainingValue === 'number' &&
                 Number.isFinite(imageQuotaRemainingValue)
-                  ? Math.max(0, Math.trunc(imageQuotaRemainingValue))
+                  ? Math.trunc(imageQuotaRemainingValue)
                   : null;
               const imageQuotaStale = useModelImageQuotaSnapshot
                 ? model.quota_stale === true
