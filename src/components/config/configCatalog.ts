@@ -44,6 +44,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'tls',
       'rmAllowRemote',
       'rmDisableControlPanel',
+      'rmAuthFilesPagination',
       'rmAccessPath',
       'rmPanelRepo',
     ],
@@ -202,7 +203,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-remote-management',
     pageId: 'global-basics',
     labelKey: 'config_management.visual.sections.remote.title',
-    yamlKeys: ['remote-management', 'access-path', 'panel-repo'],
+    yamlKeys: ['remote-management', 'access-path', 'panel-repo', 'auth-files-pagination'],
   },
   {
     id: 'config-management-key',

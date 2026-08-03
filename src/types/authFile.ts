@@ -123,6 +123,26 @@ export interface AuthFileItem {
 export interface AuthFilesResponse {
   files: AuthFileItem[];
   total?: number;
+  pagination?: AuthFilesPagination;
+  facets?: AuthFilesFacets;
+}
+
+export interface AuthFilesPagination {
+  enabled: boolean;
+  page?: number;
+  page_size?: number;
+  total_pages?: number;
+}
+
+export interface AuthFilesFacetValue {
+  value: string;
+  count: number;
+}
+
+export interface AuthFilesFacets {
+  providers: AuthFilesFacetValue[];
+  priorities: AuthFilesFacetValue[];
+  plans: AuthFilesFacetValue[];
 }
 
 export type CodexPlanTypeRefreshState =

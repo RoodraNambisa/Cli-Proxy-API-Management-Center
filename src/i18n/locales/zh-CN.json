@@ -1821,6 +1821,8 @@
           "allow_remote_desc": "允许从其他主机访问管理接口",
           "disable_panel": "禁用控制面板",
           "disable_panel_desc": "禁用内置的 Web 控制面板",
+          "auth_files_pagination": "认证文件服务端分页",
+          "auth_files_pagination_desc": "由服务端筛选、排序和分页认证文件。仅优化管理页面，所有凭证仍会加载并参与调度。",
           "secret_key": "管理密钥",
           "secret_key_placeholder": "设置管理密钥",
           "access_path": "访问路径隐藏 (access-path)",

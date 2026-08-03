@@ -165,6 +165,9 @@ export interface RemoteManagementConfig {
   disableControlPanel?: boolean;
   accessPath?: string;
   panelGithubRepository?: string;
+  authFilesPagination?: {
+    enabled?: boolean;
+  };
 }
 
 export interface PprofManagementConfig {

@@ -66,6 +66,18 @@ export type AuthCooldownClearSelectedResult = {
   updated: number;
   missing: string[];
 };
+export type AuthFilesListParams = {
+  page: number;
+  pageSize: number;
+  provider?: string;
+  plan?: string;
+  priority?: string;
+  problemOnly?: boolean;
+  enabledOnly?: boolean;
+  disabledOnly?: boolean;
+  search?: string;
+  sort?: string;
+};
 type AuthFileBatchUploadResponse = {
   status?: string;
   uploaded?: number;
@@ -644,18 +656,37 @@ const dedupeAuthFilesResponse = (payload: AuthFilesResponse): AuthFilesResponse 
   const normalizedFiles = Array.from(grouped.values()).map((entries) =>
     normalizeAuthFileEntry(mergeAuthFileEntries(entries))
   );
-  normalizedFiles.sort((left, right) =>
-    readTextField(left, 'name').localeCompare(readTextField(right, 'name'), undefined, {
-      sensitivity: 'accent',
-    })
-  );
+  if (payload?.pagination?.enabled !== true) {
+    normalizedFiles.sort((left, right) =>
+      readTextField(left, 'name').localeCompare(readTextField(right, 'name'), undefined, {
+        sensitivity: 'accent',
+      })
+    );
+  }
 
   return {
     ...payload,
     files: normalizedFiles,
-    total: normalizedFiles.length,
+    total:
+      payload?.pagination?.enabled === true && Number.isFinite(Number(payload.total))
+        ? Number(payload.total)
+        : normalizedFiles.length,
   };
 };
+
+const authFilesListQuery = (params: AuthFilesListParams) => ({
+  paged: true,
+  page: params.page,
+  page_size: params.pageSize,
+  provider: params.provider || 'all',
+  plan: params.plan || 'all',
+  priority: params.priority || 'all',
+  problem_only: params.problemOnly === true,
+  enabled_only: params.enabledOnly === true,
+  disabled_only: params.disabledOnly === true,
+  search: params.search || '',
+  sort: params.sort || 'default',
+});
 
 const parseAuthFileJsonObject = (rawText: string): Record<string, unknown> => {
   const trimmed = rawText.trim();
@@ -888,6 +919,36 @@ export const authFilesApi = {
             signal ? { signal } : undefined
           )
         : await apiClient.get<AuthFilesResponse>('/auth-files', signal ? { signal } : undefined)
+    ),
+
+  listPaged: async (
+    params: AuthFilesListParams,
+    connection?: ApiClientConnectionSnapshot,
+    signal?: AbortSignal
+  ) =>
+    dedupeAuthFilesResponse(
+      connection
+        ? await apiClient.getAtConnection<AuthFilesResponse>(connection, '/auth-files', {
+            params: authFilesListQuery(params),
+            ...(signal ? { signal } : {}),
+          })
+        : await apiClient.get<AuthFilesResponse>('/auth-files', {
+            params: authFilesListQuery(params),
+            ...(signal ? { signal } : {}),
+          })
+    ),
+
+  listSelection: async (params: AuthFilesListParams, signal?: AbortSignal) =>
+    dedupeAuthFilesResponse(
+      await apiClient.get<AuthFilesResponse>('/auth-files/selection', {
+        params: {
+          ...authFilesListQuery(params),
+          paged: undefined,
+          page: undefined,
+          page_size: undefined,
+        },
+        ...(signal ? { signal } : {}),
+      })
     ),
 
   setStatus: (name: string, disabled: boolean) =>

@@ -255,6 +255,7 @@ export type VisualConfigValues = {
   rmAllowRemote: boolean;
   rmSecretKey: string;
   rmDisableControlPanel: boolean;
+  rmAuthFilesPagination: boolean;
   rmAccessPath: string;
   rmPanelRepo: string;
   authDir: string;
@@ -337,6 +338,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   rmAllowRemote: false,
   rmSecretKey: '',
   rmDisableControlPanel: false,
+  rmAuthFilesPagination: false,
   rmAccessPath: '',
   rmPanelRepo: '',
   authDir: '',

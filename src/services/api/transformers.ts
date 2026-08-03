@@ -809,6 +809,8 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   }
   const remoteManagement = raw['remote-management'] ?? raw.remoteManagement;
   if (isRecord(remoteManagement)) {
+    const authFilesPagination =
+      remoteManagement['auth-files-pagination'] ?? remoteManagement.authFilesPagination;
     config.remoteManagement = {
       allowRemote: normalizeBoolean(
         remoteManagement['allow-remote'] ?? remoteManagement.allowRemote
@@ -824,6 +826,15 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
           remoteManagement['panel-repo'] ??
           remoteManagement.panelRepo
       ),
+      ...(isRecord(authFilesPagination)
+        ? {
+            authFilesPagination: {
+              enabled: normalizeBoolean(
+                authFilesPagination.enabled ?? authFilesPagination['enabled']
+              ),
+            },
+          }
+        : {}),
     };
   }
   const codex = raw.codex;

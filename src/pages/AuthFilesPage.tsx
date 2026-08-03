@@ -91,7 +91,8 @@ import {
   useQuotaStore,
   useThemeStore,
 } from '@/stores';
-import type { CodexPlanTypeRefreshTask } from '@/types';
+import { authFilesApi, type AuthFilesListParams } from '@/services/api';
+import type { AuthFileItem, CodexPlanTypeRefreshTask } from '@/types';
 import { getStatusFromError } from '@/utils/quota';
 import { normalizeAuthIndex } from '@/utils/usage';
 import styles from './AuthFilesPage.module.scss';
@@ -315,6 +316,7 @@ export function AuthFilesPage() {
   const [disabledOnly, setDisabledOnly] = useState(false);
   const [compactMode, setCompactMode] = useState(false);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSizeByMode, setPageSizeByMode] = useState({
     regular: DEFAULT_REGULAR_PAGE_SIZE,
@@ -326,12 +328,73 @@ export function AuthFilesPage() {
   const [codexUsageRefreshing, setCodexUsageRefreshing] = useState(false);
   const [codexResetCreditsRefreshing, setCodexResetCreditsRefreshing] = useState(false);
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
+  const [selectionDetails, setSelectionDetails] = useState<AuthFileItem[]>([]);
+  const [selectingFiltered, setSelectingFiltered] = useState(false);
+  const [paginationMode, setPaginationMode] = useState<'unknown' | 'server' | 'client'>('unknown');
   const [uiStateHydrated, setUiStateHydrated] = useState(false);
   const floatingBatchActionsRef = useRef<HTMLDivElement>(null);
   const batchActionAnimationRef = useRef<AnimationPlaybackControlsWithThen | null>(null);
   const previousSelectionCountRef = useRef(0);
   const selectionCountRef = useRef(0);
   const pageAuthIndexesRef = useRef<string[]>([]);
+  const serverPaginationRef = useRef(false);
+  const legacyFilesRef = useRef<AuthFileItem[]>([]);
+  const clientPaginationProbeRef = useRef<AuthFilesListParams | null>(null);
+  const connectionGenerationRef = useRef(connectionGenerationKey);
+  const selectFilteredRequestRef = useRef(0);
+  connectionGenerationRef.current = connectionGenerationKey;
+
+  const pageSize = compactMode ? pageSizeByMode.compact : pageSizeByMode.regular;
+  const listParams = useMemo<AuthFilesListParams>(
+    () => ({
+      page,
+      pageSize,
+      provider: filter,
+      plan: planFilter,
+      priority: priorityFilter,
+      problemOnly,
+      enabledOnly,
+      disabledOnly,
+      search: debouncedSearch,
+      sort: sortMode,
+    }),
+    [
+      debouncedSearch,
+      disabledOnly,
+      enabledOnly,
+      filter,
+      page,
+      pageSize,
+      planFilter,
+      priorityFilter,
+      problemOnly,
+      sortMode,
+    ]
+  );
+  const resolveFilteredFiles = useCallback(async (): Promise<AuthFileItem[]> => {
+    if (!serverPaginationRef.current) return legacyFilesRef.current;
+    const requestConnection = connectionGenerationKey;
+    const response = await authFilesApi.listSelection({
+      ...listParams,
+      plan: ALL_PLAN_FILTER,
+      priority: ALL_PRIORITY_FILTER,
+      search: '',
+      sort: 'default',
+    });
+    if (connectionGenerationRef.current !== requestConnection) {
+      throw new Error(t('notification.refresh_failed'));
+    }
+    return response.files;
+  }, [connectionGenerationKey, listParams, t]);
+  const requestedListParams =
+    paginationMode === 'client' && clientPaginationProbeRef.current
+      ? clientPaginationProbeRef.current
+      : listParams;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   const { keyStats, usageAuths, usageLoading, loadKeyStats, refreshKeyStats } = useAuthFilesStats();
   const refreshVisibleKeyStats = useCallback(async () => {
@@ -339,6 +402,9 @@ export function AuthFilesPage() {
   }, [refreshKeyStats]);
   const {
     files,
+    filesTotal,
+    filesPagination,
+    filesFacets,
     filesLoadedAtMs,
     filesSnapshotOrder,
     selectedFiles,
@@ -397,7 +463,24 @@ export function AuthFilesPage() {
     refreshKeyStats: refreshVisibleKeyStats,
     active: isCurrentLayer,
     connectionGenerationKey,
+    listParams: requestedListParams,
+    operationFiles: selectionDetails,
+    resolveFilteredFiles,
   });
+
+  useEffect(() => {
+    setSelectionDetails((current) => {
+      const byName = new Map(current.map((file) => [file.name, file]));
+      files.forEach((file) => byName.set(file.name, file));
+      return Array.from(byName.values()).filter((file) => selectedFiles.has(file.name));
+    });
+  }, [files, selectedFiles]);
+
+  const operationContextFiles = useMemo(() => {
+    const byName = new Map(selectionDetails.map((file) => [file.name, file]));
+    files.forEach((file) => byName.set(file.name, file));
+    return Array.from(byName.values());
+  }, [files, selectionDetails]);
 
   const refreshFilesInBackground = useCallback(() => loadFiles({ background: true }), [loadFiles]);
 
@@ -462,7 +545,7 @@ export function AuthFilesPage() {
     refreshConversionTask,
     cancelConversionTask,
   } = useAuthFilesBatchSettings({
-    files,
+    files: operationContextFiles,
     disableControls,
     loadFiles: refreshFilesInBackground,
     deselectAll,
@@ -502,7 +585,41 @@ export function AuthFilesPage() {
   )
     ? (normalizedFilter as QuotaProviderType)
     : null;
-  const pageSize = compactMode ? pageSizeByMode.compact : pageSizeByMode.regular;
+  const serverPagination = paginationMode === 'server' && filesPagination?.enabled === true;
+
+  useEffect(() => {
+    if (filesLoadedAtMs <= 0) return;
+    if (filesPagination?.enabled === true) {
+      clientPaginationProbeRef.current = null;
+      setPaginationMode('server');
+      return;
+    }
+    if (!clientPaginationProbeRef.current) {
+      clientPaginationProbeRef.current = listParams;
+    }
+    setPaginationMode('client');
+  }, [filesLoadedAtMs, filesPagination?.enabled, listParams]);
+
+  useEffect(() => {
+    selectFilteredRequestRef.current += 1;
+    clientPaginationProbeRef.current = null;
+    setPaginationMode('unknown');
+    setSelectionDetails([]);
+    setSelectingFiltered(false);
+  }, [connectionGenerationKey]);
+
+  useEffect(() => {
+    serverPaginationRef.current = serverPagination;
+    legacyFilesRef.current = files;
+  }, [files, serverPagination]);
+
+  useEffect(() => {
+    if (!serverPagination) return;
+    const resolvedPage = Number(filesPagination?.page);
+    if (Number.isFinite(resolvedPage) && resolvedPage >= 1 && resolvedPage !== page) {
+      setPage(resolvedPage);
+    }
+  }, [filesPagination?.page, page, serverPagination]);
 
   useEffect(() => {
     const persistedCompactMode = readPersistedAuthFilesCompactMode();
@@ -663,9 +780,8 @@ export function AuthFilesPage() {
       if (!isAuthFilesSortMode(value) || value === sortMode) return;
       setSortMode(value);
       setPage(1);
-      void loadFiles().catch(() => {});
     },
-    [loadFiles, sortMode]
+    [sortMode]
   );
 
   const handleHeaderRefresh = useCallback(async () => {
@@ -702,28 +818,37 @@ export function AuthFilesPage() {
 
   const existingTypes = useMemo(() => {
     const types = new Set<string>(['all']);
-    files.forEach((file) => {
-      if (file.type) {
-        types.add(file.type);
-      }
-    });
+    if (serverPagination) {
+      filesFacets?.providers.forEach((facet) => types.add(facet.value));
+    } else {
+      files.forEach((file) => {
+        if (file.type) {
+          types.add(file.type);
+        }
+      });
+    }
     return Array.from(types);
-  }, [files]);
+  }, [files, filesFacets?.providers, serverPagination]);
 
   const filesMatchingStatusFilters = useMemo(
     () =>
-      files.filter((file) => {
-        if (problemOnly && !hasAuthFileStatusMessage(file)) return false;
-        if (enabledOnly && file.disabled === true) return false;
-        if (disabledOnly && file.disabled !== true) return false;
-        return true;
-      }),
-    [disabledOnly, enabledOnly, files, problemOnly]
+      serverPagination
+        ? files
+        : files.filter((file) => {
+            if (problemOnly && !hasAuthFileStatusMessage(file)) return false;
+            if (enabledOnly && file.disabled === true) return false;
+            if (disabledOnly && file.disabled !== true) return false;
+            return true;
+          }),
+    [disabledOnly, enabledOnly, files, problemOnly, serverPagination]
   );
 
   const availablePlanFilters = useMemo(
-    () => getAvailablePlanFilters(filesMatchingStatusFilters, priorityFilter),
-    [filesMatchingStatusFilters, priorityFilter]
+    () =>
+      serverPagination
+        ? (filesFacets?.plans.map((facet) => facet.value) ?? [])
+        : getAvailablePlanFilters(filesMatchingStatusFilters, priorityFilter),
+    [filesFacets?.plans, filesMatchingStatusFilters, priorityFilter, serverPagination]
   );
 
   const planFilterOptions = useMemo(() => {
@@ -741,8 +866,11 @@ export function AuthFilesPage() {
   }, [availablePlanFilters, t]);
 
   const availablePriorityFilters = useMemo(
-    () => getAvailablePriorityFilters(filesMatchingStatusFilters),
-    [filesMatchingStatusFilters]
+    () =>
+      serverPagination
+        ? (filesFacets?.priorities.map((facet) => facet.value) ?? [])
+        : getAvailablePriorityFilters(filesMatchingStatusFilters),
+    [filesFacets?.priorities, filesMatchingStatusFilters, serverPagination]
   );
 
   const priorityFilterOptions = useMemo(() => {
@@ -789,7 +917,9 @@ export function AuthFilesPage() {
     (value: string) => {
       const nextPriorityFilter = value || ALL_PRIORITY_FILTER;
       setPriorityFilter(nextPriorityFilter);
-      if (
+      if (serverPagination && planFilter !== ALL_PLAN_FILTER) {
+        setPlanFilter(ALL_PLAN_FILTER);
+      } else if (
         planFilter !== ALL_PLAN_FILTER &&
         !getAvailablePlanFilters(filesMatchingStatusFilters, nextPriorityFilter).includes(
           planFilter
@@ -799,7 +929,7 @@ export function AuthFilesPage() {
       }
       setPage(1);
     },
-    [filesMatchingStatusFilters, planFilter]
+    [filesMatchingStatusFilters, planFilter, serverPagination]
   );
 
   const sortOptions = useMemo(
@@ -812,18 +942,27 @@ export function AuthFilesPage() {
   );
 
   const typeCounts = useMemo(() => {
+    if (serverPagination) {
+      const counts: Record<string, number> = { all: 0 };
+      filesFacets?.providers.forEach((facet) => {
+        counts[facet.value] = facet.count;
+        counts.all += facet.count;
+      });
+      return counts;
+    }
     const counts: Record<string, number> = { all: filesMatchingStatusFilters.length };
     filesMatchingStatusFilters.forEach((file) => {
       if (!file.type) return;
       counts[file.type] = (counts[file.type] || 0) + 1;
     });
     return counts;
-  }, [filesMatchingStatusFilters]);
+  }, [filesFacets?.providers, filesMatchingStatusFilters, serverPagination]);
 
-  const normalizedSearch = search.trim();
+  const normalizedSearch = (serverPagination ? debouncedSearch : search).trim();
   const wildcardSearch = useMemo(() => buildWildcardSearch(normalizedSearch), [normalizedSearch]);
 
   const filtered = useMemo(() => {
+    if (serverPagination) return files;
     const normalizedTerm = normalizedSearch.toLowerCase();
 
     return filesMatchingStatusFilters.filter((item) => {
@@ -855,14 +994,17 @@ export function AuthFilesPage() {
     });
   }, [
     filesMatchingStatusFilters,
+    files,
     filter,
     normalizedSearch,
     planFilter,
     priorityFilter,
     wildcardSearch,
+    serverPagination,
   ]);
 
   const sorted = useMemo(() => {
+    if (serverPagination) return files;
     const copy = [...filtered];
     if (sortMode === 'default') {
       copy.sort((a, b) => {
@@ -882,12 +1024,19 @@ export function AuthFilesPage() {
       });
     }
     return copy;
-  }, [filtered, sortMode]);
+  }, [files, filtered, serverPagination, sortMode]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const start = (currentPage - 1) * pageSize;
-  const pageItems = useMemo(() => sorted.slice(start, start + pageSize), [pageSize, sorted, start]);
+  const totalPages = serverPagination
+    ? Math.max(1, Number(filesPagination?.total_pages) || 1)
+    : Math.max(1, Math.ceil(sorted.length / pageSize));
+  const currentPage = serverPagination
+    ? Math.min(Number(filesPagination?.page) || page, totalPages)
+    : Math.min(page, totalPages);
+  const start = serverPagination ? 0 : (currentPage - 1) * pageSize;
+  const pageItems = useMemo(
+    () => (serverPagination ? sorted : sorted.slice(start, start + pageSize)),
+    [pageSize, serverPagination, sorted, start]
+  );
   const currentPageAuthIndexes = useMemo(
     () =>
       Array.from(
@@ -920,17 +1069,61 @@ export function AuthFilesPage() {
       sorted.filter((file) => !isRuntimeOnlyAuthFile(file) && !isRetiredGeminiCliAuthFile(file)),
     [sorted]
   );
+  const handleSelectFiltered = useCallback(async () => {
+    if (!serverPagination) {
+      selectAllVisible(selectableFilteredItems);
+      return;
+    }
+    setSelectingFiltered(true);
+    const requestId = ++selectFilteredRequestRef.current;
+    const requestConnection = connectionGenerationKey;
+    try {
+      const response = await authFilesApi.listSelection(listParams);
+      if (
+        selectFilteredRequestRef.current !== requestId ||
+        connectionGenerationRef.current !== requestConnection
+      ) {
+        return;
+      }
+      setSelectionDetails((current) => {
+        const byName = new Map(current.map((file) => [file.name, file]));
+        response.files.forEach((file) => byName.set(file.name, file));
+        return Array.from(byName.values());
+      });
+      selectAllVisible(response.files);
+    } catch (error) {
+      if (selectFilteredRequestRef.current !== requestId) return;
+      const message = error instanceof Error ? error.message : '';
+      showNotification(`${t('notification.refresh_failed')}: ${message}`, 'error');
+    } finally {
+      if (selectFilteredRequestRef.current === requestId) {
+        setSelectingFiltered(false);
+      }
+    }
+  }, [
+    connectionGenerationKey,
+    listParams,
+    selectableFilteredItems,
+    selectAllVisible,
+    serverPagination,
+    showNotification,
+    t,
+  ]);
   const currentPageCodexUsageTargets = useMemo(
     () => pageItems.filter((file) => CODEX_CONFIG.filterFn(file) && !isRuntimeOnlyAuthFile(file)),
     [pageItems]
   );
   const selectedNames = useMemo(() => Array.from(selectedFiles), [selectedFiles]);
+  const selectedContextFiles = useMemo(
+    () => operationContextFiles.filter((file) => selectedFiles.has(file.name)),
+    [operationContextFiles, selectedFiles]
+  );
   const selectedChatGptWebNames = useMemo(
     () =>
-      files
-        .filter((file) => selectedFiles.has(file.name) && isChatGptWebAccountInfoRefreshable(file))
+      selectedContextFiles
+        .filter((file) => isChatGptWebAccountInfoRefreshable(file))
         .map((file) => file.name),
-    [files, selectedFiles]
+    [selectedContextFiles]
   );
   const {
     manualRefreshing: chatGptWebAccountInfoRefreshing,
@@ -956,15 +1149,14 @@ export function AuthFilesPage() {
     if (!codexAgentIdentityConversionVisible) {
       return { toAgentIdentity, toOauth };
     }
-    files.forEach((file) => {
-      if (!selectedFiles.has(file.name)) return;
+    selectedContextFiles.forEach((file) => {
       const summary = resolveCodexAuthModeSummary(file);
       if (!summary) return;
       if (summary.canConvertToAgentIdentity) toAgentIdentity.push(file.name);
       if (summary.canConvertToOauth) toOauth.push(file.name);
     });
     return { toAgentIdentity, toOauth };
-  }, [codexAgentIdentityConversionVisible, files, selectedFiles]);
+  }, [codexAgentIdentityConversionVisible, selectedContextFiles]);
   const selectedHasStatusUpdating = useMemo(
     () => selectedNames.some((name) => statusUpdating[name] === true),
     [selectedNames, statusUpdating]
@@ -1371,7 +1563,9 @@ export function AuthFilesPage() {
   const titleNode = (
     <div className={styles.titleWrapper}>
       <span>{t('auth_files.title_section')}</span>
-      {files.length > 0 && <span className={styles.countBadge}>{files.length}</span>}
+      {(serverPagination ? filesTotal : files.length) > 0 && (
+        <span className={styles.countBadge}>{serverPagination ? filesTotal : files.length}</span>
+      )}
     </div>
   );
 
@@ -1491,7 +1685,7 @@ export function AuthFilesPage() {
               variant="danger"
               size="sm"
               onClick={() =>
-                handleDeleteAll({
+                void handleDeleteAll({
                   filter,
                   problemOnly,
                   enabledOnly,
@@ -1798,7 +1992,7 @@ export function AuthFilesPage() {
               </div>
             )}
 
-            {!loading && sorted.length > pageSize && (
+            {!loading && (serverPagination ? totalPages > 1 : sorted.length > pageSize) && (
               <div className={styles.pagination}>
                 <Button
                   variant="secondary"
@@ -1812,7 +2006,7 @@ export function AuthFilesPage() {
                   {t('auth_files.pagination_info', {
                     current: currentPage,
                     total: totalPages,
-                    count: sorted.length,
+                    count: serverPagination ? filesTotal : sorted.length,
                   })}
                 </div>
                 <Button
@@ -1927,7 +2121,7 @@ export function AuthFilesPage() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => selectAllVisible(pageItems)}
+                    onClick={() => selectAllVisible(selectablePageItems)}
                     disabled={selectablePageItems.length === 0}
                   >
                     {t('auth_files.batch_select_page')}
@@ -1935,8 +2129,12 @@ export function AuthFilesPage() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => selectAllVisible(sorted)}
-                    disabled={selectableFilteredItems.length === 0}
+                    onClick={() => void handleSelectFiltered()}
+                    disabled={
+                      selectingFiltered ||
+                      (serverPagination ? filesTotal === 0 : selectableFilteredItems.length === 0)
+                    }
+                    loading={selectingFiltered}
                   >
                     {t('auth_files.batch_select_filtered')}
                   </Button>

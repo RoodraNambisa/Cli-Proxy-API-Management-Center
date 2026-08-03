@@ -2362,6 +2362,15 @@ export function VisualConfigEditor({
                   disabled={disabled}
                   onChange={(rmDisableControlPanel) => onChange({ rmDisableControlPanel })}
                 />
+                <ToggleRow
+                  title={t('config_management.visual.sections.remote.auth_files_pagination')}
+                  description={t(
+                    'config_management.visual.sections.remote.auth_files_pagination_desc'
+                  )}
+                  checked={values.rmAuthFilesPagination}
+                  disabled={disabled}
+                  onChange={(rmAuthFilesPagination) => onChange({ rmAuthFilesPagination })}
+                />
                 <SectionGrid>
                   <Input
                     label={t('config_management.visual.sections.remote.access_path')}

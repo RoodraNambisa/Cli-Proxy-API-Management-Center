@@ -2089,6 +2089,12 @@ function getNextDirtyFields(
       nextValues.rmDisableControlPanel === baselineValues.rmDisableControlPanel
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'rmAuthFilesPagination')) {
+    updateDirty(
+      'rmAuthFilesPagination',
+      nextValues.rmAuthFilesPagination === baselineValues.rmAuthFilesPagination
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'rmAccessPath')) {
     updateDirty('rmAccessPath', nextValues.rmAccessPath === baselineValues.rmAccessPath);
   }
@@ -2819,6 +2825,7 @@ export function useVisualConfig() {
             codexFingerprint?.imagesForceHTTP1 ??
             codexFingerprint?.imagesForceHttp1
           );
+      const authFilesPagination = asRecord(remoteManagement?.['auth-files-pagination']);
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === 'string' ? parsed.host : '',
@@ -2834,6 +2841,7 @@ export function useVisualConfig() {
             ? remoteManagement['secret-key']
             : '',
         rmDisableControlPanel: Boolean(remoteManagement?.['disable-control-panel']),
+        rmAuthFilesPagination: Boolean(authFilesPagination?.enabled),
         rmAccessPath:
           typeof remoteManagement?.['access-path'] === 'string'
             ? remoteManagement['access-path']
@@ -3174,6 +3182,7 @@ export function useVisualConfig() {
           values.rmAllowRemote ||
           values.rmSecretKey.trim() ||
           values.rmDisableControlPanel ||
+          values.rmAuthFilesPagination ||
           values.rmAccessPath.trim() ||
           values.rmPanelRepo.trim()
         ) {
@@ -3184,6 +3193,12 @@ export function useVisualConfig() {
             doc,
             ['remote-management', 'disable-control-panel'],
             values.rmDisableControlPanel
+          );
+          ensureMapInDoc(doc, ['remote-management', 'auth-files-pagination']);
+          setBooleanInDoc(
+            doc,
+            ['remote-management', 'auth-files-pagination', 'enabled'],
+            values.rmAuthFilesPagination
           );
           setStringInDoc(doc, ['remote-management', 'access-path'], values.rmAccessPath);
           setStringInDoc(doc, ['remote-management', 'panel-github-repository'], values.rmPanelRepo);

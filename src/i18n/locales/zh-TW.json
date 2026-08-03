@@ -1840,6 +1840,8 @@
           "allow_remote_desc": "允許從其他主機存取管理介面",
           "disable_panel": "停用控制面板",
           "disable_panel_desc": "停用內建的 Web 控制面板",
+          "auth_files_pagination": "認證檔案伺服器端分頁",
+          "auth_files_pagination_desc": "由伺服器端篩選、排序及分頁認證檔案。僅最佳化管理頁面，所有憑證仍會載入並參與調度。",
           "secret_key": "管理金鑰",
           "secret_key_placeholder": "設定管理金鑰",
           "access_path": "存取路徑隱藏（access-path）",

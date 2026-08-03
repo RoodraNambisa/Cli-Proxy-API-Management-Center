@@ -1817,6 +1817,8 @@
           "allow_remote_desc": "Allow management access from other hosts",
           "disable_panel": "Disable Control Panel",
           "disable_panel_desc": "Disable the built-in web control panel",
+          "auth_files_pagination": "Server-side Auth File Pagination",
+          "auth_files_pagination_desc": "Filter, sort, and page authentication files on the server. This only optimizes the management page; all credentials are still loaded for scheduling.",
           "secret_key": "Management Key",
           "secret_key_placeholder": "Set management key",
           "access_path": "Access Path Hiding (access-path)",

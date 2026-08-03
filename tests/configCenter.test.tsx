@@ -789,3 +789,45 @@ describe('legacy quota fallback config', () => {
     expect(result.current.visualDirtyFields).toEqual(['quotaAntigravityCredits']);
   });
 });
+
+describe('auth files pagination config', () => {
+  test('round-trips the opt-in remote-management setting', () => {
+    const yaml = [
+      'remote-management:',
+      '  allow-remote: false',
+      '  auth-files-pagination:',
+      '    enabled: true',
+      '',
+    ].join('\n');
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => {
+      expect(result.current.loadVisualValuesFromYaml(yaml)).toEqual({ ok: true });
+    });
+    expect(result.current.visualValues.rmAuthFilesPagination).toBe(true);
+
+    const merged = parseYaml(result.current.applyVisualChangesToYaml(yaml)) as Record<
+      string,
+      Record<string, unknown>
+    >;
+    expect(merged['remote-management']['auth-files-pagination']).toEqual({ enabled: true });
+  });
+
+  test('persists disabling an existing pagination setting', () => {
+    const yaml = ['remote-management:', '  auth-files-pagination:', '    enabled: true', ''].join(
+      '\n'
+    );
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => {
+      expect(result.current.loadVisualValuesFromYaml(yaml)).toEqual({ ok: true });
+      result.current.setVisualValues({ rmAuthFilesPagination: false });
+    });
+
+    const merged = parseYaml(result.current.applyVisualChangesToYaml(yaml)) as Record<
+      string,
+      Record<string, unknown>
+    >;
+    expect(merged['remote-management']['auth-files-pagination']).toEqual({ enabled: false });
+  });
+});
