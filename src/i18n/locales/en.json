@@ -1690,6 +1690,8 @@
         "description": "Configure automatic relogin and Web image compatibility here; run account logins on the dedicated task page and manage Sentinel SDK settings and status below.",
         "auto_relogin": "Automatic relogin",
         "auto_relogin_description": "Automatically attempt login when a token cannot be refreshed and the credential can be relogged. Dead accounts and interaction-required states are never retried automatically.",
+        "session_cookie_refresh_on_token_failure": "Use Session Cookie when Access Token fails",
+        "session_cookie_refresh_on_token_failure_description": "For credentials without complete password and 2FA material, use a complete ChatGPT Session Cookie to refresh an expired or rejected Access Token. Only definitive Session expiry marks the credential dead; network, Cloudflare, rate-limit, malformed-response, and incomplete-cookie failures do not.",
         "force_session_refresh_on_import": "Force Session refresh on import",
         "force_session_refresh_on_import_description": "When enabled, refresh through Session even if the imported Access Token is still valid. When disabled, refresh only if the Token is missing or expired.",
         "auto_delete_dead_auths": "Automatically delete dead credentials",
@@ -2853,6 +2855,42 @@
           "last_seen": "Last seen",
           "last_auth_index": "Latest credential index",
           "last_attempt": "Latest attempt"
+        }
+      },
+      "raw_quota": {
+        "enabled": "Capture raw quota responses",
+        "enabled_description": "Keep the latest raw conversation/init quota response per credential in bounded process memory. This opt-in data can contain upstream account metadata; it is never logged or written to credential files and is cleared on restart.",
+        "unsupported": "This backend does not support raw quota response capture. Upgrade the backend to use this feature.",
+        "title": "Raw quota responses",
+        "description": "Loaded once when expanded and only on manual refresh afterward. Capture successful and failed conversation/init responses to compare the official payload with the parser-selected value.",
+        "summary_counts": "{{count}} records · {{bytes}} bytes · {{evicted}} evicted",
+        "summary_enabled": "Capture enabled · not loaded",
+        "summary_disabled": "Capture disabled · not loaded",
+        "summary_unsupported": "Unsupported by backend",
+        "loading": "Loading raw quota responses",
+        "loaded": "Raw quota responses loaded.",
+        "load_failed": "Failed to load raw quota responses",
+        "empty": "No raw quota responses are currently available.",
+        "clear_title": "Clear raw quota responses",
+        "clear_confirm": "Clear all captured raw quota responses from process memory? This cannot be undone.",
+        "clear_button": "Clear responses",
+        "clear_success": "Raw quota responses cleared.",
+        "clear_failed": "Failed to clear raw quota responses",
+        "unknown_status": "No status",
+        "truncated": "The response was truncated at the configured capture limit.",
+        "stats": {
+          "records": "Credentials",
+          "total_bytes": "Stored bytes",
+          "evicted_count": "Evicted",
+          "capacity": "Record capacity"
+        },
+        "fields": {
+          "attempt": "Attempt",
+          "content_type": "Content-Type",
+          "response_bytes": "Original bytes",
+          "remaining": "Parser-selected remaining",
+          "reset_at": "Parser-selected reset",
+          "parse_error": "Parse error"
         }
       },
       "refresh_workers": "Refresh workers",

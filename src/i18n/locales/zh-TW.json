@@ -1713,6 +1713,8 @@
         "description": "自動重新登入與 Web 圖片相容性在此設定；帳號登入透過獨立任務頁執行，Sentinel SDK 設定和執行狀態顯示於下方。",
         "auto_relogin": "自動重新登入",
         "auto_relogin_description": "Token 無法更新且憑證允許重新登入時自動嘗試登入。帳號死亡或需要人工驗證時不會自動重新登入。",
+        "session_cookie_refresh_on_token_failure": "Access Token 失效時使用 Session Cookie",
+        "session_cookie_refresh_on_token_failure_description": "密碼或 2FA 資訊不完整的憑證，在 Access Token 過期或遭拒後，使用完整的 ChatGPT Session Cookie 更新。只有明確的 Session 失效才標記帳號死亡；網路、Cloudflare、限流、回應格式異常或 Cookie 分片不完整都不會判死。",
         "force_session_refresh_on_import": "匯入時強制更新 Session",
         "force_session_refresh_on_import_description": "開啟後，即使匯入的 Access Token 仍有效也會透過 Session 更新；關閉後僅在 Token 缺失或已過期時更新。",
         "auto_delete_dead_auths": "自動刪除死亡憑證",
@@ -2876,6 +2878,42 @@
           "last_seen": "最近出現",
           "last_auth_index": "最近憑證索引",
           "last_attempt": "最近嘗試次數"
+        }
+      },
+      "raw_quota": {
+        "enabled": "擷取原始額度回應",
+        "enabled_description": "在有界處理程序記憶體中保留每個憑證最新的 conversation/init 原始額度回應。此選用資料可能包含上游帳號中繼資料；不會寫入日誌或認證檔案，重新啟動後清空。",
+        "unsupported": "目前後端不支援原始額度回應擷取，請升級後端。",
+        "title": "原始額度回應",
+        "description": "僅在展開時讀取一次，之後只在手動重新整理時讀取。成功與失敗的 conversation/init 回應都會被擷取，方便比較官方原文與解析器選取的值。",
+        "summary_counts": "{{count}} 筆 · {{bytes}} 位元組 · 淘汰 {{evicted}}",
+        "summary_enabled": "擷取已啟用 · 尚未讀取",
+        "summary_disabled": "擷取已關閉 · 尚未讀取",
+        "summary_unsupported": "後端不支援",
+        "loading": "正在讀取原始額度回應",
+        "loaded": "原始額度回應已讀取。",
+        "load_failed": "讀取原始額度回應失敗",
+        "empty": "目前沒有原始額度回應。",
+        "clear_title": "清空原始額度回應",
+        "clear_confirm": "確定清空處理程序記憶體中的全部原始額度回應嗎？此操作無法復原。",
+        "clear_button": "清空回應",
+        "clear_success": "原始額度回應已清空。",
+        "clear_failed": "清空原始額度回應失敗",
+        "unknown_status": "無狀態碼",
+        "truncated": "回應已在設定的擷取上限處截斷。",
+        "stats": {
+          "records": "憑證數量",
+          "total_bytes": "儲存位元組",
+          "evicted_count": "淘汰數量",
+          "capacity": "記錄容量"
+        },
+        "fields": {
+          "attempt": "嘗試次數",
+          "content_type": "Content-Type",
+          "response_bytes": "原始位元組數",
+          "remaining": "解析器選取的剩餘次數",
+          "reset_at": "解析器選取的重設時間",
+          "parse_error": "解析錯誤"
         }
       },
       "refresh_workers": "更新 Worker 數量",

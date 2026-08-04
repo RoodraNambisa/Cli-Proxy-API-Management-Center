@@ -368,6 +368,29 @@
   }
 }
 
+.rawQuotaBody {
+  max-height: 320px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border-top: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-secondary) 58%, var(--bg-primary));
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.rawQuotaNotice {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color);
+  color: var(--warning-color);
+  font-size: 11px;
+}
+
 @include mobile {
   .panel {
     padding: $spacing-md;

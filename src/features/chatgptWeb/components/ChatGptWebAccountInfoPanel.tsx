@@ -20,6 +20,8 @@ import type {
   ChatGptWebAccountInfoConfigPatch,
   ChatGptWebAccountInfoDiagnosticRecord,
   ChatGptWebAccountInfoDiagnosticsSnapshot,
+  ChatGptWebAccountInfoRawQuotaRecord,
+  ChatGptWebAccountInfoRawQuotaSnapshot,
   ChatGptWebAccountInfoSnapshot,
 } from '@/types';
 import { getChatGptWebErrorMessage } from '@/utils/chatgptWeb';
@@ -35,6 +37,7 @@ import styles from './ChatGptWebSentinelPanel.module.scss';
 type AccountInfoDraft = {
   autoRefreshEnabled: boolean;
   diagnosticsEnabled: boolean;
+  rawQuotaResponseEnabled: boolean;
   periodicMinutes: string;
   workers: string;
   queueSize: string;
@@ -46,7 +49,7 @@ type AccountInfoDraft = {
 type AccountInfoField = keyof AccountInfoDraft;
 type AccountInfoNumericField = Exclude<
   AccountInfoField,
-  'autoRefreshEnabled' | 'diagnosticsEnabled'
+  'autoRefreshEnabled' | 'diagnosticsEnabled' | 'rawQuotaResponseEnabled'
 >;
 type AccountInfoValidationErrors = Partial<Record<AccountInfoNumericField, string>>;
 
@@ -75,6 +78,8 @@ type ChatGptWebAccountInfoPanelProps = {
 const DISCLOSURE_STORAGE_KEY = 'config-management:chatgpt-web-account-info-expanded';
 const DIAGNOSTICS_DISCLOSURE_STORAGE_KEY =
   'config-management:chatgpt-web-account-info-diagnostics-expanded';
+const RAW_QUOTA_DISCLOSURE_STORAGE_KEY =
+  'config-management:chatgpt-web-account-info-raw-quota-expanded';
 const POLL_INTERVAL_MS = 5000;
 
 const ACCOUNT_INFO_FIELDS = [
@@ -138,6 +143,7 @@ const ACCOUNT_INFO_FIELDS = [
 const DEFAULT_DRAFT: AccountInfoDraft = {
   autoRefreshEnabled: true,
   diagnosticsEnabled: false,
+  rawQuotaResponseEnabled: false,
   periodicMinutes: '',
   workers: '4',
   queueSize: '256',
@@ -151,6 +157,7 @@ const toDraft = (snapshot: ChatGptWebAccountInfoSnapshot): AccountInfoDraft => {
   return {
     autoRefreshEnabled: snapshot.config['auto-refresh-enabled'] !== false,
     diagnosticsEnabled: snapshot.config['diagnostics-enabled'] === true,
+    rawQuotaResponseEnabled: snapshot.config['raw-quota-response-enabled'] === true,
     periodicMinutes:
       typeof periodicMinutes === 'number' && periodicMinutes > 0 ? String(periodicMinutes) : '',
     workers: String(snapshot.config['refresh-workers']),
@@ -178,6 +185,7 @@ const readConfig = (
   const parsed = {
     'auto-refresh-enabled': draft.autoRefreshEnabled,
     'diagnostics-enabled': draft.diagnosticsEnabled,
+    'raw-quota-response-enabled': draft.rawQuotaResponseEnabled,
   } as ChatGptWebAccountInfoConfig;
   for (const definition of ACCOUNT_INFO_FIELDS) {
     const rawValue = draft[definition.field];
@@ -207,6 +215,9 @@ const buildPatch = (
   }
   if (dirtyFields.has('diagnosticsEnabled')) {
     patch['diagnostics-enabled'] = next['diagnostics-enabled'];
+  }
+  if (dirtyFields.has('rawQuotaResponseEnabled')) {
+    patch['raw-quota-response-enabled'] = next['raw-quota-response-enabled'];
   }
   for (const definition of ACCOUNT_INFO_FIELDS) {
     if (dirtyFields.has(definition.field)) {
@@ -313,6 +324,54 @@ function DiagnosticRecord({ record }: { record: ChatGptWebAccountInfoDiagnosticR
   );
 }
 
+function RawQuotaRecord({ record }: { record: ChatGptWebAccountInfoRawQuotaRecord }) {
+  const { t } = useTranslation();
+  const parsedQuota = record.parsed_quota;
+  return (
+    <article className={styles.diagnosticRecord}>
+      <header>
+        <div>
+          <strong>{record.auth_index}</strong>
+          <span>{formatDateTime(record.captured_at)}</span>
+        </div>
+        <span className={styles.diagnosticCount}>
+          {record.http_status ?? t('chatgpt_web.account_info.raw_quota.unknown_status')}
+        </span>
+      </header>
+      <dl className={styles.diagnosticDetails}>
+        <div>
+          <dt>{t('chatgpt_web.account_info.raw_quota.fields.attempt')}</dt>
+          <dd>{record.attempt ?? '—'}</dd>
+        </div>
+        <div>
+          <dt>{t('chatgpt_web.account_info.raw_quota.fields.content_type')}</dt>
+          <dd>{record.content_type || '—'}</dd>
+        </div>
+        <div>
+          <dt>{t('chatgpt_web.account_info.raw_quota.fields.response_bytes')}</dt>
+          <dd>{record.response_bytes}</dd>
+        </div>
+        <div>
+          <dt>{t('chatgpt_web.account_info.raw_quota.fields.remaining')}</dt>
+          <dd>{parsedQuota ? parsedQuota.remaining : '—'}</dd>
+        </div>
+        <div>
+          <dt>{t('chatgpt_web.account_info.raw_quota.fields.reset_at')}</dt>
+          <dd>{parsedQuota?.reset_at ? formatDateTime(parsedQuota.reset_at) : '—'}</dd>
+        </div>
+        <div>
+          <dt>{t('chatgpt_web.account_info.raw_quota.fields.parse_error')}</dt>
+          <dd>{record.parse_error || '—'}</dd>
+        </div>
+      </dl>
+      <pre className={styles.rawQuotaBody}>{record.body}</pre>
+      {record.truncated ? (
+        <p className={styles.rawQuotaNotice}>{t('chatgpt_web.account_info.raw_quota.truncated')}</p>
+      ) : null}
+    </article>
+  );
+}
+
 export const ChatGptWebAccountInfoPanel = forwardRef<
   ChatGptWebAccountInfoPanelHandle,
   ChatGptWebAccountInfoPanelProps
@@ -360,6 +419,8 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   const saveRefreshAbortRef = useRef<AbortController | null>(null);
   const diagnosticsAbortRef = useRef<AbortController | null>(null);
   const diagnosticsLoadedRef = useRef(false);
+  const rawQuotaAbortRef = useRef<AbortController | null>(null);
+  const rawQuotaLoadedRef = useRef(false);
   const savingRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -392,11 +453,19 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   const [diagnosticsClearing, setDiagnosticsClearing] = useState(false);
   const [diagnosticsError, setDiagnosticsError] = useState('');
   const [diagnosticsEndpointUnsupported, setDiagnosticsEndpointUnsupported] = useState(false);
+  const [rawQuota, setRawQuota] = useState<ChatGptWebAccountInfoRawQuotaSnapshot | null>(null);
+  const [rawQuotaLoading, setRawQuotaLoading] = useState(false);
+  const [rawQuotaClearing, setRawQuotaClearing] = useState(false);
+  const [rawQuotaError, setRawQuotaError] = useState('');
+  const [rawQuotaEndpointUnsupported, setRawQuotaEndpointUnsupported] = useState(false);
   const [expanded, setExpanded] = useState(
     () => localStorage.getItem(DISCLOSURE_STORAGE_KEY) === 'true'
   );
   const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(
     () => localStorage.getItem(DIAGNOSTICS_DISCLOSURE_STORAGE_KEY) === 'true'
+  );
+  const [rawQuotaExpanded, setRawQuotaExpanded] = useState(
+    () => localStorage.getItem(RAW_QUOTA_DISCLOSURE_STORAGE_KEY) === 'true'
   );
 
   const replaceDirtyFields = useCallback((next: Set<AccountInfoField>) => {
@@ -441,6 +510,13 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     abortController.abort();
   }, []);
 
+  const abortRawQuotaRequest = useCallback(() => {
+    const abortController = rawQuotaAbortRef.current;
+    if (!abortController) return;
+    rawQuotaAbortRef.current = null;
+    abortController.abort();
+  }, []);
+
   const readConnectionGeneration = useCallback(
     (): ConnectionGeneration => ({
       key: connectionGenerationKeyRef.current,
@@ -470,6 +546,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       setDiagnostics((current) =>
         current ? { ...current, enabled: nextDraft.diagnosticsEnabled } : current
       );
+      setRawQuota((current) =>
+        current ? { ...current, enabled: nextDraft.rawQuotaResponseEnabled } : current
+      );
       if (preserveDirty && dirtyFieldsRef.current.size > 0) {
         setDraft((current) => {
           const merged = { ...current };
@@ -483,6 +562,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
           }
           if (!dirtyFieldsRef.current.has('diagnosticsEnabled')) {
             merged.diagnosticsEnabled = nextDraft.diagnosticsEnabled;
+          }
+          if (!dirtyFieldsRef.current.has('rawQuotaResponseEnabled')) {
+            merged.rawQuotaResponseEnabled = nextDraft.rawQuotaResponseEnabled;
           }
           return merged;
         });
@@ -666,14 +748,73 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       } finally {
         if (diagnosticsAbortRef.current === abortController) {
           diagnosticsAbortRef.current = null;
-        }
-        if (mountedRef.current && isConnectionGenerationCurrent(generation)) {
-          setDiagnosticsLoading(false);
+          if (mountedRef.current && isConnectionGenerationCurrent(generation)) {
+            setDiagnosticsLoading(false);
+          }
         }
       }
     },
     [
       abortDiagnosticsRequest,
+      isConnectionGenerationCurrent,
+      readConnectionGeneration,
+      showNotification,
+      t,
+    ]
+  );
+
+  const loadRawQuota = useCallback(
+    async (notify = true): Promise<ChatGptWebAccountInfoRawQuotaSnapshot | null> => {
+      if (snapshotRef.current?.config['raw-quota-response-enabled'] === undefined) return null;
+      const generation = readConnectionGeneration();
+      const connection = apiClient.captureConnection();
+      abortRawQuotaRequest();
+      const abortController = new AbortController();
+      rawQuotaAbortRef.current = abortController;
+      rawQuotaLoadedRef.current = true;
+      setRawQuotaLoading(true);
+      setRawQuotaError('');
+      try {
+        const next = await chatGptWebApi.getAccountInfoRawQuotaResponses(
+          connection,
+          abortController.signal
+        );
+        if (abortController.signal.aborted || !isConnectionGenerationCurrent(generation)) {
+          return null;
+        }
+        setRawQuota(next);
+        setRawQuotaEndpointUnsupported(false);
+        setLiveMessage(t('chatgpt_web.account_info.raw_quota.loaded'));
+        return next;
+      } catch (error) {
+        if (abortController.signal.aborted || !isConnectionGenerationCurrent(generation)) {
+          return null;
+        }
+        if ([404, 501].includes(getErrorStatus(error) ?? 0)) {
+          setRawQuotaEndpointUnsupported(true);
+          setRawQuotaError('');
+          return null;
+        }
+        const message = getChatGptWebErrorMessage(error, t);
+        setRawQuotaError(message);
+        if (notify) {
+          showNotification(
+            `${t('chatgpt_web.account_info.raw_quota.load_failed')}: ${message}`,
+            'error'
+          );
+        }
+        return null;
+      } finally {
+        if (rawQuotaAbortRef.current === abortController) {
+          rawQuotaAbortRef.current = null;
+          if (mountedRef.current && isConnectionGenerationCurrent(generation)) {
+            setRawQuotaLoading(false);
+          }
+        }
+      }
+    },
+    [
+      abortRawQuotaRequest,
       isConnectionGenerationCurrent,
       readConnectionGeneration,
       showNotification,
@@ -696,8 +837,10 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       abortSnapshotRequest();
       abortSaveRefresh();
       abortDiagnosticsRequest();
+      abortRawQuotaRequest();
       hasLoadedRef.current = false;
       diagnosticsLoadedRef.current = false;
+      rawQuotaLoadedRef.current = false;
       snapshotGenerationRef.current = null;
       setSnapshotGeneration(null);
       setLoading(false);
@@ -707,6 +850,11 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       setDiagnosticsEndpointUnsupported(false);
       setDiagnosticsLoading(false);
       setDiagnosticsClearing(false);
+      setRawQuota(null);
+      setRawQuotaError('');
+      setRawQuotaEndpointUnsupported(false);
+      setRawQuotaLoading(false);
+      setRawQuotaClearing(false);
       setUnsupportedState(isChatGptWebAccountInfoUnsupported(connectionGenerationKey));
       const retainedDirty = dirtyFieldsRef.current.size > 0 || savingRef.current;
       setGenerationConflictState(retainedDirty);
@@ -721,8 +869,10 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       abortSnapshotRequest();
       abortSaveRefresh();
       abortDiagnosticsRequest();
+      abortRawQuotaRequest();
       setLoading(false);
       setDiagnosticsLoading(false);
+      setRawQuotaLoading(false);
       return;
     }
     if (!hasLoadedRef.current) {
@@ -738,6 +888,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     active,
     abortSaveRefresh,
     abortDiagnosticsRequest,
+    abortRawQuotaRequest,
     abortSnapshotRequest,
     connectionGenerationKey,
     connectionGenerationVersion,
@@ -769,6 +920,8 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   const periodicRefreshSupported = snapshot?.config['periodic-refresh-minutes'] !== undefined;
   const diagnosticsConfigSupported = snapshot?.config['diagnostics-enabled'] !== undefined;
   const diagnosticsSupported = diagnosticsConfigSupported && !diagnosticsEndpointUnsupported;
+  const rawQuotaConfigSupported = snapshot?.config['raw-quota-response-enabled'] !== undefined;
+  const rawQuotaSupported = rawQuotaConfigSupported && !rawQuotaEndpointUnsupported;
   const periodicMinutes = parseInteger(draft.periodicMinutes, 0, 10080);
   const periodicSummary =
     periodicMinutes !== null && periodicMinutes > 0
@@ -787,6 +940,19 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
             ? 'chatgpt_web.account_info.diagnostics.summary_enabled'
             : 'chatgpt_web.account_info.diagnostics.summary_disabled'
           : 'chatgpt_web.account_info.diagnostics.summary_unsupported'
+      );
+  const rawQuotaSummary = rawQuota
+    ? t('chatgpt_web.account_info.raw_quota.summary_counts', {
+        count: rawQuota.records.length,
+        bytes: rawQuota.total_bytes,
+        evicted: rawQuota.evicted_count,
+      })
+    : t(
+        rawQuotaSupported
+          ? draft.rawQuotaResponseEnabled
+            ? 'chatgpt_web.account_info.raw_quota.summary_enabled'
+            : 'chatgpt_web.account_info.raw_quota.summary_disabled'
+          : 'chatgpt_web.account_info.raw_quota.summary_unsupported'
       );
 
   useEffect(() => {
@@ -809,6 +975,20 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     generationReady,
     loadDiagnostics,
   ]);
+
+  useEffect(() => {
+    if (
+      !rawQuotaExpanded ||
+      !rawQuotaSupported ||
+      rawQuotaLoadedRef.current ||
+      disabled ||
+      !active ||
+      !generationReady
+    ) {
+      return;
+    }
+    void loadRawQuota(false);
+  }, [active, disabled, generationReady, loadRawQuota, rawQuotaExpanded, rawQuotaSupported]);
 
   useEffect(() => {
     if (
@@ -838,8 +1018,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       abortSnapshotRequest();
       abortSaveRefresh();
       abortDiagnosticsRequest();
+      abortRawQuotaRequest();
     };
-  }, [abortDiagnosticsRequest, abortSaveRefresh, abortSnapshotRequest]);
+  }, [abortDiagnosticsRequest, abortRawQuotaRequest, abortSaveRefresh, abortSnapshotRequest]);
 
   useEffect(() => {
     const synchronizeUnsupported = (key: string, nextUnsupported: boolean) => {
@@ -851,8 +1032,10 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
         abortSnapshotRequest();
         abortSaveRefresh();
         abortDiagnosticsRequest();
+        abortRawQuotaRequest();
         setLoading(false);
         setDiagnosticsLoading(false);
+        setRawQuotaLoading(false);
       }
     };
     synchronizeUnsupported(
@@ -860,7 +1043,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       isChatGptWebAccountInfoUnsupported(connectionGenerationKeyRef.current)
     );
     return subscribeChatGptWebAccountInfoCapability(synchronizeUnsupported);
-  }, [abortDiagnosticsRequest, abortSaveRefresh, abortSnapshotRequest]);
+  }, [abortDiagnosticsRequest, abortRawQuotaRequest, abortSaveRefresh, abortSnapshotRequest]);
 
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -1103,6 +1286,11 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     localStorage.setItem(DIAGNOSTICS_DISCLOSURE_STORAGE_KEY, String(nextExpanded));
   }, []);
 
+  const handleRawQuotaExpandedChange = useCallback((nextExpanded: boolean) => {
+    setRawQuotaExpanded(nextExpanded);
+    localStorage.setItem(RAW_QUOTA_DISCLOSURE_STORAGE_KEY, String(nextExpanded));
+  }, []);
+
   const updateDraftField = useCallback(
     (field: AccountInfoNumericField, value: string) => {
       const latestSnapshot = snapshotRef.current;
@@ -1156,6 +1344,24 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     [replaceDirtyFields, setGenerationConflictState]
   );
 
+  const updateRawQuotaResponseEnabled = useCallback(
+    (value: boolean) => {
+      const baselineValue = snapshotRef.current
+        ? toDraft(snapshotRef.current).rawQuotaResponseEnabled
+        : undefined;
+      const nextDirtyFields = new Set(dirtyFieldsRef.current);
+      if (baselineValue === value) {
+        nextDirtyFields.delete('rawQuotaResponseEnabled');
+      } else {
+        nextDirtyFields.add('rawQuotaResponseEnabled');
+      }
+      replaceDirtyFields(nextDirtyFields);
+      if (nextDirtyFields.size === 0) setGenerationConflictState(false);
+      setDraft((current) => ({ ...current, rawQuotaResponseEnabled: value }));
+    },
+    [replaceDirtyFields, setGenerationConflictState]
+  );
+
   const handleClearDiagnostics = useCallback(() => {
     if (!diagnosticsSupported || diagnosticsClearing) return;
     const clearGeneration = readConnectionGeneration();
@@ -1195,6 +1401,51 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     diagnosticsClearing,
     diagnosticsSupported,
     isConnectionGenerationCurrent,
+    readConnectionGeneration,
+    showConfirmation,
+    showNotification,
+    t,
+  ]);
+
+  const handleClearRawQuota = useCallback(() => {
+    if (!rawQuotaSupported || rawQuotaClearing) return;
+    const clearGeneration = readConnectionGeneration();
+    const clearConnection = apiClient.captureConnection();
+    showConfirmation({
+      title: t('chatgpt_web.account_info.raw_quota.clear_title'),
+      message: t('chatgpt_web.account_info.raw_quota.clear_confirm'),
+      confirmText: t('chatgpt_web.account_info.raw_quota.clear_button'),
+      variant: 'danger',
+      onConfirm: async () => {
+        if (!isConnectionGenerationCurrent(clearGeneration)) return;
+        setRawQuotaClearing(true);
+        try {
+          const next = await chatGptWebApi.clearAccountInfoRawQuotaResponses(clearConnection);
+          if (!isConnectionGenerationCurrent(clearGeneration)) return;
+          rawQuotaLoadedRef.current = true;
+          setRawQuota(next);
+          setRawQuotaError('');
+          showNotification(t('chatgpt_web.account_info.raw_quota.clear_success'), 'success');
+        } catch (error) {
+          if (!isConnectionGenerationCurrent(clearGeneration)) return;
+          showNotification(
+            `${t('chatgpt_web.account_info.raw_quota.clear_failed')}: ${getChatGptWebErrorMessage(
+              error,
+              t
+            )}`,
+            'error'
+          );
+        } finally {
+          if (mountedRef.current && isConnectionGenerationCurrent(clearGeneration)) {
+            setRawQuotaClearing(false);
+          }
+        }
+      },
+    });
+  }, [
+    isConnectionGenerationCurrent,
+    rawQuotaClearing,
+    rawQuotaSupported,
     readConnectionGeneration,
     showConfirmation,
     showNotification,
@@ -1287,6 +1538,24 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
               onChange={updateAutoRefreshEnabled}
               disabled={controlsDisabled}
               ariaLabel={t('chatgpt_web.account_info.auto_refresh_enabled')}
+            />
+          </div>
+
+          <div className={styles.runtimeRow}>
+            <div>
+              <strong>{t('chatgpt_web.account_info.raw_quota.enabled')}</strong>
+              <span>{t('chatgpt_web.account_info.raw_quota.enabled_description')}</span>
+              {!rawQuotaSupported ? (
+                <span className={styles.validationError}>
+                  {t('chatgpt_web.account_info.raw_quota.unsupported')}
+                </span>
+              ) : null}
+            </div>
+            <ToggleSwitch
+              checked={draft.rawQuotaResponseEnabled}
+              onChange={updateRawQuotaResponseEnabled}
+              disabled={controlsDisabled || !rawQuotaSupported}
+              ariaLabel={t('chatgpt_web.account_info.raw_quota.enabled')}
             />
           </div>
 
@@ -1502,6 +1771,102 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
                     <div className={styles.diagnosticsList}>
                       {diagnostics.records.map((record) => (
                         <DiagnosticRecord key={record.id} record={record} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </ConfigDisclosure>
+
+          <ConfigDisclosure
+            id="config-chatgpt-web-account-info-raw-quota"
+            title={t('chatgpt_web.account_info.raw_quota.title')}
+            description={t('chatgpt_web.account_info.raw_quota.description')}
+            summary={rawQuotaSummary}
+            expanded={rawQuotaExpanded}
+            onExpandedChange={handleRawQuotaExpandedChange}
+            actions={
+              rawQuotaExpanded && rawQuotaSupported ? (
+                <div className={styles.diagnosticsActions}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    loading={rawQuotaLoading}
+                    disabled={
+                      disabled || externalSaving || saving || rawQuotaClearing || !generationReady
+                    }
+                    onClick={() => void loadRawQuota()}
+                  >
+                    <IconRefreshCw size={15} />
+                    {t('common.refresh')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    loading={rawQuotaClearing}
+                    disabled={
+                      disabled ||
+                      externalSaving ||
+                      saving ||
+                      rawQuotaLoading ||
+                      !generationReady ||
+                      !rawQuota ||
+                      rawQuota.records.length === 0
+                    }
+                    onClick={handleClearRawQuota}
+                  >
+                    <IconTrash2 size={15} />
+                    {t('chatgpt_web.account_info.raw_quota.clear_button')}
+                  </Button>
+                </div>
+              ) : undefined
+            }
+          >
+            <div className={styles.diagnosticsContent} aria-busy={rawQuotaLoading}>
+              {!rawQuotaSupported ? (
+                <div className={styles.statusEmpty}>
+                  <span>{t('chatgpt_web.account_info.raw_quota.unsupported')}</span>
+                </div>
+              ) : rawQuotaError ? (
+                <div className={styles.statusEmpty} role="alert">
+                  <span>
+                    {t('chatgpt_web.account_info.raw_quota.load_failed')}: {rawQuotaError}
+                  </span>
+                </div>
+              ) : !rawQuota ? (
+                <div className={styles.statusEmpty}>
+                  {rawQuotaLoading ? <LoadingSpinner size={18} /> : null}
+                  <span>{t('chatgpt_web.account_info.raw_quota.loading')}</span>
+                </div>
+              ) : (
+                <>
+                  <dl className={styles.diagnosticsStats}>
+                    {[
+                      ['records', rawQuota.records.length],
+                      ['total_bytes', rawQuota.total_bytes],
+                      ['evicted_count', rawQuota.evicted_count],
+                      ['capacity', rawQuota.capacity],
+                    ].map(([key, value]) => (
+                      <div key={key}>
+                        <dt>{t(`chatgpt_web.account_info.raw_quota.stats.${key}`)}</dt>
+                        <dd>{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  {rawQuota.records.length === 0 ? (
+                    <div className={styles.statusEmpty}>
+                      <span>{t('chatgpt_web.account_info.raw_quota.empty')}</span>
+                    </div>
+                  ) : (
+                    <div className={styles.diagnosticsList}>
+                      {rawQuota.records.map((record) => (
+                        <RawQuotaRecord
+                          key={`${record.auth_index}:${record.captured_at}`}
+                          record={record}
+                        />
                       ))}
                     </div>
                   )}

@@ -2205,6 +2205,13 @@ function getNextDirtyFields(
       nextValues.chatgptWebAutoRelogin === baselineValues.chatgptWebAutoRelogin
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebSessionCookieRefreshOnTokenFailure')) {
+    updateDirty(
+      'chatgptWebSessionCookieRefreshOnTokenFailure',
+      nextValues.chatgptWebSessionCookieRefreshOnTokenFailure ===
+        baselineValues.chatgptWebSessionCookieRefreshOnTokenFailure
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebForceSessionRefreshOnImport')) {
     updateDirty(
       'chatgptWebForceSessionRefreshOnImport',
@@ -2893,6 +2900,10 @@ export function useVisualConfig() {
         codexHeaderDefaultsOriginator:
           typeof codexHeaderDefaults?.originator === 'string' ? codexHeaderDefaults.originator : '',
         chatgptWebAutoRelogin: Boolean(chatgptWeb?.['auto-relogin'] ?? chatgptWeb?.autoRelogin),
+        chatgptWebSessionCookieRefreshOnTokenFailure: Boolean(
+          chatgptWeb?.['session-cookie-refresh-on-token-failure'] ??
+          chatgptWeb?.sessionCookieRefreshOnTokenFailure
+        ),
         chatgptWebForceSessionRefreshOnImport:
           (chatgptWeb?.['force-session-refresh-on-import'] ??
             chatgptWeb?.forceSessionRefreshOnImport) !== false,
@@ -3324,12 +3335,18 @@ export function useVisualConfig() {
         if (
           docHas(doc, ['chatgpt-web']) ||
           values.chatgptWebAutoRelogin ||
+          values.chatgptWebSessionCookieRefreshOnTokenFailure ||
           !values.chatgptWebForceSessionRefreshOnImport ||
           values.chatgptWebAutoDeleteDeadAuths ||
           values.chatgptWebAutoDeleteDeadPriorities.length > 0
         ) {
           ensureMapInDoc(doc, ['chatgpt-web']);
           doc.setIn(['chatgpt-web', 'auto-relogin'], values.chatgptWebAutoRelogin);
+          setBooleanInDoc(
+            doc,
+            ['chatgpt-web', 'session-cookie-refresh-on-token-failure'],
+            values.chatgptWebSessionCookieRefreshOnTokenFailure
+          );
           if (
             docHas(doc, ['chatgpt-web', 'force-session-refresh-on-import']) ||
             !values.chatgptWebForceSessionRefreshOnImport

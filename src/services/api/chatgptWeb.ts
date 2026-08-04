@@ -2,6 +2,7 @@ import type {
   ChatGptWebAccountInfoConfig,
   ChatGptWebAccountInfoConfigPatch,
   ChatGptWebAccountInfoDiagnosticsSnapshot,
+  ChatGptWebAccountInfoRawQuotaSnapshot,
   ChatGptWebAccountInfoRefreshTask,
   ChatGptWebAccountInfoSnapshot,
   ChatGptWebAutoDeleteDeadStats,
@@ -157,6 +158,26 @@ export const chatGptWebApi = {
     connection?: ApiClientConnectionSnapshot
   ): Promise<ChatGptWebAccountInfoDiagnosticsSnapshot> {
     const path = '/chatgpt-web/account-info/diagnostics';
+    return connection ? apiClient.deleteAtConnection(connection, path) : apiClient.delete(path);
+  },
+
+  getAccountInfoRawQuotaResponses(
+    connection?: ApiClientConnectionSnapshot,
+    signal?: AbortSignal
+  ): Promise<ChatGptWebAccountInfoRawQuotaSnapshot> {
+    const path = '/chatgpt-web/account-info/raw-quota-responses';
+    if (connection) {
+      return signal
+        ? apiClient.getAtConnection(connection, path, { signal })
+        : apiClient.getAtConnection(connection, path);
+    }
+    return signal ? apiClient.get(path, { signal }) : apiClient.get(path);
+  },
+
+  clearAccountInfoRawQuotaResponses(
+    connection?: ApiClientConnectionSnapshot
+  ): Promise<ChatGptWebAccountInfoRawQuotaSnapshot> {
+    const path = '/chatgpt-web/account-info/raw-quota-responses';
     return connection ? apiClient.deleteAtConnection(connection, path) : apiClient.delete(path);
   },
 

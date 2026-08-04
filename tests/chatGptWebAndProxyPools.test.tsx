@@ -936,6 +936,23 @@ describe('ChatGPT Web management compatibility', () => {
     });
   });
 
+  test('reads and writes Session Cookie fallback for failed Access Tokens', () => {
+    const initialYaml = 'chatgpt-web:\n  session-cookie-refresh-on-token-failure: false\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+    expect(result.current.visualValues.chatgptWebSessionCookieRefreshOnTokenFailure).toBe(false);
+    act(() =>
+      result.current.setVisualValues({
+        chatgptWebSessionCookieRefreshOnTokenFailure: true,
+      })
+    );
+
+    expect(parse(result.current.applyVisualChangesToYaml(initialYaml))).toMatchObject({
+      'chatgpt-web': { 'session-cookie-refresh-on-token-failure': true },
+    });
+  });
+
   test('defaults Session refresh on import to enabled and preserves an explicit disable', () => {
     const initialYaml = 'chatgpt-web:\n  auto-relogin: false\n';
     const { result } = renderHook(() => useVisualConfig());

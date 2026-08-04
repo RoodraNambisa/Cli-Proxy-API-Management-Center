@@ -36,6 +36,7 @@ import zhTWLocale from '@/i18n/locales/zh-TW.json';
 import type {
   AuthFileItem,
   ChatGptWebAccountInfoDiagnosticsSnapshot,
+  ChatGptWebAccountInfoRawQuotaSnapshot,
   ChatGptWebAccountInfoRefreshTask,
   ChatGptWebAccountInfoSnapshot,
 } from '@/types';
@@ -55,6 +56,7 @@ vi.mock('react-i18next', async (importOriginal) => {
 const createSnapshot = (): ChatGptWebAccountInfoSnapshot => ({
   config: {
     'diagnostics-enabled': false,
+    'raw-quota-response-enabled': false,
     'periodic-refresh-minutes': 0,
     'refresh-workers': 4,
     'refresh-queue-size': 256,
@@ -105,6 +107,32 @@ const createDiagnosticsSnapshot = (): ChatGptWebAccountInfoDiagnosticsSnapshot =
       last_seen: '2026-08-03T00:01:00Z',
       last_auth_index: 'safe-index',
       last_attempt: 2,
+    },
+  ],
+});
+
+const createRawQuotaSnapshot = (): ChatGptWebAccountInfoRawQuotaSnapshot => ({
+  enabled: true,
+  capacity: 20,
+  max_bytes: 8 * 1024 * 1024,
+  total_bytes: 96,
+  evicted_count: 0,
+  records: [
+    {
+      auth_index: 'safe-index',
+      captured_at: '2026-08-04T00:01:00Z',
+      attempt: 1,
+      http_status: 200,
+      content_type: 'application/json',
+      response_bytes: 96,
+      truncated: false,
+      parsed_quota: {
+        feature_present: true,
+        present: true,
+        remaining: 17,
+        reset_at: '2026-08-05T00:00:00Z',
+      },
+      body: '{"limits_progress":[{"feature_name":"image_gen","remaining":17}]}',
     },
   ],
 });
@@ -564,6 +592,61 @@ describe('ChatGPT Web account info and image quota', () => {
     });
     expect(clearDiagnostics).toHaveBeenCalledTimes(1);
     expect(screen.getByText('chatgpt_web.account_info.diagnostics.empty')).not.toBeNull();
+  });
+
+  test('saves and inspects raw quota responses only on demand', async () => {
+    const initial = createSnapshot();
+    const updated = {
+      ...initial,
+      config: { ...initial.config, 'raw-quota-response-enabled': true },
+    };
+    vi.spyOn(chatGptWebApi, 'getAccountInfo')
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(updated);
+    const patchAccountInfo = vi.spyOn(chatGptWebApi, 'patchAccountInfo').mockResolvedValue({});
+    const getRawQuota = vi
+      .spyOn(chatGptWebApi, 'getAccountInfoRawQuotaResponses')
+      .mockResolvedValue(createRawQuotaSnapshot());
+    const clearRawQuota = vi
+      .spyOn(chatGptWebApi, 'clearAccountInfoRawQuotaResponses')
+      .mockResolvedValue({ ...createRawQuotaSnapshot(), total_bytes: 0, records: [] });
+    const ref = createRef<ChatGptWebAccountInfoPanelHandle>();
+
+    render(<ChatGptWebAccountInfoPanel ref={ref} />);
+    await waitFor(() => expect(chatGptWebApi.getAccountInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
+    const toggle = screen.getByRole('checkbox', {
+      name: 'chatgpt_web.account_info.raw_quota.enabled',
+    });
+    fireEvent.click(toggle);
+    await act(async () => {
+      expect(await ref.current?.save()).toBe(true);
+    });
+    expect(patchAccountInfo).toHaveBeenCalledWith(
+      { 'raw-quota-response-enabled': true },
+      expect.any(Object)
+    );
+    expect(getRawQuota).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /chatgpt_web\.account_info\.raw_quota\.title/ })
+    );
+    await waitFor(() => expect(getRawQuota).toHaveBeenCalledTimes(1));
+    expect(screen.getByText(/"remaining":17/)).not.toBeNull();
+    const rawSection = document.getElementById(
+      'config-chatgpt-web-account-info-raw-quota'
+    ) as HTMLElement;
+    fireEvent.click(
+      within(rawSection).getByRole('button', {
+        name: 'chatgpt_web.account_info.raw_quota.clear_button',
+      })
+    );
+    const confirmation = useNotificationStore.getState().confirmation.options;
+    await act(async () => {
+      await confirmation?.onConfirm();
+    });
+    expect(clearRawQuota).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('chatgpt_web.account_info.raw_quota.empty')).not.toBeNull();
   });
 
   test('disables diagnostics controls when an older backend omits the capability', async () => {

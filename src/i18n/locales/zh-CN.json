@@ -1694,6 +1694,8 @@
         "description": "自动重登和 Web 图片兼容在此配置；账号登录通过独立任务页面执行，Sentinel SDK 配置和运行状态见下方。",
         "auto_relogin": "自动重新登录",
         "auto_relogin_description": "令牌无法刷新且凭证允许重登时自动尝试登录。账号死亡或需要人工验证时不会自动重登。",
+        "session_cookie_refresh_on_token_failure": "Access Token 失效时使用 Session Cookie",
+        "session_cookie_refresh_on_token_failure_description": "密码或 2FA 信息不完整的凭证，在 Access Token 过期或被拒绝后，使用完整的 ChatGPT Session Cookie 刷新。只有明确的 Session 失效才标记账号死亡；网络、Cloudflare、限流、响应格式异常或 Cookie 分片不完整都不会判死。",
         "force_session_refresh_on_import": "导入时强制刷新 Session",
         "force_session_refresh_on_import_description": "开启后，即使上传的 Access Token 仍有效也会通过 Session 刷新；关闭后仅在 Token 缺失或已过期时刷新。",
         "auto_delete_dead_auths": "自动删除死亡凭证",
@@ -2857,6 +2859,42 @@
           "last_seen": "最近出现",
           "last_auth_index": "最近凭证索引",
           "last_attempt": "最近尝试次数"
+        }
+      },
+      "raw_quota": {
+        "enabled": "抓取原始额度响应",
+        "enabled_description": "在有界进程内存中保留每个凭证最新的 conversation/init 原始额度响应。该可选数据可能包含上游账号元数据；不会写入日志或认证文件，进程重启后清空。",
+        "unsupported": "当前后端不支持原始额度响应抓取，请升级后端。",
+        "title": "原始额度响应",
+        "description": "仅在展开时读取一次，之后只在手动刷新时读取。成功与失败的 conversation/init 响应都会被抓取，便于对比官方原文和解析器选中的值。",
+        "summary_counts": "{{count}} 条 · {{bytes}} 字节 · 淘汰 {{evicted}}",
+        "summary_enabled": "抓取已启用 · 尚未读取",
+        "summary_disabled": "抓取已关闭 · 尚未读取",
+        "summary_unsupported": "后端不支持",
+        "loading": "正在读取原始额度响应",
+        "loaded": "原始额度响应已读取。",
+        "load_failed": "读取原始额度响应失败",
+        "empty": "当前没有原始额度响应。",
+        "clear_title": "清空原始额度响应",
+        "clear_confirm": "确定清空进程内存中的全部原始额度响应吗？此操作无法撤销。",
+        "clear_button": "清空响应",
+        "clear_success": "原始额度响应已清空。",
+        "clear_failed": "清空原始额度响应失败",
+        "unknown_status": "无状态码",
+        "truncated": "响应已在配置的抓取上限处截断。",
+        "stats": {
+          "records": "凭证数量",
+          "total_bytes": "存储字节",
+          "evicted_count": "淘汰数量",
+          "capacity": "记录容量"
+        },
+        "fields": {
+          "attempt": "尝试次数",
+          "content_type": "Content-Type",
+          "response_bytes": "原始字节数",
+          "remaining": "解析器选中的剩余次数",
+          "reset_at": "解析器选中的重置时间",
+          "parse_error": "解析错误"
         }
       },
       "refresh_workers": "刷新 Worker 数量",

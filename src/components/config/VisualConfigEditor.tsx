@@ -1917,6 +1917,21 @@ export function VisualConfigEditor({
                 disabled={disabled}
                 onChange={(chatgptWebAutoRelogin) => onChange({ chatgptWebAutoRelogin })}
               />
+              <div id="config-chatgpt-web-session-cookie-refresh-on-token-failure">
+                <ToggleRow
+                  title={t(
+                    'config_management.settings_center.chatgpt_web.session_cookie_refresh_on_token_failure'
+                  )}
+                  description={t(
+                    'config_management.settings_center.chatgpt_web.session_cookie_refresh_on_token_failure_description'
+                  )}
+                  checked={values.chatgptWebSessionCookieRefreshOnTokenFailure}
+                  disabled={disabled}
+                  onChange={(chatgptWebSessionCookieRefreshOnTokenFailure) =>
+                    onChange({ chatgptWebSessionCookieRefreshOnTokenFailure })
+                  }
+                />
+              </div>
               <div id="config-chatgpt-web-force-session-refresh-on-import">
                 <ToggleRow
                   title={t(

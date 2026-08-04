@@ -116,6 +116,7 @@ export type ChatGptWebLoginProxyConfigPatch = Partial<ChatGptWebLoginProxyConfig
 export interface ChatGptWebAccountInfoConfig {
   'auto-refresh-enabled'?: boolean;
   'diagnostics-enabled'?: boolean;
+  'raw-quota-response-enabled'?: boolean;
   'periodic-refresh-minutes'?: number;
   'refresh-workers': number;
   'refresh-queue-size': number;
@@ -179,6 +180,35 @@ export interface ChatGptWebAccountInfoDiagnosticsSnapshot {
   total_count: number;
   evicted_count: number;
   records: ChatGptWebAccountInfoDiagnosticRecord[];
+}
+
+export interface ChatGptWebAccountInfoRawQuotaParsed {
+  feature_present: boolean;
+  present: boolean;
+  remaining: number;
+  reset_at?: string;
+}
+
+export interface ChatGptWebAccountInfoRawQuotaRecord {
+  auth_index: string;
+  captured_at: string;
+  attempt?: number;
+  http_status?: number;
+  content_type?: string;
+  response_bytes: number;
+  truncated: boolean;
+  parse_error?: string;
+  parsed_quota?: ChatGptWebAccountInfoRawQuotaParsed;
+  body: string;
+}
+
+export interface ChatGptWebAccountInfoRawQuotaSnapshot {
+  enabled: boolean;
+  capacity: number;
+  max_bytes: number;
+  total_bytes: number;
+  evicted_count: number;
+  records: ChatGptWebAccountInfoRawQuotaRecord[];
 }
 
 export type ChatGptWebAccountInfoRefreshTaskState =
