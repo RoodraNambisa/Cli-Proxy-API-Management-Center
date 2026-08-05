@@ -28,6 +28,10 @@ import {
   type ChatGptWebAccountInfoPanelHandle,
 } from '@/features/chatgptWeb/components/ChatGptWebAccountInfoPanel';
 import {
+  ChatGptWebImportPanel,
+  type ChatGptWebImportPanelHandle,
+} from '@/features/chatgptWeb/components/ChatGptWebImportPanel';
+import {
   ChatGptWebSentinelPanel,
   type ChatGptWebSentinelPanelHandle,
 } from '@/features/chatgptWeb/components/ChatGptWebSentinelPanel';
@@ -50,6 +54,7 @@ type ConfigEditorTab = 'visual' | 'source';
 type ConfigSidecarPanelId =
   | 'request-body-release'
   | 'request-body-audit'
+  | 'config-chatgpt-web-import'
   | 'config-chatgpt-web-account-info'
   | 'config-chatgpt-web-login-proxy'
   | 'config-chatgpt-web-sentinel'
@@ -58,6 +63,7 @@ type ConfigSidecarPanelId =
 type ConfigSidecarDirtySnapshot = {
   release: boolean;
   audit: boolean;
+  importSettings: boolean;
   accountInfo: boolean;
   loginProxy: boolean;
   sentinel: boolean;
@@ -130,12 +136,14 @@ export function ConfigPage() {
   const [dirty, setDirty] = useState(false);
   const [requestBodyReleaseDirty, setRequestBodyReleaseDirty] = useState(false);
   const [requestBodyAuditDirty, setRequestBodyAuditDirty] = useState(false);
+  const [chatGptWebImportDirty, setChatGptWebImportDirty] = useState(false);
   const [chatGptWebAccountInfoDirty, setChatGptWebAccountInfoDirty] = useState(false);
   const [chatGptWebLoginProxyDirty, setChatGptWebLoginProxyDirty] = useState(false);
   const [chatGptWebSentinelDirty, setChatGptWebSentinelDirty] = useState(false);
   const [chatGptWebUsageCacheDirty, setChatGptWebUsageCacheDirty] = useState(false);
   const [requestBodyReleaseErrorCount, setRequestBodyReleaseErrorCount] = useState(0);
   const [requestBodyAuditErrorCount, setRequestBodyAuditErrorCount] = useState(0);
+  const [chatGptWebImportErrorCount, setChatGptWebImportErrorCount] = useState(0);
   const [chatGptWebAccountInfoErrorCount, setChatGptWebAccountInfoErrorCount] = useState(0);
   const [chatGptWebLoginProxyErrorCount, setChatGptWebLoginProxyErrorCount] = useState(0);
   const [chatGptWebSentinelErrorCount, setChatGptWebSentinelErrorCount] = useState(0);
@@ -155,6 +163,7 @@ export function ConfigPage() {
   const floatingActionsRef = useRef<HTMLDivElement>(null);
   const requestBodyReleaseRef = useRef<RequestBodyReleaseCardHandle | null>(null);
   const requestBodyAuditRef = useRef<RequestBodyAuditCardHandle | null>(null);
+  const chatGptWebImportRef = useRef<ChatGptWebImportPanelHandle | null>(null);
   const chatGptWebAccountInfoRef = useRef<ChatGptWebAccountInfoPanelHandle | null>(null);
   const chatGptWebLoginProxyRef = useRef<ChatGptWebLoginProxyPanelHandle | null>(null);
   const chatGptWebSentinelRef = useRef<ChatGptWebSentinelPanelHandle | null>(null);
@@ -166,6 +175,7 @@ export function ConfigPage() {
     yamlDirty ||
     requestBodyReleaseDirty ||
     requestBodyAuditDirty ||
+    chatGptWebImportDirty ||
     chatGptWebAccountInfoDirty ||
     chatGptWebLoginProxyDirty ||
     chatGptWebSentinelDirty ||
@@ -216,6 +226,7 @@ export function ConfigPage() {
     const releaseValid =
       !requestBodyReleaseDirty || requestBodyReleaseRef.current?.validate() !== false;
     const auditValid = !requestBodyAuditDirty || requestBodyAuditRef.current?.validate() !== false;
+    const importValid = !chatGptWebImportDirty || chatGptWebImportRef.current?.validate() !== false;
     const accountInfoValid =
       !chatGptWebAccountInfoDirty || chatGptWebAccountInfoRef.current?.validate() !== false;
     const loginProxyValid =
@@ -227,6 +238,7 @@ export function ConfigPage() {
     if (
       releaseValid &&
       auditValid &&
+      importValid &&
       accountInfoValid &&
       loginProxyValid &&
       sentinelValid &&
@@ -239,18 +251,21 @@ export function ConfigPage() {
       ? 'request-body-release'
       : !auditValid
         ? 'request-body-audit'
-        : !accountInfoValid
-          ? 'config-chatgpt-web-account-info'
-          : !loginProxyValid
-            ? 'config-chatgpt-web-login-proxy'
-            : !sentinelValid
-              ? 'config-chatgpt-web-sentinel'
-              : 'config-chatgpt-web-usage-cache';
+        : !importValid
+          ? 'config-chatgpt-web-import'
+          : !accountInfoValid
+            ? 'config-chatgpt-web-account-info'
+            : !loginProxyValid
+              ? 'config-chatgpt-web-login-proxy'
+              : !sentinelValid
+                ? 'config-chatgpt-web-sentinel'
+                : 'config-chatgpt-web-usage-cache';
     navigate(`/config?section=${invalidSection}`, { replace: true });
     showNotification(t('config_management.settings_center.sidecar_validation_failed'), 'error');
     return false;
   }, [
     chatGptWebAccountInfoDirty,
+    chatGptWebImportDirty,
     chatGptWebLoginProxyDirty,
     chatGptWebSentinelDirty,
     chatGptWebUsageCacheDirty,
@@ -276,6 +291,7 @@ export function ConfigPage() {
     async ({
       reloadRelease = false,
       reloadAudit = false,
+      reloadImport = false,
       reloadAccountInfo = false,
       reloadLoginProxy = false,
       reloadSentinel = false,
@@ -289,6 +305,9 @@ export function ConfigPage() {
             : Promise.resolve(),
           reloadAudit
             ? (requestBodyAuditRef.current?.reload() ?? Promise.resolve())
+            : Promise.resolve(),
+          reloadImport
+            ? (chatGptWebImportRef.current?.reload() ?? Promise.resolve())
             : Promise.resolve(),
           reloadAccountInfo
             ? (chatGptWebAccountInfoRef.current?.reload() ?? Promise.resolve())
@@ -354,6 +373,13 @@ export function ConfigPage() {
         const panel = requestBodyAuditRef.current;
         results.push({
           id: 'request-body-audit',
+          success: panel ? await panel.save() : false,
+        });
+      }
+      if (snapshot.importSettings) {
+        const panel = chatGptWebImportRef.current;
+        results.push({
+          id: 'config-chatgpt-web-import',
           success: panel ? await panel.save() : false,
         });
       }
@@ -430,6 +456,7 @@ export function ConfigPage() {
     const sidecarSnapshot: ConfigSidecarDirtySnapshot = {
       release: requestBodyReleaseDirty,
       audit: requestBodyAuditDirty,
+      importSettings: chatGptWebImportDirty,
       accountInfo: chatGptWebAccountInfoDirty,
       loginProxy: chatGptWebLoginProxyDirty,
       sentinel: chatGptWebSentinelDirty,
@@ -449,6 +476,7 @@ export function ConfigPage() {
       await refreshSavedSnapshots({
         reloadRelease: !sidecarSnapshot.release,
         reloadAudit: !sidecarSnapshot.audit,
+        reloadImport: !sidecarSnapshot.importSettings,
         reloadAccountInfo: !sidecarSnapshot.accountInfo,
         reloadLoginProxy: !sidecarSnapshot.loginProxy,
         reloadSentinel: !sidecarSnapshot.sentinel,
@@ -480,6 +508,7 @@ export function ConfigPage() {
       !yamlDirty &&
       (requestBodyReleaseDirty ||
         requestBodyAuditDirty ||
+        chatGptWebImportDirty ||
         chatGptWebAccountInfoDirty ||
         chatGptWebLoginProxyDirty ||
         chatGptWebSentinelDirty ||
@@ -488,6 +517,7 @@ export function ConfigPage() {
       const sidecarSnapshot: ConfigSidecarDirtySnapshot = {
         release: requestBodyReleaseDirty,
         audit: requestBodyAuditDirty,
+        importSettings: chatGptWebImportDirty,
         accountInfo: chatGptWebAccountInfoDirty,
         loginProxy: chatGptWebLoginProxyDirty,
         sentinel: chatGptWebSentinelDirty,
@@ -548,6 +578,7 @@ export function ConfigPage() {
         if (
           requestBodyReleaseDirty ||
           requestBodyAuditDirty ||
+          chatGptWebImportDirty ||
           chatGptWebAccountInfoDirty ||
           chatGptWebLoginProxyDirty ||
           chatGptWebSentinelDirty ||
@@ -556,6 +587,7 @@ export function ConfigPage() {
           await saveSidecarsWithoutYaml({
             release: requestBodyReleaseDirty,
             audit: requestBodyAuditDirty,
+            importSettings: chatGptWebImportDirty,
             accountInfo: chatGptWebAccountInfoDirty,
             loginProxy: chatGptWebLoginProxyDirty,
             sentinel: chatGptWebSentinelDirty,
@@ -792,6 +824,7 @@ export function ConfigPage() {
         loadConfig(),
         requestBodyReleaseRef.current?.reload(),
         requestBodyAuditRef.current?.reload(),
+        chatGptWebImportRef.current?.reload(),
         chatGptWebAccountInfoRef.current?.reload(),
         chatGptWebLoginProxyRef.current?.reload(),
         chatGptWebSentinelRef.current?.reload(),
@@ -811,6 +844,7 @@ export function ConfigPage() {
           loadConfig(),
           requestBodyReleaseRef.current?.reload(),
           requestBodyAuditRef.current?.reload(),
+          chatGptWebImportRef.current?.reload(),
           chatGptWebAccountInfoRef.current?.reload(),
           chatGptWebLoginProxyRef.current?.reload(),
           chatGptWebSentinelRef.current?.reload(),
@@ -924,12 +958,14 @@ export function ConfigPage() {
               requestBodyDirty={requestBodyReleaseDirty || requestBodyAuditDirty}
               requestBodyErrorCount={requestBodyReleaseErrorCount + requestBodyAuditErrorCount}
               chatGptWebSentinelDirty={
+                chatGptWebImportDirty ||
                 chatGptWebAccountInfoDirty ||
                 chatGptWebLoginProxyDirty ||
                 chatGptWebSentinelDirty ||
                 chatGptWebUsageCacheDirty
               }
               chatGptWebSentinelErrorCount={
+                chatGptWebImportErrorCount +
                 chatGptWebAccountInfoErrorCount +
                 chatGptWebLoginProxyErrorCount +
                 chatGptWebSentinelErrorCount +
@@ -960,6 +996,16 @@ export function ConfigPage() {
               )}
               renderChatGptWebSentinel={({ active, focusTarget }) => (
                 <>
+                  <ChatGptWebImportPanel
+                    ref={chatGptWebImportRef}
+                    active={active && activeTab === 'visual' && isCurrentLayer}
+                    disabled={disableControls}
+                    connectionGenerationKey={connectionGenerationKey}
+                    externalSaving={saving}
+                    focusTarget={focusTarget}
+                    onDirtyChange={setChatGptWebImportDirty}
+                    onErrorCountChange={setChatGptWebImportErrorCount}
+                  />
                   <ChatGptWebAccountInfoPanel
                     ref={chatGptWebAccountInfoRef}
                     active={active && activeTab === 'visual' && isCurrentLayer}

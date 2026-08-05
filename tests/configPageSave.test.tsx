@@ -7,6 +7,7 @@ const harness = vi.hoisted(() => ({
   visualDirty: false,
   releaseDirty: false,
   auditDirty: false,
+  importDirty: false,
   accountInfoDirty: false,
   loginProxyDirty: false,
   sentinelDirty: false,
@@ -20,6 +21,8 @@ const harness = vi.hoisted(() => ({
   releaseReload: vi.fn(),
   auditSave: vi.fn(),
   auditReload: vi.fn(),
+  importSave: vi.fn(),
+  importReload: vi.fn(),
   accountInfoSave: vi.fn(),
   accountInfoReload: vi.fn(),
   loginProxySave: vi.fn(),
@@ -249,6 +252,54 @@ vi.mock('@/features/chatgptWeb/components/ChatGptWebSentinelPanel', async () => 
   };
 });
 
+vi.mock('@/features/chatgptWeb/components/ChatGptWebImportPanel', async () => {
+  const React = await import('react');
+  type Props = {
+    active?: boolean;
+    onDirtyChange?: (dirty: boolean) => void;
+    onErrorCountChange?: (count: number) => void;
+  };
+  type Handle = {
+    save: () => Promise<boolean>;
+    reload: () => Promise<void>;
+    reset: () => void;
+    validate: () => boolean;
+  };
+
+  return {
+    ChatGptWebImportPanel: React.forwardRef<Handle, Props>(function MockImportPanel(
+      { active, onDirtyChange, onErrorCountChange },
+      ref
+    ) {
+      React.useEffect(() => {
+        onDirtyChange?.(harness.importDirty);
+        onErrorCountChange?.(0);
+      }, [onDirtyChange, onErrorCountChange]);
+      React.useImperativeHandle(
+        ref,
+        () => ({
+          save: async () => {
+            const success = (await harness.importSave()) !== false;
+            if (success) onDirtyChange?.(false);
+            return success;
+          },
+          reload: async () => {
+            await harness.importReload();
+          },
+          reset: vi.fn(),
+          validate: () => true,
+        }),
+        [onDirtyChange]
+      );
+      return (
+        <div data-testid="import-panel" data-active={String(active)}>
+          import-panel
+        </div>
+      );
+    }),
+  };
+});
+
 vi.mock('@/features/chatgptWeb/components/ChatGptWebAccountInfoPanel', async () => {
   const React = await import('react');
   type Props = {
@@ -411,6 +462,7 @@ describe('ConfigPage save coordination', () => {
     harness.visualDirty = false;
     harness.releaseDirty = false;
     harness.auditDirty = false;
+    harness.importDirty = false;
     harness.accountInfoDirty = false;
     harness.loginProxyDirty = false;
     harness.sentinelDirty = false;
@@ -428,6 +480,8 @@ describe('ConfigPage save coordination', () => {
     harness.releaseReload.mockResolvedValue(undefined);
     harness.auditSave.mockResolvedValue(true);
     harness.auditReload.mockResolvedValue(undefined);
+    harness.importSave.mockResolvedValue(true);
+    harness.importReload.mockResolvedValue(undefined);
     harness.accountInfoSave.mockResolvedValue(true);
     harness.accountInfoReload.mockResolvedValue(undefined);
     harness.loginProxySave.mockResolvedValue(true);
@@ -471,6 +525,22 @@ describe('ConfigPage save coordination', () => {
     expect(harness.saveYaml).not.toHaveBeenCalled();
     expect(harness.loadVisualValues).toHaveBeenLastCalledWith(
       'chatgpt-web:\n  sentinel:\n    sdk-workers: 4\n'
+    );
+  });
+
+  test('saves ChatGPT Web import settings through the unified sidecar flow', async () => {
+    harness.importDirty = true;
+    harness.fetchYaml
+      .mockResolvedValueOnce('chatgpt-web: {}\n')
+      .mockResolvedValueOnce('chatgpt-web:\n  import:\n    workers: 8\n');
+
+    renderPage();
+    await clickSave();
+
+    await waitFor(() => expect(harness.importSave).toHaveBeenCalledTimes(1));
+    expect(harness.saveYaml).not.toHaveBeenCalled();
+    expect(harness.loadVisualValues).toHaveBeenLastCalledWith(
+      'chatgpt-web:\n  import:\n    workers: 8\n'
     );
   });
 

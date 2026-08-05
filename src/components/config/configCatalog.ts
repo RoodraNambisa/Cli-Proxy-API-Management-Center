@@ -537,6 +537,25 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['session import', '导入刷新', 'session 刷新'],
   },
   {
+    id: 'config-chatgpt-web-import',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'chatgpt_web.import.title',
+    yamlKeys: [
+      'chatgpt-web.import',
+      'chatgpt-web.import.workers',
+      'chatgpt-web.import.validate-models-after-upload',
+      'chatgpt-web.import.refresh-account-info-after-upload',
+    ],
+    aliases: [
+      'fast import',
+      'upload workers',
+      'background validation',
+      '快速上传',
+      '后台验活',
+      '导入 worker',
+    ],
+  },
+  {
     id: 'config-chatgpt-web-auto-delete-dead-priorities',
     pageId: 'provider-chatgpt-web',
     labelKey: 'config_management.settings_center.chatgpt_web.auto_delete_dead_priorities',

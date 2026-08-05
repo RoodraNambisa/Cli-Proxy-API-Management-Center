@@ -1697,7 +1697,7 @@
         "session_cookie_refresh_on_token_failure": "Access Token 失效时使用 Session Cookie",
         "session_cookie_refresh_on_token_failure_description": "密码或 2FA 信息不完整的凭证，在 Access Token 过期或被拒绝后，使用完整的 ChatGPT Session Cookie 刷新。只有明确的 Session 失效才标记账号死亡；网络、Cloudflare、限流、响应格式异常或 Cookie 分片不完整都不会判死。",
         "force_session_refresh_on_import": "导入时强制刷新 Session",
-        "force_session_refresh_on_import_description": "开启后，即使上传的 Access Token 仍有效也会通过 Session 刷新；关闭后仅在 Token 缺失或已过期时刷新。",
+        "force_session_refresh_on_import_description": "开启后，即使上传的 Access Token 仍有效，也会排队执行后台 Session 刷新；上传不再等待该请求。关闭后仅在 Token 缺失或已过期时排队刷新。",
         "auto_delete_dead_auths": "自动删除死亡凭证",
         "auto_delete_dead_auths_description": "仅在 ChatGPT Web 已确认账号生命周期为死亡时，交由后台维护队列错峰删除凭证。不会删除普通冷却、图片额度耗尽或需要人工验证的账号。",
         "auto_delete_dead_runtime_count": "本次服务运行期间已自动删除",
@@ -2988,6 +2988,44 @@
       "validation_flow_attempts": "完整登录流程次数必须是 1–5 的整数。",
       "validation_retry_delay": "基础重试延迟必须是 0–10000 的整数。",
       "validation_acquisition_timeout": "登录总时限必须是 30–600 的整数。"
+    },
+    "import": {
+      "title": "ChatGPT Web 上传与后台维护",
+      "description": "凭证落盘后立即使用内置模型参与调度；可选的 Session、模型和额度网络检查在后台执行，不阻塞上传。",
+      "workers": "全局上传 Worker 数量",
+      "workers_hint": "所有导入任务共享，范围 1–32，默认 4。",
+      "validate_models": "上传后后台验活并刷新模型",
+      "validate_models_description": "上传后排队执行一次模型请求；成功时同时更新远程模型目录。",
+      "refresh_account_info": "上传后后台刷新账号信息与图片额度",
+      "refresh_account_info_description": "仅在自动刷新账号信息已开启时排队；重复任务会直接复用。",
+      "runtime_title": "导入运行状态",
+      "runtime_description": "显示当前条目队列和共享 Worker 使用情况；可手动刷新快照。",
+      "loading": "正在读取上传配置",
+      "load_failed": "读取上传配置失败",
+      "save_failed": "保存上传配置失败",
+      "save_success": "上传配置已保存",
+      "saved_refresh_failed": "配置已保存，但重新读取运行状态失败",
+      "reset": "还原",
+      "validation_workers": "全局上传 Worker 数量必须是 1–32 的整数。",
+      "summary": "{{workers}} 个 Worker · 排队 {{queued}} · 运行 {{running}}",
+      "runtime": {
+        "queued_entries": "排队条目",
+        "running_entries": "运行条目",
+        "active_workers": "活跃 Worker",
+        "worker_limit": "Worker 上限"
+      },
+      "background_task": {
+        "session": "Session",
+        "models": "模型",
+        "account_info": "账号信息"
+      },
+      "background_state": {
+        "queued": "已排队",
+        "reused": "已复用",
+        "skipped": "已跳过",
+        "canceled": "已取消"
+      },
+      "background_state_summary": "{{kind}}：{{state}}"
     },
     "sentinel": {
       "title": "Sentinel SDK",

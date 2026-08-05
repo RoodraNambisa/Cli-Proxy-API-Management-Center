@@ -1716,7 +1716,7 @@
         "session_cookie_refresh_on_token_failure": "Access Token 失效時使用 Session Cookie",
         "session_cookie_refresh_on_token_failure_description": "密碼或 2FA 資訊不完整的憑證，在 Access Token 過期或遭拒後，使用完整的 ChatGPT Session Cookie 更新。只有明確的 Session 失效才標記帳號死亡；網路、Cloudflare、限流、回應格式異常或 Cookie 分片不完整都不會判死。",
         "force_session_refresh_on_import": "匯入時強制更新 Session",
-        "force_session_refresh_on_import_description": "開啟後，即使匯入的 Access Token 仍有效也會透過 Session 更新；關閉後僅在 Token 缺失或已過期時更新。",
+        "force_session_refresh_on_import_description": "開啟後，即使匯入的 Access Token 仍有效，也會排隊執行背景 Session 更新；上傳不再等待該請求。關閉後僅在 Token 缺失或已過期時排隊更新。",
         "auto_delete_dead_auths": "自動刪除死亡憑證",
         "auto_delete_dead_auths_description": "僅在 ChatGPT Web 已確認帳號生命週期為死亡時，交由背景維護佇列錯峰刪除憑證。不會刪除一般冷卻、圖片額度耗盡或需要人工驗證的帳號。",
         "auto_delete_dead_runtime_count": "本次服務執行期間已自動刪除",
@@ -3007,6 +3007,44 @@
       "validation_flow_attempts": "完整登入流程次數必須是 1–5 的整數。",
       "validation_retry_delay": "基礎重試延遲必須是 0–10000 的整數。",
       "validation_acquisition_timeout": "登入總時限必須是 30–600 的整數。"
+    },
+    "import": {
+      "title": "ChatGPT Web 上傳與背景維護",
+      "description": "憑證落盤後立即使用內建模型參與排程；可選的 Session、模型和額度網路檢查在背景執行，不阻塞上傳。",
+      "workers": "全域上傳 Worker 數量",
+      "workers_hint": "所有匯入任務共用，範圍 1–32，預設 4。",
+      "validate_models": "上傳後背景驗活並更新模型",
+      "validate_models_description": "上傳後排隊執行一次模型請求；成功時同時更新遠端模型目錄。",
+      "refresh_account_info": "上傳後背景更新帳號資訊與圖片額度",
+      "refresh_account_info_description": "僅在自動更新帳號資訊已開啟時排隊；重複任務會直接複用。",
+      "runtime_title": "匯入執行狀態",
+      "runtime_description": "顯示目前項目佇列和共用 Worker 使用情況；可手動重新整理快照。",
+      "loading": "正在讀取上傳設定",
+      "load_failed": "讀取上傳設定失敗",
+      "save_failed": "儲存上傳設定失敗",
+      "save_success": "上傳設定已儲存",
+      "saved_refresh_failed": "設定已儲存，但重新讀取執行狀態失敗",
+      "reset": "還原",
+      "validation_workers": "全域上傳 Worker 數量必須是 1–32 的整數。",
+      "summary": "{{workers}} 個 Worker · 排隊 {{queued}} · 執行 {{running}}",
+      "runtime": {
+        "queued_entries": "排隊項目",
+        "running_entries": "執行項目",
+        "active_workers": "作用中 Worker",
+        "worker_limit": "Worker 上限"
+      },
+      "background_task": {
+        "session": "Session",
+        "models": "模型",
+        "account_info": "帳號資訊"
+      },
+      "background_state": {
+        "queued": "已排隊",
+        "reused": "已複用",
+        "skipped": "已略過",
+        "canceled": "已取消"
+      },
+      "background_state_summary": "{{kind}}：{{state}}"
     },
     "sentinel": {
       "title": "Sentinel SDK",

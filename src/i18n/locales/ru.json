@@ -1690,7 +1690,7 @@
         "session_cookie_refresh_on_token_failure": "Использовать Session Cookie при сбое Access Token",
         "session_cookie_refresh_on_token_failure_description": "Для учётных данных без полного пароля и 2FA обновлять просроченный или отклонённый Access Token через полноценный ChatGPT Session Cookie. Только подтверждённое истечение Session помечает запись как мёртвую; сеть, Cloudflare, лимиты, неверный формат ответа и неполные фрагменты Cookie не считаются смертью.",
         "force_session_refresh_on_import": "Принудительно обновлять Session при импорте",
-        "force_session_refresh_on_import_description": "Если включено, Session обновляется даже при действующем импортированном Access Token. Если выключено, обновление выполняется только при отсутствии или истечении Token.",
+        "force_session_refresh_on_import_description": "Если включено, фоновое обновление Session ставится в очередь даже при действующем Access Token; загрузка его не ожидает. Если выключено, обновление ставится в очередь только при отсутствии или истечении Token.",
         "auto_delete_dead_auths": "Автоматически удалять мёртвые учётные данные",
         "auto_delete_dead_auths_description": "Фоновая очередь удаляет учётные данные только после подтверждения ChatGPT Web, что аккаунт окончательно мёртв. Охлаждение, исчерпанная квота изображений и ручная проверка не приводят к удалению.",
         "auto_delete_dead_runtime_count": "Автоматически удалено за текущий запуск сервера",
@@ -2983,6 +2983,44 @@
       "validation_flow_attempts": "Число полных потоков должно быть целым от 1 до 5.",
       "validation_retry_delay": "Базовая задержка должна быть целым числом от 0 до 10000.",
       "validation_acquisition_timeout": "Общий тайм-аут входа должен быть целым числом от 30 до 600."
+    },
+    "import": {
+      "title": "Загрузка ChatGPT Web и фоновое обслуживание",
+      "description": "Учётные данные сразу сохраняются и участвуют в планировании со встроенными моделями. Необязательные проверки Session, моделей и квоты выполняются в фоне.",
+      "workers": "Общие Worker загрузки",
+      "workers_hint": "Общие для всех задач импорта. Целое число 1–32; по умолчанию 4.",
+      "validate_models": "Проверять модели после загрузки",
+      "validate_models_description": "После загрузки поставить в очередь один фоновый запрос моделей; успешный запрос также обновит каталог.",
+      "refresh_account_info": "Обновлять сведения и квоту изображений после загрузки",
+      "refresh_account_info_description": "Ставить в очередь только при включённом автообновлении сведений. Повторная работа переиспользуется.",
+      "runtime_title": "Состояние импорта",
+      "runtime_description": "Текущая очередь элементов и использование общего пула. Снимок обновляется вручную.",
+      "loading": "Загрузка настроек импорта",
+      "load_failed": "Не удалось загрузить настройки импорта",
+      "save_failed": "Не удалось сохранить настройки импорта",
+      "save_success": "Настройки импорта сохранены",
+      "saved_refresh_failed": "Настройки сохранены, но состояние не удалось перечитать",
+      "reset": "Сбросить",
+      "validation_workers": "Число общих Worker загрузки должно быть целым от 1 до 32.",
+      "summary": "Worker: {{workers}} · в очереди: {{queued}} · выполняется: {{running}}",
+      "runtime": {
+        "queued_entries": "В очереди",
+        "running_entries": "Выполняется",
+        "active_workers": "Активные Worker",
+        "worker_limit": "Лимит Worker"
+      },
+      "background_task": {
+        "session": "Session",
+        "models": "Модели",
+        "account_info": "Сведения"
+      },
+      "background_state": {
+        "queued": "в очереди",
+        "reused": "переиспользовано",
+        "skipped": "пропущено",
+        "canceled": "отменено"
+      },
+      "background_state_summary": "{{kind}}: {{state}}"
     },
     "sentinel": {
       "title": "Sentinel SDK",

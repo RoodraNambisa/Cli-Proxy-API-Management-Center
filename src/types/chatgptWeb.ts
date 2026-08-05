@@ -69,6 +69,9 @@ export interface ChatGptWebMutationResult {
   error_category?: string;
   error?: string;
   http_status?: number;
+  session_refresh_state?: string;
+  model_validation_state?: string;
+  account_info_refresh_state?: string;
 }
 
 export interface ChatGptWebMutationTask {
@@ -266,6 +269,26 @@ export const isChatGptWebAccountInfoRefreshTaskTerminal = (state: string): boole
   state === 'completed_with_errors' ||
   state === 'failed' ||
   state === 'canceled';
+
+export interface ChatGptWebImportConfig {
+  workers: number;
+  'validate-models-after-upload': boolean;
+  'refresh-account-info-after-upload': boolean;
+}
+
+export type ChatGptWebImportConfigPatch = Partial<ChatGptWebImportConfig>;
+
+export interface ChatGptWebImportRuntime {
+  queued_entries: number;
+  running_entries: number;
+  active_workers: number;
+  worker_limit: number;
+}
+
+export interface ChatGptWebImportSnapshot {
+  config: ChatGptWebImportConfig;
+  runtime: ChatGptWebImportRuntime;
+}
 
 export interface ChatGptWebSentinelConfig {
   'sdk-runtime-enabled': boolean;

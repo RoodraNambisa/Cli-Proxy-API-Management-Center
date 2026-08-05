@@ -1693,7 +1693,7 @@
         "session_cookie_refresh_on_token_failure": "Use Session Cookie when Access Token fails",
         "session_cookie_refresh_on_token_failure_description": "For credentials without complete password and 2FA material, use a complete ChatGPT Session Cookie to refresh an expired or rejected Access Token. Only definitive Session expiry marks the credential dead; network, Cloudflare, rate-limit, malformed-response, and incomplete-cookie failures do not.",
         "force_session_refresh_on_import": "Force Session refresh on import",
-        "force_session_refresh_on_import_description": "When enabled, refresh through Session even if the imported Access Token is still valid. When disabled, refresh only if the Token is missing or expired.",
+        "force_session_refresh_on_import_description": "When enabled, queue a background Session refresh even if the imported Access Token is still valid. Upload no longer waits for this request. When disabled, a refresh is queued only if the Token is missing or expired.",
         "auto_delete_dead_auths": "Automatically delete dead credentials",
         "auto_delete_dead_auths_description": "Use the staggered background maintenance queue only after ChatGPT Web confirms that the account lifecycle is dead. Cooling, exhausted image quota, and interaction-required accounts are not deleted.",
         "auto_delete_dead_runtime_count": "Automatically deleted during this server run",
@@ -2984,6 +2984,44 @@
       "validation_flow_attempts": "Full login flows must be an integer from 1 to 5.",
       "validation_retry_delay": "Base retry delay must be an integer from 0 to 10000.",
       "validation_acquisition_timeout": "Total login timeout must be an integer from 30 to 600."
+    },
+    "import": {
+      "title": "ChatGPT Web upload and background maintenance",
+      "description": "Persist credentials and make them schedulable immediately with built-in models. Optional Session, model, and quota network checks run later without blocking upload.",
+      "workers": "Global upload workers",
+      "workers_hint": "Shared by all import tasks. Enter an integer from 1 to 32; default 4.",
+      "validate_models": "Validate models after upload",
+      "validate_models_description": "Queue one background model request after upload. A successful request also refreshes the remote model catalog.",
+      "refresh_account_info": "Refresh account info and image quota after upload",
+      "refresh_account_info_description": "Queue a background refresh only while automatic account-info refresh is enabled. Duplicate work is reused.",
+      "runtime_title": "Import runtime",
+      "runtime_description": "Current entry queue and shared worker usage. Refresh manually for a new snapshot.",
+      "loading": "Loading upload settings",
+      "load_failed": "Failed to load upload settings",
+      "save_failed": "Failed to save upload settings",
+      "save_success": "Upload settings saved",
+      "saved_refresh_failed": "Settings were saved, but the runtime snapshot could not be reloaded",
+      "reset": "Reset",
+      "validation_workers": "Global upload workers must be an integer from 1 to 32.",
+      "summary": "{{workers}} workers · {{queued}} queued · {{running}} running",
+      "runtime": {
+        "queued_entries": "Queued entries",
+        "running_entries": "Running entries",
+        "active_workers": "Active workers",
+        "worker_limit": "Worker limit"
+      },
+      "background_task": {
+        "session": "Session",
+        "models": "Models",
+        "account_info": "Account info"
+      },
+      "background_state": {
+        "queued": "queued",
+        "reused": "reused",
+        "skipped": "skipped",
+        "canceled": "canceled"
+      },
+      "background_state_summary": "{{kind}}: {{state}}"
     },
     "sentinel": {
       "title": "Sentinel SDK",

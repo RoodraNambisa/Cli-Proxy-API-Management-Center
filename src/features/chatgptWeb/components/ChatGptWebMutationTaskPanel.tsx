@@ -173,6 +173,22 @@ export function ChatGptWebMutationTaskPanel(props: ChatGptWebMutationTaskPanelPr
                 ]
                   .filter(Boolean)
                   .join(' · ');
+                const backgroundStates = [
+                  ['session', result.session_refresh_state],
+                  ['models', result.model_validation_state],
+                  ['account_info', result.account_info_refresh_state],
+                ]
+                  .filter((entry): entry is [string, string] => Boolean(entry[1]))
+                  .map(([kind, state]) =>
+                    t('chatgpt_web.import.background_state_summary', {
+                      kind: t(`chatgpt_web.import.background_task.${kind}`),
+                      state: readTranslatedValue(
+                        t,
+                        `chatgpt_web.import.background_state.${state}`,
+                        state
+                      ),
+                    })
+                  );
 
                 return (
                   <tr key={`${source}-${result.email ?? ''}-${index}`}>
@@ -185,7 +201,20 @@ export function ChatGptWebMutationTaskPanel(props: ChatGptWebMutationTaskPanelPr
                     </td>
                     <td className={styles.wrapCell}>{target}</td>
                     <td>{credentialMode}</td>
-                    <td className={styles.messageCell}>{message || '-'}</td>
+                    <td className={styles.messageCell}>
+                      {backgroundStates.length > 0 ? (
+                        <div className={styles.backgroundStates}>
+                          {backgroundStates.map((state) => (
+                            <span key={state}>{state}</span>
+                          ))}
+                        </div>
+                      ) : null}
+                      {message ? (
+                        <span>{message}</span>
+                      ) : backgroundStates.length === 0 ? (
+                        '-'
+                      ) : null}
+                    </td>
                   </tr>
                 );
               })}

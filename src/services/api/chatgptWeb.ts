@@ -6,6 +6,9 @@ import type {
   ChatGptWebAccountInfoRefreshTask,
   ChatGptWebAccountInfoSnapshot,
   ChatGptWebAutoDeleteDeadStats,
+  ChatGptWebImportConfig,
+  ChatGptWebImportConfigPatch,
+  ChatGptWebImportSnapshot,
   ChatGptWebLoginTask,
   ChatGptWebLoginProxyConfig,
   ChatGptWebLoginProxyConfigPatch,
@@ -102,6 +105,18 @@ export const chatGptWebApi = {
 
   cancelConversionTask(id: string): Promise<ChatGptWebMutationTask> {
     return apiClient.delete(`/chatgpt-web/conversion-tasks/${encodeURIComponent(id)}`);
+  },
+
+  getImport(): Promise<ChatGptWebImportSnapshot> {
+    return apiClient.get('/chatgpt-web/import');
+  },
+
+  putImport(config: ChatGptWebImportConfig): Promise<unknown> {
+    return apiClient.put('/chatgpt-web/import', config);
+  },
+
+  patchImport(config: ChatGptWebImportConfigPatch): Promise<unknown> {
+    return apiClient.patch('/chatgpt-web/import', config);
   },
 
   relogin(name: string): Promise<ChatGptWebReloginResponse> {
