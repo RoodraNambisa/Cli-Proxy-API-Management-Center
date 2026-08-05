@@ -2121,6 +2121,7 @@
           "enable_desc": "开启后台扫描和处理失效或反复撞额度的账号",
           "scan_interval_seconds": "扫描间隔 (秒)",
           "delete_interval_seconds": "删除间隔 (秒)",
+          "delete_interval_seconds_desc": "仅限制通用账号维护删除；已确认死亡的 ChatGPT Web 凭证会立即删除，不受此间隔限制。",
           "delete_status_codes": "立即删除状态码",
           "delete_status_codes_desc": "用逗号或换行分隔，例如 401, 403",
           "delete_quota_exceeded": "额度撞限后删除",

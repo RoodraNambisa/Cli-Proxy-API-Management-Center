@@ -4659,6 +4659,9 @@ export function VisualConfigEditor({
                     }
                     disabled={disabled}
                     error={authMaintenanceDeleteIntervalError}
+                    hint={t(
+                      'config_management.visual.sections.maintenance.delete_interval_seconds_desc'
+                    )}
                   />
                   <Input
                     label={t(

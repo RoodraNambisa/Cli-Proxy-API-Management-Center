@@ -2117,6 +2117,7 @@
           "enable_desc": "Run background scans to handle broken or repeatedly rate-limited auths",
           "scan_interval_seconds": "Scan Interval (seconds)",
           "delete_interval_seconds": "Delete Interval (seconds)",
+          "delete_interval_seconds_desc": "Applies only to general auth-maintenance deletions. Confirmed dead ChatGPT Web credentials are deleted immediately and are not throttled by this interval.",
           "delete_status_codes": "Immediate Delete Status Codes",
           "delete_status_codes_desc": "Separate with commas or new lines, for example 401, 403",
           "delete_quota_exceeded": "Delete on Repeated Quota Exceeded",

@@ -2140,6 +2140,7 @@
           "enable_desc": "開啟背景掃描和處理失效或反覆撞額度的帳號",
           "scan_interval_seconds": "掃描間隔（秒）",
           "delete_interval_seconds": "刪除間隔（秒）",
+          "delete_interval_seconds_desc": "僅限制一般帳號維護刪除；已確認死亡的 ChatGPT Web 憑證會立即刪除，不受此間隔限制。",
           "delete_status_codes": "立即刪除狀態碼",
           "delete_status_codes_desc": "用逗號或換行分隔，例如 401, 403",
           "delete_quota_exceeded": "額度撞限後刪除",
