@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { usageApi } from '@/services/api/usage';
 import { useNotificationStore } from '@/stores';
 import type {
+  UsageAuthsQuery,
   UsageAuthSummary,
   UsageCostsResponse,
   UsageHealthResponse,
@@ -52,6 +60,22 @@ export interface UsageQuerySnapshot {
   aggregateBucket: 'hour' | 'day';
 }
 
+export interface UsageAuthQueryState {
+  page: number;
+  pageSize: number;
+  search: string;
+  sortBy: NonNullable<UsageAuthsQuery['sort_by']>;
+  sortOrder: 'asc' | 'desc';
+}
+
+export interface UsageAuthPagination {
+  serverSide: boolean;
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
 type UsageCapability =
   | 'meta'
   | 'summary'
@@ -63,6 +87,7 @@ type UsageCapability =
   | 'prices';
 
 const HEALTH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const DEFAULT_AUTH_PAGE_SIZE = 50;
 
 const emptyResource = <T>(): UsageResource<T> => ({
   status: 'idle',
@@ -120,12 +145,100 @@ const resourceStatusForData = <T>(data: T, isEmpty: (value: T) => boolean): Usag
   error: '',
 });
 
+const readAuthIndex = (auth: UsageAuthSummary): string =>
+  String(auth.auth_index ?? auth.authIndex ?? auth.id ?? '');
+
+const readAuthLabel = (auth: UsageAuthSummary): string =>
+  String(auth.label ?? auth.name ?? auth.email ?? auth.account ?? readAuthIndex(auth));
+
+const readAuthStatus = (auth: UsageAuthSummary): string => {
+  if (auth.stale) return 'stale';
+  if (auth.disabled) return 'disabled';
+  return String(auth.status ?? 'enabled');
+};
+
+const compareAuths = (
+  left: UsageAuthSummary,
+  right: UsageAuthSummary,
+  sortBy: UsageAuthQueryState['sortBy']
+): number => {
+  const numberValue = (value: unknown) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  switch (sortBy) {
+    case 'name':
+      return readAuthLabel(left).localeCompare(readAuthLabel(right));
+    case 'provider':
+      return String(left.provider ?? '').localeCompare(String(right.provider ?? ''));
+    case 'status':
+      return readAuthStatus(left).localeCompare(readAuthStatus(right));
+    case 'total_requests':
+      return numberValue(left.total_requests) - numberValue(right.total_requests);
+    case 'total_tokens':
+      return numberValue(left.total_tokens) - numberValue(right.total_tokens);
+    case 'last_used_at': {
+      const leftTime = Date.parse(String(left.last_used_at ?? ''));
+      const rightTime = Date.parse(String(right.last_used_at ?? ''));
+      return (
+        (Number.isFinite(leftTime) ? leftTime : 0) - (Number.isFinite(rightTime) ? rightTime : 0)
+      );
+    }
+    default:
+      return readAuthIndex(left).localeCompare(readAuthIndex(right));
+  }
+};
+
+const paginateLegacyAuths = (
+  auths: UsageAuthSummary[],
+  query: UsageAuthQueryState
+): { auths: UsageAuthSummary[]; pagination: UsageAuthPagination } => {
+  const search = query.search.trim().toLowerCase();
+  const filtered = search
+    ? auths.filter((auth) =>
+        [
+          readAuthIndex(auth),
+          readAuthLabel(auth),
+          auth.provider,
+          auth.type,
+          auth.account_type ?? auth.accountType,
+          readAuthStatus(auth),
+        ].some((value) =>
+          String(value ?? '')
+            .toLowerCase()
+            .includes(search)
+        )
+      )
+    : [...auths];
+  filtered.sort((left, right) => {
+    const comparison = compareAuths(left, right, query.sortBy);
+    if (comparison !== 0) return query.sortOrder === 'desc' ? -comparison : comparison;
+    return readAuthIndex(left).localeCompare(readAuthIndex(right));
+  });
+  const total = filtered.length;
+  const totalPages = total > 0 ? Math.ceil(total / query.pageSize) : 0;
+  const page = totalPages > 0 ? Math.min(query.page, totalPages) : 1;
+  const start = (page - 1) * query.pageSize;
+  return {
+    auths: filtered.slice(start, start + query.pageSize),
+    pagination: {
+      serverSide: false,
+      page,
+      pageSize: query.pageSize,
+      total,
+      totalPages,
+    },
+  };
+};
+
 export interface UseUsageDataReturn {
   usage: UsagePayload | null;
   usageMeta: UsageMeta | null;
   authUsage: UsageAuthSummary[];
   summaryResource: UsageResource<UsagePayload>;
   authResource: UsageResource<UsageAuthSummary[]>;
+  authQuery: UsageAuthQueryState;
+  authPagination: UsageAuthPagination;
   healthResource: UsageResource<UsageHealthResponse>;
   ratesResource: UsageResource<UsageRatesResponse>;
   tokensResource: UsageResource<UsageTokensResponse>;
@@ -134,6 +247,13 @@ export interface UseUsageDataReturn {
   querySnapshot: UsageQuerySnapshot;
   loading: boolean;
   authUsageLoading: boolean;
+  setAuthPage: (page: number) => void;
+  setAuthPageSize: (pageSize: number) => void;
+  setAuthSearch: (search: string) => void;
+  setAuthSort: (
+    sortBy: UsageAuthQueryState['sortBy'],
+    sortOrder: UsageAuthQueryState['sortOrder']
+  ) => void;
   error: string;
   lastRefreshedAt: Date | null;
   modelPrices: UsageModelPrices;
@@ -160,6 +280,20 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
     useState<UsageResource<UsagePayload>>(emptyResource);
   const [authResource, setAuthResource] =
     useState<UsageResource<UsageAuthSummary[]>>(emptyResource);
+  const [authQuery, setAuthQuery] = useState<UsageAuthQueryState>({
+    page: 1,
+    pageSize: DEFAULT_AUTH_PAGE_SIZE,
+    search: '',
+    sortBy: 'total_requests',
+    sortOrder: 'desc',
+  });
+  const [authPagination, setAuthPagination] = useState<UsageAuthPagination>({
+    serverSide: true,
+    page: 1,
+    pageSize: DEFAULT_AUTH_PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
   const [healthResource, setHealthResource] =
     useState<UsageResource<UsageHealthResponse>>(emptyResource);
   const [ratesResource, setRatesResource] =
@@ -187,6 +321,10 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
   const [clearing, setClearing] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const requestControllerRef = useRef<AbortController | null>(null);
+  const authRequestControllerRef = useRef<AbortController | null>(null);
+  const authQueryRef = useRef(authQuery);
+  const querySnapshotRef = useRef(querySnapshot);
+  const usageAvailableRef = useRef(false);
   const unsupportedCapabilitiesRef = useRef<Set<UsageCapability>>(new Set());
   const summaryCacheRef = useRef<{
     version: string;
@@ -218,9 +356,121 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
     []
   );
 
+  const loadAuthPage = useCallback(
+    async (range: UsageRangeQuery, query: UsageAuthQueryState, parentSignal?: AbortSignal) => {
+      authRequestControllerRef.current?.abort();
+      const controller = new AbortController();
+      authRequestControllerRef.current = controller;
+      const abortFromParent = () => controller.abort();
+      parentSignal?.addEventListener('abort', abortFromParent, { once: true });
+      setAuthResource((current) => loadingResource(current));
+
+      try {
+        const result = await requestResource(
+          'auths',
+          () =>
+            usageApi.getUsageAuths(
+              {
+                ...range,
+                paged: true,
+                page: query.page,
+                page_size: query.pageSize,
+                q: query.search,
+                sort_by: query.sortBy,
+                sort_order: query.sortOrder,
+              },
+              { signal: controller.signal }
+            ),
+          (response) => (response.auths ?? []).length === 0
+        );
+        if (controller.signal.aborted) return;
+        if (!result.data) {
+          setAuthResource({ status: result.status, data: null, error: result.error });
+          return;
+        }
+
+        const rows = result.data.auths ?? [];
+        const serverPagination = result.data.pagination;
+        if (serverPagination?.enabled) {
+          const page = Math.max(1, Number(serverPagination.page) || query.page);
+          const pageSize = Math.max(1, Number(serverPagination.page_size) || query.pageSize);
+          const total = Math.max(0, Number(result.data.total) || 0);
+          const totalPages = Math.max(0, Number(serverPagination.total_pages) || 0);
+          setAuthResource(resourceStatusForData(rows, (items) => items.length === 0));
+          setAuthPagination({ serverSide: true, page, pageSize, total, totalPages });
+          if (page !== authQueryRef.current.page) {
+            authQueryRef.current = { ...authQueryRef.current, page };
+            setAuthQuery(authQueryRef.current);
+          }
+          return;
+        }
+
+        const legacy = paginateLegacyAuths(rows, query);
+        setAuthResource(resourceStatusForData(legacy.auths, (items) => items.length === 0));
+        setAuthPagination(legacy.pagination);
+        if (legacy.pagination.page !== authQueryRef.current.page) {
+          authQueryRef.current = { ...authQueryRef.current, page: legacy.pagination.page };
+          setAuthQuery(authQueryRef.current);
+        }
+      } catch (error: unknown) {
+        if (!isAbortError(error)) {
+          setAuthResource({ status: 'error', data: null, error: errorMessage(error) });
+        }
+      } finally {
+        parentSignal?.removeEventListener('abort', abortFromParent);
+        if (authRequestControllerRef.current === controller) {
+          authRequestControllerRef.current = null;
+        }
+      }
+    },
+    [requestResource]
+  );
+
+  const updateAuthQuery = useCallback(
+    (next: UsageAuthQueryState) => {
+      authQueryRef.current = next;
+      setAuthQuery(next);
+      if (usageAvailableRef.current) {
+        void loadAuthPage(querySnapshotRef.current.range, next);
+      }
+    },
+    [loadAuthPage]
+  );
+
+  const setAuthPage = useCallback(
+    (page: number) => {
+      const maxPage = Math.max(1, authPagination.totalPages || 1);
+      updateAuthQuery({ ...authQueryRef.current, page: Math.min(Math.max(1, page), maxPage) });
+    },
+    [authPagination.totalPages, updateAuthQuery]
+  );
+
+  const setAuthPageSize = useCallback(
+    (pageSize: number) => {
+      const normalized = Math.min(100, Math.max(1, Math.floor(pageSize)));
+      updateAuthQuery({ ...authQueryRef.current, page: 1, pageSize: normalized });
+    },
+    [updateAuthQuery]
+  );
+
+  const setAuthSearch = useCallback(
+    (search: string) => {
+      updateAuthQuery({ ...authQueryRef.current, page: 1, search: search.trim() });
+    },
+    [updateAuthQuery]
+  );
+
+  const setAuthSort = useCallback(
+    (sortBy: UsageAuthQueryState['sortBy'], sortOrder: UsageAuthQueryState['sortOrder']) => {
+      updateAuthQuery({ ...authQueryRef.current, page: 1, sortBy, sortOrder });
+    },
+    [updateAuthQuery]
+  );
+
   const refresh = useCallback(
     async (force: boolean) => {
       requestControllerRef.current?.abort();
+      authRequestControllerRef.current?.abort();
       const controller = new AbortController();
       requestControllerRef.current = controller;
 
@@ -235,6 +485,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
       };
       const rangeKey = `${range.from || ''}::${range.to || ''}`;
       setQuerySnapshot(snapshot);
+      querySnapshotRef.current = snapshot;
+      usageAvailableRef.current = false;
       setSummaryResource((current) => loadingResource(current));
       setAuthResource((current) => loadingResource(current));
       setHealthResource((current) => loadingResource(current));
@@ -243,21 +495,28 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
       setCostsResource((current) => loadingResource(current));
       setPricesResource((current) => loadingResource(current));
 
-      const [metaResult, pricesResult] = await Promise.all([
-        requestResource(
-          'meta',
-          () => usageApi.getUsageMeta({ signal: controller.signal }),
-          () => false
-        ),
-        requestResource(
-          'prices',
-          () => usageApi.getUsagePrices({ signal: controller.signal }),
-          (response) => Object.keys(response.models ?? {}).length === 0
-        ),
-      ]);
+      const pricesTask = requestResource(
+        'prices',
+        () => usageApi.getUsagePrices({ signal: controller.signal }),
+        (response) => Object.keys(response.models ?? {}).length === 0
+      )
+        .then((pricesResult) => {
+          if (controller.signal.aborted) return;
+          setPricesResource(pricesResult);
+          setLegacyPriceImportAvailable(pricesResult.status === 'empty' && hasLegacyPrices());
+        })
+        .catch((error: unknown) => {
+          if (!isAbortError(error) && !controller.signal.aborted) {
+            setPricesResource({ status: 'error', data: null, error: errorMessage(error) });
+          }
+        });
+
+      const metaResult = await requestResource(
+        'meta',
+        () => usageApi.getUsageMeta({ signal: controller.signal }),
+        () => false
+      );
       if (controller.signal.aborted) return;
-      setPricesResource(pricesResult);
-      setLegacyPriceImportAvailable(pricesResult.status === 'empty' && hasLegacyPrices());
 
       if (metaResult.status === 'unsupported') {
         setUsageMeta(null);
@@ -267,6 +526,7 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         setRatesResource(terminalResource('unsupported'));
         setTokensResource(terminalResource('unsupported'));
         setCostsResource(terminalResource('unsupported'));
+        await pricesTask;
         setLastRefreshedAt(new Date(asOfMs));
         return;
       }
@@ -277,6 +537,7 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         setRatesResource({ status: 'error', data: null, error: metaResult.error });
         setTokensResource({ status: 'error', data: null, error: metaResult.error });
         setCostsResource({ status: 'error', data: null, error: metaResult.error });
+        await pricesTask;
         return;
       }
 
@@ -289,6 +550,7 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         setRatesResource(terminalResource('disabled'));
         setTokensResource(terminalResource('disabled'));
         setCostsResource(terminalResource('disabled'));
+        await pricesTask;
         setLastRefreshedAt(new Date(asOfMs));
         return;
       }
@@ -300,9 +562,11 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         setRatesResource({ status: 'error', data: null, error: message });
         setTokensResource({ status: 'error', data: null, error: message });
         setCostsResource({ status: 'error', data: null, error: message });
+        await pricesTask;
         setLastRefreshedAt(new Date(asOfMs));
         return;
       }
+      usageAvailableRef.current = true;
 
       const version = String(meta.version ?? '');
       const cachedSummary = summaryCacheRef.current;
@@ -318,7 +582,11 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
           )
         : requestResource(
             'summary',
-            () => usageApi.getUsageSummary(range, { signal: controller.signal }),
+            () =>
+              usageApi.getUsageSummary(
+                { ...range, include_sources: false },
+                { signal: controller.signal }
+              ),
             (response) => (readUsageEnvelope(response).total_requests ?? 0) === 0
           ).then((result) => {
             if (result.data) {
@@ -329,70 +597,81 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
             return result as UsageResource<UsagePayload>;
           });
 
-      const [summary, auths, health, rates, tokens, costs] = await Promise.all([
-        summaryPromise,
-        requestResource(
-          'auths',
-          () => usageApi.getUsageAuths(range, { signal: controller.signal }),
-          (response) => (response.auths ?? []).length === 0
-        ).then((result): UsageResource<UsageAuthSummary[]> => {
-          if (!result.data) {
-            return { status: result.status, data: null, error: result.error };
+      const applyResource = async <T>(
+        promise: Promise<UsageResource<T>>,
+        setter: Dispatch<SetStateAction<UsageResource<T>>>
+      ) => {
+        try {
+          const result = await promise;
+          if (!controller.signal.aborted) setter(result);
+        } catch (error: unknown) {
+          if (!isAbortError(error) && !controller.signal.aborted) {
+            setter({ status: 'error', data: null, error: errorMessage(error) });
           }
-          const auths = result.data.auths ?? [];
-          return resourceStatusForData(auths, (items) => items.length === 0);
-        }),
-        requestResource(
-          'health',
-          () =>
-            usageApi.getUsageHealth(
-              { ...healthRange, bucket: '15m', group_by: 'none' },
-              { signal: controller.signal }
-            ),
-          (response) => !(response.items ?? []).some((item) => Number(item.requests) > 0)
-        ),
-        requestResource(
-          'rates',
-          () =>
-            usageApi.getUsageRates(
-              { window_minutes: 30, sparkline_minutes: 60 },
-              { signal: controller.signal }
-            ),
-          (response) => Number(response.request_count) <= 0 && Number(response.token_count) <= 0
-        ),
-        requestResource(
-          'tokens',
-          () =>
-            usageApi.getUsageTokens(
-              { ...range, bucket: aggregateBucket, group_by: 'none' },
-              { signal: controller.signal }
-            ),
-          (response) => Number(response.total_tokens) <= 0
-        ),
-        requestResource(
-          'costs',
-          () =>
-            usageApi.getUsageCosts(
-              { ...range, bucket: aggregateBucket },
-              { signal: controller.signal }
-            ),
-          (response) =>
-            Number(response.total?.amount_micros) === 0 &&
-            (response.by_model ?? []).length === 0 &&
-            (response.unpriced_models ?? []).length === 0
-        ),
-      ]);
+        }
+      };
 
-      if (controller.signal.aborted) return;
-      setSummaryResource(summary);
-      setAuthResource(auths);
-      setHealthResource(health);
-      setRatesResource(rates);
-      setTokensResource(tokens);
-      setCostsResource(costs);
-      setLastRefreshedAt(new Date(asOfMs));
+      const tasks = [
+        applyResource(summaryPromise, setSummaryResource),
+        loadAuthPage(range, authQueryRef.current, controller.signal),
+        applyResource(
+          requestResource(
+            'health',
+            () =>
+              usageApi.getUsageHealth(
+                { ...healthRange, bucket: '15m', group_by: 'none' },
+                { signal: controller.signal }
+              ),
+            (response) => !(response.items ?? []).some((item) => Number(item.requests) > 0)
+          ),
+          setHealthResource
+        ),
+        applyResource(
+          requestResource(
+            'rates',
+            () =>
+              usageApi.getUsageRates(
+                { window_minutes: 30, sparkline_minutes: 60 },
+                { signal: controller.signal }
+              ),
+            (response) => Number(response.request_count) <= 0 && Number(response.token_count) <= 0
+          ),
+          setRatesResource
+        ),
+        applyResource(
+          requestResource(
+            'tokens',
+            () =>
+              usageApi.getUsageTokens(
+                { ...range, bucket: aggregateBucket, group_by: 'none' },
+                { signal: controller.signal }
+              ),
+            (response) => Number(response.total_tokens) <= 0
+          ),
+          setTokensResource
+        ),
+        applyResource(
+          requestResource(
+            'costs',
+            () =>
+              usageApi.getUsageCosts(
+                { ...range, bucket: aggregateBucket },
+                { signal: controller.signal }
+              ),
+            (response) =>
+              Number(response.total?.amount_micros) === 0 &&
+              (response.by_model ?? []).length === 0 &&
+              (response.unpriced_models ?? []).length === 0
+          ),
+          setCostsResource
+        ),
+        pricesTask,
+      ];
+
+      await Promise.all(tasks);
+      if (!controller.signal.aborted) setLastRefreshedAt(new Date(asOfMs));
     },
-    [requestResource, t, timeRange]
+    [loadAuthPage, requestResource, t, timeRange]
   );
 
   const loadUsage = useCallback(() => refresh(true), [refresh]);
@@ -403,7 +682,10 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         setSummaryResource({ status: 'error', data: null, error: errorMessage(error) });
       }
     });
-    return () => requestControllerRef.current?.abort();
+    return () => {
+      requestControllerRef.current?.abort();
+      authRequestControllerRef.current?.abort();
+    };
   }, [refresh]);
 
   const handleExport = async () => {
@@ -515,6 +797,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
     authUsage,
     summaryResource,
     authResource,
+    authQuery,
+    authPagination,
     healthResource,
     ratesResource,
     tokensResource,
@@ -523,6 +807,10 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
     querySnapshot,
     loading,
     authUsageLoading,
+    setAuthPage,
+    setAuthPageSize,
+    setAuthSearch,
+    setAuthSort,
     error: summaryResource.status === 'error' ? summaryResource.error : '',
     lastRefreshedAt,
     modelPrices,

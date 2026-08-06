@@ -525,6 +525,58 @@
   color: var(--text-secondary);
 }
 
+.credentialTotal {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.credentialToolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(190px, auto) auto;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+
+  :global(.form-group) {
+    min-width: 0;
+    margin: 0;
+  }
+
+  @include mobile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.credentialSelect {
+  min-width: 190px;
+
+  @include mobile {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.credentialPageSize {
+  min-width: 82px;
+
+  @include mobile {
+    width: 100%;
+  }
+}
+
+.credentialPagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  flex: 0 0 auto;
+  padding-top: $spacing-sm;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 // Table (80%比例)
 .tableWrapper {
   overflow-x: auto;
@@ -1001,6 +1053,10 @@
   flex-direction: column;
   gap: 4px;
   min-width: 180px;
+
+  :global(.form-group) {
+    margin: 0;
+  }
 }
 
 .requestEventsFilterLabel {
@@ -1011,6 +1067,15 @@
 
 .requestEventsSelect {
   min-width: 180px;
+}
+
+.requestEventsSourceSearch {
+  min-width: 180px;
+}
+
+.requestEventsFilterHint {
+  color: var(--text-tertiary);
+  font-size: 11px;
 }
 
 .requestEventsMeta {

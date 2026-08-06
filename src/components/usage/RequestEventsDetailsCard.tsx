@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { usageApi } from '@/services/api/usage';
 import { useUsageStatsStore, type UsageDetailsPage } from '@/stores';
 import type {
   GeminiKeyConfig,
@@ -118,10 +120,15 @@ export function RequestEventsDetailsCard({
   const [detailsPage, setDetailsPage] = useState<UsageDetailsPage | null>(null);
   const [modelFilter, setModelFilter] = useState(ALL_FILTER);
   const [sourceFilter, setSourceFilter] = useState(ALL_FILTER);
+  const [sourceSearch, setSourceSearch] = useState('');
+  const [remoteSources, setRemoteSources] = useState<string[]>([]);
+  const [sourceFacetsLoading, setSourceFacetsLoading] = useState(false);
+  const [sourceFacetsUnsupported, setSourceFacetsUnsupported] = useState(false);
   const [authIndexFilter, setAuthIndexFilter] = useState(ALL_FILTER);
   const [resultFilter, setResultFilter] = useState(ALL_FILTER);
   const sourceFilterValuesRef = useRef(new Map<string, string>());
   const detailsControllerRef = useRef<AbortController | null>(null);
+  const sourceFacetsControllerRef = useRef<AbortController | null>(null);
 
   const authFileMap = useMemo(() => {
     const map = new Map<string, CredentialInfo>();
@@ -252,7 +259,7 @@ export function RequestEventsDetailsCard({
 
   const sourceOptions = useMemo(() => {
     const optionMap = new Map<string, string>();
-    availableSources.forEach((source) => {
+    [...availableSources, ...remoteSources].forEach((source) => {
       const sourceFilterValue = source.trim();
       const sourceFilterKey = normalizeUsageSourceId(sourceFilterValue);
       if (!sourceFilterValue || !sourceFilterKey) return;
@@ -282,7 +289,7 @@ export function RequestEventsDetailsCard({
         label: (labelCounts.get(label) ?? 0) > 1 ? `${label} · ${value}` : label,
       })),
     ];
-  }, [authFileMap, availableSources, rows, sourceFilter, sourceInfoMap, t]);
+  }, [authFileMap, availableSources, remoteSources, rows, sourceFilter, sourceInfoMap, t]);
 
   const authIndexOptions = useMemo(() => {
     const values = new Set(
@@ -360,7 +367,52 @@ export function RequestEventsDetailsCard({
     [loadUsageDetails, range]
   );
 
-  useEffect(() => () => detailsControllerRef.current?.abort(), []);
+  useEffect(
+    () => () => {
+      detailsControllerRef.current?.abort();
+      sourceFacetsControllerRef.current?.abort();
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!detailsOpened || sourceFacetsUnsupported) return;
+    const timer = window.setTimeout(() => {
+      sourceFacetsControllerRef.current?.abort();
+      const controller = new AbortController();
+      sourceFacetsControllerRef.current = controller;
+      setSourceFacetsLoading(true);
+      void usageApi
+        .getUsageFacets(
+          { ...range, kind: 'source', q: sourceSearch.trim(), limit: 100 },
+          { signal: controller.signal }
+        )
+        .then((response) => {
+          if (controller.signal.aborted) return;
+          setRemoteSources(
+            (response.items ?? []).map((item) => String(item.value ?? '').trim()).filter(Boolean)
+          );
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          const status =
+            error && typeof error === 'object' && 'status' in error
+              ? Number((error as { status?: unknown }).status)
+              : undefined;
+          if (status === 404) setSourceFacetsUnsupported(true);
+        })
+        .finally(() => {
+          if (sourceFacetsControllerRef.current === controller) {
+            sourceFacetsControllerRef.current = null;
+            setSourceFacetsLoading(false);
+          }
+        });
+    }, 300);
+    return () => {
+      window.clearTimeout(timer);
+      sourceFacetsControllerRef.current?.abort();
+    };
+  }, [detailsOpened, range, sourceFacetsUnsupported, sourceSearch]);
 
   useEffect(() => {
     const canLoad = availabilityStatus === 'ready' || availabilityStatus === 'empty';
@@ -401,6 +453,7 @@ export function RequestEventsDetailsCard({
   const handleClearFilters = () => {
     setModelFilter(ALL_FILTER);
     setSourceFilter(ALL_FILTER);
+    setSourceSearch('');
     setAuthIndexFilter(ALL_FILTER);
     setResultFilter(ALL_FILTER);
   };
@@ -574,6 +627,13 @@ export function RequestEventsDetailsCard({
               <span className={styles.requestEventsFilterLabel}>
                 {t('usage_stats.request_events_filter_source')}
               </span>
+              <Input
+                value={sourceSearch}
+                onChange={(event) => setSourceSearch(event.target.value)}
+                placeholder={t('usage_stats.request_events_source_search')}
+                aria-label={t('usage_stats.request_events_source_search')}
+                className={styles.requestEventsSourceSearch}
+              />
               <Select
                 value={sourceFilter}
                 options={sourceOptions}
@@ -582,6 +642,9 @@ export function RequestEventsDetailsCard({
                 ariaLabel={t('usage_stats.request_events_filter_source')}
                 fullWidth={false}
               />
+              {sourceFacetsLoading && (
+                <span className={styles.requestEventsFilterHint}>{t('common.loading')}</span>
+              )}
             </div>
             <div className={styles.requestEventsFilterItem}>
               <span className={styles.requestEventsFilterLabel}>

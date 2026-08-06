@@ -1,15 +1,28 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { usageApi } from '@/services/api/usage';
 import type { UsageAuthSummary } from '@/types';
 import { formatCompactNumber, normalizeAuthIndex } from '@/utils/usage';
 import styles from '@/pages/UsagePage.module.scss';
+import type { UsageAuthPagination, UsageAuthQueryState } from './hooks/useUsageData';
 
 export interface CredentialStatsCardProps {
   authUsage: UsageAuthSummary[];
   loading: boolean;
+  error?: string;
+  query: UsageAuthQueryState;
+  pagination: UsageAuthPagination;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  onSearchChange: (search: string) => void;
+  onSortChange: (
+    sortBy: UsageAuthQueryState['sortBy'],
+    sortOrder: UsageAuthQueryState['sortOrder']
+  ) => void;
 }
 
 type AuthModelState = {
@@ -70,19 +83,45 @@ const getTokenBreakdownLabel = (auth: UsageAuthSummary, t: (key: string) => stri
   ].join(' · ');
 };
 
-export function CredentialStatsCard({ authUsage, loading }: CredentialStatsCardProps) {
+export function CredentialStatsCard({
+  authUsage,
+  loading,
+  error = '',
+  query,
+  pagination,
+  onPageChange,
+  onPageSizeChange,
+  onSearchChange,
+  onSortChange,
+}: CredentialStatsCardProps) {
   const { t } = useTranslation();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [modelStateByKey, setModelStateByKey] = useState<Record<string, AuthModelState>>({});
+  const [searchInput, setSearchInput] = useState(query.search);
+  const rows = authUsage;
 
-  const rows = useMemo(
+  useEffect(() => {
+    if (searchInput.trim() === query.search) return;
+    const timer = window.setTimeout(() => onSearchChange(searchInput), 300);
+    return () => window.clearTimeout(timer);
+  }, [onSearchChange, query.search, searchInput]);
+
+  const sortOptions = useMemo(
+    () => [
+      { value: 'total_requests:desc', label: t('usage_stats.credential_sort_requests_desc') },
+      { value: 'total_tokens:desc', label: t('usage_stats.credential_sort_tokens_desc') },
+      { value: 'last_used_at:desc', label: t('usage_stats.credential_sort_recent') },
+      { value: 'name:asc', label: t('usage_stats.credential_sort_name') },
+      { value: 'auth_index:asc', label: t('usage_stats.credential_sort_index') },
+    ],
+    [t]
+  );
+  const pageSizeOptions = useMemo(
     () =>
-      [...authUsage].sort((a, b) => {
-        const totalDelta = toNumber(b.total_requests) - toNumber(a.total_requests);
-        if (totalDelta !== 0) return totalDelta;
-        return getAuthLabel(a).localeCompare(getAuthLabel(b));
-      }),
-    [authUsage]
+      Array.from(new Set([query.pageSize, 25, 50, 100]))
+        .sort((left, right) => left - right)
+        .map((value) => ({ value: String(value), label: String(value) })),
+    [query.pageSize]
   );
 
   const loadModels = async (auth: UsageAuthSummary, key: string) => {
@@ -105,7 +144,6 @@ export function CredentialStatsCard({ authUsage, loading }: CredentialStatsCardP
     }));
 
     try {
-      await usageApi.getUsageAuth(authIndex);
       const response = await usageApi.getUsageAuthModels(authIndex);
       const models = Array.isArray(response.models) ? response.models : [];
       setModelStateByKey((prev) => ({
@@ -125,9 +163,50 @@ export function CredentialStatsCard({ authUsage, loading }: CredentialStatsCardP
     }
   };
 
+  const sortValue = `${query.sortBy}:${query.sortOrder}`;
+  const pageCount = Math.max(1, pagination.totalPages || 1);
+
   return (
-    <Card title={t('usage_stats.credential_stats')} className={styles.detailsFixedCard}>
-      {loading ? (
+    <Card
+      title={t('usage_stats.credential_stats')}
+      extra={
+        <span className={styles.credentialTotal}>
+          {t('usage_stats.credential_total', { count: pagination.total })}
+        </span>
+      }
+      className={styles.detailsFixedCard}
+    >
+      <div className={styles.credentialToolbar}>
+        <Input
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          placeholder={t('usage_stats.credential_search_placeholder')}
+          aria-label={t('usage_stats.credential_search_label')}
+        />
+        <Select
+          value={sortValue}
+          options={sortOptions}
+          onChange={(value) => {
+            const [sortBy, sortOrder] = value.split(':');
+            onSortChange(
+              sortBy as UsageAuthQueryState['sortBy'],
+              sortOrder as UsageAuthQueryState['sortOrder']
+            );
+          }}
+          ariaLabel={t('usage_stats.credential_sort_label')}
+          className={styles.credentialSelect}
+        />
+        <Select
+          value={String(query.pageSize)}
+          options={pageSizeOptions}
+          onChange={(value) => onPageSizeChange(Number(value))}
+          ariaLabel={t('usage_stats.credential_page_size')}
+          className={styles.credentialPageSize}
+          fullWidth={false}
+        />
+      </div>
+      {error && <div className={styles.errorBox}>{error}</div>}
+      {loading && rows.length === 0 ? (
         <div className={styles.hint}>{t('common.loading')}</div>
       ) : rows.length > 0 ? (
         <div className={styles.detailsScroll}>
@@ -270,6 +349,30 @@ export function CredentialStatsCard({ authUsage, loading }: CredentialStatsCardP
       ) : (
         <div className={styles.hint}>{t('usage_stats.no_data')}</div>
       )}
+      <div className={styles.credentialPagination}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onPageChange(pagination.page - 1)}
+          disabled={loading || pagination.page <= 1}
+        >
+          {t('usage_stats.credential_page_prev')}
+        </Button>
+        <span>
+          {t('usage_stats.credential_page_info', {
+            current: pagination.page,
+            total: pageCount,
+          })}
+        </span>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onPageChange(pagination.page + 1)}
+          disabled={loading || pagination.page >= pageCount}
+        >
+          {t('usage_stats.credential_page_next')}
+        </Button>
+      </div>
     </Card>
   );
 }

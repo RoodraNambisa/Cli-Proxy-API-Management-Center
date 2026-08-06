@@ -17,9 +17,12 @@ import type {
   UsageMeta,
   UsageHealthQuery,
   UsageHealthResponse,
+  UsageFacetsQuery,
+  UsageFacetsResponse,
   UsageModelPrices,
   UsagePricesResponse,
   UsageRangeQuery,
+  UsageSummaryQuery,
   UsageRatesQuery,
   UsageRatesResponse,
   UsageSeriesQuery,
@@ -100,6 +103,14 @@ const normalizeAuthsQuery = (query: UsageAuthsQuery = {}) => {
   if (params.auth_index === '') {
     delete params.auth_index;
   }
+  const provider = normalizeCsvValue(params.provider);
+  const status = normalizeCsvValue(params.status);
+  if (provider) params.provider = provider;
+  else delete params.provider;
+  if (status) params.status = status;
+  else delete params.status;
+  if (params.q?.trim()) params.q = params.q.trim();
+  else delete params.q;
   return params;
 };
 
@@ -108,6 +119,13 @@ const normalizeSeriesQuery = (query: UsageSeriesQuery = {}) => ({
   bucket: query.bucket || 'hour',
   group_by: query.group_by || 'model',
 });
+
+const normalizeFacetsQuery = (query: UsageFacetsQuery = {}) => {
+  const params = normalizeRangeQuery(query);
+  if (params.q?.trim()) params.q = params.q.trim();
+  else delete params.q;
+  return params;
+};
 
 type UsageRequestOptions = {
   signal?: AbortSignal;
@@ -143,7 +161,7 @@ export const usageApi = {
   /**
    * 获取不包含 details 的全局/API/model 汇总
    */
-  getUsageSummary: (query?: UsageRangeQuery, options: UsageRequestOptions = {}) =>
+  getUsageSummary: (query?: UsageSummaryQuery, options: UsageRequestOptions = {}) =>
     apiClient.get<UsageEnvelope<Record<string, unknown>>>('/usage/summary', {
       timeout: USAGE_TIMEOUT_MS,
       params: normalizeRangeQuery(query),
@@ -167,6 +185,16 @@ export const usageApi = {
     apiClient.get<UsageAuthsResponse>('/usage/auths', {
       timeout: USAGE_TIMEOUT_MS,
       params: normalizeAuthsQuery(query),
+      signal: options.signal,
+    }),
+
+  /**
+   * Fetch high-cardinality filter values on demand instead of embedding them in the summary.
+   */
+  getUsageFacets: (query?: UsageFacetsQuery, options: UsageRequestOptions = {}) =>
+    apiClient.get<UsageFacetsResponse>('/usage/facets', {
+      timeout: USAGE_TIMEOUT_MS,
+      params: normalizeFacetsQuery(query),
       signal: options.signal,
     }),
 

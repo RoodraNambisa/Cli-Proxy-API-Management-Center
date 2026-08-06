@@ -87,6 +87,10 @@ export interface UsageRangeQuery {
   to?: string;
 }
 
+export interface UsageSummaryQuery extends UsageRangeQuery {
+  include_sources?: boolean;
+}
+
 export interface UsageDetailsQuery extends UsageRangeQuery {
   api?: string;
   model?: string;
@@ -114,6 +118,22 @@ export interface UsageDetailsResponse {
 
 export interface UsageAuthsQuery extends UsageRangeQuery {
   auth_index?: string | number | Array<string | number>;
+  paged?: boolean;
+  page?: number;
+  page_size?: number;
+  q?: string;
+  provider?: string | string[];
+  status?: string | string[];
+  sort_by?:
+    | 'auth_index'
+    | 'name'
+    | 'provider'
+    | 'status'
+    | 'total_requests'
+    | 'total_tokens'
+    | 'last_used_at'
+    | string;
+  sort_order?: 'asc' | 'desc' | string;
 }
 
 export interface UsageAuthSummary {
@@ -141,7 +161,33 @@ export interface UsageAuthSummary {
 
 export interface UsageAuthsResponse {
   auths?: UsageAuthSummary[];
+  total?: number;
+  pagination?: {
+    enabled?: boolean;
+    page?: number;
+    page_size?: number;
+    total_pages?: number;
+  };
   [key: string]: unknown;
+}
+
+export interface UsageSourceFacet {
+  value?: string;
+  total_requests?: number;
+  total_tokens?: number;
+  last_used_at?: string | null;
+}
+
+export interface UsageFacetsQuery extends UsageRangeQuery {
+  kind?: 'source';
+  q?: string;
+  limit?: number;
+}
+
+export interface UsageFacetsResponse {
+  kind?: string;
+  items?: UsageSourceFacet[];
+  total?: number;
 }
 
 export interface UsageAuthModelsResponse {

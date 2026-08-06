@@ -129,8 +129,15 @@ export function UsagePage() {
   const {
     usage,
     authUsage,
+    authResource,
+    authQuery,
+    authPagination,
     loading,
     authUsageLoading,
+    setAuthPage,
+    setAuthPageSize,
+    setAuthSearch,
+    setAuthSort,
     error,
     lastRefreshedAt,
     modelPrices,
@@ -457,7 +464,17 @@ export function UsagePage() {
       />
 
       {/* Credential Stats */}
-      <CredentialStatsCard authUsage={authUsage} loading={authUsageLoading} />
+      <CredentialStatsCard
+        authUsage={authUsage}
+        loading={authUsageLoading}
+        error={authResource.status === 'error' ? authResource.error : ''}
+        query={authQuery}
+        pagination={authPagination}
+        onPageChange={setAuthPage}
+        onPageSizeChange={setAuthPageSize}
+        onSearchChange={setAuthSearch}
+        onSortChange={setAuthSort}
+      />
 
       {/* Price Settings */}
       <PriceSettingsCard
