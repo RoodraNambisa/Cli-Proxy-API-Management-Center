@@ -21,6 +21,7 @@ type UseLiveLogsOptions = {
   scopeKey: string;
   query: LiveLogQuery;
   onLine: (line: string) => void;
+  onReset?: () => void;
 };
 
 const waitForRetry = (milliseconds: number, signal: AbortSignal): Promise<void> =>
@@ -39,24 +40,31 @@ const waitForRetry = (milliseconds: number, signal: AbortSignal): Promise<void> 
   });
 
 export const useLiveLogs = (options: UseLiveLogsOptions) => {
-  const { enabled, paused, connected, scopeKey, query, onLine } = options;
+  const { enabled, paused, connected, scopeKey, query, onLine, onReset } = options;
   const [streamState, setStreamState] = useState<LiveLogConnectionState>('idle');
-  const [gapState, setGapState] = useState({ scopeKey, count: 0 });
-  const [errorState, setErrorState] = useState({ scopeKey, message: '' });
+  const [gapState, setGapState] = useState({ streamKey: scopeKey, count: 0 });
+  const [errorState, setErrorState] = useState({ streamKey: scopeKey, message: '' });
   const [retryGeneration, setRetryGeneration] = useState(0);
   const cursorRef = useRef(0);
   const onLineRef = useRef(onLine);
+  const onResetRef = useRef(onReset);
 
   const queryKey = useMemo(() => JSON.stringify(query), [query]);
   const requestQuery = useMemo(() => JSON.parse(queryKey) as LiveLogQuery, [queryKey]);
+  const streamKey = `${scopeKey}\u0000${queryKey}`;
 
   useEffect(() => {
     onLineRef.current = onLine;
   }, [onLine]);
 
   useEffect(() => {
+    onResetRef.current = onReset;
+  }, [onReset]);
+
+  useEffect(() => {
     cursorRef.current = 0;
-  }, [scopeKey]);
+    if (enabled) onResetRef.current?.();
+  }, [enabled, streamKey]);
 
   useEffect(() => {
     if (!enabled || !connected || paused) return;
@@ -72,7 +80,7 @@ export const useLiveLogs = (options: UseLiveLogsOptions) => {
             {
               onOpen: () => {
                 retryAttempt = 0;
-                setErrorState({ scopeKey, message: '' });
+                setErrorState({ streamKey, message: '' });
                 setStreamState('connected');
               },
               onEvent: (event: LiveLogEvent) => {
@@ -82,9 +90,9 @@ export const useLiveLogs = (options: UseLiveLogsOptions) => {
               onGap: (gap) => {
                 cursorRef.current = Math.max(cursorRef.current, gap.to || 0);
                 setGapState((current) => ({
-                  scopeKey,
+                  streamKey,
                   count:
-                    (current.scopeKey === scopeKey ? current.count : 0) +
+                    (current.streamKey === streamKey ? current.count : 0) +
                     Math.max(0, gap.count || 0),
                 }));
               },
@@ -100,7 +108,7 @@ export const useLiveLogs = (options: UseLiveLogsOptions) => {
               ? Number((error as { status?: unknown }).status)
               : 0;
           const message = error instanceof Error ? error.message : String(error);
-          setErrorState({ scopeKey, message });
+          setErrorState({ streamKey, message });
           if (status === 404 || status === 405 || status === 503) {
             setStreamState('fallback');
             return;
@@ -119,14 +127,14 @@ export const useLiveLogs = (options: UseLiveLogsOptions) => {
   }, [connected, enabled, paused, queryKey, requestQuery, retryGeneration, scopeKey]);
 
   const retry = useCallback(() => {
-    setErrorState({ scopeKey, message: '' });
+    setErrorState({ streamKey, message: '' });
     setRetryGeneration((current) => current + 1);
-  }, [scopeKey]);
+  }, [streamKey]);
 
   const state: LiveLogConnectionState =
     !enabled || !connected ? 'idle' : paused ? 'paused' : streamState;
-  const gapCount = gapState.scopeKey === scopeKey ? gapState.count : 0;
-  const lastError = errorState.scopeKey === scopeKey ? errorState.message : '';
+  const gapCount = gapState.streamKey === streamKey ? gapState.count : 0;
+  const lastError = errorState.streamKey === streamKey ? errorState.message : '';
 
   return { state, gapCount, lastError, retry };
 };

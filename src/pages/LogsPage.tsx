@@ -139,6 +139,11 @@ export function LogsPage() {
     });
   }, []);
 
+  const resetLiveLines = useCallback(() => {
+    setLogState({ buffer: [], visibleFrom: 0 });
+    latestTimestampRef.current = 0;
+  }, []);
+
   const liveQuery = useMemo<LiveLogQuery>(
     () => ({
       level: liveLevel,
@@ -172,6 +177,7 @@ export function LogsPage() {
     scopeKey: traceScopeKey,
     query: liveQuery,
     onLine: appendLiveLine,
+    onReset: resetLiveLines,
   });
   const liveFallback = liveEnabled && live.state === 'fallback';
 
