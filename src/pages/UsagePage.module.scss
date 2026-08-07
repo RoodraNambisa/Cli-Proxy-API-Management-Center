@@ -80,42 +80,6 @@
   padding: 16px;
 }
 
-.loadingOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  --glass-blur: 6px;
-  background: var(--glass-bg-secondary);
-  backdrop-filter: var(--glass-backdrop-filter);
-  -webkit-backdrop-filter: var(--glass-backdrop-filter);
-}
-
-.loadingOverlayContent {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border-radius: $radius-lg;
-  border: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  box-shadow: var(--shadow-lg);
-}
-
-.loadingOverlaySpinner {
-  border-color: rgba($primary-color, 0.25);
-  border-top-color: var(--primary-color);
-  box-shadow: 0 0 10px rgba($primary-color, 0.25);
-}
-
-.loadingOverlayText {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
 // Stats Grid
 .statsGrid {
   display: grid;

@@ -12,7 +12,6 @@ import {
   Filler,
 } from 'chart.js';
 import { Button } from '@/components/ui/Button';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Select } from '@/components/ui/Select';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
@@ -308,15 +307,6 @@ export function UsagePage() {
 
   return (
     <div className={styles.container}>
-      {loading && !usage && (
-        <div className={styles.loadingOverlay} aria-busy="true">
-          <div className={styles.loadingOverlayContent}>
-            <LoadingSpinner size={28} className={styles.loadingOverlaySpinner} />
-            <span className={styles.loadingOverlayText}>{t('common.loading')}</span>
-          </div>
-        </div>
-      )}
-
       <div className={styles.header}>
         <h1 className={styles.pageTitle}>{t('usage_stats.title')}</h1>
         <div className={styles.headerActions}>

@@ -124,7 +124,7 @@ export const useLiveLogs = (options: UseLiveLogsOptions) => {
     };
     void run();
     return () => controller.abort();
-  }, [connected, enabled, paused, queryKey, requestQuery, retryGeneration, scopeKey]);
+  }, [connected, enabled, paused, requestQuery, retryGeneration, streamKey]);
 
   const retry = useCallback(() => {
     setErrorState({ streamKey, message: '' });
