@@ -69,6 +69,8 @@ export interface AuthErrorDiagnostic {
   ua_major?: string;
   platform?: string;
   response_bytes?: number;
+  response_body?: string;
+  response_body_truncated?: boolean;
   attempts?: number;
   http_status?: number;
   cloudflare?: boolean;

@@ -23,6 +23,8 @@ export type LiveLogEvent = {
   content_type?: string;
   cf_ray?: string;
   response_bytes?: number;
+  response_body?: string;
+  response_body_truncated?: boolean;
   attempts?: number;
   cloudflare?: boolean;
 };
@@ -136,7 +138,10 @@ export const formatLiveLogEvent = (event: LiveLogEvent): string => {
   ]
     .filter(Boolean)
     .join(' ');
-  return [prefix, request, event.message, details].filter(Boolean).join(' · ');
+  const responseBody = event.response_body
+    ? `response_body=${JSON.stringify(event.response_body)}${event.response_body_truncated ? ' [truncated]' : ''}`
+    : '';
+  return [prefix, request, event.message, details, responseBody].filter(Boolean).join(' · ');
 };
 
 export const streamLiveLogs = async (

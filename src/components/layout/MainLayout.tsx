@@ -37,6 +37,7 @@ import { triggerHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { LANGUAGE_LABEL_KEYS, LANGUAGE_ORDER } from '@/utils/constants';
 import { isSupportedLanguage } from '@/utils/language';
 import type { Theme } from '@/types';
+import { shouldShowLogsNavigation } from './navigation';
 
 const sidebarIcons: Record<string, ReactNode> = {
   dashboard: <IconSidebarDashboard size={18} />,
@@ -397,7 +398,7 @@ export function MainLayout() {
       icon: sidebarIcons.codexAnalytics,
     },
     { path: '/usage', label: t('nav.usage_stats'), icon: sidebarIcons.usage },
-    ...(config?.loggingToFile
+    ...(shouldShowLogsNavigation(config)
       ? [{ path: '/logs', label: t('nav.logs'), icon: sidebarIcons.logs }]
       : []),
     ...(config?.pprof?.enable

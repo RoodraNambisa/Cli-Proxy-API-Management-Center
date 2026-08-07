@@ -30,10 +30,16 @@ describe('live log SSE parsing', () => {
       code: 'cloudflare_challenge',
       status: 403,
       cloudflare: true,
+      response_body: '{"error":{"message":"raw upstream detail"}}',
+      response_body_truncated: true,
     });
     expect(line).toContain('HTTP 403');
     expect(line).toContain('stage=file_sign');
     expect(line).toContain('code=cloudflare_challenge');
+    expect(line).toContain(
+      'response_body="{\\"error\\":{\\"message\\":\\"raw upstream detail\\"}}"'
+    );
+    expect(line).toContain('[truncated]');
   });
 
   it('uses an authenticated header and keeps the management key out of the stream URL', async () => {

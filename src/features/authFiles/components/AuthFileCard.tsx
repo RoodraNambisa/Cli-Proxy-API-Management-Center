@@ -771,6 +771,17 @@ export function AuthFileCard(props: AuthFileCardProps) {
                       </div>
                     ))}
                   </div>
+                  {lastDiagnostic.response_body ? (
+                    <div className={styles.chatGptWebDiagnosticBody}>
+                      <span>
+                        {t('auth_files.chatgpt_web_diagnostic_response_body')}
+                        {lastDiagnostic.response_body_truncated
+                          ? ` · ${t('auth_files.chatgpt_web_diagnostic_truncated')}`
+                          : ''}
+                      </span>
+                      <pre>{lastDiagnostic.response_body}</pre>
+                    </div>
+                  ) : null}
                 </details>
               ) : null}
             </div>
