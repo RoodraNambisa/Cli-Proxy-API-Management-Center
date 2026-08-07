@@ -1959,6 +1959,21 @@ export function VisualConfigEditor({
                     onChange({ chatgptWebAutoDeleteDeadAuths })
                   }
                 />
+                <div id="config-chatgpt-web-invalid-passkey-response-as-dead">
+                  <ToggleRow
+                    title={t(
+                      'config_management.settings_center.chatgpt_web.invalid_passkey_response_as_dead'
+                    )}
+                    description={t(
+                      'config_management.settings_center.chatgpt_web.invalid_passkey_response_as_dead_description'
+                    )}
+                    checked={values.chatgptWebInvalidPasskeyResponseAsDead}
+                    disabled={disabled}
+                    onChange={(chatgptWebInvalidPasskeyResponseAsDead) =>
+                      onChange({ chatgptWebInvalidPasskeyResponseAsDead })
+                    }
+                  />
+                </div>
                 <div className={styles.autoDeleteRuntimeCount} role="status" aria-live="polite">
                   <span>
                     {t(
@@ -2385,6 +2400,13 @@ export function VisualConfigEditor({
                   checked={values.rmAuthFilesPagination}
                   disabled={disabled}
                   onChange={(rmAuthFilesPagination) => onChange({ rmAuthFilesPagination })}
+                />
+                <ToggleRow
+                  title={t('config_management.visual.sections.remote.live_logs')}
+                  description={t('config_management.visual.sections.remote.live_logs_desc')}
+                  checked={values.rmLiveLogs}
+                  disabled={disabled}
+                  onChange={(rmLiveLogs) => onChange({ rmLiveLogs })}
                 />
                 <SectionGrid>
                   <Input

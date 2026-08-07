@@ -168,6 +168,9 @@ export interface RemoteManagementConfig {
   authFilesPagination?: {
     enabled?: boolean;
   };
+  liveLogs?: {
+    enabled?: boolean;
+  };
 }
 
 export interface PprofManagementConfig {

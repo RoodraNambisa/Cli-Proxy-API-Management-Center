@@ -309,6 +309,45 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const imageQuotaUpdatedAt = metadataTime(file.quota_updated_at);
   const imageQuotaNextRefreshAt = metadataTime(file.quota_next_refresh_at);
   const imageQuotaLastError = String(file.quota_last_error ?? '').trim();
+  const lastDiagnostic = file.last_diagnostic ?? file.last_error?.diagnostic;
+  const diagnosticStatus = lastDiagnostic?.http_status ?? file.last_error?.http_status ?? 0;
+  const diagnosticCode = lastDiagnostic?.code ?? file.last_error?.code ?? '';
+  const diagnosticSummary = [
+    diagnosticStatus ? `HTTP ${diagnosticStatus}` : '',
+    diagnosticCode,
+    lastDiagnostic?.stage,
+    lastDiagnostic?.retryable === true
+      ? t('auth_files.chatgpt_web_diagnostic_retryable')
+      : lastDiagnostic?.retryable === false
+        ? t('auth_files.chatgpt_web_diagnostic_terminal')
+        : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const diagnosticRows = lastDiagnostic
+    ? [
+        ['stage', lastDiagnostic.stage],
+        ['code', diagnosticCode],
+        ['provider', lastDiagnostic.provider],
+        ['auth_index', lastDiagnostic.auth_index],
+        ['response_type', lastDiagnostic.response_type],
+        ['content_type', lastDiagnostic.content_type],
+        [
+          'target',
+          [lastDiagnostic.target_host, lastDiagnostic.target_path].filter(Boolean).join(''),
+        ],
+        ['cf_ray', lastDiagnostic.cf_ray],
+        ['cloudflare', lastDiagnostic.cloudflare ? 'true' : ''],
+        ['persona', lastDiagnostic.persona],
+        ['ua', lastDiagnostic.ua_major],
+        ['platform', lastDiagnostic.platform],
+        ['attempts', lastDiagnostic.attempts ? String(lastDiagnostic.attempts) : ''],
+        [
+          'response_bytes',
+          lastDiagnostic.response_bytes ? String(lastDiagnostic.response_bytes) : '',
+        ],
+      ].filter((entry): entry is [string, string] => Boolean(entry[1]))
+    : [];
   const imageQuotaStateKey = `auth_files.chatgpt_web_image_quota_${imageQuotaState}`;
   const translatedImageQuotaState = t(imageQuotaStateKey);
   const imageQuotaStateLabel =
@@ -716,6 +755,23 @@ export function AuthFileCard(props: AuthFileCardProps) {
                     </span>
                   ) : null}
                 </div>
+              ) : null}
+              {!compact && lastDiagnostic ? (
+                <details className={styles.chatGptWebDiagnostic}>
+                  <summary>
+                    <IconInfo size={13} />
+                    <span>{t('auth_files.chatgpt_web_diagnostic_title')}</span>
+                    <strong>{diagnosticSummary || '-'}</strong>
+                  </summary>
+                  <div className={styles.chatGptWebDiagnosticGrid}>
+                    {diagnosticRows.map(([label, value]) => (
+                      <div key={label}>
+                        <span>{label}</span>
+                        <strong>{value}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </details>
               ) : null}
             </div>
           )}

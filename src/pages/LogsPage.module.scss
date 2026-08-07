@@ -115,6 +115,78 @@
   }
 }
 
+.liveLogPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 100%;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 26%, var(--border-color));
+  border-radius: $radius-md;
+  background: color-mix(in srgb, var(--primary-color) 4%, var(--bg-secondary));
+}
+
+.liveLogHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.liveStatus,
+.liveGap {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-full;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.liveStatus_connected {
+  color: var(--success-badge-text);
+  border-color: var(--success-badge-border);
+  background: var(--success-badge-bg);
+}
+
+.liveStatus_connecting,
+.liveStatus_reconnecting {
+  color: var(--info-color);
+  border-color: rgba($primary-color, 0.25);
+  background: rgba($primary-color, 0.1);
+}
+
+.liveStatus_fallback,
+.liveGap {
+  color: var(--warning-text);
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+}
+
+.liveFilterGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 8px;
+
+  :global(.form-group) {
+    min-width: 0;
+  }
+
+  @include mobile {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.liveHint {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
 .searchWrapper {
   flex: 1;
   min-width: 220px;
@@ -520,8 +592,9 @@
 }
 
 .requestIdBadge {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-    'Courier New', monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
   font-size: 11px;
   color: #0891b2;
   background: rgba(8, 145, 178, 0.1);

@@ -256,6 +256,7 @@ export type VisualConfigValues = {
   rmSecretKey: string;
   rmDisableControlPanel: boolean;
   rmAuthFilesPagination: boolean;
+  rmLiveLogs: boolean;
   rmAccessPath: string;
   rmPanelRepo: string;
   authDir: string;
@@ -282,6 +283,7 @@ export type VisualConfigValues = {
   chatgptWebSessionCookieRefreshOnTokenFailure: boolean;
   chatgptWebForceSessionRefreshOnImport: boolean;
   chatgptWebAutoDeleteDeadAuths: boolean;
+  chatgptWebInvalidPasskeyResponseAsDead: boolean;
   chatgptWebAutoDeleteDeadPriorities: string[];
   chatgptWebImageUpstreamModel: string;
   chatgptWebIgnoreUnsupportedImageParams: boolean;
@@ -340,6 +342,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   rmSecretKey: '',
   rmDisableControlPanel: false,
   rmAuthFilesPagination: false,
+  rmLiveLogs: false,
   rmAccessPath: '',
   rmPanelRepo: '',
   authDir: '',
@@ -366,6 +369,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebSessionCookieRefreshOnTokenFailure: false,
   chatgptWebForceSessionRefreshOnImport: true,
   chatgptWebAutoDeleteDeadAuths: false,
+  chatgptWebInvalidPasskeyResponseAsDead: false,
   chatgptWebAutoDeleteDeadPriorities: [],
   chatgptWebImageUpstreamModel: 'gpt-5-5',
   chatgptWebIgnoreUnsupportedImageParams: false,

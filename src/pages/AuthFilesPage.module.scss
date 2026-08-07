@@ -807,6 +807,58 @@
   }
 }
 
+.chatGptWebDiagnostic {
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+
+  summary {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 10px;
+    cursor: pointer;
+
+    strong {
+      color: var(--warning-text);
+      font-size: 10px;
+      font-weight: 650;
+      overflow-wrap: anywhere;
+      text-align: right;
+    }
+  }
+}
+
+.chatGptWebDiagnosticGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+
+  > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 9px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+}
+
 .chatGptWebImageQuota {
   display: flex;
   flex-direction: column;

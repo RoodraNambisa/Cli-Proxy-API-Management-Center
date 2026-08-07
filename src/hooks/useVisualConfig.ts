@@ -2095,6 +2095,9 @@ function getNextDirtyFields(
       nextValues.rmAuthFilesPagination === baselineValues.rmAuthFilesPagination
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'rmLiveLogs')) {
+    updateDirty('rmLiveLogs', nextValues.rmLiveLogs === baselineValues.rmLiveLogs);
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'rmAccessPath')) {
     updateDirty('rmAccessPath', nextValues.rmAccessPath === baselineValues.rmAccessPath);
   }
@@ -2223,6 +2226,13 @@ function getNextDirtyFields(
     updateDirty(
       'chatgptWebAutoDeleteDeadAuths',
       nextValues.chatgptWebAutoDeleteDeadAuths === baselineValues.chatgptWebAutoDeleteDeadAuths
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebInvalidPasskeyResponseAsDead')) {
+    updateDirty(
+      'chatgptWebInvalidPasskeyResponseAsDead',
+      nextValues.chatgptWebInvalidPasskeyResponseAsDead ===
+        baselineValues.chatgptWebInvalidPasskeyResponseAsDead
     );
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAutoDeleteDeadPriorities')) {
@@ -2833,6 +2843,7 @@ export function useVisualConfig() {
             codexFingerprint?.imagesForceHttp1
           );
       const authFilesPagination = asRecord(remoteManagement?.['auth-files-pagination']);
+      const liveLogs = asRecord(remoteManagement?.['live-logs'] ?? remoteManagement?.liveLogs);
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === 'string' ? parsed.host : '',
@@ -2849,6 +2860,7 @@ export function useVisualConfig() {
             : '',
         rmDisableControlPanel: Boolean(remoteManagement?.['disable-control-panel']),
         rmAuthFilesPagination: Boolean(authFilesPagination?.enabled),
+        rmLiveLogs: Boolean(liveLogs?.enabled),
         rmAccessPath:
           typeof remoteManagement?.['access-path'] === 'string'
             ? remoteManagement['access-path']
@@ -2909,6 +2921,10 @@ export function useVisualConfig() {
             chatgptWeb?.forceSessionRefreshOnImport) !== false,
         chatgptWebAutoDeleteDeadAuths: parseBooleanValue(
           chatgptWeb?.['auto-delete-dead-auths'] ?? chatgptWeb?.autoDeleteDeadAuths
+        ),
+        chatgptWebInvalidPasskeyResponseAsDead: parseBooleanValue(
+          chatgptWeb?.['invalid-passkey-response-as-dead'] ??
+            chatgptWeb?.invalidPasskeyResponseAsDead
         ),
         chatgptWebAutoDeleteDeadPriorities: parseIntegerStringList(
           chatgptWebAutoDeleteDeadPrioritiesRaw
@@ -3194,6 +3210,7 @@ export function useVisualConfig() {
           values.rmSecretKey.trim() ||
           values.rmDisableControlPanel ||
           values.rmAuthFilesPagination ||
+          values.rmLiveLogs ||
           values.rmAccessPath.trim() ||
           values.rmPanelRepo.trim()
         ) {
@@ -3211,6 +3228,8 @@ export function useVisualConfig() {
             ['remote-management', 'auth-files-pagination', 'enabled'],
             values.rmAuthFilesPagination
           );
+          ensureMapInDoc(doc, ['remote-management', 'live-logs']);
+          setBooleanInDoc(doc, ['remote-management', 'live-logs', 'enabled'], values.rmLiveLogs);
           setStringInDoc(doc, ['remote-management', 'access-path'], values.rmAccessPath);
           setStringInDoc(doc, ['remote-management', 'panel-github-repository'], values.rmPanelRepo);
           if (docHas(doc, ['remote-management', 'panel-repo'])) {
@@ -3338,6 +3357,7 @@ export function useVisualConfig() {
           values.chatgptWebSessionCookieRefreshOnTokenFailure ||
           !values.chatgptWebForceSessionRefreshOnImport ||
           values.chatgptWebAutoDeleteDeadAuths ||
+          values.chatgptWebInvalidPasskeyResponseAsDead ||
           values.chatgptWebAutoDeleteDeadPriorities.length > 0
         ) {
           ensureMapInDoc(doc, ['chatgpt-web']);
@@ -3374,6 +3394,15 @@ export function useVisualConfig() {
                 Array.from(new Set(parsedPriorities))
               );
             }
+          }
+          if (
+            docHas(doc, ['chatgpt-web', 'invalid-passkey-response-as-dead']) ||
+            values.chatgptWebInvalidPasskeyResponseAsDead
+          ) {
+            doc.setIn(
+              ['chatgpt-web', 'invalid-passkey-response-as-dead'],
+              values.chatgptWebInvalidPasskeyResponseAsDead
+            );
           }
           deleteIfMapEmpty(doc, ['chatgpt-web']);
         }

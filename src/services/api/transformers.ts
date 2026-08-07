@@ -811,6 +811,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   if (isRecord(remoteManagement)) {
     const authFilesPagination =
       remoteManagement['auth-files-pagination'] ?? remoteManagement.authFilesPagination;
+    const liveLogs = remoteManagement['live-logs'] ?? remoteManagement.liveLogs;
     config.remoteManagement = {
       allowRemote: normalizeBoolean(
         remoteManagement['allow-remote'] ?? remoteManagement.allowRemote
@@ -832,6 +833,13 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
               enabled: normalizeBoolean(
                 authFilesPagination.enabled ?? authFilesPagination['enabled']
               ),
+            },
+          }
+        : {}),
+      ...(isRecord(liveLogs)
+        ? {
+            liveLogs: {
+              enabled: normalizeBoolean(liveLogs.enabled ?? liveLogs['enabled']),
             },
           }
         : {}),

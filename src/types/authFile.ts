@@ -55,6 +55,34 @@ export interface AuthFileProxyBinding {
   error_message?: string;
 }
 
+export interface AuthErrorDiagnostic {
+  provider?: string;
+  auth_index?: string;
+  stage?: string;
+  code?: string;
+  response_type?: string;
+  content_type?: string;
+  cf_ray?: string;
+  target_host?: string;
+  target_path?: string;
+  persona?: string;
+  ua_major?: string;
+  platform?: string;
+  response_bytes?: number;
+  attempts?: number;
+  http_status?: number;
+  cloudflare?: boolean;
+  retryable?: boolean;
+}
+
+export interface AuthErrorSummary {
+  code?: string;
+  message?: string;
+  retryable?: boolean;
+  http_status?: number;
+  diagnostic?: AuthErrorDiagnostic;
+}
+
 export interface AuthFileItem {
   name: string;
   type?: AuthFileType | string;
@@ -107,6 +135,8 @@ export interface AuthFileItem {
   dependent_names?: string[];
   deletion_requested_at?: string;
   proxy_binding?: AuthFileProxyBinding;
+  last_error?: AuthErrorSummary;
+  last_diagnostic?: AuthErrorDiagnostic;
   auth_mode?: CodexAuthMode | string;
   auth_mode_label?: string;
   can_convert_to_agent_identity?: boolean;

@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
@@ -24,6 +24,7 @@ import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import { logsApi } from '@/services/api/logs';
+import type { LiveLogQuery } from '@/services/api/liveLogs';
 import { copyToClipboard } from '@/utils/clipboard';
 import { downloadBlob } from '@/utils/download';
 import { MANAGEMENT_API_PREFIX } from '@/utils/constants';
@@ -31,6 +32,7 @@ import { formatUnixTimestamp } from '@/utils/format';
 import { HTTP_METHODS, STATUS_GROUPS, resolveStatusGroup, type LogState } from './hooks/logTypes';
 import { parseLogLine } from './hooks/logParsing';
 import { useLogFilters } from './hooks/useLogFilters';
+import { useLiveLogs } from './hooks/useLiveLogs';
 import { isNearBottom, useLogScroller } from './hooks/useLogScroller';
 import { isTraceableRequestPath, useTraceResolver } from './hooks/useTraceResolver';
 import styles from './LogsPage.module.scss';
@@ -72,9 +74,19 @@ export function LogsPage() {
 
   const [activeTab, setActiveTab] = useState<TabType>('logs');
   const [logState, setLogState] = useState<LogState>({ buffer: [], visibleFrom: 0 });
-  const [loading, setLoading] = useState(true);
+  const [liveEnabled, setLiveEnabled] = useLocalStorage('logsPage.liveEnabled', false);
+  const [loading, setLoading] = useState(!liveEnabled);
   const [error, setError] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [livePaused, setLivePaused] = useState(false);
+  const [liveLevel, setLiveLevel] = useState('');
+  const [liveProvider, setLiveProvider] = useState('');
+  const [liveAuthIndex, setLiveAuthIndex] = useState('');
+  const [liveStage, setLiveStage] = useState('');
+  const [liveCode, setLiveCode] = useState('');
+  const [liveStatus, setLiveStatus] = useState('');
+  const [liveMethod, setLiveMethod] = useState('');
+  const [livePath, setLivePath] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [hideManagementLogs, setHideManagementLogs] = useState(true);
@@ -110,6 +122,58 @@ export function LogsPage() {
   const latestTimestampRef = useRef<number>(0);
 
   const disableControls = connectionStatus !== 'connected';
+
+  const appendLiveLine = useCallback((line: string) => {
+    const scrollerInstance = logScrollerRef.current;
+    const stickToBottom = isNearBottom(scrollerInstance?.logViewerRef.current ?? null);
+    if (stickToBottom) scrollerInstance?.requestScrollToBottom();
+    setLogState((previous) => {
+      const combined = [...previous.buffer, line];
+      const dropCount = Math.max(combined.length - MAX_BUFFER_LINES, 0);
+      const buffer = dropCount > 0 ? combined.slice(dropCount) : combined;
+      const previousRendered = previous.buffer.length - previous.visibleFrom;
+      const visibleFrom = stickToBottom
+        ? Math.max(buffer.length - Math.max(previousRendered, INITIAL_DISPLAY_LINES), 0)
+        : Math.max(previous.visibleFrom - dropCount, 0);
+      return { buffer, visibleFrom };
+    });
+  }, []);
+
+  const liveQuery = useMemo<LiveLogQuery>(
+    () => ({
+      level: liveLevel,
+      contains: deferredSearchQuery.trim(),
+      provider: liveProvider,
+      authIndex: liveAuthIndex,
+      stage: liveStage,
+      code: liveCode,
+      status: /^\d{3}$/.test(liveStatus.trim()) ? liveStatus.trim() : undefined,
+      method: liveMethod,
+      path: livePath,
+      hideManagement: hideManagementLogs,
+    }),
+    [
+      deferredSearchQuery,
+      hideManagementLogs,
+      liveAuthIndex,
+      liveCode,
+      liveLevel,
+      liveMethod,
+      livePath,
+      liveProvider,
+      liveStage,
+      liveStatus,
+    ]
+  );
+  const live = useLiveLogs({
+    enabled: liveEnabled,
+    paused: livePaused,
+    connected: connectionStatus === 'connected',
+    scopeKey: traceScopeKey,
+    query: liveQuery,
+    onLine: appendLiveLine,
+  });
+  const liveFallback = liveEnabled && live.state === 'fallback';
 
   const loadLogs = async (incremental = false) => {
     if (connectionStatus !== 'connected') {
@@ -261,10 +325,15 @@ export function LogsPage() {
   useEffect(() => {
     if (connectionStatus === 'connected') {
       latestTimestampRef.current = 0;
-      loadLogs(false);
+      if (!liveEnabled) void loadLogs(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionStatus]);
+  }, [connectionStatus, liveEnabled]);
+
+  useEffect(() => {
+    if (liveFallback && connectionStatus === 'connected') void loadLogs(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectionStatus, liveFallback]);
 
   useEffect(() => {
     if (activeTab !== 'errors') return;
@@ -274,7 +343,8 @@ export function LogsPage() {
   }, [activeTab, connectionStatus, requestLogEnabled]);
 
   useEffect(() => {
-    if (!autoRefresh || connectionStatus !== 'connected') {
+    const shouldPollFileLogs = liveFallback || (!liveEnabled && autoRefresh);
+    if (!shouldPollFileLogs || connectionStatus !== 'connected') {
       return;
     }
     const id = window.setInterval(() => {
@@ -282,7 +352,7 @@ export function LogsPage() {
     }, 8000);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefresh, connectionStatus]);
+  }, [autoRefresh, connectionStatus, liveEnabled, liveFallback]);
 
   const visibleLines = useMemo(
     () => logState.buffer.slice(logState.visibleFrom),
@@ -505,6 +575,99 @@ export function LogsPage() {
                 />
               </div>
 
+              <div className={styles.liveLogPanel}>
+                <div className={styles.liveLogHeader}>
+                  <ToggleSwitch
+                    checked={liveEnabled}
+                    onChange={(enabled) => {
+                      setLiveEnabled(enabled);
+                      setLivePaused(false);
+                      if (enabled) {
+                        setAutoRefresh(false);
+                        setLoading(false);
+                        setLogState({ buffer: [], visibleFrom: 0 });
+                        latestTimestampRef.current = 0;
+                      }
+                    }}
+                    disabled={disableControls}
+                    label={t('logs.live_connection')}
+                  />
+                  <span className={`${styles.liveStatus} ${styles[`liveStatus_${live.state}`]}`}>
+                    {t(`logs.live_state_${live.state}`)}
+                  </span>
+                  {live.gapCount > 0 ? (
+                    <span className={styles.liveGap}>
+                      {t('logs.live_gap', { count: live.gapCount })}
+                    </span>
+                  ) : null}
+                  {liveEnabled && live.state !== 'fallback' ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setLivePaused((current) => !current)}
+                    >
+                      {livePaused ? t('logs.live_resume') : t('logs.live_pause')}
+                    </Button>
+                  ) : null}
+                  {liveEnabled && (live.lastError || live.state === 'fallback') ? (
+                    <Button variant="ghost" size="sm" onClick={live.retry}>
+                      {t('logs.live_reconnect')}
+                    </Button>
+                  ) : null}
+                </div>
+                {liveEnabled ? (
+                  <div className={styles.liveFilterGrid}>
+                    <Input
+                      value={liveLevel}
+                      onChange={(event) => setLiveLevel(event.target.value)}
+                      placeholder={t('logs.live_filter_level')}
+                    />
+                    <Input
+                      value={liveProvider}
+                      onChange={(event) => setLiveProvider(event.target.value)}
+                      placeholder={t('logs.live_filter_provider')}
+                    />
+                    <Input
+                      value={liveAuthIndex}
+                      onChange={(event) => setLiveAuthIndex(event.target.value)}
+                      placeholder={t('logs.live_filter_auth')}
+                    />
+                    <Input
+                      value={liveStage}
+                      onChange={(event) => setLiveStage(event.target.value)}
+                      placeholder={t('logs.live_filter_stage')}
+                    />
+                    <Input
+                      value={liveCode}
+                      onChange={(event) => setLiveCode(event.target.value)}
+                      placeholder={t('logs.live_filter_code')}
+                    />
+                    <Input
+                      value={liveStatus}
+                      onChange={(event) =>
+                        setLiveStatus(event.target.value.replace(/\D/g, '').slice(0, 3))
+                      }
+                      placeholder={t('logs.live_filter_status')}
+                    />
+                    <Input
+                      value={liveMethod}
+                      onChange={(event) => setLiveMethod(event.target.value.toUpperCase())}
+                      placeholder={t('logs.live_filter_method')}
+                    />
+                    <Input
+                      value={livePath}
+                      onChange={(event) => setLivePath(event.target.value)}
+                      placeholder={t('logs.live_filter_path')}
+                    />
+                  </div>
+                ) : null}
+                {liveFallback ? (
+                  <span className={styles.liveHint}>{t('logs.live_fallback_hint')}</span>
+                ) : live.lastError ? (
+                  <span className={styles.liveHint}>{live.lastError}</span>
+                ) : null}
+              </div>
+
               <div className={styles.filterPanelHeader}>
                 <Button
                   type="button"
@@ -662,7 +825,7 @@ export function LogsPage() {
                 <ToggleSwitch
                   checked={autoRefresh}
                   onChange={(value) => setAutoRefresh(value)}
-                  disabled={disableControls}
+                  disabled={disableControls || (liveEnabled && !liveFallback)}
                   label={
                     <span className={styles.switchLabel}>
                       <IconTimer size={16} />
