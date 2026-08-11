@@ -2208,6 +2208,13 @@ function getNextDirtyFields(
       nextValues.chatgptWebAutoRelogin === baselineValues.chatgptWebAutoRelogin
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebApi798AutoLoginEnabled')) {
+    updateDirty(
+      'chatgptWebApi798AutoLoginEnabled',
+      nextValues.chatgptWebApi798AutoLoginEnabled ===
+        baselineValues.chatgptWebApi798AutoLoginEnabled
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebSessionCookieRefreshOnTokenFailure')) {
     updateDirty(
       'chatgptWebSessionCookieRefreshOnTokenFailure',
@@ -2912,6 +2919,9 @@ export function useVisualConfig() {
         codexHeaderDefaultsOriginator:
           typeof codexHeaderDefaults?.originator === 'string' ? codexHeaderDefaults.originator : '',
         chatgptWebAutoRelogin: Boolean(chatgptWeb?.['auto-relogin'] ?? chatgptWeb?.autoRelogin),
+        chatgptWebApi798AutoLoginEnabled: Boolean(
+          chatgptWeb?.['api798-auto-login-enabled'] ?? chatgptWeb?.api798AutoLoginEnabled
+        ),
         chatgptWebSessionCookieRefreshOnTokenFailure: Boolean(
           chatgptWeb?.['session-cookie-refresh-on-token-failure'] ??
           chatgptWeb?.sessionCookieRefreshOnTokenFailure
@@ -3354,6 +3364,7 @@ export function useVisualConfig() {
         if (
           docHas(doc, ['chatgpt-web']) ||
           values.chatgptWebAutoRelogin ||
+          values.chatgptWebApi798AutoLoginEnabled ||
           values.chatgptWebSessionCookieRefreshOnTokenFailure ||
           !values.chatgptWebForceSessionRefreshOnImport ||
           values.chatgptWebAutoDeleteDeadAuths ||
@@ -3362,6 +3373,15 @@ export function useVisualConfig() {
         ) {
           ensureMapInDoc(doc, ['chatgpt-web']);
           doc.setIn(['chatgpt-web', 'auto-relogin'], values.chatgptWebAutoRelogin);
+          if (
+            docHas(doc, ['chatgpt-web', 'api798-auto-login-enabled']) ||
+            values.chatgptWebApi798AutoLoginEnabled
+          ) {
+            doc.setIn(
+              ['chatgpt-web', 'api798-auto-login-enabled'],
+              values.chatgptWebApi798AutoLoginEnabled
+            );
+          }
           setBooleanInDoc(
             doc,
             ['chatgpt-web', 'session-cookie-refresh-on-token-failure'],

@@ -140,6 +140,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     descriptionKey: 'config_management.settings_center.pages.provider_chatgpt_web.description',
     dirtyPrefixes: [
       'chatgptWebAutoRelogin',
+      'chatgptWebApi798AutoLoginEnabled',
       'chatgptWebSessionCookieRefreshOnTokenFailure',
       'chatgptWebForceSessionRefreshOnImport',
       'chatgptWebAutoDeleteDead',
@@ -521,6 +522,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.settings_center.chatgpt_web.auto_relogin',
     yamlKeys: ['chatgpt-web.auto-relogin'],
     aliases: ['chatgpt web', '自动重登', 'auto relogin'],
+  },
+  {
+    id: 'config-chatgpt-web-api798-auto-login',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.api798_auto_login',
+    yamlKeys: ['chatgpt-web.api798-auto-login-enabled'],
+    aliases: ['api798', '邮箱接码', 'email otp'],
   },
   {
     id: 'config-chatgpt-web-auto-delete-dead',

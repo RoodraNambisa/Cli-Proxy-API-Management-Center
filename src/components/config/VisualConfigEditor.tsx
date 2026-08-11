@@ -1917,6 +1917,19 @@ export function VisualConfigEditor({
                 disabled={disabled}
                 onChange={(chatgptWebAutoRelogin) => onChange({ chatgptWebAutoRelogin })}
               />
+              <div id="config-chatgpt-web-api798-auto-login">
+                <ToggleRow
+                  title={t('config_management.settings_center.chatgpt_web.api798_auto_login')}
+                  description={t(
+                    'config_management.settings_center.chatgpt_web.api798_auto_login_description'
+                  )}
+                  checked={values.chatgptWebApi798AutoLoginEnabled}
+                  disabled={disabled}
+                  onChange={(chatgptWebApi798AutoLoginEnabled) =>
+                    onChange({ chatgptWebApi798AutoLoginEnabled })
+                  }
+                />
+              </div>
               <div id="config-chatgpt-web-session-cookie-refresh-on-token-failure">
                 <ToggleRow
                   title={t(

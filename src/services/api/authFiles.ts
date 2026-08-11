@@ -31,6 +31,8 @@ export type AuthFileFieldsPatch = {
   websockets?: boolean;
   excluded_models?: string[];
   disable_cooling?: boolean;
+  login_method?: 'auto' | 'passkey' | 'password_totp' | 'api798';
+  api798_url?: string;
 };
 export type XaiAuthFileFieldsPatch = Partial<Pick<AuthFileFieldsPatch, XaiAuthFileField>>;
 export type AuthFileFieldsPatchResponse = { status: string };

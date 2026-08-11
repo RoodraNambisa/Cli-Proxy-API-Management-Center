@@ -19,6 +19,8 @@ export type AuthFileHeadersErrorKey =
   | 'auth_files.headers_invalid_object'
   | 'auth_files.headers_invalid_value';
 
+export type ChatGptWebLoginMethod = 'auto' | 'passkey' | 'password_totp' | 'api798';
+
 export type PrefixProxyEditorField =
   | 'prefix'
   | 'proxyUrl'
@@ -27,7 +29,9 @@ export type PrefixProxyEditorField =
   | 'disableCooling'
   | 'websockets'
   | 'note'
-  | 'headersText';
+  | 'headersText'
+  | 'loginMethod'
+  | 'api798Url';
 
 export type PrefixProxyEditorFieldValue = string | boolean;
 
@@ -35,6 +39,7 @@ export type PrefixProxyEditorState = {
   fileName: string;
   fileInfoText: string;
   isCodexFile: boolean;
+  isChatGptWebFile: boolean;
   readOnly: boolean;
   loading: boolean;
   saving: boolean;
@@ -53,6 +58,8 @@ export type PrefixProxyEditorState = {
   headersText: string;
   headersTouched: boolean;
   headersError: string | null;
+  loginMethod: ChatGptWebLoginMethod;
+  api798Url: string;
 };
 
 export type UseAuthFilesPrefixProxyEditorOptions = {
@@ -76,6 +83,9 @@ export type UseAuthFilesPrefixProxyEditorResult = {
 const isRecordObject = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
+const isChatGptWebLoginMethod = (value: unknown): value is ChatGptWebLoginMethod =>
+  value === 'auto' || value === 'passkey' || value === 'password_totp' || value === 'api798';
+
 const validateHeadersValue = (value: unknown): AuthFileHeadersErrorKey | null => {
   if (!isRecordObject(value)) {
     return 'auth_files.headers_invalid_object';
@@ -88,10 +98,11 @@ const validateHeadersValue = (value: unknown): AuthFileHeadersErrorKey | null =>
 const jsonValuesEqual = (left: unknown, right: unknown): boolean =>
   JSON.stringify(left) === JSON.stringify(right);
 
-const buildAuthFileFieldsPatch = (
+export const buildAuthFileFieldsPatch = (
   previous: Record<string, unknown>,
   next: Record<string, unknown>,
-  isCodexFile: boolean
+  isCodexFile: boolean,
+  isChatGptWebFile: boolean
 ): AuthFileFieldsPatch => {
   const patch: AuthFileFieldsPatch = {};
 
@@ -120,6 +131,13 @@ const buildAuthFileFieldsPatch = (
   }
   if (isCodexFile && !jsonValuesEqual(previous.websockets, next.websockets)) {
     patch.websockets = readCodexAuthFileWebsockets(next);
+  }
+  if (isChatGptWebFile && !jsonValuesEqual(previous.login_method, next.login_method)) {
+    patch.login_method =
+      typeof next.login_method === 'string' ? (next.login_method as ChatGptWebLoginMethod) : 'auto';
+  }
+  if (isChatGptWebFile && !jsonValuesEqual(previous.api798_url, next.api798_url)) {
+    patch.api798_url = typeof next.api798_url === 'string' ? next.api798_url : '';
   }
 
   return patch;
@@ -203,6 +221,17 @@ const buildPrefixProxyUpdatedText = (
     }
   }
 
+  if (editor.isChatGptWebFile) {
+    if ('login_method' in next || editor.loginMethod !== 'auto') {
+      next.login_method = editor.loginMethod;
+    }
+    if (editor.api798Url) {
+      next.api798_url = editor.api798Url;
+    } else if ('api798_url' in next) {
+      delete next.api798_url;
+    }
+  }
+
   return JSON.stringify(
     editor.isCodexFile ? applyCodexAuthFileWebsockets(next, editor.websockets) : next
   );
@@ -218,7 +247,10 @@ export function useAuthFilesPrefixProxyEditor(
   const [prefixProxyEditor, setPrefixProxyEditor] = useState<PrefixProxyEditorState | null>(null);
 
   const hasBlockingValidationError = Boolean(
-    prefixProxyEditor?.headersTouched && prefixProxyEditor.headersError
+    (prefixProxyEditor?.headersTouched && prefixProxyEditor.headersError) ||
+    (prefixProxyEditor?.isChatGptWebFile &&
+      prefixProxyEditor.loginMethod === 'api798' &&
+      !prefixProxyEditor.api798Url.trim())
   );
   const prefixProxyUpdatedText =
     prefixProxyEditor?.json && !hasBlockingValidationError
@@ -243,6 +275,8 @@ export function useAuthFilesPrefixProxyEditor(
       .trim()
       .toLowerCase();
     const isCodexFile = normalizedType === 'codex' || normalizedProvider === 'codex';
+    const isChatGptWebFile =
+      normalizedType === 'chatgpt-web' || normalizedProvider === 'chatgpt-web';
     const readOnly = normalizedType === 'gemini-cli' || normalizedProvider === 'gemini-cli';
 
     if (disableControls) return;
@@ -255,6 +289,7 @@ export function useAuthFilesPrefixProxyEditor(
       fileName: name,
       fileInfoText: JSON.stringify(file, null, 2),
       isCodexFile,
+      isChatGptWebFile,
       readOnly,
       loading: true,
       saving: false,
@@ -273,6 +308,8 @@ export function useAuthFilesPrefixProxyEditor(
       headersText: '',
       headersTouched: false,
       headersError: null,
+      loginMethod: 'auto',
+      api798Url: '',
     });
 
     try {
@@ -324,6 +361,8 @@ export function useAuthFilesPrefixProxyEditor(
       const disableCoolingValue = parseDisableCoolingValue(json.disable_cooling);
       const websocketsValue = readCodexAuthFileWebsockets(json);
       const note = typeof json.note === 'string' ? json.note : '';
+      const loginMethod = isChatGptWebLoginMethod(json.login_method) ? json.login_method : 'auto';
+      const api798Url = typeof json.api798_url === 'string' ? json.api798_url : '';
       const headers = json.headers;
       let headersText = '';
       let headersError: string | null = null;
@@ -353,6 +392,8 @@ export function useAuthFilesPrefixProxyEditor(
           headersText,
           headersTouched: false,
           headersError,
+          loginMethod,
+          api798Url,
           error: null,
         };
       });
@@ -388,6 +429,10 @@ export function useAuthFilesPrefixProxyEditor(
           headersError: errorKey ? t(errorKey) : null,
         };
       }
+      if (field === 'loginMethod') {
+        return isChatGptWebLoginMethod(value) ? { ...prev, loginMethod: value } : prev;
+      }
+      if (field === 'api798Url') return { ...prev, api798Url: String(value) };
       return { ...prev, websockets: Boolean(value) };
     });
   };
@@ -416,7 +461,8 @@ export function useAuthFilesPrefixProxyEditor(
       const fieldsPatch = buildAuthFileFieldsPatch(
         prefixProxyEditor.json,
         nextJson,
-        prefixProxyEditor.isCodexFile
+        prefixProxyEditor.isCodexFile,
+        prefixProxyEditor.isChatGptWebFile
       );
       const result = await authFilesApi.patchFieldsBatch([name], fieldsPatch);
       if (result.failed.length > 0 || result.updated !== 1) {

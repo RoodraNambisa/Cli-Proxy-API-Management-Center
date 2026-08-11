@@ -71,7 +71,12 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                 editor?.saving === true ||
                 !dirty ||
                 !editor?.json ||
-                Boolean(editor?.headersTouched && editor.headersError)
+                Boolean(editor?.headersTouched && editor.headersError) ||
+                Boolean(
+                  editor?.isChatGptWebFile &&
+                  editor.loginMethod === 'api798' &&
+                  !editor.api798Url.trim()
+                )
               }
             >
               {t('common.save')}
@@ -116,6 +121,49 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
               </div>
               {!editor.readOnly && (
                 <div className={styles.prefixProxyFields}>
+                  {editor.isChatGptWebFile && (
+                    <>
+                      <div className="form-group">
+                        <label htmlFor="chatgpt-web-login-method">
+                          {t('auth_files.chatgpt_web_login_method_label')}
+                        </label>
+                        <select
+                          id="chatgpt-web-login-method"
+                          className="input"
+                          value={editor.loginMethod}
+                          disabled={disableControls || editor.saving || !editor.json}
+                          onChange={(event) => onChange('loginMethod', event.target.value)}
+                        >
+                          <option value="auto">
+                            {t('auth_files.chatgpt_web_login_methods.auto')}
+                          </option>
+                          <option value="passkey">
+                            {t('auth_files.chatgpt_web_login_methods.passkey')}
+                          </option>
+                          <option value="password_totp">
+                            {t('auth_files.chatgpt_web_login_methods.password_totp')}
+                          </option>
+                          <option value="api798">
+                            {t('auth_files.chatgpt_web_login_methods.api798')}
+                          </option>
+                        </select>
+                        <div className="hint">{t('auth_files.chatgpt_web_login_method_hint')}</div>
+                      </div>
+                      <Input
+                        label={t('auth_files.chatgpt_web_api798_url_label')}
+                        value={editor.api798Url}
+                        placeholder={t('auth_files.chatgpt_web_api798_url_placeholder')}
+                        hint={t('auth_files.chatgpt_web_api798_url_hint')}
+                        error={
+                          editor.loginMethod === 'api798' && !editor.api798Url.trim()
+                            ? t('auth_files.chatgpt_web_api798_url_required')
+                            : undefined
+                        }
+                        disabled={disableControls || editor.saving || !editor.json}
+                        onChange={(event) => onChange('api798Url', event.target.value)}
+                      />
+                    </>
+                  )}
                   <Input
                     label={t('auth_files.prefix_label')}
                     value={editor.prefix}
