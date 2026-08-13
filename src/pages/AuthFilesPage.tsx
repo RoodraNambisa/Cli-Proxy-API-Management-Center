@@ -63,6 +63,7 @@ import {
 import { useAuthFilesModels } from '@/features/authFiles/hooks/useAuthFilesModels';
 import { useAuthFilesOauth } from '@/features/authFiles/hooks/useAuthFilesOauth';
 import { useAuthFilesPrefixProxyEditor } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
+import { useAuthFilesServerPageSync } from '@/features/authFiles/hooks/useAuthFilesServerPageSync';
 import { useAuthFilesStats } from '@/features/authFiles/hooks/useAuthFilesStats';
 import { useAuthFilesStatusBarCache } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import { useAuthFilesUsageSummary } from '@/features/authFiles/hooks/useAuthFilesUsageSummary';
@@ -613,13 +614,7 @@ export function AuthFilesPage() {
     legacyFilesRef.current = files;
   }, [files, serverPagination]);
 
-  useEffect(() => {
-    if (!serverPagination) return;
-    const resolvedPage = Number(filesPagination?.page);
-    if (Number.isFinite(resolvedPage) && resolvedPage >= 1 && resolvedPage !== page) {
-      setPage(resolvedPage);
-    }
-  }, [filesPagination?.page, page, serverPagination]);
+  useAuthFilesServerPageSync(serverPagination, filesPagination?.page, filesSnapshotOrder, setPage);
 
   useEffect(() => {
     const persistedCompactMode = readPersistedAuthFilesCompactMode();

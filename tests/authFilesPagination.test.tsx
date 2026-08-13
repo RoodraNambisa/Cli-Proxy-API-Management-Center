@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { apiClient } from '@/services/api/client';
 import { authFilesApi, type AuthFilesListParams } from '@/services/api/authFiles';
 import { useAuthFilesData } from '@/features/authFiles/hooks/useAuthFilesData';
+import { useAuthFilesServerPageSync } from '@/features/authFiles/hooks/useAuthFilesServerPageSync';
 import { useNotificationStore } from '@/stores';
 
 vi.mock('react-i18next', async (importOriginal) => {
@@ -114,6 +116,37 @@ describe('auth files server-side pagination', () => {
 
     expect(result.current.files.map((file) => file.name)).toEqual(['page-two.json']);
     expect(Array.from(result.current.selectedFiles)).toEqual(['page-one.json']);
+  });
+
+  test('does not restore the previous response page while requesting the next page', () => {
+    const { result, rerender } = renderHook(
+      ({ responsePage, responseVersion }) => {
+        const [page, setPage] = useState(1);
+        useAuthFilesServerPageSync(true, responsePage, responseVersion, setPage);
+        return { page, setPage };
+      },
+      { initialProps: { responsePage: 1, responseVersion: 1 } }
+    );
+
+    act(() => result.current.setPage(2));
+    expect(result.current.page).toBe(2);
+
+    rerender({ responsePage: 2, responseVersion: 2 });
+    expect(result.current.page).toBe(2);
+  });
+
+  test('accepts a clamped page from a newly completed backend response', () => {
+    const { result, rerender } = renderHook(
+      ({ responsePage, responseVersion }) => {
+        const [page, setPage] = useState(99);
+        useAuthFilesServerPageSync(true, responsePage, responseVersion, setPage);
+        return page;
+      },
+      { initialProps: { responsePage: 99, responseVersion: 1 } }
+    );
+
+    rerender({ responsePage: 93, responseVersion: 2 });
+    expect(result.current).toBe(93);
   });
 
   test('clears cross-page selection when the management connection changes', async () => {
