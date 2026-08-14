@@ -541,7 +541,7 @@
     "pagination_next": "下一页",
     "pagination_info": "第 {{current}} / {{total}} 页 · 共 {{count}} 个文件",
     "search_label": "搜索配置文件",
-    "search_placeholder": "输入名称、类型、提供方或错误关键字，支持 * 通配",
+    "search_placeholder": "输入名称、邮箱、类型、提供方或错误关键字，支持 * 通配",
     "plan_filter_label": "套餐筛选",
     "plan_filter_all": "全部套餐",
     "priority_filter_label": "优先级筛选",

@@ -541,7 +541,7 @@
     "pagination_next": "Следующая",
     "pagination_info": "Страница {{current}} / {{total}} · {{count}} файлов",
     "search_label": "Поиск конфигов",
-    "search_placeholder": "Фильтр по имени, типу, провайдеру или тексту ошибки; поддерживается wildcard *",
+    "search_placeholder": "Фильтр по имени, электронной почте, типу, провайдеру или тексту ошибки; поддерживается wildcard *",
     "plan_filter_label": "Фильтр по плану",
     "plan_filter_all": "Все планы",
     "priority_filter_label": "Фильтр по приоритету",

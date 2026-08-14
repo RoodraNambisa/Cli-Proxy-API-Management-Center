@@ -538,7 +538,7 @@
     "pagination_next": "下一頁",
     "pagination_info": "第 {{current}} / {{total}} 頁 · 共 {{count}} 個檔案",
     "search_label": "搜尋設定檔",
-    "search_placeholder": "輸入名稱、類型、供應方或錯誤關鍵字，支援 * 萬用字元",
+    "search_placeholder": "輸入名稱、電子郵件、類型、供應方或錯誤關鍵字，支援 * 萬用字元",
     "plan_filter_label": "方案篩選",
     "plan_filter_all": "全部方案",
     "priority_filter_label": "優先順序篩選",

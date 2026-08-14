@@ -87,6 +87,7 @@ export interface AuthErrorSummary {
 
 export interface AuthFileItem {
   name: string;
+  email?: string;
   type?: AuthFileType | string;
   provider?: string;
   planType?: string | null;

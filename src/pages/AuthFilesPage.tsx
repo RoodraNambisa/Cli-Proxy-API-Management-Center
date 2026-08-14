@@ -969,6 +969,7 @@ export function AuthFilesPage() {
         !normalizedSearch ||
         [
           item.name,
+          item.email,
           item.type,
           item.provider,
           itemPlanType,

@@ -541,7 +541,7 @@
     "pagination_next": "Next",
     "pagination_info": "Page {{current}} / {{total}} · {{count}} files",
     "search_label": "Search configs",
-    "search_placeholder": "Filter by name, type, provider, or error text. Use * as a wildcard",
+    "search_placeholder": "Filter by name, email, type, provider, or error text. Use * as a wildcard",
     "plan_filter_label": "Plan Filter",
     "plan_filter_all": "All Plans",
     "priority_filter_label": "Priority Filter",
