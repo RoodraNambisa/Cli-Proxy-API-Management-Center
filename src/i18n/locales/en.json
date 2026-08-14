@@ -1878,6 +1878,11 @@
           "auth_files_pagination_desc": "Filter, sort, and page authentication files on the server. This only optimizes the management page; all credentials are still loaded for scheduling.",
           "live_logs": "Live management logs",
           "live_logs_desc": "Keep an in-memory log stream for authenticated SSE viewing and server-side filtering, including bounded upstream error response bodies. It is independent of file logging and resets when the server restarts.",
+          "diagnostics_detail_level": "Management diagnostic detail",
+          "diagnostics_detail_level_desc": "Safe hides nonessential upstream text, email addresses, and URL parameters. Full preserves non-credential diagnostic content for authenticated management views only; credential material is always hidden.",
+          "diagnostics_detail_safe": "Safe (default)",
+          "diagnostics_detail_full": "Full details",
+          "diagnostics_detail_full_warning": "Full mode may expose upstream error text, email addresses, Cloudflare pages, paths, and ordinary URL parameters to management users. Tokens, cookies, passwords, private keys, passkey assertions, recovery codes, authorization parameters, and signed URLs remain hidden.",
           "secret_key": "Management Key",
           "secret_key_placeholder": "Set management key",
           "access_path": "Access Path Hiding (access-path)",
@@ -2909,11 +2914,14 @@
           "response_bytes": "Response bytes",
           "content_length": "Content-Length",
           "upstream_error_code": "Upstream error code",
+          "error_message": "Latest error message",
+          "response_body": "Latest response body",
           "first_seen": "First seen",
           "last_seen": "Last seen",
           "last_auth_index": "Latest credential index",
           "last_attempt": "Latest attempt"
-        }
+        },
+        "response_body_truncated": "Body truncated"
       },
       "raw_quota": {
         "enabled": "Capture raw quota responses",

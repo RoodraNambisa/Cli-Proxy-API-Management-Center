@@ -2098,6 +2098,12 @@ function getNextDirtyFields(
   if (Object.prototype.hasOwnProperty.call(patch, 'rmLiveLogs')) {
     updateDirty('rmLiveLogs', nextValues.rmLiveLogs === baselineValues.rmLiveLogs);
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'rmDiagnosticsDetailLevel')) {
+    updateDirty(
+      'rmDiagnosticsDetailLevel',
+      nextValues.rmDiagnosticsDetailLevel === baselineValues.rmDiagnosticsDetailLevel
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'rmAccessPath')) {
     updateDirty('rmAccessPath', nextValues.rmAccessPath === baselineValues.rmAccessPath);
   }
@@ -2851,6 +2857,11 @@ export function useVisualConfig() {
           );
       const authFilesPagination = asRecord(remoteManagement?.['auth-files-pagination']);
       const liveLogs = asRecord(remoteManagement?.['live-logs'] ?? remoteManagement?.liveLogs);
+      const diagnostics = asRecord(remoteManagement?.diagnostics);
+      const diagnosticsDetailLevel =
+        diagnostics?.['detail-level'] === 'full' || diagnostics?.detailLevel === 'full'
+          ? 'full'
+          : 'safe';
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === 'string' ? parsed.host : '',
@@ -2868,6 +2879,7 @@ export function useVisualConfig() {
         rmDisableControlPanel: Boolean(remoteManagement?.['disable-control-panel']),
         rmAuthFilesPagination: Boolean(authFilesPagination?.enabled),
         rmLiveLogs: Boolean(liveLogs?.enabled),
+        rmDiagnosticsDetailLevel: diagnosticsDetailLevel,
         rmAccessPath:
           typeof remoteManagement?.['access-path'] === 'string'
             ? remoteManagement['access-path']
@@ -3221,6 +3233,7 @@ export function useVisualConfig() {
           values.rmDisableControlPanel ||
           values.rmAuthFilesPagination ||
           values.rmLiveLogs ||
+          values.rmDiagnosticsDetailLevel !== 'safe' ||
           values.rmAccessPath.trim() ||
           values.rmPanelRepo.trim()
         ) {
@@ -3240,6 +3253,12 @@ export function useVisualConfig() {
           );
           ensureMapInDoc(doc, ['remote-management', 'live-logs']);
           setBooleanInDoc(doc, ['remote-management', 'live-logs', 'enabled'], values.rmLiveLogs);
+          ensureMapInDoc(doc, ['remote-management', 'diagnostics']);
+          setStringInDoc(
+            doc,
+            ['remote-management', 'diagnostics', 'detail-level'],
+            values.rmDiagnosticsDetailLevel
+          );
           setStringInDoc(doc, ['remote-management', 'access-path'], values.rmAccessPath);
           setStringInDoc(doc, ['remote-management', 'panel-github-repository'], values.rmPanelRepo);
           if (docHas(doc, ['remote-management', 'panel-repo'])) {

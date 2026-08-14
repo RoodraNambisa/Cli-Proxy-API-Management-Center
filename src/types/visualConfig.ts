@@ -257,6 +257,7 @@ export type VisualConfigValues = {
   rmDisableControlPanel: boolean;
   rmAuthFilesPagination: boolean;
   rmLiveLogs: boolean;
+  rmDiagnosticsDetailLevel: 'safe' | 'full';
   rmAccessPath: string;
   rmPanelRepo: string;
   authDir: string;
@@ -344,6 +345,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   rmDisableControlPanel: false,
   rmAuthFilesPagination: false,
   rmLiveLogs: false,
+  rmDiagnosticsDetailLevel: 'safe',
   rmAccessPath: '',
   rmPanelRepo: '',
   authDir: '',

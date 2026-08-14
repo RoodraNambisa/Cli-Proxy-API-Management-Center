@@ -292,6 +292,7 @@ function DiagnosticRecord({ record }: { record: ChatGptWebAccountInfoDiagnosticR
     ['response_bytes', record.response_bytes],
     ['content_length', record.content_length ?? ''],
     ['upstream_error_code', record.upstream_error_code ?? ''],
+    ['error_message', record.error_message ?? ''],
     ['first_seen', formatDateTime(record.first_seen)],
     ['last_seen', formatDateTime(record.last_seen)],
     ['last_auth_index', record.last_auth_index ?? ''],
@@ -320,6 +321,17 @@ function DiagnosticRecord({ record }: { record: ChatGptWebAccountInfoDiagnosticR
           </div>
         ))}
       </dl>
+      {record.response_body ? (
+        <>
+          <div className={styles.diagnosticBodyLabel}>
+            {t('chatgpt_web.account_info.diagnostics.fields.response_body')}
+            {record.response_body_truncated
+              ? ` · ${t('chatgpt_web.account_info.diagnostics.response_body_truncated')}`
+              : ''}
+          </div>
+          <pre className={styles.rawQuotaBody}>{record.response_body}</pre>
+        </>
+      ) : null}
     </article>
   );
 }

@@ -812,6 +812,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     const authFilesPagination =
       remoteManagement['auth-files-pagination'] ?? remoteManagement.authFilesPagination;
     const liveLogs = remoteManagement['live-logs'] ?? remoteManagement.liveLogs;
+    const diagnostics = remoteManagement.diagnostics;
     config.remoteManagement = {
       allowRemote: normalizeBoolean(
         remoteManagement['allow-remote'] ?? remoteManagement.allowRemote
@@ -840,6 +841,13 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
         ? {
             liveLogs: {
               enabled: normalizeBoolean(liveLogs.enabled ?? liveLogs['enabled']),
+            },
+          }
+        : {}),
+      ...(isRecord(diagnostics)
+        ? {
+            diagnostics: {
+              detailLevel: normalizeString(diagnostics['detail-level'] ?? diagnostics.detailLevel),
             },
           }
         : {}),

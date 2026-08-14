@@ -46,6 +46,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'rmDisableControlPanel',
       'rmAuthFilesPagination',
       'rmLiveLogs',
+      'rmDiagnosticsDetailLevel',
       'rmAccessPath',
       'rmPanelRepo',
     ],
@@ -213,6 +214,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'panel-repo',
       'auth-files-pagination',
       'live-logs',
+      'diagnostics',
+      'detail-level',
     ],
   },
   {

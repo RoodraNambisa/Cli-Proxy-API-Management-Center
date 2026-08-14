@@ -169,6 +169,9 @@ export interface ChatGptWebAccountInfoDiagnosticRecord {
   response_bytes: number;
   content_length: number;
   upstream_error_code?: string;
+  error_message?: string;
+  response_body?: string;
+  response_body_truncated?: boolean;
   count: number;
   first_seen: string;
   last_seen: string;

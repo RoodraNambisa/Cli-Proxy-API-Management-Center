@@ -972,6 +972,19 @@ export function VisualConfigEditor({
     ],
     [t]
   );
+  const managementDiagnosticsDetailOptions = useMemo(
+    () => [
+      {
+        value: 'safe',
+        label: t('config_management.visual.sections.remote.diagnostics_detail_safe'),
+      },
+      {
+        value: 'full',
+        label: t('config_management.visual.sections.remote.diagnostics_detail_full'),
+      },
+    ],
+    [t]
+  );
 
   const portError = getValidationMessage(t, validationErrors?.port);
   const rmAccessPathError = getValidationMessage(t, validationErrors?.rmAccessPath);
@@ -2421,6 +2434,29 @@ export function VisualConfigEditor({
                   disabled={disabled}
                   onChange={(rmLiveLogs) => onChange({ rmLiveLogs })}
                 />
+                <FieldShell
+                  label={t('config_management.visual.sections.remote.diagnostics_detail_level')}
+                  htmlFor="config-management-diagnostics-detail-level"
+                  hint={t('config_management.visual.sections.remote.diagnostics_detail_level_desc')}
+                >
+                  <Select
+                    id="config-management-diagnostics-detail-level"
+                    value={values.rmDiagnosticsDetailLevel}
+                    options={managementDiagnosticsDetailOptions}
+                    disabled={disabled}
+                    onChange={(rmDiagnosticsDetailLevel) =>
+                      onChange({
+                        rmDiagnosticsDetailLevel:
+                          rmDiagnosticsDetailLevel === 'full' ? 'full' : 'safe',
+                      })
+                    }
+                  />
+                </FieldShell>
+                {values.rmDiagnosticsDetailLevel === 'full' ? (
+                  <div className={styles.diagnosticsRiskNotice}>
+                    {t('config_management.visual.sections.remote.diagnostics_detail_full_warning')}
+                  </div>
+                ) : null}
                 <SectionGrid>
                   <Input
                     label={t('config_management.visual.sections.remote.access_path')}

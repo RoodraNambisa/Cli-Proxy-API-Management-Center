@@ -1901,6 +1901,11 @@
           "auth_files_pagination_desc": "由伺服器端篩選、排序及分頁認證檔案。僅最佳化管理頁面，所有憑證仍會載入並參與調度。",
           "live_logs": "即時管理記錄",
           "live_logs_desc": "在記憶體中保留記錄串流，供已驗證的 SSE 連線即時檢視與伺服器端篩選，並包含限長的上游錯誤回應內容；不依賴檔案記錄，服務重新啟動後清空。",
+          "diagnostics_detail_level": "管理診斷詳細模式",
+          "diagnostics_detail_level_desc": "安全模式隱藏非必要的上游原文、電子郵件與 URL 參數；完整模式僅在已驗證的管理檢視中保留非憑證診斷原文，憑證資料始終隱藏。",
+          "diagnostics_detail_safe": "安全（預設）",
+          "diagnostics_detail_full": "完整詳細資料",
+          "diagnostics_detail_full_warning": "完整模式可能向管理使用者顯示上游錯誤原文、電子郵件、Cloudflare 頁面、路徑與一般 URL 參數。Token、Cookie、密碼、私鑰、Passkey 斷言、復原碼、授權參數與簽名 URL 仍會強制隱藏。",
           "secret_key": "管理金鑰",
           "secret_key_placeholder": "設定管理金鑰",
           "access_path": "存取路徑隱藏（access-path）",
@@ -2932,11 +2937,14 @@
           "response_bytes": "回應位元組數",
           "content_length": "Content-Length",
           "upstream_error_code": "上游錯誤碼",
+          "error_message": "最近錯誤訊息",
+          "response_body": "最近回應正文",
           "first_seen": "首次出現",
           "last_seen": "最近出現",
           "last_auth_index": "最近憑證索引",
           "last_attempt": "最近嘗試次數"
-        }
+        },
+        "response_body_truncated": "正文已截斷"
       },
       "raw_quota": {
         "enabled": "擷取原始額度回應",

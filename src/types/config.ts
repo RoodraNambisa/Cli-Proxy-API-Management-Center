@@ -171,6 +171,9 @@ export interface RemoteManagementConfig {
   liveLogs?: {
     enabled?: boolean;
   };
+  diagnostics?: {
+    detailLevel?: 'safe' | 'full' | string;
+  };
 }
 
 export interface PprofManagementConfig {

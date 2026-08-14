@@ -686,6 +686,15 @@
   line-height: 1.6;
 }
 
+.diagnosticsRiskNotice {
+  padding: 11px 13px;
+  border-left: 3px solid var(--warning-border);
+  background: color-mix(in srgb, var(--warning-bg) 72%, transparent);
+  color: var(--warning-text);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .proxyCheckPanel {
   display: flex;
   flex-direction: column;
