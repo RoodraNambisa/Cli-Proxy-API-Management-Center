@@ -877,6 +877,39 @@ describe('ChatGPT Web management compatibility', () => {
     expect(screen.getByText('codex-source.json')).not.toBeNull();
   });
 
+  test('shows bounded recovery exhaustion and starts a manual recheck without marking success', () => {
+    const onAccountInfoRefresh = vi.fn();
+    render(
+      <MemoryRouter>
+        <AuthFileCard
+          {...createCardProps({
+            name: 'manual-recovery.json',
+            type: 'chatgpt-web',
+            lifecycle_state: 'active',
+            account_info_recovery_state: 'manual_recovery_required',
+            account_info_recovery_attempts: 4,
+            account_info_recovery_max_attempts: 4,
+            account_info_consecutive_failures: 4,
+            account_info_recovery_stop_reason: 'recovery_exhausted',
+            account_info_last_failure: 'temporary_failure',
+            account_info_last_failure_at: '2026-08-16T00:00:00Z',
+            account_info_manual_recheckable: true,
+          })}
+          onChatGptWebAccountInfoRefresh={onAccountInfoRefresh}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByText('manual_recovery_required').length).toBeGreaterThan(0);
+    expect(screen.getByText('recovery_exhausted')).not.toBeNull();
+    expect(screen.getByText('temporary_failure')).not.toBeNull();
+    const button = screen.getByRole('button', { name: /auth_files.chatgpt_web_manual_recheck/ });
+    fireEvent.click(button);
+    expect(onAccountInfoRefresh).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'manual-recovery.json' })
+    );
+  });
+
   test('keeps critical Web lifecycle states above credential mode hints', () => {
     render(
       <MemoryRouter>

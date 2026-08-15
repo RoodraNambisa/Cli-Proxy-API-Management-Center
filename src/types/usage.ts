@@ -87,6 +87,39 @@ export interface UsageRangeQuery {
   to?: string;
 }
 
+export interface UsageFailureSummaryQuery extends UsageRangeQuery {
+  api?: string;
+  model?: string;
+  source?: string;
+}
+
+export interface UsageFailureDimensionCount {
+  value: string;
+  count: number;
+  percent: number;
+}
+
+export interface UsageFailureSummary {
+  as_of: string;
+  total: number;
+  main: number;
+  auxiliary: number;
+  boundaries: {
+    credential_selected: number;
+    upstream_committed: number;
+    auth_request_slot_consumed: number;
+  };
+  by_error_code: UsageFailureDimensionCount[];
+  by_failure_stage: UsageFailureDimensionCount[];
+  by_model: UsageFailureDimensionCount[];
+  by_source: UsageFailureDimensionCount[];
+  by_hour: UsageFailureDimensionCount[];
+}
+
+export interface UsageFailureSummaryResponse {
+  failures: UsageFailureSummary;
+}
+
 export interface UsageSummaryQuery extends UsageRangeQuery {
   include_sources?: boolean;
 }

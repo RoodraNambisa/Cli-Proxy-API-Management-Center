@@ -132,16 +132,96 @@ export interface ChatGptWebAccountInfoRuntime {
   busy: number;
   queued: number;
   scheduled: number;
+  immediate_queued?: number;
+  retry_scheduled?: number;
+  task_retry_scheduled?: number;
+  transient_recovery_scheduled?: number;
+  quota_recovery_scheduled?: number;
+  periodic_review_scheduled?: number;
+  periodic_pending?: number;
+  periodic_next_at?: string;
+  max_automatic_attempts?: number;
   inflight: number;
   refresh_count: number;
   retry_count: number;
   failed_count: number;
   last_error: string;
+  last_failure?: string;
+  last_failure_at?: string;
+  last_success_at?: string;
+  failure_counts?: Record<string, number>;
+  recovery_state_counts?: Record<string, number>;
+  background_relogin?: ChatGptWebBackgroundReloginRuntime;
+}
+
+export interface ChatGptWebBackgroundReloginRuntime {
+  queued: number;
+  delayed: number;
+  running: number;
+  promoted: number;
+  deduplicated: number;
+  canceled: number;
+}
+
+export interface ChatGptWebRefreshPersistenceRuntime {
+  enabled: boolean;
+  concurrency: number;
+  queue_limit: number;
+  queued: number;
+  active: number;
+  peak_active: number;
+  refresh_persist_backpressure: number;
+  rejected: number;
 }
 
 export interface ChatGptWebAccountInfoSnapshot {
   config: ChatGptWebAccountInfoConfig;
   runtime: ChatGptWebAccountInfoRuntime;
+  refresh_persistence?: ChatGptWebRefreshPersistenceRuntime;
+}
+
+export type ChatGptWebRoutingCapacityMode = 'none' | 'limited' | 'unlimited' | 'mixed' | string;
+
+export interface ChatGptWebRoutingRequestCapacity {
+  mode: ChatGptWebRoutingCapacityMode;
+  limited_credentials: number;
+  unlimited_credentials: number;
+  configured_slots: number | null;
+  remaining_slots: number | null;
+  configured_rpm: number | null;
+  earliest_consumed_reset_at: string | null;
+}
+
+export interface ChatGptWebRoutingPriorityDiagnostics {
+  priority: number;
+  total: number;
+  quota_exhausted: number;
+  cooldown: number;
+  unavailable: number;
+  ready_before_request_limit: number;
+  request_limited: number;
+  eligible_now: number;
+  earliest_request_limit_reset_at: string | null;
+  request_capacity: ChatGptWebRoutingRequestCapacity;
+}
+
+export interface ChatGptWebRequestExecutionMetrics {
+  preflight_rejected?: number;
+  auth_slot_reserved?: number;
+  auth_slot_released?: number;
+  upstream_committed?: number;
+  auth_request_limited?: number;
+  selected_but_not_committed?: number;
+  [key: string]: number | undefined;
+}
+
+export interface ChatGptWebRoutingDiagnosticsSnapshot {
+  routing: {
+    provider: string;
+    model: string;
+    priorities: ChatGptWebRoutingPriorityDiagnostics[];
+  };
+  request_execution_metrics: ChatGptWebRequestExecutionMetrics;
 }
 
 export type ChatGptWebAccountInfoConfigPatch = Partial<ChatGptWebAccountInfoConfig>;

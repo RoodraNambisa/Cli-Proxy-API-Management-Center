@@ -25,6 +25,7 @@ import type {
   ChatGptWebAccountInfoRawQuotaRecord,
   ChatGptWebAccountInfoRawQuotaSnapshot,
   ChatGptWebAccountInfoSnapshot,
+  ChatGptWebRoutingDiagnosticsSnapshot,
 } from '@/types';
 import { getChatGptWebErrorMessage } from '@/utils/chatgptWeb';
 import { formatDateTime } from '@/utils/format';
@@ -462,6 +463,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   const diagnosticsLoadedRef = useRef(false);
   const rawQuotaAbortRef = useRef<AbortController | null>(null);
   const rawQuotaLoadedRef = useRef(false);
+  const routingAbortRef = useRef<AbortController | null>(null);
   const savingRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -499,6 +501,11 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   const [rawQuotaClearing, setRawQuotaClearing] = useState(false);
   const [rawQuotaError, setRawQuotaError] = useState('');
   const [rawQuotaEndpointUnsupported, setRawQuotaEndpointUnsupported] = useState(false);
+  const [routingDiagnostics, setRoutingDiagnostics] =
+    useState<ChatGptWebRoutingDiagnosticsSnapshot | null>(null);
+  const [routingLoading, setRoutingLoading] = useState(false);
+  const [routingError, setRoutingError] = useState('');
+  const [routingUnsupported, setRoutingUnsupported] = useState(false);
   const [expanded, setExpanded] = useState(
     () => localStorage.getItem(DISCLOSURE_STORAGE_KEY) === 'true'
   );
@@ -555,6 +562,13 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     const abortController = rawQuotaAbortRef.current;
     if (!abortController) return;
     rawQuotaAbortRef.current = null;
+    abortController.abort();
+  }, []);
+
+  const abortRoutingRequest = useCallback(() => {
+    const abortController = routingAbortRef.current;
+    if (!abortController) return;
+    routingAbortRef.current = null;
     abortController.abort();
   }, []);
 
@@ -863,6 +877,58 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     ]
   );
 
+  const loadRoutingDiagnostics = useCallback(
+    async (notify = false): Promise<ChatGptWebRoutingDiagnosticsSnapshot | null> => {
+      if (routingAbortRef.current) return null;
+      const generation = readConnectionGeneration();
+      const connection = apiClient.captureConnection();
+      const abortController = new AbortController();
+      routingAbortRef.current = abortController;
+      setRoutingLoading(true);
+      try {
+        const next = await chatGptWebApi.getRoutingDiagnostics(
+          'chatgpt-web',
+          'gpt-image-2',
+          connection,
+          abortController.signal
+        );
+        if (abortController.signal.aborted || !isConnectionGenerationCurrent(generation)) {
+          return null;
+        }
+        setRoutingDiagnostics(next);
+        setRoutingError('');
+        setRoutingUnsupported(false);
+        return next;
+      } catch (error) {
+        if (abortController.signal.aborted || !isConnectionGenerationCurrent(generation)) {
+          return null;
+        }
+        if ([404, 501].includes(getErrorStatus(error) ?? 0)) {
+          setRoutingUnsupported(true);
+          setRoutingError('');
+          return null;
+        }
+        const message = getChatGptWebErrorMessage(error, t);
+        setRoutingError(message);
+        if (notify) {
+          showNotification(
+            `${t('chatgpt_web.account_info.routing.load_failed')}: ${message}`,
+            'error'
+          );
+        }
+        return null;
+      } finally {
+        if (routingAbortRef.current === abortController) {
+          routingAbortRef.current = null;
+          if (mountedRef.current && isConnectionGenerationCurrent(generation)) {
+            setRoutingLoading(false);
+          }
+        }
+      }
+    },
+    [isConnectionGenerationCurrent, readConnectionGeneration, showNotification, t]
+  );
+
   useEffect(() => {
     const previous = previousAvailabilityRef.current;
     const connectionChanged = previous.connectionGenerationVersion !== connectionGenerationVersion;
@@ -879,6 +945,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       abortSaveRefresh();
       abortDiagnosticsRequest();
       abortRawQuotaRequest();
+      abortRoutingRequest();
       hasLoadedRef.current = false;
       diagnosticsLoadedRef.current = false;
       rawQuotaLoadedRef.current = false;
@@ -896,6 +963,10 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       setRawQuotaEndpointUnsupported(false);
       setRawQuotaLoading(false);
       setRawQuotaClearing(false);
+      setRoutingDiagnostics(null);
+      setRoutingError('');
+      setRoutingUnsupported(false);
+      setRoutingLoading(false);
       setUnsupportedState(isChatGptWebAccountInfoUnsupported(connectionGenerationKey));
       const retainedDirty = dirtyFieldsRef.current.size > 0 || savingRef.current;
       setGenerationConflictState(retainedDirty);
@@ -911,9 +982,11 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       abortSaveRefresh();
       abortDiagnosticsRequest();
       abortRawQuotaRequest();
+      abortRoutingRequest();
       setLoading(false);
       setDiagnosticsLoading(false);
       setRawQuotaLoading(false);
+      setRoutingLoading(false);
       return;
     }
     if (!hasLoadedRef.current) {
@@ -930,6 +1003,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     abortSaveRefresh,
     abortDiagnosticsRequest,
     abortRawQuotaRequest,
+    abortRoutingRequest,
     abortSnapshotRequest,
     connectionGenerationKey,
     connectionGenerationVersion,
@@ -1053,6 +1127,25 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   }, [active, disabled, expanded, generationReady, loadError, loadSnapshot, unsupported]);
 
   useEffect(() => {
+    if (disabled || !active || !expanded || !generationReady || unsupported || routingUnsupported) {
+      return;
+    }
+    void loadRoutingDiagnostics(false);
+    const timer = window.setInterval(() => {
+      void loadRoutingDiagnostics(false);
+    }, POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [
+    active,
+    disabled,
+    expanded,
+    generationReady,
+    loadRoutingDiagnostics,
+    routingUnsupported,
+    unsupported,
+  ]);
+
+  useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
@@ -1062,8 +1155,15 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       abortSaveRefresh();
       abortDiagnosticsRequest();
       abortRawQuotaRequest();
+      abortRoutingRequest();
     };
-  }, [abortDiagnosticsRequest, abortRawQuotaRequest, abortSaveRefresh, abortSnapshotRequest]);
+  }, [
+    abortDiagnosticsRequest,
+    abortRawQuotaRequest,
+    abortRoutingRequest,
+    abortSaveRefresh,
+    abortSnapshotRequest,
+  ]);
 
   useEffect(() => {
     const synchronizeUnsupported = (key: string, nextUnsupported: boolean) => {
@@ -1076,9 +1176,11 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
         abortSaveRefresh();
         abortDiagnosticsRequest();
         abortRawQuotaRequest();
+        abortRoutingRequest();
         setLoading(false);
         setDiagnosticsLoading(false);
         setRawQuotaLoading(false);
+        setRoutingLoading(false);
       }
     };
     synchronizeUnsupported(
@@ -1086,7 +1188,13 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       isChatGptWebAccountInfoUnsupported(connectionGenerationKeyRef.current)
     );
     return subscribeChatGptWebAccountInfoCapability(synchronizeUnsupported);
-  }, [abortDiagnosticsRequest, abortRawQuotaRequest, abortSaveRefresh, abortSnapshotRequest]);
+  }, [
+    abortDiagnosticsRequest,
+    abortRawQuotaRequest,
+    abortRoutingRequest,
+    abortSaveRefresh,
+    abortSnapshotRequest,
+  ]);
 
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -1498,18 +1606,131 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   const statusItems = snapshot
     ? [
         { key: 'busy', value: `${snapshot.runtime.busy} / ${snapshot.config['refresh-workers']}` },
-        { key: 'queued', value: snapshot.runtime.queued },
-        { key: 'scheduled', value: snapshot.runtime.scheduled },
+        {
+          key: 'immediate_queued',
+          value: snapshot.runtime.immediate_queued ?? snapshot.runtime.queued,
+        },
+        { key: 'task_retry_scheduled', value: snapshot.runtime.task_retry_scheduled ?? 0 },
+        {
+          key: 'transient_recovery_scheduled',
+          value: snapshot.runtime.transient_recovery_scheduled ?? 0,
+        },
+        { key: 'quota_recovery_scheduled', value: snapshot.runtime.quota_recovery_scheduled ?? 0 },
+        {
+          key: 'periodic_review_scheduled',
+          value: snapshot.runtime.periodic_review_scheduled ?? 0,
+        },
         { key: 'inflight', value: snapshot.runtime.inflight },
+        ...(snapshot.runtime.background_relogin
+          ? [
+              {
+                key: 'background_relogin_queued',
+                value: snapshot.runtime.background_relogin.queued,
+              },
+              {
+                key: 'background_relogin_delayed',
+                value: snapshot.runtime.background_relogin.delayed,
+              },
+              {
+                key: 'background_relogin_running',
+                value: snapshot.runtime.background_relogin.running,
+              },
+            ]
+          : []),
+        {
+          key: 'max_automatic_attempts',
+          value: snapshot.runtime.max_automatic_attempts ?? snapshot.config['max-retries'] + 1,
+        },
         { key: 'refresh_count', value: snapshot.runtime.refresh_count },
         { key: 'retry_count', value: snapshot.runtime.retry_count },
         { key: 'failed_count', value: snapshot.runtime.failed_count },
         {
-          key: 'last_error',
-          value: snapshot.runtime.last_error || t('chatgpt_web.account_info.no_error'),
+          key: 'last_failure_at',
+          value: snapshot.runtime.last_failure_at
+            ? formatDateTime(snapshot.runtime.last_failure_at)
+            : '—',
+        },
+        {
+          key: 'last_success_at',
+          value: snapshot.runtime.last_success_at
+            ? formatDateTime(snapshot.runtime.last_success_at)
+            : '—',
+        },
+        {
+          key: 'last_failure',
+          value:
+            snapshot.runtime.last_failure ||
+            snapshot.runtime.last_error ||
+            t('chatgpt_web.account_info.no_error'),
         },
       ]
     : [];
+  const recoveryStateCounts = Object.entries(snapshot?.runtime.recovery_state_counts ?? {})
+    .filter(([, count]) => Number(count) > 0)
+    .sort((left, right) => Number(right[1]) - Number(left[1]));
+  const failureCounts = Object.entries(snapshot?.runtime.failure_counts ?? {})
+    .filter(([, count]) => Number(count) > 0)
+    .sort((left, right) => Number(right[1]) - Number(left[1]));
+  const routingSummary = useMemo(() => {
+    const priorities = routingDiagnostics?.routing.priorities ?? [];
+    const sum = (read: (priority: (typeof priorities)[number]) => number) =>
+      priorities.reduce((total, priority) => total + Math.max(0, read(priority) || 0), 0);
+    const capacityValues = priorities.map((priority) => priority.request_capacity);
+    const hasUnlimited = capacityValues.some(
+      (capacity) => capacity.mode === 'unlimited' || capacity.mode === 'mixed'
+    );
+    const hasLimited = capacityValues.some(
+      (capacity) =>
+        capacity.mode === 'limited' ||
+        capacity.mode === 'mixed' ||
+        Math.max(0, capacity.limited_credentials ?? 0) > 0
+    );
+    const configuredSlots = capacityValues.reduce(
+      (total, capacity) => total + Math.max(0, capacity.configured_slots ?? 0),
+      0
+    );
+    const remainingSlots = capacityValues.reduce(
+      (total, capacity) => total + Math.max(0, capacity.remaining_slots ?? 0),
+      0
+    );
+    const configuredRpm = capacityValues.reduce(
+      (total, capacity) => total + Math.max(0, capacity.configured_rpm ?? 0),
+      0
+    );
+    const resetCandidates = capacityValues
+      .map((capacity) => capacity.earliest_consumed_reset_at)
+      .filter((value): value is string => Boolean(value))
+      .sort((left, right) => new Date(left).getTime() - new Date(right).getTime());
+    return {
+      priorities,
+      total: sum((priority) => priority.total),
+      ready: sum((priority) => priority.ready_before_request_limit),
+      eligible: sum((priority) => priority.eligible_now),
+      requestLimited: sum((priority) => priority.request_limited),
+      quotaExhausted: sum((priority) => priority.quota_exhausted),
+      unavailable: sum((priority) => priority.unavailable),
+      cooldown: sum((priority) => priority.cooldown),
+      hasUnlimited,
+      hasLimited,
+      configuredSlots,
+      remainingSlots,
+      configuredRpm,
+      earliestResetAt: resetCandidates[0] ?? null,
+    };
+  }, [routingDiagnostics]);
+  const formatRoutingCapacity = (value: number): number | string => {
+    const normalized = Math.round(Math.max(0, value));
+    if (!routingSummary.hasUnlimited) return normalized;
+    const unlimitedLabel = t('chatgpt_web.account_info.routing.unlimited');
+    return routingSummary.hasLimited
+      ? `${unlimitedLabel} + ${normalized.toLocaleString()}`
+      : unlimitedLabel;
+  };
+
+  const handleRuntimeRefresh = useCallback(() => {
+    void loadSnapshot();
+    void loadRoutingDiagnostics(true);
+  }, [loadRoutingDiagnostics, loadSnapshot]);
 
   return (
     <>
@@ -1676,8 +1897,8 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => void loadSnapshot()}
-              loading={loading}
+              onClick={handleRuntimeRefresh}
+              loading={loading || routingLoading}
               disabled={
                 disabled || externalSaving || saving || dirty || unsupported || generationConflict
               }
@@ -1715,15 +1936,139 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
               </span>
             </div>
           ) : (
-            <dl className={styles.statusGrid}>
-              {statusItems.map((item) => (
-                <div key={item.key} data-field={item.key}>
-                  <dt>{t(`chatgpt_web.account_info.status.${item.key}`)}</dt>
-                  <dd>{item.value}</dd>
+            <>
+              <dl className={styles.statusGrid}>
+                {statusItems.map((item) => (
+                  <div key={item.key} data-field={item.key}>
+                    <dt>{t(`chatgpt_web.account_info.status.${item.key}`)}</dt>
+                    <dd>{item.value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <div className={styles.accountInfoRuntimeDetails}>
+                <div>
+                  <strong>{t('chatgpt_web.account_info.recovery_states_title')}</strong>
+                  <div className={styles.runtimeBadges}>
+                    {recoveryStateCounts.length > 0 ? (
+                      recoveryStateCounts.map(([state, count]) => (
+                        <span key={state}>
+                          {t(`auth_files.chatgpt_web_recovery_states.${state}`, {
+                            defaultValue: state,
+                          })}{' '}
+                          · {count}
+                        </span>
+                      ))
+                    ) : (
+                      <span>{t('chatgpt_web.account_info.no_recovery_states')}</span>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </dl>
+                <div>
+                  <strong>{t('chatgpt_web.account_info.failure_distribution_title')}</strong>
+                  <div className={styles.runtimeBadges}>
+                    {failureCounts.length > 0 ? (
+                      failureCounts.map(([code, count]) => (
+                        <span key={code}>
+                          {code} · {count}
+                        </span>
+                      ))
+                    ) : (
+                      <span>{t('chatgpt_web.account_info.no_error')}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {snapshot.refresh_persistence?.enabled ? (
+                <dl className={`${styles.statusGrid} ${styles.persistenceGrid}`}>
+                  {[
+                    [
+                      'persistence_active',
+                      `${snapshot.refresh_persistence.active} / ${snapshot.refresh_persistence.concurrency}`,
+                    ],
+                    [
+                      'persistence_queued',
+                      `${snapshot.refresh_persistence.queued} / ${snapshot.refresh_persistence.queue_limit}`,
+                    ],
+                    ['persistence_peak', snapshot.refresh_persistence.peak_active],
+                    [
+                      'persistence_backpressure',
+                      snapshot.refresh_persistence.refresh_persist_backpressure,
+                    ],
+                    ['persistence_rejected', snapshot.refresh_persistence.rejected],
+                  ].map(([key, value]) => (
+                    <div key={String(key)} data-field={String(key)}>
+                      <dt>{t(`chatgpt_web.account_info.status.${key}`)}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
+            </>
           )}
+
+          <section className={styles.routingCapacityPanel}>
+            <div className={styles.routingCapacityHeader}>
+              <div>
+                <h3>{t('chatgpt_web.account_info.routing.title')}</h3>
+                <p>{t('chatgpt_web.account_info.routing.description')}</p>
+              </div>
+              <span>gpt-image-2</span>
+            </div>
+            {routingUnsupported || unsupported ? (
+              <div className={styles.statusEmpty}>
+                {t('chatgpt_web.account_info.routing.unsupported')}
+              </div>
+            ) : routingError && !routingDiagnostics ? (
+              <div className={styles.statusEmpty}>
+                {t('chatgpt_web.account_info.routing.load_failed')}: {routingError}
+              </div>
+            ) : !routingDiagnostics ? (
+              <div className={styles.statusEmpty}>
+                {routingLoading ? <LoadingSpinner size={18} /> : null}
+                {t('chatgpt_web.account_info.routing.loading')}
+              </div>
+            ) : (
+              <>
+                {routingError ? (
+                  <p className={styles.routingCapacityWarning}>
+                    {t('chatgpt_web.account_info.routing.stale')}: {routingError}
+                  </p>
+                ) : null}
+                <dl className={styles.routingCapacityGrid}>
+                  {[
+                    ['total', routingSummary.total],
+                    ['ready', routingSummary.ready],
+                    ['eligible', routingSummary.eligible],
+                    ['remaining_slots', formatRoutingCapacity(routingSummary.remainingSlots)],
+                    ['configured_slots', formatRoutingCapacity(routingSummary.configuredSlots)],
+                    ['configured_rpm', formatRoutingCapacity(routingSummary.configuredRpm)],
+                    ['request_limited', routingSummary.requestLimited],
+                    ['quota_exhausted', routingSummary.quotaExhausted],
+                    ['unavailable', routingSummary.unavailable],
+                    ['cooldown', routingSummary.cooldown],
+                    [
+                      'earliest_reset',
+                      routingSummary.earliestResetAt
+                        ? formatDateTime(routingSummary.earliestResetAt)
+                        : '—',
+                    ],
+                  ].map(([key, value]) => (
+                    <div key={String(key)}>
+                      <dt>{t(`chatgpt_web.account_info.routing.${key}`)}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className={styles.routingPriorityList}>
+                  {routingSummary.priorities.map((priority) => (
+                    <span key={priority.priority}>
+                      P{priority.priority} · {priority.eligible_now}/{priority.total}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
 
           <ConfigDisclosure
             id="config-chatgpt-web-account-info-diagnostics"

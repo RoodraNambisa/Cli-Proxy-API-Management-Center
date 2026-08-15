@@ -270,6 +270,33 @@ describe('ChatGPT Web account info and image quota', () => {
     expect(remove).toHaveBeenCalledWith(connection, '/chatgpt-web/account-info/diagnostics');
   });
 
+  test('uses the read-only routing diagnostics endpoint with an explicit provider and model', async () => {
+    const connection = {
+      apiBase: 'https://routing.example/v0/management',
+      managementKey: 'secret',
+      timeout: 30_000,
+    };
+    const response = {
+      routing: { provider: 'chatgpt-web', model: 'gpt-image-2', priorities: [] },
+      request_execution_metrics: {},
+    };
+    const get = vi.spyOn(apiClient, 'getAtConnection').mockResolvedValue(response);
+    const abortController = new AbortController();
+
+    await expect(
+      chatGptWebApi.getRoutingDiagnostics(
+        'chatgpt-web',
+        'gpt-image-2',
+        connection,
+        abortController.signal
+      )
+    ).resolves.toEqual(response);
+    expect(get).toHaveBeenCalledWith(connection, '/routing/diagnostics', {
+      params: { provider: 'chatgpt-web', model: 'gpt-image-2' },
+      signal: abortController.signal,
+    });
+  });
+
   test('normalizes null, missing, and malformed diagnostic record collections', async () => {
     const get = vi
       .spyOn(apiClient, 'get')
@@ -515,6 +542,78 @@ describe('ChatGPT Web account info and image quota', () => {
     await waitFor(() => expect(getAccountInfo).toHaveBeenCalledTimes(2));
     expect(getAccountInfo).toHaveBeenNthCalledWith(1, saveConnection, expect.any(AbortSignal));
     expect(getAccountInfo).toHaveBeenNthCalledWith(2, saveConnection, expect.any(AbortSignal));
+  });
+
+  test('shows categorized recovery work, persistent failures, and fixed-window routing capacity', async () => {
+    const initial = createSnapshot();
+    initial.runtime = {
+      ...initial.runtime,
+      immediate_queued: 8,
+      task_retry_scheduled: 5,
+      transient_recovery_scheduled: 3,
+      quota_recovery_scheduled: 11,
+      periodic_review_scheduled: 17,
+      max_automatic_attempts: 4,
+      last_failure: 'account_unverified',
+      last_failure_at: '2026-08-16T00:00:00Z',
+      last_success_at: '2026-08-16T00:05:00Z',
+      failure_counts: { account_unverified: 9 },
+      recovery_state_counts: { manual_recovery_required: 27 },
+    };
+    initial.refresh_persistence = {
+      enabled: true,
+      concurrency: 1,
+      queue_limit: 512,
+      queued: 6,
+      active: 1,
+      peak_active: 1,
+      refresh_persist_backpressure: 12,
+      rejected: 0,
+    };
+    vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(initial);
+    const getRouting = vi.spyOn(chatGptWebApi, 'getRoutingDiagnostics').mockResolvedValue({
+      routing: {
+        provider: 'chatgpt-web',
+        model: 'gpt-image-2',
+        priorities: [
+          {
+            priority: 0,
+            total: 1000,
+            quota_exhausted: 100,
+            cooldown: 20,
+            unavailable: 30,
+            ready_before_request_limit: 850,
+            request_limited: 50,
+            eligible_now: 800,
+            earliest_request_limit_reset_at: '2026-08-16T00:10:00Z',
+            request_capacity: {
+              mode: 'limited',
+              limited_credentials: 850,
+              unlimited_credentials: 0,
+              configured_slots: 850,
+              remaining_slots: 800,
+              configured_rpm: 850,
+              earliest_consumed_reset_at: '2026-08-16T00:10:00Z',
+            },
+          },
+        ],
+      },
+      request_execution_metrics: {},
+    });
+
+    render(<ChatGptWebAccountInfoPanel />);
+    await waitFor(() => expect(chatGptWebApi.getAccountInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
+    await waitFor(() => expect(getRouting).toHaveBeenCalledTimes(1));
+
+    expect(screen.getByText('account_unverified')).not.toBeNull();
+    expect(screen.getByText(/manual_recovery_required.*27/)).not.toBeNull();
+    const routingPanel = screen
+      .getByText('chatgpt_web.account_info.routing.title')
+      .closest('section') as HTMLElement;
+    expect(within(routingPanel).getByText('1000')).not.toBeNull();
+    expect(within(routingPanel).getAllByText('800').length).toBeGreaterThan(0);
+    expect(within(routingPanel).getAllByText('850').length).toBeGreaterThan(0);
   });
 
   test('defaults a missing auto-refresh field to enabled and saves the disabled switch', async () => {

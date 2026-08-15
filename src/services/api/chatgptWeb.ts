@@ -14,6 +14,7 @@ import type {
   ChatGptWebLoginProxyConfigPatch,
   ChatGptWebMutationTask,
   ChatGptWebReloginResponse,
+  ChatGptWebRoutingDiagnosticsSnapshot,
   ChatGptWebSentinelConfig,
   ChatGptWebSentinelConfigPatch,
   ChatGptWebSentinelSnapshot,
@@ -182,6 +183,18 @@ export const chatGptWebApi = {
     return signal
       ? apiClient.get('/chatgpt-web/account-info', { signal })
       : apiClient.get('/chatgpt-web/account-info');
+  },
+
+  getRoutingDiagnostics(
+    provider: string,
+    model: string,
+    connection?: ApiClientConnectionSnapshot,
+    signal?: AbortSignal
+  ): Promise<ChatGptWebRoutingDiagnosticsSnapshot> {
+    const options = { params: { provider, model }, ...(signal ? { signal } : {}) };
+    return connection
+      ? apiClient.getAtConnection(connection, '/routing/diagnostics', options)
+      : apiClient.get('/routing/diagnostics', options);
   },
 
   putAccountInfo(config: ChatGptWebAccountInfoConfig): Promise<unknown> {

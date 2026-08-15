@@ -30,6 +30,7 @@ import {
   TokenBreakdownChart,
   CostTrendChart,
   ServiceHealthCard,
+  FailureSummaryCard,
   useUsageData,
   useSparklines,
   useChartData,
@@ -142,6 +143,7 @@ export function UsagePage() {
     modelPrices,
     summaryResource,
     healthResource,
+    failureResource,
     ratesResource,
     tokensResource,
     costsResource,
@@ -400,6 +402,8 @@ export function UsagePage() {
 
       {/* Service Health */}
       <ServiceHealthCard resource={healthResource} />
+
+      <FailureSummaryCard resource={failureResource} />
 
       {/* Charts Grid */}
       <div className={styles.chartsGrid}>

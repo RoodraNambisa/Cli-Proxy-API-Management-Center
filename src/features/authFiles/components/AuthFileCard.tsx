@@ -183,6 +183,21 @@ export function AuthFileCard(props: AuthFileCardProps) {
     .trim()
     .toLowerCase();
   const lifecycleReason = String(file.lifecycle_reason ?? '').trim();
+  const accountInfoRecoveryState = String(file.account_info_recovery_state ?? 'idle')
+    .trim()
+    .toLowerCase();
+  const accountInfoRecoveryStateKey = `auth_files.chatgpt_web_recovery_states.${accountInfoRecoveryState}`;
+  const translatedAccountInfoRecoveryState = t(accountInfoRecoveryStateKey);
+  const accountInfoRecoveryStateLabel =
+    translatedAccountInfoRecoveryState !== accountInfoRecoveryStateKey
+      ? translatedAccountInfoRecoveryState
+      : accountInfoRecoveryState;
+  const accountInfoRecoveryNeedsAttention = [
+    'manual_recovery_required',
+    'relogin_pending',
+    'reauth_required',
+    'interaction_required',
+  ].includes(accountInfoRecoveryState);
   const criticalLifecycleState = CHATGPT_WEB_CRITICAL_LIFECYCLE_STATES.has(lifecycleState);
   const lifecycleNeedsAttention = Boolean(lifecycleState && lifecycleState !== 'active');
   const credentialMode = String(file.credential_mode ?? '')
@@ -246,6 +261,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     isRetainedCodex ||
     (isChatGptWeb && (sourceMissing || tokenOnly)) ||
     (isChatGptWeb && lifecycleNeedsAttention) ||
+    (isChatGptWeb && accountInfoRecoveryNeedsAttention) ||
     hasLastErrorStatusCode ||
     (Boolean(rawStatusMessage) && !HEALTHY_STATUS_MESSAGES.has(rawStatusMessage.toLowerCase()));
   const displayStatusMessage = isRetiredGeminiCli
@@ -309,6 +325,25 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const imageQuotaUpdatedAt = metadataTime(file.quota_updated_at);
   const imageQuotaNextRefreshAt = metadataTime(file.quota_next_refresh_at);
   const imageQuotaLastError = String(file.quota_last_error ?? '').trim();
+  const recoveryAttempts = Math.max(0, Number(file.account_info_recovery_attempts) || 0);
+  const recoveryMaxAttempts = Math.max(
+    recoveryAttempts,
+    Number(file.account_info_recovery_max_attempts) || 0
+  );
+  const consecutiveFailures = Math.max(0, Number(file.account_info_consecutive_failures) || 0);
+  const recoveryStopReason = String(file.account_info_recovery_stop_reason ?? '').trim();
+  const accountInfoLastFailure = String(file.account_info_last_failure ?? '').trim();
+  const accountInfoLastFailureAt = metadataTime(file.account_info_last_failure_at);
+  const accountInfoLastSuccessAt = metadataTime(file.account_info_last_success_at);
+  const accountInfoManualRecheckable = file.account_info_manual_recheckable === true;
+  const recoveryNeedsRelogin =
+    accountInfoRecoveryState === 'relogin_pending' ||
+    accountInfoRecoveryState === 'reauth_required';
+  const showAccountInfoRecovery =
+    accountInfoRecoveryState !== 'idle' ||
+    recoveryAttempts > 0 ||
+    consecutiveFailures > 0 ||
+    Boolean(accountInfoLastFailure);
   const lastDiagnostic = file.last_diagnostic ?? file.last_error?.diagnostic;
   const diagnosticStatus = lastDiagnostic?.http_status ?? file.last_error?.http_status ?? 0;
   const diagnosticCode = lastDiagnostic?.code ?? file.last_error?.code ?? '';
@@ -373,17 +408,19 @@ export function AuthFileCard(props: AuthFileCardProps) {
           ? t('auth_files.health_status_disabled')
           : isChatGptWeb && criticalLifecycleState
             ? lifecycleLabel
-            : isChatGptWeb && sourceMissing
-              ? t('auth_files.chatgpt_web_source_missing_state')
-              : isChatGptWeb && tokenOnly
-                ? t('auth_files.chatgpt_web_token_only_state')
-                : isChatGptWeb && lifecycleState
-                  ? lifecycleLabel
-                  : hasStatusWarning
-                    ? t('auth_files.health_status_warning')
-                    : rawStatusMessage
-                      ? t('auth_files.health_status_healthy')
-                      : t('auth_files.status_toggle_label');
+            : isChatGptWeb && accountInfoRecoveryNeedsAttention
+              ? accountInfoRecoveryStateLabel
+              : isChatGptWeb && sourceMissing
+                ? t('auth_files.chatgpt_web_source_missing_state')
+                : isChatGptWeb && tokenOnly
+                  ? t('auth_files.chatgpt_web_token_only_state')
+                  : isChatGptWeb && lifecycleState
+                    ? lifecycleLabel
+                    : hasStatusWarning
+                      ? t('auth_files.health_status_warning')
+                      : rawStatusMessage
+                        ? t('auth_files.health_status_healthy')
+                        : t('auth_files.status_toggle_label');
   const stateBadgeClass = isRetiredGeminiCli
     ? styles.stateBadgeWarning
     : isRuntimeOnly
@@ -393,7 +430,11 @@ export function AuthFileCard(props: AuthFileCardProps) {
         : file.disabled
           ? styles.stateBadgeDisabled
           : isChatGptWeb &&
-              (criticalLifecycleState || sourceMissing || tokenOnly || lifecycleNeedsAttention)
+              (criticalLifecycleState ||
+                sourceMissing ||
+                tokenOnly ||
+                lifecycleNeedsAttention ||
+                accountInfoRecoveryNeedsAttention)
             ? styles.stateBadgeWarning
             : hasStatusWarning
               ? styles.stateBadgeWarning
@@ -656,6 +697,99 @@ export function AuthFileCard(props: AuthFileCardProps) {
                     <span>{t('auth_files.chatgpt_web_last_relogin')}</span>
                     <strong>{lastReloginAt}</strong>
                   </div>
+                </div>
+              ) : null}
+              {showAccountInfoRecovery ? (
+                <div
+                  className={`${styles.chatGptWebRecoveryPanel} ${
+                    accountInfoRecoveryState === 'manual_recovery_required' ||
+                    accountInfoRecoveryState === 'interaction_required' ||
+                    accountInfoRecoveryState === 'reauth_required'
+                      ? styles.chatGptWebRecoveryAttention
+                      : ''
+                  }`}
+                  role="status"
+                >
+                  <div className={styles.chatGptWebRecoveryHeader}>
+                    <div>
+                      <span>{t('auth_files.chatgpt_web_recovery_label')}</span>
+                      <strong>{accountInfoRecoveryStateLabel}</strong>
+                    </div>
+                    {recoveryMaxAttempts > 0 ? (
+                      <span>
+                        {t('auth_files.chatgpt_web_recovery_attempts', {
+                          current: recoveryAttempts,
+                          max: recoveryMaxAttempts,
+                        })}
+                      </span>
+                    ) : null}
+                  </div>
+                  {!compact ? (
+                    <div className={styles.chatGptWebRecoveryGrid}>
+                      <div>
+                        <span>{t('auth_files.chatgpt_web_consecutive_failures')}</span>
+                        <strong>{consecutiveFailures}</strong>
+                      </div>
+                      <div>
+                        <span>{t('auth_files.chatgpt_web_last_failure_at')}</span>
+                        <strong>{accountInfoLastFailureAt}</strong>
+                      </div>
+                      <div>
+                        <span>{t('auth_files.chatgpt_web_last_success_at')}</span>
+                        <strong>{accountInfoLastSuccessAt}</strong>
+                      </div>
+                      <div>
+                        <span>{t('auth_files.chatgpt_web_recovery_next_action')}</span>
+                        <strong>{accountInfoRecoveryStateLabel}</strong>
+                      </div>
+                      {recoveryStopReason ? (
+                        <div className={styles.chatGptWebRecoveryWide}>
+                          <span>{t('auth_files.chatgpt_web_recovery_stop_reason')}</span>
+                          <strong>{recoveryStopReason}</strong>
+                        </div>
+                      ) : null}
+                      {accountInfoLastFailure ? (
+                        <div className={styles.chatGptWebRecoveryWide}>
+                          <span>{t('auth_files.chatgpt_web_last_failure')}</span>
+                          <strong>{accountInfoLastFailure}</strong>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {accountInfoManualRecheckable || recoveryNeedsRelogin ? (
+                    <div className={styles.chatGptWebRecoveryActions}>
+                      {accountInfoManualRecheckable ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => onChatGptWebAccountInfoRefresh(file)}
+                          disabled={
+                            disableControls ||
+                            chatGptWebAccountInfoRefreshBusy ||
+                            chatGptWebAccountInfoRefreshUnsupported
+                          }
+                          loading={chatGptWebAccountInfoRefreshing}
+                        >
+                          {!chatGptWebAccountInfoRefreshing ? <IconRefreshCw size={13} /> : null}
+                          {t('auth_files.chatgpt_web_manual_recheck')}
+                        </Button>
+                      ) : null}
+                      {recoveryNeedsRelogin ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => onChatGptWebRelogin(file)}
+                          disabled={disableControls || chatGptWebReloginBusy}
+                          loading={chatGptWebReloginBusy}
+                        >
+                          {!chatGptWebReloginBusy ? <IconRefreshCw size={13} /> : null}
+                          {t('auth_files.chatgpt_web_relogin')}
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               <div

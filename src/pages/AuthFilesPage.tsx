@@ -104,6 +104,16 @@ const BATCH_BAR_BASE_TRANSFORM = 'translateX(-50%)';
 const BATCH_BAR_HIDDEN_TRANSFORM = 'translateX(-50%) translateY(56px)';
 const DEFAULT_REGULAR_PAGE_SIZE = 9;
 const DEFAULT_COMPACT_PAGE_SIZE = 12;
+const ALL_RECOVERY_FILTER = 'all';
+const RECOVERY_FILTER_VALUES = [
+  'idle',
+  'auto_retrying',
+  'manual_checking',
+  'manual_recovery_required',
+  'relogin_pending',
+  'reauth_required',
+  'interaction_required',
+] as const;
 
 const isRetiredGeminiCliAuthFile = (file: { provider?: unknown; type?: unknown }) =>
   [file.provider, file.type].some(
@@ -312,6 +322,7 @@ export function AuthFilesPage() {
   const [filter, setFilter] = useState<'all' | string>('all');
   const [planFilter, setPlanFilter] = useState(ALL_PLAN_FILTER);
   const [priorityFilter, setPriorityFilter] = useState(ALL_PRIORITY_FILTER);
+  const [recoveryFilter, setRecoveryFilter] = useState(ALL_RECOVERY_FILTER);
   const [problemOnly, setProblemOnly] = useState(false);
   const [enabledOnly, setEnabledOnly] = useState(false);
   const [disabledOnly, setDisabledOnly] = useState(false);
@@ -353,6 +364,7 @@ export function AuthFilesPage() {
       provider: filter,
       plan: planFilter,
       priority: priorityFilter,
+      recoveryState: recoveryFilter,
       problemOnly,
       enabledOnly,
       disabledOnly,
@@ -368,6 +380,7 @@ export function AuthFilesPage() {
       pageSize,
       planFilter,
       priorityFilter,
+      recoveryFilter,
       problemOnly,
       sortMode,
     ]
@@ -633,6 +646,15 @@ export function AuthFilesPage() {
       if (typeof persisted.priorityFilter === 'string' && persisted.priorityFilter.trim()) {
         setPriorityFilter(persisted.priorityFilter);
       }
+      if (
+        typeof persisted.recoveryFilter === 'string' &&
+        (persisted.recoveryFilter === ALL_RECOVERY_FILTER ||
+          RECOVERY_FILTER_VALUES.includes(
+            persisted.recoveryFilter as (typeof RECOVERY_FILTER_VALUES)[number]
+          ))
+      ) {
+        setRecoveryFilter(persisted.recoveryFilter);
+      }
       if (typeof persisted.problemOnly === 'boolean') {
         setProblemOnly(persisted.problemOnly);
       }
@@ -685,6 +707,7 @@ export function AuthFilesPage() {
       filter,
       planFilter,
       priorityFilter,
+      recoveryFilter,
       problemOnly,
       enabledOnly,
       disabledOnly,
@@ -708,6 +731,7 @@ export function AuthFilesPage() {
     planFilter,
     problemOnly,
     priorityFilter,
+    recoveryFilter,
     search,
     sortMode,
     uiStateHydrated,
@@ -833,9 +857,15 @@ export function AuthFilesPage() {
             if (problemOnly && !hasAuthFileStatusMessage(file)) return false;
             if (enabledOnly && file.disabled === true) return false;
             if (disabledOnly && file.disabled !== true) return false;
+            if (
+              recoveryFilter !== ALL_RECOVERY_FILTER &&
+              String(file.account_info_recovery_state ?? 'idle').toLowerCase() !== recoveryFilter
+            ) {
+              return false;
+            }
             return true;
           }),
-    [disabledOnly, enabledOnly, files, problemOnly, serverPagination]
+    [disabledOnly, enabledOnly, files, problemOnly, recoveryFilter, serverPagination]
   );
 
   const availablePlanFilters = useMemo(
@@ -884,6 +914,17 @@ export function AuthFilesPage() {
       ),
     ];
   }, [availablePriorityFilters, t]);
+
+  const recoveryFilterOptions = useMemo(
+    () => [
+      { value: ALL_RECOVERY_FILTER, label: t('auth_files.chatgpt_web_recovery_filter_all') },
+      ...RECOVERY_FILTER_VALUES.map((state) => ({
+        value: state,
+        label: t(`auth_files.chatgpt_web_recovery_states.${state}`),
+      })),
+    ],
+    [t]
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -979,6 +1020,9 @@ export function AuthFilesPage() {
           item['error_message'],
           item['last_error'],
           item.lastError,
+          item.account_info_recovery_state,
+          item.account_info_recovery_stop_reason,
+          item.account_info_last_failure,
           getAuthFileStatusMessage(item),
         ].some((value) => {
           const content = stringifySearchValue(value);
@@ -1566,7 +1610,7 @@ export function AuthFilesPage() {
   );
 
   const deleteAllButtonLabel = (() => {
-    if (enabledOnly || disabledOnly) {
+    if (enabledOnly || disabledOnly || recoveryFilter !== ALL_RECOVERY_FILTER) {
       return t('auth_files.delete_filtered_result_button');
     }
     if (problemOnly) {
@@ -1683,10 +1727,12 @@ export function AuthFilesPage() {
               onClick={() =>
                 void handleDeleteAll({
                   filter,
+                  recoveryState: recoveryFilter,
                   problemOnly,
                   enabledOnly,
                   disabledOnly,
                   onResetFilterToAll: () => setFilter('all'),
+                  onResetRecoveryState: () => setRecoveryFilter(ALL_RECOVERY_FILTER),
                   onResetProblemOnly: () => setProblemOnly(false),
                   onResetEnabledOnly: () => setEnabledOnly(false),
                   onResetDisabledOnly: () => setDisabledOnly(false),
@@ -1827,6 +1873,20 @@ export function AuthFilesPage() {
                     options={priorityFilterOptions}
                     onChange={handlePriorityFilterChange}
                     ariaLabel={t('auth_files.priority_filter_label')}
+                    fullWidth
+                  />
+                </div>
+                <div className={styles.filterItem}>
+                  <label>{t('auth_files.chatgpt_web_recovery_filter_label')}</label>
+                  <Select
+                    className={styles.sortSelect}
+                    value={recoveryFilter}
+                    options={recoveryFilterOptions}
+                    onChange={(value) => {
+                      setRecoveryFilter(value || ALL_RECOVERY_FILTER);
+                      setPage(1);
+                    }}
+                    ariaLabel={t('auth_files.chatgpt_web_recovery_filter_label')}
                     fullWidth
                   />
                 </div>

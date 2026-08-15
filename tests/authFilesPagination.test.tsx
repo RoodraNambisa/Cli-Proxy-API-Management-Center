@@ -21,6 +21,7 @@ const params = (page: number): AuthFilesListParams => ({
   provider: 'chatgpt-web',
   plan: 'free',
   priority: '0',
+  recoveryState: 'manual_recovery_required',
   problemOnly: false,
   enabledOnly: true,
   disabledOnly: false,
@@ -57,6 +58,7 @@ describe('auth files server-side pagination', () => {
           provider: 'chatgpt-web',
           plan: 'free',
           priority: '0',
+          account_info_recovery_state: 'manual_recovery_required',
           problem_only: false,
           enabled_only: true,
           disabled_only: false,
@@ -68,6 +70,66 @@ describe('auth files server-side pagination', () => {
     expect(response.files.map((file) => file.name)).toEqual(['z.json', 'a.json']);
     expect(response.total).toBe(100);
     expect(response.pagination?.enabled).toBe(true);
+  });
+
+  test('uses filtered batch deletion when only a recovery-state filter is active', async () => {
+    const manualRecoveryFile = {
+      name: 'manual.json',
+      type: 'chatgpt-web',
+      account_info_recovery_state: 'manual_recovery_required',
+    };
+    const healthyFile = {
+      name: 'healthy.json',
+      type: 'chatgpt-web',
+      account_info_recovery_state: 'idle',
+    };
+    const deleteAll = vi.spyOn(authFilesApi, 'deleteAll').mockResolvedValue(undefined);
+    const deleteFiles = vi.spyOn(authFilesApi, 'deleteFiles').mockResolvedValue({
+      status: 'ok',
+      deleted: 1,
+      files: ['manual.json'],
+      retained: 0,
+      retainedFiles: [],
+      failed: [],
+    });
+    vi.spyOn(authFilesApi, 'listPaged').mockResolvedValue({
+      files: [healthyFile],
+      total: 1,
+    });
+    const resetRecoveryState = vi.fn();
+    const { result } = renderHook(() =>
+      useAuthFilesData({
+        refreshKeyStats: vi.fn().mockResolvedValue(undefined),
+        active: false,
+        operationFiles: [manualRecoveryFile, healthyFile],
+        resolveFilteredFiles: vi.fn().mockResolvedValue([manualRecoveryFile]),
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleDeleteAll({
+        filter: 'all',
+        recoveryState: 'manual_recovery_required',
+        problemOnly: false,
+        enabledOnly: false,
+        disabledOnly: false,
+        onResetFilterToAll: vi.fn(),
+        onResetRecoveryState: resetRecoveryState,
+        onResetProblemOnly: vi.fn(),
+        onResetEnabledOnly: vi.fn(),
+        onResetDisabledOnly: vi.fn(),
+      });
+    });
+    const confirmation = useNotificationStore.getState().confirmation.options;
+    expect(confirmation?.message).toBe('auth_files.delete_filtered_result_confirm');
+
+    await act(async () => {
+      await confirmation?.onConfirm();
+    });
+
+    expect(deleteAll).not.toHaveBeenCalled();
+    expect(deleteFiles).toHaveBeenCalledWith(['manual.json']);
+    expect(resetRecoveryState).toHaveBeenCalledOnce();
   });
 
   test('falls back to a legacy full response when pagination metadata is absent', async () => {

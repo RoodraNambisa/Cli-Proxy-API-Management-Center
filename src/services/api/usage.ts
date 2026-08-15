@@ -19,6 +19,8 @@ import type {
   UsageHealthResponse,
   UsageFacetsQuery,
   UsageFacetsResponse,
+  UsageFailureSummaryQuery,
+  UsageFailureSummaryResponse,
   UsageModelPrices,
   UsagePricesResponse,
   UsageRangeQuery,
@@ -163,6 +165,13 @@ export const usageApi = {
    */
   getUsageSummary: (query?: UsageSummaryQuery, options: UsageRequestOptions = {}) =>
     apiClient.get<UsageEnvelope<Record<string, unknown>>>('/usage/summary', {
+      timeout: USAGE_TIMEOUT_MS,
+      params: normalizeRangeQuery(query),
+      signal: options.signal,
+    }),
+
+  getUsageFailureSummary: (query?: UsageFailureSummaryQuery, options: UsageRequestOptions = {}) =>
+    apiClient.get<UsageFailureSummaryResponse>('/usage/failures/summary', {
       timeout: USAGE_TIMEOUT_MS,
       params: normalizeRangeQuery(query),
       signal: options.signal,

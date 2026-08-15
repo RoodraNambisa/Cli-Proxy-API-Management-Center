@@ -807,6 +807,90 @@
   }
 }
 
+.chatGptWebRecoveryPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, #c58a16 32%, var(--border-color));
+  border-radius: 7px;
+  background: color-mix(in srgb, #c58a16 7%, var(--bg-primary));
+}
+
+.chatGptWebRecoveryAttention {
+  border-color: color-mix(in srgb, var(--warning-color) 58%, var(--border-color));
+  background: color-mix(in srgb, var(--warning-color) 11%, var(--bg-primary));
+}
+
+.chatGptWebRecoveryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 10px;
+  }
+
+  strong {
+    color: var(--warning-text);
+    font-size: 11px;
+  }
+
+  > span {
+    padding: 2px 6px;
+    border: 1px solid color-mix(in srgb, var(--warning-color) 32%, var(--border-color));
+    border-radius: 999px;
+    color: var(--warning-text);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.chatGptWebRecoveryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  padding-top: 7px;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+
+  > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 10px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.chatGptWebRecoveryWide {
+  grid-column: 1 / -1;
+}
+
+.chatGptWebRecoveryActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .chatGptWebDiagnostic {
   padding-top: 8px;
   border-top: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);

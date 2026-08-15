@@ -74,6 +74,7 @@ export type AuthFilesListParams = {
   provider?: string;
   plan?: string;
   priority?: string;
+  recoveryState?: string;
   problemOnly?: boolean;
   enabledOnly?: boolean;
   disabledOnly?: boolean;
@@ -683,6 +684,7 @@ const authFilesListQuery = (params: AuthFilesListParams) => ({
   provider: params.provider || 'all',
   plan: params.plan || 'all',
   priority: params.priority || 'all',
+  account_info_recovery_state: params.recoveryState || 'all',
   problem_only: params.problemOnly === true,
   enabled_only: params.enabledOnly === true,
   disabled_only: params.disabledOnly === true,

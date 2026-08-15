@@ -3,7 +3,12 @@ export { useUsageData } from './hooks/useUsageData';
 export type { UsagePayload, UseUsageDataReturn } from './hooks/useUsageData';
 
 export { useSparklines } from './hooks/useSparklines';
-export type { SparklineData, SparklineBundle, UseSparklinesOptions, UseSparklinesReturn } from './hooks/useSparklines';
+export type {
+  SparklineData,
+  SparklineBundle,
+  UseSparklinesOptions,
+  UseSparklinesReturn,
+} from './hooks/useSparklines';
 
 export { useChartData } from './hooks/useChartData';
 export type { UseChartDataOptions, UseChartDataReturn } from './hooks/useChartData';
@@ -38,6 +43,9 @@ export type { CostTrendChartProps } from './CostTrendChart';
 
 export { ServiceHealthCard } from './ServiceHealthCard';
 export type { ServiceHealthCardProps } from './ServiceHealthCard';
+
+export { FailureSummaryCard } from './FailureSummaryCard';
+export type { FailureSummaryCardProps } from './FailureSummaryCard';
 
 export { RequestEventsDetailsCard } from './RequestEventsDetailsCard';
 export type { RequestEventsDetailsCardProps } from './RequestEventsDetailsCard';

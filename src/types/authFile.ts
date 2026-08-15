@@ -22,6 +22,14 @@ export type AuthFileType =
 export type AuthCooldownScope = 'auth' | 'model';
 export type CodexAuthMode = 'oauth' | 'agentIdentity';
 export type ChatGptWebQuotaState = 'unknown' | 'available' | 'exhausted';
+export type ChatGptWebAccountInfoRecoveryState =
+  | 'idle'
+  | 'auto_retrying'
+  | 'manual_checking'
+  | 'manual_recovery_required'
+  | 'relogin_pending'
+  | 'reauth_required'
+  | 'interaction_required';
 
 export interface AuthFileModelItem {
   id: string;
@@ -127,6 +135,15 @@ export interface AuthFileItem {
   quota_next_refresh_at?: string;
   quota_last_error?: string;
   account_info_refreshable?: boolean;
+  account_info_manual_recheckable?: boolean;
+  account_info_recovery_state?: ChatGptWebAccountInfoRecoveryState | string;
+  account_info_recovery_attempts?: number;
+  account_info_recovery_max_attempts?: number;
+  account_info_consecutive_failures?: number;
+  account_info_recovery_stop_reason?: string;
+  account_info_last_failure?: string;
+  account_info_last_failure_at?: string;
+  account_info_last_success_at?: string;
   credential_mode?: string;
   refresh_strategy?: string;
   token_only?: boolean;

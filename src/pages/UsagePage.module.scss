@@ -73,11 +73,163 @@
   font-size: 12px;
 }
 
+.failureSummaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+  background:
+    radial-gradient(90% 150% at 100% 0%, rgba($error-color, 0.1), transparent 58%),
+    var(--bg-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.failureSummaryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+
+  h3,
+  p {
+    margin: 0;
+  }
+
+  h3 {
+    color: var(--text-primary);
+    font-size: 15px;
+  }
+
+  p {
+    margin-top: 3px;
+    color: var(--text-tertiary);
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  > span {
+    color: var(--error-color);
+    font-size: 24px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.failureBoundaryGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+
+  > div {
+    min-width: 0;
+    padding: 10px;
+    border-right: 1px solid var(--border-color);
+  }
+
+  dt {
+    color: var(--text-tertiary);
+    font-size: 10px;
+  }
+
+  dd {
+    margin: 4px 0 0;
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.failureDimensionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.failureDimension {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  background: var(--bg-secondary);
+
+  h4 {
+    margin: 0 0 10px;
+    color: var(--text-primary);
+    font-size: 12px;
+  }
+}
+
+.failureRows {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.failureRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.failureRowHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    flex-shrink: 0;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.failureBarTrack {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border-color) 62%, transparent);
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #d97706, var(--error-color));
+  }
+}
+
 .hint {
   color: var(--text-secondary);
   font-size: 12px;
   text-align: center;
   padding: 16px;
+}
+
+@include mobile {
+  .failureBoundaryGrid,
+  .failureDimensionsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .failureBoundaryGrid > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--border-color);
+  }
 }
 
 // Stats Grid

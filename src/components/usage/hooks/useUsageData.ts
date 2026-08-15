@@ -13,6 +13,7 @@ import type {
   UsageAuthsQuery,
   UsageAuthSummary,
   UsageCostsResponse,
+  UsageFailureSummary,
   UsageHealthResponse,
   UsageMeta,
   UsageModelPrices,
@@ -81,6 +82,7 @@ type UsageCapability =
   | 'summary'
   | 'auths'
   | 'health'
+  | 'failures'
   | 'rates'
   | 'tokens'
   | 'costs'
@@ -240,6 +242,7 @@ export interface UseUsageDataReturn {
   authQuery: UsageAuthQueryState;
   authPagination: UsageAuthPagination;
   healthResource: UsageResource<UsageHealthResponse>;
+  failureResource: UsageResource<UsageFailureSummary>;
   ratesResource: UsageResource<UsageRatesResponse>;
   tokensResource: UsageResource<UsageTokensResponse>;
   costsResource: UsageResource<UsageCostsResponse>;
@@ -296,6 +299,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
   });
   const [healthResource, setHealthResource] =
     useState<UsageResource<UsageHealthResponse>>(emptyResource);
+  const [failureResource, setFailureResource] =
+    useState<UsageResource<UsageFailureSummary>>(emptyResource);
   const [ratesResource, setRatesResource] =
     useState<UsageResource<UsageRatesResponse>>(emptyResource);
   const [tokensResource, setTokensResource] =
@@ -490,6 +495,7 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
       setSummaryResource((current) => loadingResource(current));
       setAuthResource((current) => loadingResource(current));
       setHealthResource((current) => loadingResource(current));
+      setFailureResource((current) => loadingResource(current));
       setRatesResource((current) => loadingResource(current));
       setTokensResource((current) => loadingResource(current));
       setCostsResource((current) => loadingResource(current));
@@ -523,6 +529,7 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         setSummaryResource(terminalResource('unsupported'));
         setAuthResource(terminalResource('unsupported'));
         setHealthResource(terminalResource('unsupported'));
+        setFailureResource(terminalResource('unsupported'));
         setRatesResource(terminalResource('unsupported'));
         setTokensResource(terminalResource('unsupported'));
         setCostsResource(terminalResource('unsupported'));
@@ -534,6 +541,7 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         setSummaryResource({ status: 'error', data: null, error: metaResult.error });
         setAuthResource({ status: 'error', data: null, error: metaResult.error });
         setHealthResource({ status: 'error', data: null, error: metaResult.error });
+        setFailureResource({ status: 'error', data: null, error: metaResult.error });
         setRatesResource({ status: 'error', data: null, error: metaResult.error });
         setTokensResource({ status: 'error', data: null, error: metaResult.error });
         setCostsResource({ status: 'error', data: null, error: metaResult.error });
@@ -547,6 +555,7 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         setSummaryResource(terminalResource('disabled'));
         setAuthResource(terminalResource('disabled'));
         setHealthResource(terminalResource('disabled'));
+        setFailureResource(terminalResource('disabled'));
         setRatesResource(terminalResource('disabled'));
         setTokensResource(terminalResource('disabled'));
         setCostsResource(terminalResource('disabled'));
@@ -559,6 +568,7 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
         setSummaryResource({ status: 'error', data: null, error: message });
         setAuthResource({ status: 'error', data: null, error: message });
         setHealthResource({ status: 'error', data: null, error: message });
+        setFailureResource({ status: 'error', data: null, error: message });
         setRatesResource({ status: 'error', data: null, error: message });
         setTokensResource({ status: 'error', data: null, error: message });
         setCostsResource({ status: 'error', data: null, error: message });
@@ -614,6 +624,18 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
       const tasks = [
         applyResource(summaryPromise, setSummaryResource),
         loadAuthPage(range, authQueryRef.current, controller.signal),
+        applyResource(
+          requestResource(
+            'failures',
+            () => usageApi.getUsageFailureSummary(range, { signal: controller.signal }),
+            (response) => !response.failures || Number(response.failures.total) <= 0
+          ).then((result) =>
+            result.data
+              ? { ...result, data: result.data.failures ?? null }
+              : { status: result.status, data: null, error: result.error }
+          ),
+          setFailureResource
+        ),
         applyResource(
           requestResource(
             'health',
@@ -800,6 +822,7 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
     authQuery,
     authPagination,
     healthResource,
+    failureResource,
     ratesResource,
     tokensResource,
     costsResource,

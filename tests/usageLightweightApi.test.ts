@@ -1,7 +1,9 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { createElement } from 'react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { useChartData } from '@/components/usage/hooks/useChartData';
 import { useUsageData } from '@/components/usage/hooks/useUsageData';
+import { FailureSummaryCard } from '@/components/usage/FailureSummaryCard';
 import { buildUsageDetailsQuery } from '@/components/usage/requestDetailsQuery';
 import { apiClient } from '@/services/api/client';
 import { usageApi } from '@/services/api/usage';
@@ -35,6 +37,7 @@ describe('lightweight usage management API', () => {
       { signal: controller.signal }
     );
     await usageApi.getUsageCosts({ ...range, bucket: 'hour' }, { signal: controller.signal });
+    await usageApi.getUsageFailureSummary(range, { signal: controller.signal });
 
     expect(get).toHaveBeenNthCalledWith(1, '/usage/summary', {
       timeout: 60_000,
@@ -67,6 +70,43 @@ describe('lightweight usage management API', () => {
       params: { ...range, bucket: 'hour' },
       signal: controller.signal,
     });
+    expect(get).toHaveBeenNthCalledWith(6, '/usage/failures/summary', {
+      timeout: 60_000,
+      params: range,
+      signal: controller.signal,
+    });
+  });
+
+  test('renders safe failure proportions and execution boundaries without raw payloads', () => {
+    render(
+      createElement(FailureSummaryCard, {
+        resource: {
+          status: 'ready',
+          error: '',
+          data: {
+            as_of: '2026-08-16T00:00:00Z',
+            total: 3,
+            main: 2,
+            auxiliary: 1,
+            boundaries: {
+              credential_selected: 2,
+              upstream_committed: 1,
+              auth_request_slot_consumed: 1,
+            },
+            by_error_code: [{ value: 'http_401', count: 2, percent: 66.67 }],
+            by_failure_stage: [{ value: 'upstream', count: 2, percent: 66.67 }],
+            by_model: [],
+            by_source: [],
+            by_hour: [],
+          },
+        },
+      })
+    );
+
+    expect(screen.getByText('HTTP 401')).not.toBeNull();
+    expect(screen.getAllByText(/2 · 66\.7%/)).toHaveLength(2);
+    expect(document.body.textContent).not.toContain('response_body');
+    expect(document.body.textContent).not.toContain('credential-token');
   });
 
   test('normalizes server-side details paging, auth filters, and source facets', async () => {
@@ -137,6 +177,24 @@ describe('lightweight usage management API', () => {
       () => authsPending as ReturnType<typeof usageApi.getUsageAuths>
     );
     vi.spyOn(usageApi, 'getUsageHealth').mockResolvedValue({ items: [] });
+    vi.spyOn(usageApi, 'getUsageFailureSummary').mockResolvedValue({
+      failures: {
+        as_of: '2026-07-15T00:00:00Z',
+        total: 3,
+        main: 2,
+        auxiliary: 1,
+        boundaries: {
+          credential_selected: 2,
+          upstream_committed: 1,
+          auth_request_slot_consumed: 1,
+        },
+        by_error_code: [{ value: 'http_401', count: 2, percent: 66.67 }],
+        by_failure_stage: [{ value: 'upstream', count: 2, percent: 66.67 }],
+        by_model: [],
+        by_source: [],
+        by_hour: [],
+      },
+    });
     vi.spyOn(usageApi, 'getUsageRates').mockResolvedValue({ request_count: 0, token_count: 0 });
     vi.spyOn(usageApi, 'getUsageTokens').mockResolvedValue({ total_tokens: 42 });
     vi.spyOn(usageApi, 'getUsageCosts').mockResolvedValue({
@@ -149,6 +207,8 @@ describe('lightweight usage management API', () => {
     const { result } = renderHook(() => useUsageData({ timeRange: '24h' }));
 
     await waitFor(() => expect(result.current.summaryResource.status).toBe('ready'));
+    await waitFor(() => expect(result.current.failureResource.status).toBe('ready'));
+    expect(result.current.failureResource.data?.boundaries.upstream_committed).toBe(1);
     expect(result.current.usage?.total_requests).toBe(3);
     expect(result.current.authResource.status).toBe('loading');
 
@@ -182,6 +242,24 @@ describe('lightweight usage management API', () => {
       ],
     });
     vi.spyOn(usageApi, 'getUsageHealth').mockResolvedValue({ items: [] });
+    vi.spyOn(usageApi, 'getUsageFailureSummary').mockResolvedValue({
+      failures: {
+        as_of: '2026-07-15T00:00:00Z',
+        total: 0,
+        main: 0,
+        auxiliary: 0,
+        boundaries: {
+          credential_selected: 0,
+          upstream_committed: 0,
+          auth_request_slot_consumed: 0,
+        },
+        by_error_code: [],
+        by_failure_stage: [],
+        by_model: [],
+        by_source: [],
+        by_hour: [],
+      },
+    });
     vi.spyOn(usageApi, 'getUsageRates').mockResolvedValue({ request_count: 0, token_count: 0 });
     vi.spyOn(usageApi, 'getUsageTokens').mockResolvedValue({ total_tokens: 0 });
     vi.spyOn(usageApi, 'getUsageCosts').mockResolvedValue({

@@ -147,10 +147,12 @@ const formatMissingCooldownTargets = (missing: string[]): string => {
 
 type DeleteAllOptions = {
   filter: string;
+  recoveryState: string;
   problemOnly: boolean;
   enabledOnly: boolean;
   disabledOnly: boolean;
   onResetFilterToAll: () => void;
+  onResetRecoveryState: () => void;
   onResetProblemOnly: () => void;
   onResetEnabledOnly: () => void;
   onResetDisabledOnly: () => void;
@@ -925,22 +927,28 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     async (deleteAllOptions: DeleteAllOptions) => {
       const {
         filter,
+        recoveryState,
         problemOnly,
         enabledOnly,
         disabledOnly,
         onResetFilterToAll,
+        onResetRecoveryState,
         onResetProblemOnly,
         onResetEnabledOnly,
         onResetDisabledOnly,
       } = deleteAllOptions;
       const isFiltered = filter !== 'all';
+      const isRecoveryFiltered = recoveryState !== 'all';
       const isProblemOnly = problemOnly === true;
       const isEnabledOnly = enabledOnly === true;
       const isDisabledOnly = disabledOnly === true;
       const isStatusFiltered = isEnabledOnly || isDisabledOnly;
       const typeLabel = isFiltered ? getTypeLabel(t, filter) : t('auth_files.filter_all');
       let filteredOperationFiles = operationFiles;
-      if ((isFiltered || isProblemOnly || isStatusFiltered) && resolveFilteredFiles) {
+      if (
+        (isFiltered || isRecoveryFiltered || isProblemOnly || isStatusFiltered) &&
+        resolveFilteredFiles
+      ) {
         try {
           filteredOperationFiles = await resolveFilteredFiles();
         } catch (error) {
@@ -949,11 +957,17 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
           return;
         }
       }
-      if (isFiltered || isProblemOnly || isStatusFiltered) {
+      if (isFiltered || isRecoveryFiltered || isProblemOnly || isStatusFiltered) {
         const names = filteredOperationFiles
           .filter((file) => {
             if (isRuntimeOnlyAuthFile(file)) return false;
             if (isFiltered && file.type !== filter) return false;
+            if (
+              isRecoveryFiltered &&
+              String(file.account_info_recovery_state ?? 'idle').toLowerCase() !== recoveryState
+            ) {
+              return false;
+            }
             if (isProblemOnly && !hasAuthFileStatusMessage(file)) return false;
             if (isEnabledOnly && file.disabled === true) return false;
             if (isDisabledOnly && file.disabled !== true) return false;
@@ -963,7 +977,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         if (openDependencyDelete(names)) return;
       }
       let confirmMessage = t('auth_files.delete_all_confirm');
-      if (isStatusFiltered) {
+      if (isStatusFiltered || isRecoveryFiltered) {
         confirmMessage = t('auth_files.delete_filtered_result_confirm');
       } else if (isProblemOnly) {
         confirmMessage = isFiltered
@@ -981,7 +995,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         onConfirm: async () => {
           setDeletingAll(true);
           try {
-            if (!isFiltered && !isProblemOnly && !isStatusFiltered) {
+            if (!isFiltered && !isRecoveryFiltered && !isProblemOnly && !isStatusFiltered) {
               await authFilesApi.deleteAll();
               showNotification(t('auth_files.delete_all_success'), 'success');
               setFiles((prev) => prev.filter((file) => isRuntimeOnlyAuthFile(file)));
@@ -991,6 +1005,12 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
               const filesToDelete = filteredOperationFiles.filter((file) => {
                 if (isRuntimeOnlyAuthFile(file)) return false;
                 if (isFiltered && file.type !== filter) return false;
+                if (
+                  isRecoveryFiltered &&
+                  String(file.account_info_recovery_state ?? 'idle').toLowerCase() !== recoveryState
+                ) {
+                  return false;
+                }
                 if (isProblemOnly && !hasAuthFileStatusMessage(file)) return false;
                 if (isEnabledOnly && file.disabled === true) return false;
                 if (isDisabledOnly && file.disabled !== true) return false;
@@ -999,7 +1019,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
               if (filesToDelete.length === 0) {
                 let emptyMessage = t('auth_files.delete_filtered_none', { type: typeLabel });
-                if (isStatusFiltered) {
+                if (isStatusFiltered || isRecoveryFiltered) {
                   emptyMessage = t('auth_files.delete_filtered_result_none');
                 } else if (isProblemOnly) {
                   emptyMessage = isFiltered
@@ -1030,7 +1050,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
                   }),
                   'warning'
                 );
-              } else if (failed === 0 && isStatusFiltered) {
+              } else if (failed === 0 && (isStatusFiltered || isRecoveryFiltered)) {
                 showNotification(
                   t('auth_files.delete_filtered_result_success', { count: success }),
                   'success'
@@ -1050,7 +1070,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
                   t('auth_files.delete_filtered_success', { count: success, type: typeLabel }),
                   'success'
                 );
-              } else if (isStatusFiltered) {
+              } else if (isStatusFiltered || isRecoveryFiltered) {
                 showNotification(
                   t('auth_files.delete_filtered_result_partial', { success, failed }),
                   'warning'
@@ -1075,6 +1095,9 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
               if (isFiltered) {
                 onResetFilterToAll();
+              }
+              if (isRecoveryFiltered) {
+                onResetRecoveryState();
               }
               if (isProblemOnly) {
                 onResetProblemOnly();
