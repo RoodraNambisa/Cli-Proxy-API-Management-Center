@@ -16,3 +16,19 @@ describe('normalizeConfigResponse management diagnostics', () => {
     ).toBe('safe');
   });
 });
+
+describe('normalizeConfigResponse Codex configuration', () => {
+  it('reads session identity spoofing from YAML and camel-case keys', () => {
+    expect(
+      normalizeConfigResponse({
+        codex: { 'identity-confuse': true, 'spoof-session-identity': true },
+      }).codex
+    ).toEqual({ identityConfuse: true, spoofSessionIdentity: true });
+
+    expect(
+      normalizeConfigResponse({
+        codex: { identityConfuse: false, spoofSessionIdentity: true },
+      }).codex
+    ).toEqual({ identityConfuse: false, spoofSessionIdentity: true });
+  });
+});

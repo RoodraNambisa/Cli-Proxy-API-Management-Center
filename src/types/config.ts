@@ -157,6 +157,7 @@ export interface CodexHeaderDefaultsConfig {
 
 export interface CodexConfig {
   identityConfuse?: boolean;
+  spoofSessionIdentity?: boolean;
 }
 
 export interface RemoteManagementConfig {

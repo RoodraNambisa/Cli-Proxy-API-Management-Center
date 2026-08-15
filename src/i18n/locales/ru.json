@@ -2089,6 +2089,8 @@
           "ws_auth_desc": "Включить аутентификацию WebSocket (/v1/ws)",
           "codex_identity_confuse": "Codex identity confuse",
           "codex_identity_confuse_desc": "Стабильно переназначать session, window и turn ID Codex на аккаунт перед upstream-запросами, затем восстанавливать исходные ID в ответах.",
+          "codex_spoof_session_identity": "Подмена идентификаторов сессии Codex",
+          "codex_spoof_session_identity_desc": "Дополнять отсутствующие Session, Thread, Window и Turn ID для запросов Codex OAuth и Agent Identity. Явно заданные клиентом значения сохраняются.",
           "codex_fingerprint_ja3": "Принудительный TLS-профиль Codex",
           "codex_fingerprint_ja3_desc": "Заставлять upstream-запросы Codex использовать нативный Codex TLS 1.2 ClientHello, HTTP/1.1 и порядок заголовков Codex. По умолчанию выключено.",
           "codex_fingerprint_force_http1": "Принудительно Codex HTTP/1.1",

@@ -2090,6 +2090,8 @@
           "ws_auth_desc": "Enable WebSocket authentication (/v1/ws)",
           "codex_identity_confuse": "Codex Identity Confuse",
           "codex_identity_confuse_desc": "Stably remap Codex session, window, and turn identities per account before upstream requests, then restore original IDs in responses.",
+          "codex_spoof_session_identity": "Spoof Codex Session Identity",
+          "codex_spoof_session_identity_desc": "Fill missing Session, Thread, Window, and Turn identities for Codex OAuth and Agent Identity requests. Explicit client values are preserved.",
           "codex_fingerprint_ja3": "Force Codex TLS Profile",
           "codex_fingerprint_ja3_desc": "Force Codex upstream requests to use the native Codex TLS 1.2 ClientHello, HTTP/1.1, and Codex request header order. Disabled by default.",
           "codex_fingerprint_force_http1": "Force Codex HTTP/1.1",

@@ -274,6 +274,7 @@ export type VisualConfigValues = {
   proxyUrl: string;
   forceModelPrefix: boolean;
   codexIdentityConfuse: boolean;
+  codexSpoofSessionIdentity: boolean;
   codexFingerprintJA3: boolean;
   codexFingerprintForceHTTP1: boolean;
   codexFingerprintImagesForceHTTP1: boolean;
@@ -362,6 +363,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   proxyUrl: '',
   forceModelPrefix: false,
   codexIdentityConfuse: false,
+  codexSpoofSessionIdentity: false,
   codexFingerprintJA3: false,
   codexFingerprintForceHTTP1: false,
   codexFingerprintImagesForceHTTP1: false,

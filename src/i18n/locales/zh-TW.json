@@ -2113,6 +2113,8 @@
           "ws_auth_desc": "啟用 WebSocket 連線驗證（/v1/ws）",
           "codex_identity_confuse": "Codex 身份混淆",
           "codex_identity_confuse_desc": "按帳號穩定混淆 Codex session、window 和 turn 身份，上游返回後再恢復原始 ID",
+          "codex_spoof_session_identity": "偽裝 Codex 會話身份",
+          "codex_spoof_session_identity_desc": "為 Codex OAuth 和 Agent Identity 請求補齊缺失的 Session、Thread、Window 與 Turn 身份；用戶端明確提供的值保持不變。",
           "codex_fingerprint_ja3": "強制 Codex TLS 特徵",
           "codex_fingerprint_ja3_desc": "對 Codex 上游請求強制使用 Codex 原生 TLS 1.2 ClientHello、HTTP/1.1 和 Codex 請求頭順序，預設關閉",
           "codex_fingerprint_force_http1": "強制 Codex HTTP/1.1",

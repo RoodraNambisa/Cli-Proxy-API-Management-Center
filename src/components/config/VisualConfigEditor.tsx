@@ -4213,6 +4213,19 @@ export function VisualConfigEditor({
                       onChange={(codexIdentityConfuse) => onChange({ codexIdentityConfuse })}
                     />
                     <ToggleRow
+                      title={t(
+                        'config_management.visual.sections.network.codex_spoof_session_identity'
+                      )}
+                      description={t(
+                        'config_management.visual.sections.network.codex_spoof_session_identity_desc'
+                      )}
+                      checked={values.codexSpoofSessionIdentity}
+                      disabled={disabled}
+                      onChange={(codexSpoofSessionIdentity) =>
+                        onChange({ codexSpoofSessionIdentity })
+                      }
+                    />
+                    <ToggleRow
                       title={t('config_management.visual.sections.network.codex_fingerprint_ja3')}
                       description={t(
                         'config_management.visual.sections.network.codex_fingerprint_ja3_desc'

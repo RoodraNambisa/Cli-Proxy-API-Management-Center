@@ -2171,6 +2171,12 @@ function getNextDirtyFields(
       nextValues.codexIdentityConfuse === baselineValues.codexIdentityConfuse
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexSpoofSessionIdentity')) {
+    updateDirty(
+      'codexSpoofSessionIdentity',
+      nextValues.codexSpoofSessionIdentity === baselineValues.codexSpoofSessionIdentity
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintJA3')) {
     updateDirty(
       'codexFingerprintJA3',
@@ -2913,6 +2919,9 @@ export function useVisualConfig() {
         proxyUrl: typeof parsed['proxy-url'] === 'string' ? parsed['proxy-url'] : '',
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
+        codexSpoofSessionIdentity: Boolean(
+          codex?.['spoof-session-identity'] ?? codex?.spoofSessionIdentity
+        ),
         codexFingerprintJA3,
         codexFingerprintForceHTTP1,
         codexFingerprintImagesForceHTTP1,
@@ -3331,9 +3340,14 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['request-retry'], values.requestRetry);
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
-        if (docHas(doc, ['codex']) || values.codexIdentityConfuse) {
+        if (
+          docHas(doc, ['codex']) ||
+          values.codexIdentityConfuse ||
+          values.codexSpoofSessionIdentity
+        ) {
           ensureMapInDoc(doc, ['codex']);
           doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
+          doc.setIn(['codex', 'spoof-session-identity'], values.codexSpoofSessionIdentity);
           deleteIfMapEmpty(doc, ['codex']);
         }
         if (

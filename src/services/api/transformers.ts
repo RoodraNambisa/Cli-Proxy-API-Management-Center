@@ -857,6 +857,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   if (isRecord(codex)) {
     config.codex = {
       identityConfuse: normalizeBoolean(codex['identity-confuse'] ?? codex.identityConfuse),
+      spoofSessionIdentity: normalizeBoolean(
+        codex['spoof-session-identity'] ?? codex.spoofSessionIdentity
+      ),
     };
   }
   const codexFingerprint = raw['codex-fingerprint'] ?? raw.codexFingerprint;

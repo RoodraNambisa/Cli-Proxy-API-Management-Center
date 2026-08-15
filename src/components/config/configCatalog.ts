@@ -121,6 +121,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     dirtyPrefixes: [
       'codexCustomModels',
       'codexIdentityConfuse',
+      'codexSpoofSessionIdentity',
       'codexFingerprint',
       'codexHeaderDefaults',
       'disabledImageGenerationTool',
@@ -451,12 +452,21 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.codex_fingerprint_ja3',
     yamlKeys: [
       'codex-identity-confuse',
+      'codex.spoof-session-identity',
       'codex-fingerprint',
       'codex-fingerprint.ja3',
       'codex-fingerprint.force-http1',
       'codex-fingerprint.images-force-http1',
     ],
-    aliases: ['ja3', 'tls clienthello', '身份混淆', '指纹'],
+    aliases: [
+      'ja3',
+      'tls clienthello',
+      'session identity',
+      'spoof session identity',
+      '身份混淆',
+      '会话身份伪装',
+      '指纹',
+    ],
   },
   {
     id: 'config-codex-headers',
