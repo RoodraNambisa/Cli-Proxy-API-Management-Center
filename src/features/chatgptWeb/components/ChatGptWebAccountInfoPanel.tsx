@@ -1,4 +1,5 @@
 import {
+  Component,
   forwardRef,
   useCallback,
   useEffect,
@@ -6,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
@@ -232,6 +234,33 @@ const getErrorStatus = (error: unknown): number | undefined => {
   const status = (error as { status?: unknown }).status;
   return typeof status === 'number' ? status : undefined;
 };
+
+type DiagnosticContentBoundaryProps = {
+  children: ReactNode;
+  fallback: ReactNode;
+  resetKey: unknown;
+};
+
+class DiagnosticContentBoundary extends Component<
+  DiagnosticContentBoundaryProps,
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidUpdate(previous: DiagnosticContentBoundaryProps) {
+    if (this.state.failed && previous.resetKey !== this.props.resetKey) {
+      this.setState({ failed: false });
+    }
+  }
+
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
 
 const isSameGeneration = (
   left: ConnectionGeneration | null,
@@ -940,6 +969,8 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       ? t('chatgpt_web.account_info.periodic_every', { minutes: periodicMinutes })
       : t('chatgpt_web.account_info.periodic_off');
   const resetDisabled = externalSaving || saving;
+  const diagnosticRecords = Array.isArray(diagnostics?.records) ? diagnostics.records : [];
+  const rawQuotaRecords = Array.isArray(rawQuota?.records) ? rawQuota.records : [];
   const diagnosticsSummary = diagnostics
     ? t('chatgpt_web.account_info.diagnostics.summary_counts', {
         unique: diagnostics.unique_count,
@@ -955,7 +986,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       );
   const rawQuotaSummary = rawQuota
     ? t('chatgpt_web.account_info.raw_quota.summary_counts', {
-        count: rawQuota.records.length,
+        count: rawQuotaRecords.length,
         bytes: rawQuota.total_bytes,
         evicted: rawQuota.evicted_count,
       })
@@ -1744,51 +1775,63 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
               ) : undefined
             }
           >
-            <div className={styles.diagnosticsContent} aria-busy={diagnosticsLoading}>
-              {!diagnosticsSupported ? (
-                <div className={styles.statusEmpty}>
-                  <span>{t('chatgpt_web.account_info.diagnostics.unsupported')}</span>
-                </div>
-              ) : diagnosticsError ? (
+            <DiagnosticContentBoundary
+              resetKey={diagnostics}
+              fallback={
                 <div className={styles.statusEmpty} role="alert">
-                  <span>
-                    {t('chatgpt_web.account_info.diagnostics.load_failed')}: {diagnosticsError}
-                  </span>
+                  <span>{t('chatgpt_web.account_info.diagnostics.load_failed')}</span>
                 </div>
-              ) : !diagnostics ? (
-                <div className={styles.statusEmpty}>
-                  {diagnosticsLoading ? <LoadingSpinner size={18} /> : null}
-                  <span>{t('chatgpt_web.account_info.diagnostics.loading')}</span>
-                </div>
-              ) : (
-                <>
-                  <dl className={styles.diagnosticsStats}>
-                    {[
-                      ['unique_count', diagnostics.unique_count],
-                      ['total_count', diagnostics.total_count],
-                      ['evicted_count', diagnostics.evicted_count],
-                      ['capacity', diagnostics.capacity],
-                    ].map(([key, value]) => (
-                      <div key={key}>
-                        <dt>{t(`chatgpt_web.account_info.diagnostics.stats.${key}`)}</dt>
-                        <dd>{value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                  {diagnostics.records.length === 0 ? (
-                    <div className={styles.statusEmpty}>
-                      <span>{t('chatgpt_web.account_info.diagnostics.empty')}</span>
-                    </div>
-                  ) : (
-                    <div className={styles.diagnosticsList}>
-                      {diagnostics.records.map((record) => (
-                        <DiagnosticRecord key={record.id} record={record} />
+              }
+            >
+              <div className={styles.diagnosticsContent} aria-busy={diagnosticsLoading}>
+                {!diagnosticsSupported ? (
+                  <div className={styles.statusEmpty}>
+                    <span>{t('chatgpt_web.account_info.diagnostics.unsupported')}</span>
+                  </div>
+                ) : diagnosticsError ? (
+                  <div className={styles.statusEmpty} role="alert">
+                    <span>
+                      {t('chatgpt_web.account_info.diagnostics.load_failed')}: {diagnosticsError}
+                    </span>
+                  </div>
+                ) : !diagnostics ? (
+                  <div className={styles.statusEmpty}>
+                    {diagnosticsLoading ? <LoadingSpinner size={18} /> : null}
+                    <span>{t('chatgpt_web.account_info.diagnostics.loading')}</span>
+                  </div>
+                ) : (
+                  <>
+                    <dl className={styles.diagnosticsStats}>
+                      {[
+                        ['unique_count', diagnostics.unique_count],
+                        ['total_count', diagnostics.total_count],
+                        ['evicted_count', diagnostics.evicted_count],
+                        ['capacity', diagnostics.capacity],
+                      ].map(([key, value]) => (
+                        <div key={key}>
+                          <dt>{t(`chatgpt_web.account_info.diagnostics.stats.${key}`)}</dt>
+                          <dd>{value}</dd>
+                        </div>
                       ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+                    </dl>
+                    {diagnosticRecords.length === 0 ? (
+                      <div className={styles.statusEmpty}>
+                        <span>{t('chatgpt_web.account_info.diagnostics.empty')}</span>
+                      </div>
+                    ) : (
+                      <div className={styles.diagnosticsList}>
+                        {diagnosticRecords.map((record, index) => (
+                          <DiagnosticRecord
+                            key={record?.id ?? `invalid-diagnostic-${index}`}
+                            record={record}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </DiagnosticContentBoundary>
           </ConfigDisclosure>
 
           <ConfigDisclosure
@@ -1826,7 +1869,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
                       rawQuotaLoading ||
                       !generationReady ||
                       !rawQuota ||
-                      rawQuota.records.length === 0
+                      rawQuotaRecords.length === 0
                     }
                     onClick={handleClearRawQuota}
                   >
@@ -1837,54 +1880,67 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
               ) : undefined
             }
           >
-            <div className={styles.diagnosticsContent} aria-busy={rawQuotaLoading}>
-              {!rawQuotaSupported ? (
-                <div className={styles.statusEmpty}>
-                  <span>{t('chatgpt_web.account_info.raw_quota.unsupported')}</span>
-                </div>
-              ) : rawQuotaError ? (
+            <DiagnosticContentBoundary
+              resetKey={rawQuota}
+              fallback={
                 <div className={styles.statusEmpty} role="alert">
-                  <span>
-                    {t('chatgpt_web.account_info.raw_quota.load_failed')}: {rawQuotaError}
-                  </span>
+                  <span>{t('chatgpt_web.account_info.raw_quota.load_failed')}</span>
                 </div>
-              ) : !rawQuota ? (
-                <div className={styles.statusEmpty}>
-                  {rawQuotaLoading ? <LoadingSpinner size={18} /> : null}
-                  <span>{t('chatgpt_web.account_info.raw_quota.loading')}</span>
-                </div>
-              ) : (
-                <>
-                  <dl className={styles.diagnosticsStats}>
-                    {[
-                      ['records', rawQuota.records.length],
-                      ['total_bytes', rawQuota.total_bytes],
-                      ['evicted_count', rawQuota.evicted_count],
-                      ['capacity', rawQuota.capacity],
-                    ].map(([key, value]) => (
-                      <div key={key}>
-                        <dt>{t(`chatgpt_web.account_info.raw_quota.stats.${key}`)}</dt>
-                        <dd>{value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                  {rawQuota.records.length === 0 ? (
-                    <div className={styles.statusEmpty}>
-                      <span>{t('chatgpt_web.account_info.raw_quota.empty')}</span>
-                    </div>
-                  ) : (
-                    <div className={styles.diagnosticsList}>
-                      {rawQuota.records.map((record) => (
-                        <RawQuotaRecord
-                          key={`${record.auth_index}:${record.captured_at}`}
-                          record={record}
-                        />
+              }
+            >
+              <div className={styles.diagnosticsContent} aria-busy={rawQuotaLoading}>
+                {!rawQuotaSupported ? (
+                  <div className={styles.statusEmpty}>
+                    <span>{t('chatgpt_web.account_info.raw_quota.unsupported')}</span>
+                  </div>
+                ) : rawQuotaError ? (
+                  <div className={styles.statusEmpty} role="alert">
+                    <span>
+                      {t('chatgpt_web.account_info.raw_quota.load_failed')}: {rawQuotaError}
+                    </span>
+                  </div>
+                ) : !rawQuota ? (
+                  <div className={styles.statusEmpty}>
+                    {rawQuotaLoading ? <LoadingSpinner size={18} /> : null}
+                    <span>{t('chatgpt_web.account_info.raw_quota.loading')}</span>
+                  </div>
+                ) : (
+                  <>
+                    <dl className={styles.diagnosticsStats}>
+                      {[
+                        ['records', rawQuotaRecords.length],
+                        ['total_bytes', rawQuota.total_bytes],
+                        ['evicted_count', rawQuota.evicted_count],
+                        ['capacity', rawQuota.capacity],
+                      ].map(([key, value]) => (
+                        <div key={key}>
+                          <dt>{t(`chatgpt_web.account_info.raw_quota.stats.${key}`)}</dt>
+                          <dd>{value}</dd>
+                        </div>
                       ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+                    </dl>
+                    {rawQuotaRecords.length === 0 ? (
+                      <div className={styles.statusEmpty}>
+                        <span>{t('chatgpt_web.account_info.raw_quota.empty')}</span>
+                      </div>
+                    ) : (
+                      <div className={styles.diagnosticsList}>
+                        {rawQuotaRecords.map((record, index) => (
+                          <RawQuotaRecord
+                            key={
+                              record
+                                ? `${record.auth_index}:${record.captured_at}`
+                                : `invalid-raw-quota-${index}`
+                            }
+                            record={record}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </DiagnosticContentBoundary>
           </ConfigDisclosure>
         </div>
       </ConfigDisclosure>

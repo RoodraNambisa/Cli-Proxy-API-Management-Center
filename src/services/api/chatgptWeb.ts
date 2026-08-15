@@ -27,6 +27,47 @@ import { AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
 const CHATGPT_WEB_RELOGIN_TIMEOUT_MS = 2 * 60 * 1000;
 const accountInfoTaskConnections = new Map<string, ApiClientConnectionSnapshot>();
 
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+
+const finiteNumber = (value: unknown): number =>
+  typeof value === 'number' && Number.isFinite(value) ? value : 0;
+
+const recordArray = <T>(value: unknown): T[] =>
+  Array.isArray(value)
+    ? (value.filter(
+        (entry) => entry !== null && typeof entry === 'object' && !Array.isArray(entry)
+      ) as T[])
+    : [];
+
+const normalizeAccountInfoDiagnostics = (
+  value: unknown
+): ChatGptWebAccountInfoDiagnosticsSnapshot => {
+  const source = asRecord(value);
+  return {
+    enabled: source.enabled === true,
+    capacity: finiteNumber(source.capacity),
+    unique_count: finiteNumber(source.unique_count),
+    total_count: finiteNumber(source.total_count),
+    evicted_count: finiteNumber(source.evicted_count),
+    records: recordArray(source.records),
+  };
+};
+
+const normalizeAccountInfoRawQuota = (value: unknown): ChatGptWebAccountInfoRawQuotaSnapshot => {
+  const source = asRecord(value);
+  return {
+    enabled: source.enabled === true,
+    capacity: finiteNumber(source.capacity),
+    max_bytes: finiteNumber(source.max_bytes),
+    total_bytes: finiteNumber(source.total_bytes),
+    evicted_count: finiteNumber(source.evicted_count),
+    records: recordArray(source.records),
+  };
+};
+
 export const chatGptWebApi = {
   getAutoDeleteDeadStats(signal?: AbortSignal): Promise<ChatGptWebAutoDeleteDeadStats> {
     return signal
@@ -156,44 +197,56 @@ export const chatGptWebApi = {
       : apiClient.patch('/chatgpt-web/account-info', config);
   },
 
-  getAccountInfoDiagnostics(
+  async getAccountInfoDiagnostics(
     connection?: ApiClientConnectionSnapshot,
     signal?: AbortSignal
   ): Promise<ChatGptWebAccountInfoDiagnosticsSnapshot> {
     const path = '/chatgpt-web/account-info/diagnostics';
+    let response: unknown;
     if (connection) {
-      return signal
+      response = signal
         ? apiClient.getAtConnection(connection, path, { signal })
         : apiClient.getAtConnection(connection, path);
+    } else {
+      response = signal ? apiClient.get(path, { signal }) : apiClient.get(path);
     }
-    return signal ? apiClient.get(path, { signal }) : apiClient.get(path);
+    return normalizeAccountInfoDiagnostics(await response);
   },
 
-  clearAccountInfoDiagnostics(
+  async clearAccountInfoDiagnostics(
     connection?: ApiClientConnectionSnapshot
   ): Promise<ChatGptWebAccountInfoDiagnosticsSnapshot> {
     const path = '/chatgpt-web/account-info/diagnostics';
-    return connection ? apiClient.deleteAtConnection(connection, path) : apiClient.delete(path);
+    const response = connection
+      ? await apiClient.deleteAtConnection(connection, path)
+      : await apiClient.delete(path);
+    return normalizeAccountInfoDiagnostics(response);
   },
 
-  getAccountInfoRawQuotaResponses(
+  async getAccountInfoRawQuotaResponses(
     connection?: ApiClientConnectionSnapshot,
     signal?: AbortSignal
   ): Promise<ChatGptWebAccountInfoRawQuotaSnapshot> {
     const path = '/chatgpt-web/account-info/raw-quota-responses';
+    let response: unknown;
     if (connection) {
-      return signal
+      response = signal
         ? apiClient.getAtConnection(connection, path, { signal })
         : apiClient.getAtConnection(connection, path);
+    } else {
+      response = signal ? apiClient.get(path, { signal }) : apiClient.get(path);
     }
-    return signal ? apiClient.get(path, { signal }) : apiClient.get(path);
+    return normalizeAccountInfoRawQuota(await response);
   },
 
-  clearAccountInfoRawQuotaResponses(
+  async clearAccountInfoRawQuotaResponses(
     connection?: ApiClientConnectionSnapshot
   ): Promise<ChatGptWebAccountInfoRawQuotaSnapshot> {
     const path = '/chatgpt-web/account-info/raw-quota-responses';
-    return connection ? apiClient.deleteAtConnection(connection, path) : apiClient.delete(path);
+    const response = connection
+      ? await apiClient.deleteAtConnection(connection, path)
+      : await apiClient.delete(path);
+    return normalizeAccountInfoRawQuota(response);
   },
 
   startAccountInfoRefreshTask(

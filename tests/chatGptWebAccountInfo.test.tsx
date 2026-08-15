@@ -270,6 +270,51 @@ describe('ChatGPT Web account info and image quota', () => {
     expect(remove).toHaveBeenCalledWith(connection, '/chatgpt-web/account-info/diagnostics');
   });
 
+  test('normalizes null, missing, and malformed diagnostic record collections', async () => {
+    const get = vi
+      .spyOn(apiClient, 'get')
+      .mockResolvedValueOnce({
+        enabled: false,
+        capacity: 100,
+        unique_count: 0,
+        total_count: 0,
+        evicted_count: 0,
+        records: null,
+      })
+      .mockResolvedValueOnce({
+        enabled: true,
+        capacity: 20,
+        max_bytes: 1024,
+        total_bytes: 0,
+        evicted_count: 0,
+        records: 'invalid',
+      });
+    const remove = vi
+      .spyOn(apiClient, 'delete')
+      .mockResolvedValueOnce({ enabled: false })
+      .mockResolvedValueOnce({ enabled: false, records: [null, 'bad'] });
+
+    await expect(chatGptWebApi.getAccountInfoDiagnostics()).resolves.toMatchObject({
+      records: [],
+      total_count: 0,
+    });
+    await expect(chatGptWebApi.getAccountInfoRawQuotaResponses()).resolves.toMatchObject({
+      records: [],
+      total_bytes: 0,
+    });
+    await expect(chatGptWebApi.clearAccountInfoDiagnostics()).resolves.toMatchObject({
+      records: [],
+      enabled: false,
+    });
+    await expect(chatGptWebApi.clearAccountInfoRawQuotaResponses()).resolves.toMatchObject({
+      records: [],
+      enabled: false,
+    });
+
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(remove).toHaveBeenCalledTimes(2);
+  });
+
   test('isolates scoped task responses from the current connection global events', async () => {
     apiClient.setConfig({
       apiBase: 'https://new.example',
@@ -592,6 +637,41 @@ describe('ChatGPT Web account info and image quota', () => {
     });
     expect(clearDiagnostics).toHaveBeenCalledTimes(1);
     expect(screen.getByText('chatgpt_web.account_info.diagnostics.empty')).not.toBeNull();
+  });
+
+  test('contains malformed diagnostic records inside their own disclosure panels', async () => {
+    const accountInfo = createSnapshot();
+    accountInfo.config['diagnostics-enabled'] = true;
+    accountInfo.config['raw-quota-response-enabled'] = true;
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(accountInfo);
+    vi.spyOn(chatGptWebApi, 'getAccountInfoDiagnostics').mockResolvedValue({
+      ...createDiagnosticsSnapshot(),
+      records: [null] as unknown as ChatGptWebAccountInfoDiagnosticsSnapshot['records'],
+    });
+    vi.spyOn(chatGptWebApi, 'getAccountInfoRawQuotaResponses').mockResolvedValue({
+      ...createRawQuotaSnapshot(),
+      records: [null] as unknown as ChatGptWebAccountInfoRawQuotaSnapshot['records'],
+    });
+
+    render(<ChatGptWebAccountInfoPanel />);
+    await waitFor(() => expect(chatGptWebApi.getAccountInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /chatgpt_web\.account_info\.diagnostics\.title/ })
+    );
+    await waitFor(() =>
+      expect(screen.getByText('chatgpt_web.account_info.diagnostics.load_failed')).not.toBeNull()
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /chatgpt_web\.account_info\.raw_quota\.title/ })
+    );
+    await waitFor(() =>
+      expect(screen.getByText('chatgpt_web.account_info.raw_quota.load_failed')).not.toBeNull()
+    );
+    expect(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ })).not.toBeNull();
   });
 
   test('saves and inspects raw quota responses only on demand', async () => {
@@ -1880,7 +1960,7 @@ describe('ChatGPT Web account info and image quota', () => {
     expect(start).toHaveBeenLastCalledWith(['retry-web.json'], false, expect.any(Object));
   });
 
-  test('retries a transient automatic refresh failure without leaving the visible scope', async () => {
+  test('leaves transient automatic refresh retries to the backend', async () => {
     vi.useFakeTimers();
     try {
       vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(createSnapshot());
@@ -1908,14 +1988,13 @@ describe('ChatGPT Web account info and image quota', () => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(1500);
       });
-      expect(start).toHaveBeenCalledTimes(2);
-      expect(start).toHaveBeenLastCalledWith(['retry-web.json'], false, expect.any(Object));
+      expect(start).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  test('bounds automatic refresh retries for repeated transient failures', async () => {
+  test('does not recursively retry repeated automatic request failures', async () => {
     vi.useFakeTimers();
     try {
       vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(createSnapshot());
@@ -1937,12 +2016,12 @@ describe('ChatGPT Web account info and image quota', () => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(4800);
       });
-      expect(start).toHaveBeenCalledTimes(4);
+      expect(start).toHaveBeenCalledTimes(1);
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(3000);
       });
-      expect(start).toHaveBeenCalledTimes(4);
+      expect(start).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }
@@ -1976,7 +2055,7 @@ describe('ChatGPT Web account info and image quota', () => {
     }
   });
 
-  test('uses only the inner retry budget for automatic queue-full results', async () => {
+  test('does not resubmit completed automatic queue-full results', async () => {
     vi.useFakeTimers();
     try {
       const queueFullTask: ChatGptWebAccountInfoRefreshTask = {
@@ -2004,12 +2083,12 @@ describe('ChatGPT Web account info and image quota', () => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(5000);
       });
-      expect(start).toHaveBeenCalledTimes(4);
+      expect(start).toHaveBeenCalledTimes(1);
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(5000);
       });
-      expect(start).toHaveBeenCalledTimes(4);
+      expect(start).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }
@@ -3189,7 +3268,7 @@ describe('ChatGPT Web account info and image quota', () => {
     expect(reloadFiles).toHaveBeenCalledTimes(1);
   });
 
-  test('retries names rejected by a concurrent backend queue-capacity race', async () => {
+  test('does not resubmit manual results rejected by a backend queue-capacity race', async () => {
     vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue({
       ...createSnapshot(),
       config: {
@@ -3204,16 +3283,13 @@ describe('ChatGPT Web account info and image quota', () => {
         scheduled: 0,
       },
     });
-    const start = vi
-      .spyOn(chatGptWebApi, 'startAccountInfoRefreshTask')
-      .mockResolvedValueOnce({
-        ...createCompletedTask(),
-        state: 'completed_with_errors',
-        failed: 1,
-        updated: 0,
-        results: [{ name: 'web.json', status: 'failed', error: 'refresh_queue_full' }],
-      })
-      .mockResolvedValueOnce(createCompletedTask());
+    const start = vi.spyOn(chatGptWebApi, 'startAccountInfoRefreshTask').mockResolvedValue({
+      ...createCompletedTask(),
+      state: 'completed_with_errors',
+      failed: 1,
+      updated: 0,
+      results: [{ name: 'web.json', status: 'failed', error: 'refresh_queue_full' }],
+    });
     const reloadFiles = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() =>
       useChatGptWebAccountInfoRefresh({
@@ -3230,15 +3306,15 @@ describe('ChatGPT Web account info and image quota', () => {
       await result.current.refreshSelected();
     });
 
-    expect(start).toHaveBeenCalledTimes(2);
+    expect(start).toHaveBeenCalledTimes(1);
     expect(reloadFiles).toHaveBeenCalledTimes(1);
     expect(useNotificationStore.getState().showNotification).toHaveBeenCalledWith(
-      expect.stringContaining('auth_files.chatgpt_web_account_refresh_success'),
-      'success'
+      'auth_files.chatgpt_web_account_refresh_failed',
+      'error'
     );
   });
 
-  test('stops retrying a name after repeated backend queue-capacity races', async () => {
+  test('does not recursively retry manual backend queue-capacity failures', async () => {
     vi.useFakeTimers();
     try {
       vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue({
@@ -3277,14 +3353,10 @@ describe('ChatGPT Web account info and image quota', () => {
       );
 
       await act(async () => {
-        const refresh = result.current.refreshSelected();
-        for (let retry = 0; retry < 3; retry += 1) {
-          await vi.advanceTimersByTimeAsync(1500);
-        }
-        await refresh;
+        await result.current.refreshSelected();
       });
 
-      expect(start).toHaveBeenCalledTimes(4);
+      expect(start).toHaveBeenCalledTimes(1);
       expect(result.current.manualRefreshing).toBe(false);
       expect(useNotificationStore.getState().showNotification).toHaveBeenCalledWith(
         'auth_files.chatgpt_web_account_refresh_failed',

@@ -16,20 +16,11 @@ const POLL_INTERVAL_MS = 1500;
 const AUTO_REFRESH_DEBOUNCE_MS = 300;
 const MAX_REFRESH_TASK_NAMES = 500;
 const REFRESH_QUEUE_FULL_ERROR = 'refresh_queue_full';
-const MAX_QUEUE_FULL_RETRIES = 3;
-const MAX_AUTOMATIC_REFRESH_RETRIES = 3;
 const MAX_CAPACITY_WAIT_POLLS = 20;
 const MAX_TASK_POLL_FAILURES = 3;
 const MAX_TASK_STALL_POLLS = 400;
 const REFRESH_TASK_NOT_FOUND_ERROR = 'refresh_task_not_found';
 const REFRESH_TASK_STALLED_ERROR = 'refresh_task_stalled';
-const AUTOMATIC_RETRYABLE_ERRORS = new Set([
-  REFRESH_TASK_NOT_FOUND_ERROR,
-  'rate_limited',
-  'upstream_unavailable',
-  'network_error',
-  'refresh_failed',
-]);
 
 type UseChatGptWebAccountInfoRefreshOptions = {
   active: boolean;
@@ -69,11 +60,6 @@ const getErrorStatus = (error: unknown): number | undefined => {
   if (error === null || typeof error !== 'object') return undefined;
   const status = (error as { status?: unknown }).status;
   return typeof status === 'number' ? status : undefined;
-};
-
-const isAutomaticRefreshRequestRetryable = (error: unknown): boolean => {
-  const status = getErrorStatus(error);
-  return status === undefined || status === 408 || status === 429 || status >= 500;
 };
 
 const createFailedRefreshTask = (
@@ -464,7 +450,6 @@ export function useChatGptWebAccountInfoRefresh({
       }
       let pendingNames = uniqueNames;
       const tasks: ChatGptWebAccountInfoRefreshTask[] = [];
-      const queueFullRetries = new Map<string, number>();
       let capacityWaitPolls = 0;
       try {
         while (control.isCurrent() && pendingNames.length > 0) {
@@ -548,17 +533,6 @@ export function useChatGptWebAccountInfoRefresh({
           }
           tasks.push(completed);
           if (!control.isCurrent()) break;
-          const retryNames: string[] = [];
-          for (const result of completed.results ?? []) {
-            if (result.status !== 'failed' || result.error !== REFRESH_QUEUE_FULL_ERROR) continue;
-            const attempts = (queueFullRetries.get(result.name) ?? 0) + 1;
-            queueFullRetries.set(result.name, attempts);
-            if (attempts <= MAX_QUEUE_FULL_RETRIES) retryNames.push(result.name);
-          }
-          if (retryNames.length > 0) {
-            pendingNames = [...retryNames, ...pendingNames];
-            await waitForPoll();
-          }
         }
       } finally {
         if (control.isCurrent() && tasks.length > 0) {
@@ -623,18 +597,16 @@ export function useChatGptWebAccountInfoRefresh({
         cancelTrackedTasks((task) => task.automaticGeneration === generation);
       };
     }
-    const refreshAutomatically = async (names: string[], retryCount: number): Promise<void> => {
+    const refreshAutomatically = async (names: string[]): Promise<void> => {
       if (!isCurrent() || names.length === 0) return;
       const control = createRunControl(generation);
       if (!control.isCurrent()) return;
-      let retryNames = names;
       try {
         const tasks = await runRefresh(names, false, control);
         if (!control.isCurrent()) return;
         const latestResults = new Map(
           tasks.flatMap((task) => task.results ?? []).map((result) => [result.name, result])
         );
-        retryNames = [];
         for (const name of names) {
           const result = latestResults.get(name);
           if (
@@ -642,28 +614,14 @@ export function useChatGptWebAccountInfoRefresh({
             ['updated', 'unchanged', 'fresh', 'partial'].includes(result.status)
           ) {
             automaticallyRefreshedNamesRef.current.add(name);
-            continue;
-          }
-          if (
-            result?.status === 'failed' &&
-            AUTOMATIC_RETRYABLE_ERRORS.has(String(result.error ?? '').trim())
-          ) {
-            retryNames.push(name);
           }
         }
-      } catch (error) {
-        if (!control.isCurrent()) return;
-        if (!isAutomaticRefreshRequestRetryable(error)) retryNames = [];
+      } catch {
+        // The backend owns retry policy. A later scope refresh or manual action can try again.
       }
-      if (!isCurrent() || retryNames.length === 0 || retryCount >= MAX_AUTOMATIC_REFRESH_RETRIES) {
-        return;
-      }
-      await waitForPoll();
-      if (!isCurrent()) return;
-      await refreshAutomatically(retryNames, retryCount + 1);
     };
     const timer = window.setTimeout(() => {
-      void refreshAutomatically(pendingNames, 0);
+      void refreshAutomatically(pendingNames);
     }, AUTO_REFRESH_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(timer);
@@ -685,7 +643,6 @@ export function useChatGptWebAccountInfoRefresh({
     unsupported,
     visibleNamesKey,
     visibleScopeKey,
-    waitForPoll,
   ]);
 
   const refreshNames = useCallback(
