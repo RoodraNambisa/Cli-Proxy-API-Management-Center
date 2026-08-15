@@ -328,15 +328,16 @@ export function isRuntimeOnlyAuthFile(file: AuthFileItem): boolean {
 export function isChatGptWebAccountInfoRefreshable(file: AuthFileItem): boolean {
   if (
     normalizeProviderKey(String(file.provider || file.type || '')) !== 'chatgpt-web' ||
-    isRuntimeOnlyAuthFile(file)
+    isRuntimeOnlyAuthFile(file) ||
+    file.disabled === true
   ) {
     return false;
   }
+  if (file.account_info_manual_recheckable === true) {
+    return true;
+  }
   if (typeof file.account_info_refreshable === 'boolean') {
     return file.account_info_refreshable;
-  }
-  if (file.disabled === true) {
-    return false;
   }
   const lifecycleState = String(file.lifecycle_state ?? '')
     .trim()

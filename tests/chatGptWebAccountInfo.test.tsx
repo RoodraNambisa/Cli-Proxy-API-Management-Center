@@ -475,6 +475,23 @@ describe('ChatGPT Web account info and image quota', () => {
     ).toBe(false);
     expect(
       isChatGptWebAccountInfoRefreshable({
+        name: 'manual-reauth.json',
+        type: 'chatgpt-web',
+        lifecycle_state: 'reauth_required',
+        account_info_refreshable: false,
+        account_info_manual_recheckable: true,
+      })
+    ).toBe(true);
+    expect(
+      isChatGptWebAccountInfoRefreshable({
+        name: 'disabled-manual.json',
+        type: 'chatgpt-web',
+        disabled: true,
+        account_info_manual_recheckable: true,
+      })
+    ).toBe(false);
+    expect(
+      isChatGptWebAccountInfoRefreshable({
         name: 'runtime.json',
         type: 'chatgpt-web',
         runtime_only: true,
