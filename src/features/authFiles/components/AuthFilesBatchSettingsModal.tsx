@@ -52,6 +52,16 @@ export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalPr
     ],
     [t]
   );
+  const fingerprintOptions = useMemo(
+    () => [
+      { value: '', label: t('auth_files.batch_settings_websockets_skip') },
+      { value: 'off', label: t('auth_files.codex_fingerprint_modes.off') },
+      { value: 'device', label: t('auth_files.codex_fingerprint_modes.device') },
+      { value: 'session', label: t('auth_files.codex_fingerprint_modes.session') },
+      { value: 'full', label: t('auth_files.codex_fingerprint_modes.full') },
+    ],
+    [t]
+  );
 
   const conversionActive = Boolean(
     conversionTask && !isChatGptWebMutationTaskTerminal(conversionTask.state)
@@ -182,6 +192,23 @@ export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalPr
               onChange={(value) => onChange('websockets', value)}
             />
             <div className="hint">{t('auth_files.batch_settings_websockets_hint')}</div>
+          </div>
+          <div className="form-group">
+            <label>{t('auth_files.codex_fingerprint_mode_label')}</label>
+            <Select
+              value={state.codexFingerprintMode}
+              options={fingerprintOptions}
+              disabled={fieldDisabled || state.codexNames.length === 0}
+              ariaLabel={t('auth_files.codex_fingerprint_mode_label')}
+              onChange={(value) => onChange('codexFingerprintMode', value)}
+            />
+            <div className="hint">
+              {state.codexNames.length > 0
+                ? t('auth_files.batch_settings_codex_fingerprint_hint', {
+                    count: state.codexNames.length,
+                  })
+                : t('auth_files.batch_settings_codex_fingerprint_empty')}
+            </div>
           </div>
           <div className={styles.batchConversionOption}>
             <div>

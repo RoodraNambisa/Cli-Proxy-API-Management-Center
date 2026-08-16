@@ -38,3 +38,17 @@ describe('buildAuthFileFieldsPatch ChatGPT Web login settings', () => {
     ).toEqual({});
   });
 });
+
+describe('buildAuthFileFieldsPatch Codex fingerprint settings', () => {
+  it('writes the selected mode for Codex auth files', () => {
+    expect(buildAuthFileFieldsPatch({}, { codex_fingerprint_mode: 'full' }, true, false)).toEqual({
+      codex_fingerprint_mode: 'full',
+    });
+  });
+
+  it('does not expose the Codex-only field on other providers', () => {
+    expect(
+      buildAuthFileFieldsPatch({}, { codex_fingerprint_mode: 'session' }, false, false)
+    ).toEqual({});
+  });
+});

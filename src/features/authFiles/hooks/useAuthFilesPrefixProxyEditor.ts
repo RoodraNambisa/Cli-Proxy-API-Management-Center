@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
-import type { AuthFileItem } from '@/types';
+import type { AuthFileItem, CodexFingerprintMode } from '@/types';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileFieldsPatch } from '@/services/api/authFiles';
 import {
   applyCodexAuthFileWebsockets,
+  normalizeCodexFingerprintMode,
   normalizeExcludedModels,
   parseDisableCoolingValue,
   parseExcludedModelsText,
   parsePriorityValue,
   readCodexAuthFileWebsockets,
+  resolveCodexAuthModeSummary,
 } from '@/features/authFiles/constants';
 
 export type AuthFileHeaders = Record<string, string>;
@@ -28,6 +30,7 @@ export type PrefixProxyEditorField =
   | 'excludedModelsText'
   | 'disableCooling'
   | 'websockets'
+  | 'codexFingerprintMode'
   | 'note'
   | 'headersText'
   | 'loginMethod'
@@ -53,6 +56,8 @@ export type PrefixProxyEditorState = {
   excludedModelsText: string;
   disableCooling: string;
   websockets: boolean;
+  codexFingerprintMode: CodexFingerprintMode;
+  codexFingerprintModeTouched: boolean;
   note: string;
   noteTouched: boolean;
   headersText: string;
@@ -131,6 +136,12 @@ export const buildAuthFileFieldsPatch = (
   }
   if (isCodexFile && !jsonValuesEqual(previous.websockets, next.websockets)) {
     patch.websockets = readCodexAuthFileWebsockets(next);
+  }
+  if (
+    isCodexFile &&
+    !jsonValuesEqual(previous.codex_fingerprint_mode, next.codex_fingerprint_mode)
+  ) {
+    patch.codex_fingerprint_mode = normalizeCodexFingerprintMode(next.codex_fingerprint_mode);
   }
   if (isChatGptWebFile && !jsonValuesEqual(previous.login_method, next.login_method)) {
     patch.login_method =
@@ -232,6 +243,10 @@ const buildPrefixProxyUpdatedText = (
     }
   }
 
+  if (editor.isCodexFile && editor.codexFingerprintModeTouched) {
+    next.codex_fingerprint_mode = editor.codexFingerprintMode;
+  }
+
   return JSON.stringify(
     editor.isCodexFile ? applyCodexAuthFileWebsockets(next, editor.websockets) : next
   );
@@ -274,7 +289,9 @@ export function useAuthFilesPrefixProxyEditor(
     const normalizedProvider = String(file.provider ?? '')
       .trim()
       .toLowerCase();
-    const isCodexFile = normalizedType === 'codex' || normalizedProvider === 'codex';
+    const isCodexFile =
+      (normalizedType === 'codex' || normalizedProvider === 'codex') &&
+      resolveCodexAuthModeSummary(file) !== null;
     const isChatGptWebFile =
       normalizedType === 'chatgpt-web' || normalizedProvider === 'chatgpt-web';
     const readOnly = normalizedType === 'gemini-cli' || normalizedProvider === 'gemini-cli';
@@ -303,6 +320,8 @@ export function useAuthFilesPrefixProxyEditor(
       excludedModelsText: '',
       disableCooling: '',
       websockets: false,
+      codexFingerprintMode: 'device',
+      codexFingerprintModeTouched: false,
       note: '',
       noteTouched: false,
       headersText: '',
@@ -360,6 +379,7 @@ export function useAuthFilesPrefixProxyEditor(
       const excludedModels = normalizeExcludedModels(json.excluded_models);
       const disableCoolingValue = parseDisableCoolingValue(json.disable_cooling);
       const websocketsValue = readCodexAuthFileWebsockets(json);
+      const codexFingerprintMode = normalizeCodexFingerprintMode(json.codex_fingerprint_mode);
       const note = typeof json.note === 'string' ? json.note : '';
       const loginMethod = isChatGptWebLoginMethod(json.login_method) ? json.login_method : 'auto';
       const api798Url = typeof json.api798_url === 'string' ? json.api798_url : '';
@@ -387,6 +407,8 @@ export function useAuthFilesPrefixProxyEditor(
           disableCooling:
             disableCoolingValue === undefined ? '' : disableCoolingValue ? 'true' : 'false',
           websockets: websocketsValue,
+          codexFingerprintMode,
+          codexFingerprintModeTouched: false,
           note,
           noteTouched: false,
           headersText,
@@ -433,6 +455,13 @@ export function useAuthFilesPrefixProxyEditor(
         return isChatGptWebLoginMethod(value) ? { ...prev, loginMethod: value } : prev;
       }
       if (field === 'api798Url') return { ...prev, api798Url: String(value) };
+      if (field === 'codexFingerprintMode') {
+        return {
+          ...prev,
+          codexFingerprintMode: normalizeCodexFingerprintMode(value),
+          codexFingerprintModeTouched: true,
+        };
+      }
       return { ...prev, websockets: Boolean(value) };
     });
   };

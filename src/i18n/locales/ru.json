@@ -670,6 +670,21 @@
     "batch_settings_websockets_skip": "Не изменять",
     "batch_settings_websockets_enable": "Включить",
     "batch_settings_websockets_disable": "Отключить",
+    "batch_settings_codex_fingerprint_hint": "Применяется к {{count}} выбранным OAuth/файловым учётным данным Codex; остальные провайдеры не изменяются.",
+    "batch_settings_codex_fingerprint_empty": "Среди выбранных учётных данных нет поддерживающих сведение отпечатка Codex.",
+    "codex_fingerprint_mode_label": "Режим отпечатка Codex",
+    "codex_fingerprint_modes": {
+      "off": "Отключён",
+      "device": "Устройство (по умолчанию)",
+      "session": "Сессия",
+      "full": "Полный"
+    },
+    "codex_fingerprint_mode_hints": {
+      "off": "Не добавлять и не заменять идентификаторы установки и сессии Codex.",
+      "device": "Закрепить installation ID за учётными данными и заменять installation ID клиента.",
+      "session": "Также закрепить Session ID, сохраняя Thread ID производным от сессии клиента.",
+      "full": "Закрепить installation, Session и Thread ID за этими учётными данными."
+    },
     "codex_identity_mode_label": "Режим авторизации",
     "codex_identity_oauth": "OAuth",
     "codex_identity_convert_to_agent": "Преобразовать в Agent Identity",

@@ -21,6 +21,7 @@ export type AuthFileType =
 
 export type AuthCooldownScope = 'auth' | 'model';
 export type CodexAuthMode = 'oauth' | 'agentIdentity';
+export type CodexFingerprintMode = 'off' | 'device' | 'session' | 'full';
 export type ChatGptWebQuotaState = 'unknown' | 'available' | 'exhausted';
 export type ChatGptWebAccountInfoRecoveryState =
   | 'idle'
@@ -165,6 +166,8 @@ export interface AuthFileItem {
   authModeLabel?: string;
   canConvertToAgentIdentity?: boolean;
   canConvertToOauth?: boolean;
+  codex_fingerprint_mode?: CodexFingerprintMode | string;
+  codexFingerprintMode?: CodexFingerprintMode | string;
   lastRefresh?: string | number;
   modified?: number;
   [key: string]: unknown;

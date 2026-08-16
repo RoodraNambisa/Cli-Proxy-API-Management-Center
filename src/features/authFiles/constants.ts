@@ -12,7 +12,7 @@ import iconQwen from '@/assets/icons/qwen.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
 import iconOpenaiLight from '@/assets/icons/openai-light.svg';
 import iconOpenaiDark from '@/assets/icons/openai-dark.svg';
-import type { AuthFileItem, AuthFileModelItem } from '@/types';
+import type { AuthFileItem, AuthFileModelItem, CodexFingerprintMode } from '@/types';
 import { parseTimestamp } from '@/utils/timestamp';
 import {
   normalizeAuthIndex,
@@ -235,6 +235,22 @@ export type CodexAuthModeSummary = {
   canConvertToOauth: boolean;
 };
 
+export const CODEX_FINGERPRINT_MODES: readonly CodexFingerprintMode[] = [
+  'off',
+  'device',
+  'session',
+  'full',
+];
+
+export const normalizeCodexFingerprintMode = (value: unknown): CodexFingerprintMode => {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
+  return CODEX_FINGERPRINT_MODES.includes(normalized as CodexFingerprintMode)
+    ? (normalized as CodexFingerprintMode)
+    : 'device';
+};
+
 export const resolveCodexAuthModeSummary = (file: AuthFileItem): CodexAuthModeSummary | null => {
   if (
     normalizeProviderKey(String(file.provider ?? file.type ?? '')) !== 'codex' ||
@@ -276,6 +292,11 @@ export const resolveCodexAuthModeSummary = (file: AuthFileItem): CodexAuthModeSu
     canConvertToOauth:
       parseDisableCoolingValue(file.canConvertToOauth ?? file.can_convert_to_oauth) ?? false,
   };
+};
+
+export const resolveCodexFingerprintMode = (file: AuthFileItem): CodexFingerprintMode | null => {
+  if (!resolveCodexAuthModeSummary(file)) return null;
+  return normalizeCodexFingerprintMode(file.codexFingerprintMode ?? file.codex_fingerprint_mode);
 };
 
 export const applyCodexAuthFileWebsockets = (

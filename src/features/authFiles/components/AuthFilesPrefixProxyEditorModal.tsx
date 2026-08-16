@@ -228,16 +228,43 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                     onChange={(e) => onChange('note', e.target.value)}
                   />
                   {editor.isCodexFile && (
-                    <div className="form-group">
-                      <label>{t('ai_providers.codex_websockets_label')}</label>
-                      <ToggleSwitch
-                        checked={Boolean(editor.websockets)}
-                        disabled={disableControls || editor.saving || !editor.json}
-                        ariaLabel={t('ai_providers.codex_websockets_label')}
-                        onChange={(value) => onChange('websockets', value)}
-                      />
-                      <div className="hint">{t('ai_providers.codex_websockets_hint')}</div>
-                    </div>
+                    <>
+                      <div className="form-group">
+                        <label>{t('auth_files.codex_fingerprint_mode_label')}</label>
+                        <select
+                          className="input"
+                          value={editor.codexFingerprintMode}
+                          disabled={disableControls || editor.saving || !editor.json}
+                          onChange={(event) => onChange('codexFingerprintMode', event.target.value)}
+                        >
+                          <option value="off">{t('auth_files.codex_fingerprint_modes.off')}</option>
+                          <option value="device">
+                            {t('auth_files.codex_fingerprint_modes.device')}
+                          </option>
+                          <option value="session">
+                            {t('auth_files.codex_fingerprint_modes.session')}
+                          </option>
+                          <option value="full">
+                            {t('auth_files.codex_fingerprint_modes.full')}
+                          </option>
+                        </select>
+                        <div className="hint">
+                          {t(
+                            `auth_files.codex_fingerprint_mode_hints.${editor.codexFingerprintMode}`
+                          )}
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>{t('ai_providers.codex_websockets_label')}</label>
+                        <ToggleSwitch
+                          checked={Boolean(editor.websockets)}
+                          disabled={disableControls || editor.saving || !editor.json}
+                          ariaLabel={t('ai_providers.codex_websockets_label')}
+                          onChange={(value) => onChange('websockets', value)}
+                        />
+                        <div className="hint">{t('ai_providers.codex_websockets_hint')}</div>
+                      </div>
+                    </>
                   )}
                 </div>
               )}

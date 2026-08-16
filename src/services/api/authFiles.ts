@@ -6,6 +6,7 @@ import { apiClient, type ApiClientConnectionSnapshot } from './client';
 import type {
   AuthFileModelItem,
   AuthFilesResponse,
+  CodexFingerprintMode,
   CodexPlanTypeRefreshResult,
   CodexPlanTypeRefreshMode,
   CodexPlanTypeRefreshSummary,
@@ -33,6 +34,7 @@ export type AuthFileFieldsPatch = {
   disable_cooling?: boolean;
   login_method?: 'auto' | 'passkey' | 'password_totp' | 'api798';
   api798_url?: string;
+  codex_fingerprint_mode?: CodexFingerprintMode;
 };
 export type XaiAuthFileFieldsPatch = Partial<Pick<AuthFileFieldsPatch, XaiAuthFileField>>;
 export type AuthFileFieldsPatchResponse = { status: string };
@@ -608,6 +610,12 @@ export const normalizeAuthFileEntry = (entry: AuthFileEntry): AuthFileEntry => {
     );
     if (canConvertToOauth !== undefined) {
       normalized.canConvertToOauth = canConvertToOauth;
+    }
+    const codexFingerprintMode = readStringValue(
+      entry.codexFingerprintMode ?? entry['codex_fingerprint_mode']
+    );
+    if (codexFingerprintMode) {
+      normalized.codexFingerprintMode = codexFingerprintMode.toLowerCase();
     }
   }
   const planType = readStringValue(entry.planType) ?? readStringValue(entry['plan_type']);

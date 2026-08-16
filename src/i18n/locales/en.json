@@ -670,6 +670,21 @@
     "batch_settings_websockets_skip": "Do not change",
     "batch_settings_websockets_enable": "Enable",
     "batch_settings_websockets_disable": "Disable",
+    "batch_settings_codex_fingerprint_hint": "Applies to {{count}} selected Codex OAuth/file credentials; other providers remain unchanged.",
+    "batch_settings_codex_fingerprint_empty": "No selected credential supports Codex fingerprint convergence.",
+    "codex_fingerprint_mode_label": "Codex fingerprint mode",
+    "codex_fingerprint_modes": {
+      "off": "Disabled",
+      "device": "Device (default)",
+      "session": "Session",
+      "full": "Full"
+    },
+    "codex_fingerprint_mode_hints": {
+      "off": "Do not add or override Codex installation and session identity.",
+      "device": "Keep one stable installation ID per credential and override client-provided installation IDs.",
+      "session": "Also keep the session ID stable while deriving thread identity from each client session.",
+      "full": "Keep installation, session, and thread identity stable for this credential."
+    },
     "codex_identity_mode_label": "Auth mode",
     "codex_identity_oauth": "OAuth",
     "codex_identity_convert_to_agent": "Convert to Agent Identity",

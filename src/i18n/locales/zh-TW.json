@@ -667,6 +667,21 @@
     "batch_settings_websockets_skip": "不修改",
     "batch_settings_websockets_enable": "開啟",
     "batch_settings_websockets_disable": "關閉",
+    "batch_settings_codex_fingerprint_hint": "僅套用於選取的 {{count}} 個 Codex OAuth/檔案憑證，其他提供者保持不變。",
+    "batch_settings_codex_fingerprint_empty": "選取的憑證中沒有支援 Codex 指紋收斂的帳號。",
+    "codex_fingerprint_mode_label": "Codex 指紋模式",
+    "codex_fingerprint_modes": {
+      "off": "關閉",
+      "device": "裝置（預設）",
+      "session": "工作階段",
+      "full": "完整"
+    },
+    "codex_fingerprint_mode_hints": {
+      "off": "不補齊或覆寫 Codex installation 與工作階段身分。",
+      "device": "為每個憑證固定一個 installation ID，並覆寫用戶端傳入的 installation ID。",
+      "session": "同時固定 Session ID，Thread 身分仍依用戶端工作階段衍生。",
+      "full": "為該憑證固定 installation、Session 和 Thread 身分。"
+    },
     "codex_identity_mode_label": "認證模式",
     "codex_identity_oauth": "OAuth",
     "codex_identity_convert_to_agent": "轉為 Agent Identity",

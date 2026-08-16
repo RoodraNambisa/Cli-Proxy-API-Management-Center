@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { authFilesApi, chatGptWebApi } from '@/services/api';
 import { useNotificationStore } from '@/stores';
-import type { AuthFileItem, ChatGptWebMutationTask } from '@/types';
+import type { AuthFileItem, ChatGptWebMutationTask, CodexFingerprintMode } from '@/types';
 import { isChatGptWebMutationTaskTerminal } from '@/types';
 import type { AuthFileBatchFailure, AuthFileFieldsPatch } from '@/services/api/authFiles';
 import {
@@ -11,6 +11,7 @@ import {
   parseExcludedModelsText,
   parsePriorityValue,
   normalizeProviderKey,
+  resolveCodexAuthModeSummary,
 } from '@/features/authFiles/constants';
 import {
   parseHeadersText,
@@ -19,6 +20,7 @@ import {
 } from '@/features/authFiles/hooks/useAuthFilesPrefixProxyEditor';
 
 export type AuthFilesBatchSettingsBooleanValue = '' | 'true' | 'false';
+export type AuthFilesBatchSettingsFingerprintValue = '' | CodexFingerprintMode;
 
 export type AuthFilesBatchSettingsField =
   | 'prefix'
@@ -30,6 +32,7 @@ export type AuthFilesBatchSettingsField =
   | 'note'
   | 'usingApi'
   | 'websockets'
+  | 'codexFingerprintMode'
   | 'createChatGptWebCopy';
 
 export type AuthFilesBatchSettingsState = {
@@ -46,6 +49,7 @@ export type AuthFilesBatchSettingsState = {
   note: string;
   usingApi: AuthFilesBatchSettingsBooleanValue;
   websockets: AuthFilesBatchSettingsBooleanValue;
+  codexFingerprintMode: AuthFilesBatchSettingsFingerprintValue;
   codexNames: string[];
   createChatGptWebCopy: boolean;
   failures: AuthFileBatchFailure[];
@@ -91,6 +95,7 @@ const createEmptyBatchSettingsState = (): AuthFilesBatchSettingsState => ({
   note: '',
   usingApi: '',
   websockets: '',
+  codexFingerprintMode: '',
   codexNames: [],
   createChatGptWebCopy: false,
   failures: [],
@@ -117,10 +122,11 @@ const hasPatchFields = (patch: BatchSettingsPatch): boolean => Object.keys(patch
 
 const isCodexAuthFile = (file: AuthFileItem): boolean =>
   normalizeProviderKey(String(file.provider ?? file.type ?? '')) === 'codex' &&
+  resolveCodexAuthModeSummary(file) !== null &&
   file.retained_for_dependents !== true &&
   file.deletion_state !== 'retained_for_dependents';
 
-const buildBatchSettingsPatch = (
+export const buildBatchSettingsPatch = (
   state: AuthFilesBatchSettingsState
 ): { patch: BatchSettingsPatch; errorKey: AuthFileHeadersErrorKey | null } => {
   const patch: BatchSettingsPatch = {};
@@ -179,7 +185,36 @@ const buildBatchSettingsPatch = (
     patch.websockets = state.websockets === 'true';
   }
 
+  if (state.codexFingerprintMode !== '') {
+    patch.codex_fingerprint_mode = state.codexFingerprintMode;
+  }
+
   return { patch, errorKey: null };
+};
+
+export const buildBatchSettingsRequests = (
+  targets: AuthFileItem[],
+  patch: BatchSettingsPatch
+): Array<{ names: string[]; patch: BatchSettingsPatch }> => {
+  if (!patch.codex_fingerprint_mode) {
+    return targets.length > 0 && hasPatchFields(patch)
+      ? [{ names: targets.map((file) => file.name), patch }]
+      : [];
+  }
+
+  const sharedPatch = { ...patch };
+  delete sharedPatch.codex_fingerprint_mode;
+  const codexTargets = targets.filter(isCodexAuthFile);
+  const otherTargets = targets.filter((file) => !isCodexAuthFile(file));
+  const requests: Array<{ names: string[]; patch: BatchSettingsPatch }> = [];
+
+  if (codexTargets.length > 0) {
+    requests.push({ names: codexTargets.map((file) => file.name), patch });
+  }
+  if (otherTargets.length > 0 && hasPatchFields(sharedPatch)) {
+    requests.push({ names: otherTargets.map((file) => file.name), patch: sharedPatch });
+  }
+  return requests;
 };
 
 export function useAuthFilesBatchSettings(
@@ -210,6 +245,7 @@ export function useAuthFilesBatchSettings(
         batchSettings.note.trim() ||
         batchSettings.usingApi ||
         batchSettings.websockets ||
+        batchSettings.codexFingerprintMode ||
         batchSettings.createChatGptWebCopy
       ),
     [batchSettings]
@@ -413,7 +449,8 @@ export function useAuthFilesBatchSettings(
     }
     const shouldCreateWebCopies =
       batchSettings.createChatGptWebCopy && batchSettings.codexNames.length > 0;
-    const shouldPatchFields = hasPatchFields(patch);
+    const patchRequests = buildBatchSettingsRequests(targets, patch);
+    const shouldPatchFields = patchRequests.length > 0;
     if (!shouldPatchFields && !shouldCreateWebCopies) {
       showNotification(t('auth_files.batch_settings_no_fields'), 'warning');
       return;
@@ -422,16 +459,20 @@ export function useAuthFilesBatchSettings(
     setBatchSettings((prev) => ({ ...prev, saving: true, failures: [] }));
 
     try {
-      const targetNames = targets.map((file) => file.name);
-      const result = shouldPatchFields
-        ? await authFilesApi.patchFieldsBatch(targetNames, patch)
-        : {
-            status: 'ok',
-            matched: targetNames.length,
-            updated: 0,
-            files: targetNames,
-            failed: [] as AuthFileBatchFailure[],
-          };
+      const result = {
+        status: 'ok',
+        matched: 0,
+        updated: 0,
+        files: [] as string[],
+        failed: [] as AuthFileBatchFailure[],
+      };
+      for (const request of patchRequests) {
+        const partial = await authFilesApi.patchFieldsBatch(request.names, request.patch);
+        result.matched += partial.matched;
+        result.updated += partial.updated;
+        result.files.push(...partial.files);
+        result.failed.push(...partial.failed);
+      }
       const failedNames = result.failed.map((failure) => failure.name).filter(Boolean);
 
       if (shouldCreateWebCopies) {

@@ -36,6 +36,7 @@ import {
   readXaiAuthFileUsingApi,
   readXaiAuthFileWebsockets,
   resolveCodexAuthModeSummary,
+  resolveCodexFingerprintMode,
   resolveAuthFileStats,
   type QuotaProviderType,
   type ResolvedTheme,
@@ -398,6 +399,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     ? `${styles.codexPlanValue} ${styles.premiumPlanValue}`
     : styles.codexPlanValue;
   const codexAuthMode = resolveCodexAuthModeSummary(file);
+  const codexFingerprintMode = resolveCodexFingerprintMode(file);
   const stateLabel = isRetiredGeminiCli
     ? t('auth_files.health_status_unsupported')
     : isRuntimeOnly
@@ -539,9 +541,19 @@ export function AuthFileCard(props: AuthFileCardProps) {
             <div
               className={`${styles.codexAuthModePanel} ${compact ? styles.codexAuthModePanelCompact : ''}`}
             >
-              <div className={styles.codexAuthModeSummary}>
-                <span>{t('auth_files.codex_identity_mode_label')}</span>
-                <strong>{codexAuthMode.label}</strong>
+              <div className={styles.codexAuthModeDetails}>
+                <div className={styles.codexAuthModeSummary}>
+                  <span>{t('auth_files.codex_identity_mode_label')}</span>
+                  <strong>{codexAuthMode.label}</strong>
+                </div>
+                {codexFingerprintMode && (
+                  <div className={styles.codexAuthModeSummary}>
+                    <span>{t('auth_files.codex_fingerprint_mode_label')}</span>
+                    <strong>
+                      {t(`auth_files.codex_fingerprint_modes.${codexFingerprintMode}`)}
+                    </strong>
+                  </div>
+                )}
               </div>
               {codexIdentityConversionVisible &&
                 onConvertCodexAuthMode &&
