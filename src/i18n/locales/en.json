@@ -661,6 +661,7 @@
     "batch_settings_partial": "Batch settings finished: {{success}} succeeded, {{failed}} failed",
     "batch_settings_failed": "Batch settings failed: {{failed}} files failed",
     "batch_settings_failure_details": "The following credentials failed and remain selected:",
+    "batch_settings_request_failed": "Batch update request failed",
     "batch_settings_priority_placeholder": "Integer (including 0) or null",
     "batch_settings_priority_hint": "Leave blank to keep unchanged; enter an integer to set priority (0 is valid), or null to clear it.",
     "batch_settings_using_api_label": "Use official xAI API",

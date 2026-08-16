@@ -467,11 +467,21 @@ export function useAuthFilesBatchSettings(
         failed: [] as AuthFileBatchFailure[],
       };
       for (const request of patchRequests) {
-        const partial = await authFilesApi.patchFieldsBatch(request.names, request.patch);
-        result.matched += partial.matched;
-        result.updated += partial.updated;
-        result.files.push(...partial.files);
-        result.failed.push(...partial.failed);
+        try {
+          const partial = await authFilesApi.patchFieldsBatch(request.names, request.patch);
+          result.matched += partial.matched;
+          result.updated += partial.updated;
+          result.files.push(...partial.files);
+          result.failed.push(...partial.failed);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error ?? '');
+          result.failed.push(
+            ...request.names.map((name) => ({
+              name,
+              error: message || t('auth_files.batch_settings_request_failed'),
+            }))
+          );
+        }
       }
       const failedNames = result.failed.map((failure) => failure.name).filter(Boolean);
 

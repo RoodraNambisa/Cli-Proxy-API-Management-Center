@@ -661,6 +661,7 @@
     "batch_settings_partial": "Пакетные настройки применены: успешно {{success}}, ошибок {{failed}}",
     "batch_settings_failed": "Пакетные настройки не применены: ошибок {{failed}}",
     "batch_settings_failure_details": "Следующие учётные данные не обновлены и остались выбранными:",
+    "batch_settings_request_failed": "Сбой запроса пакетного обновления",
     "batch_settings_priority_placeholder": "Целое число (включая 0) или null",
     "batch_settings_priority_hint": "Оставьте пустым без изменений; введите целое число для приоритета (0 допустим) или null, чтобы очистить его.",
     "batch_settings_using_api_label": "Использовать официальный API xAI",

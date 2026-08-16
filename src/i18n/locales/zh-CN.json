@@ -661,6 +661,7 @@
     "batch_settings_partial": "批量设置完成：成功 {{success}} 个，失败 {{failed}} 个",
     "batch_settings_failed": "批量设置失败：{{failed}} 个文件失败",
     "batch_settings_failure_details": "以下凭证更新失败，已保留选择：",
+    "batch_settings_request_failed": "批量更新请求失败",
     "batch_settings_priority_placeholder": "整数（包括 0）或 null",
     "batch_settings_priority_hint": "留空不修改；输入整数设置优先级，0 是有效优先级；输入 null 清空优先级。",
     "batch_settings_using_api_label": "使用官方 xAI API",
