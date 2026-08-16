@@ -96,7 +96,7 @@ describe('ChatGPT Web fast import settings', () => {
     render(<ChatGptWebImportPanel ref={panelRef} />);
 
     const workers = await screen.findByRole('spinbutton');
-    expect(screen.getByText('3')).toBeTruthy();
+    expect(await screen.findByText('3')).toBeTruthy();
     fireEvent.change(workers, { target: { value: '8' } });
 
     await act(async () => {
