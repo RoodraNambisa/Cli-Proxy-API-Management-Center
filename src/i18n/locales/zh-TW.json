@@ -91,6 +91,8 @@
     "connect_button": "連線",
     "submit_button": "登入",
     "submitting": "連線中...",
+    "retrying_startup": "伺服器啟動中，正在重試（{{attempt}}/{{total}}）",
+    "retrying_startup_hint": "管理介面尚未就緒，頁面會在短時間內自動重試；驗證失敗不會進入此重試。",
     "error_title": "登入失敗",
     "error_required": "請填寫完整的連線資訊",
     "error_invalid": "連線失敗，請檢查位址和金鑰",

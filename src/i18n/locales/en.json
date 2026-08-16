@@ -91,6 +91,8 @@
     "connect_button": "Connect",
     "submit_button": "Login",
     "submitting": "Connecting...",
+    "retrying_startup": "Server starting, retrying ({{attempt}}/{{total}})",
+    "retrying_startup_hint": "The management API is not ready yet. This page will retry briefly; authentication failures are never retried.",
     "error_title": "Login Failed",
     "error_required": "Please fill in complete connection information",
     "error_invalid": "Connection failed, please check address and key",

@@ -561,7 +561,7 @@ describe('ChatGPT Web account info and image quota', () => {
     expect(getAccountInfo).toHaveBeenNthCalledWith(2, saveConnection, expect.any(AbortSignal));
   });
 
-  test('shows categorized recovery work, persistent failures, and fixed-window routing capacity', async () => {
+  test('shows categorized recovery work and persistent failures without routing capacity', async () => {
     const initial = createSnapshot();
     initial.runtime = {
       ...initial.runtime,
@@ -588,49 +588,16 @@ describe('ChatGPT Web account info and image quota', () => {
       rejected: 0,
     };
     vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(initial);
-    const getRouting = vi.spyOn(chatGptWebApi, 'getRoutingDiagnostics').mockResolvedValue({
-      routing: {
-        provider: 'chatgpt-web',
-        model: 'gpt-image-2',
-        priorities: [
-          {
-            priority: 0,
-            total: 1000,
-            quota_exhausted: 100,
-            cooldown: 20,
-            unavailable: 30,
-            ready_before_request_limit: 850,
-            request_limited: 50,
-            eligible_now: 800,
-            earliest_request_limit_reset_at: '2026-08-16T00:10:00Z',
-            request_capacity: {
-              mode: 'limited',
-              limited_credentials: 850,
-              unlimited_credentials: 0,
-              configured_slots: 850,
-              remaining_slots: 800,
-              configured_rpm: 850,
-              earliest_consumed_reset_at: '2026-08-16T00:10:00Z',
-            },
-          },
-        ],
-      },
-      request_execution_metrics: {},
-    });
+    const getRouting = vi.spyOn(chatGptWebApi, 'getRoutingDiagnostics');
 
     render(<ChatGptWebAccountInfoPanel />);
     await waitFor(() => expect(chatGptWebApi.getAccountInfo).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
-    await waitFor(() => expect(getRouting).toHaveBeenCalledTimes(1));
 
     expect(screen.getByText('account_unverified')).not.toBeNull();
     expect(screen.getByText(/manual_recovery_required.*27/)).not.toBeNull();
-    const routingPanel = screen
-      .getByText('chatgpt_web.account_info.routing.title')
-      .closest('section') as HTMLElement;
-    expect(within(routingPanel).getByText('1000')).not.toBeNull();
-    expect(within(routingPanel).getAllByText('800').length).toBeGreaterThan(0);
-    expect(within(routingPanel).getAllByText('850').length).toBeGreaterThan(0);
+    expect(screen.queryByText('chatgpt_web.account_info.routing.title')).toBeNull();
+    expect(getRouting).not.toHaveBeenCalled();
   });
 
   test('defaults a missing auto-refresh field to enabled and saves the disabled switch', async () => {

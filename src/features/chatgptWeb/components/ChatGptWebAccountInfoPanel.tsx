@@ -25,7 +25,6 @@ import type {
   ChatGptWebAccountInfoRawQuotaRecord,
   ChatGptWebAccountInfoRawQuotaSnapshot,
   ChatGptWebAccountInfoSnapshot,
-  ChatGptWebRoutingDiagnosticsSnapshot,
 } from '@/types';
 import { getChatGptWebErrorMessage } from '@/utils/chatgptWeb';
 import { formatDateTime } from '@/utils/format';
@@ -463,7 +462,6 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   const diagnosticsLoadedRef = useRef(false);
   const rawQuotaAbortRef = useRef<AbortController | null>(null);
   const rawQuotaLoadedRef = useRef(false);
-  const routingAbortRef = useRef<AbortController | null>(null);
   const savingRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -501,11 +499,6 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   const [rawQuotaClearing, setRawQuotaClearing] = useState(false);
   const [rawQuotaError, setRawQuotaError] = useState('');
   const [rawQuotaEndpointUnsupported, setRawQuotaEndpointUnsupported] = useState(false);
-  const [routingDiagnostics, setRoutingDiagnostics] =
-    useState<ChatGptWebRoutingDiagnosticsSnapshot | null>(null);
-  const [routingLoading, setRoutingLoading] = useState(false);
-  const [routingError, setRoutingError] = useState('');
-  const [routingUnsupported, setRoutingUnsupported] = useState(false);
   const [expanded, setExpanded] = useState(
     () => localStorage.getItem(DISCLOSURE_STORAGE_KEY) === 'true'
   );
@@ -562,13 +555,6 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     const abortController = rawQuotaAbortRef.current;
     if (!abortController) return;
     rawQuotaAbortRef.current = null;
-    abortController.abort();
-  }, []);
-
-  const abortRoutingRequest = useCallback(() => {
-    const abortController = routingAbortRef.current;
-    if (!abortController) return;
-    routingAbortRef.current = null;
     abortController.abort();
   }, []);
 
@@ -877,58 +863,6 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     ]
   );
 
-  const loadRoutingDiagnostics = useCallback(
-    async (notify = false): Promise<ChatGptWebRoutingDiagnosticsSnapshot | null> => {
-      if (routingAbortRef.current) return null;
-      const generation = readConnectionGeneration();
-      const connection = apiClient.captureConnection();
-      const abortController = new AbortController();
-      routingAbortRef.current = abortController;
-      setRoutingLoading(true);
-      try {
-        const next = await chatGptWebApi.getRoutingDiagnostics(
-          'chatgpt-web',
-          'gpt-image-2',
-          connection,
-          abortController.signal
-        );
-        if (abortController.signal.aborted || !isConnectionGenerationCurrent(generation)) {
-          return null;
-        }
-        setRoutingDiagnostics(next);
-        setRoutingError('');
-        setRoutingUnsupported(false);
-        return next;
-      } catch (error) {
-        if (abortController.signal.aborted || !isConnectionGenerationCurrent(generation)) {
-          return null;
-        }
-        if ([404, 501].includes(getErrorStatus(error) ?? 0)) {
-          setRoutingUnsupported(true);
-          setRoutingError('');
-          return null;
-        }
-        const message = getChatGptWebErrorMessage(error, t);
-        setRoutingError(message);
-        if (notify) {
-          showNotification(
-            `${t('chatgpt_web.account_info.routing.load_failed')}: ${message}`,
-            'error'
-          );
-        }
-        return null;
-      } finally {
-        if (routingAbortRef.current === abortController) {
-          routingAbortRef.current = null;
-          if (mountedRef.current && isConnectionGenerationCurrent(generation)) {
-            setRoutingLoading(false);
-          }
-        }
-      }
-    },
-    [isConnectionGenerationCurrent, readConnectionGeneration, showNotification, t]
-  );
-
   useEffect(() => {
     const previous = previousAvailabilityRef.current;
     const connectionChanged = previous.connectionGenerationVersion !== connectionGenerationVersion;
@@ -945,7 +879,6 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       abortSaveRefresh();
       abortDiagnosticsRequest();
       abortRawQuotaRequest();
-      abortRoutingRequest();
       hasLoadedRef.current = false;
       diagnosticsLoadedRef.current = false;
       rawQuotaLoadedRef.current = false;
@@ -963,10 +896,6 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       setRawQuotaEndpointUnsupported(false);
       setRawQuotaLoading(false);
       setRawQuotaClearing(false);
-      setRoutingDiagnostics(null);
-      setRoutingError('');
-      setRoutingUnsupported(false);
-      setRoutingLoading(false);
       setUnsupportedState(isChatGptWebAccountInfoUnsupported(connectionGenerationKey));
       const retainedDirty = dirtyFieldsRef.current.size > 0 || savingRef.current;
       setGenerationConflictState(retainedDirty);
@@ -982,11 +911,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       abortSaveRefresh();
       abortDiagnosticsRequest();
       abortRawQuotaRequest();
-      abortRoutingRequest();
       setLoading(false);
       setDiagnosticsLoading(false);
       setRawQuotaLoading(false);
-      setRoutingLoading(false);
       return;
     }
     if (!hasLoadedRef.current) {
@@ -1003,7 +930,6 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
     abortSaveRefresh,
     abortDiagnosticsRequest,
     abortRawQuotaRequest,
-    abortRoutingRequest,
     abortSnapshotRequest,
     connectionGenerationKey,
     connectionGenerationVersion,
@@ -1127,25 +1053,6 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   }, [active, disabled, expanded, generationReady, loadError, loadSnapshot, unsupported]);
 
   useEffect(() => {
-    if (disabled || !active || !expanded || !generationReady || unsupported || routingUnsupported) {
-      return;
-    }
-    void loadRoutingDiagnostics(false);
-    const timer = window.setInterval(() => {
-      void loadRoutingDiagnostics(false);
-    }, POLL_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [
-    active,
-    disabled,
-    expanded,
-    generationReady,
-    loadRoutingDiagnostics,
-    routingUnsupported,
-    unsupported,
-  ]);
-
-  useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
@@ -1155,15 +1062,8 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       abortSaveRefresh();
       abortDiagnosticsRequest();
       abortRawQuotaRequest();
-      abortRoutingRequest();
     };
-  }, [
-    abortDiagnosticsRequest,
-    abortRawQuotaRequest,
-    abortRoutingRequest,
-    abortSaveRefresh,
-    abortSnapshotRequest,
-  ]);
+  }, [abortDiagnosticsRequest, abortRawQuotaRequest, abortSaveRefresh, abortSnapshotRequest]);
 
   useEffect(() => {
     const synchronizeUnsupported = (key: string, nextUnsupported: boolean) => {
@@ -1176,11 +1076,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
         abortSaveRefresh();
         abortDiagnosticsRequest();
         abortRawQuotaRequest();
-        abortRoutingRequest();
         setLoading(false);
         setDiagnosticsLoading(false);
         setRawQuotaLoading(false);
-        setRoutingLoading(false);
       }
     };
     synchronizeUnsupported(
@@ -1188,13 +1086,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
       isChatGptWebAccountInfoUnsupported(connectionGenerationKeyRef.current)
     );
     return subscribeChatGptWebAccountInfoCapability(synchronizeUnsupported);
-  }, [
-    abortDiagnosticsRequest,
-    abortRawQuotaRequest,
-    abortRoutingRequest,
-    abortSaveRefresh,
-    abortSnapshotRequest,
-  ]);
+  }, [abortDiagnosticsRequest, abortRawQuotaRequest, abortSaveRefresh, abortSnapshotRequest]);
 
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -1671,66 +1563,9 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   const failureCounts = Object.entries(snapshot?.runtime.failure_counts ?? {})
     .filter(([, count]) => Number(count) > 0)
     .sort((left, right) => Number(right[1]) - Number(left[1]));
-  const routingSummary = useMemo(() => {
-    const priorities = routingDiagnostics?.routing.priorities ?? [];
-    const sum = (read: (priority: (typeof priorities)[number]) => number) =>
-      priorities.reduce((total, priority) => total + Math.max(0, read(priority) || 0), 0);
-    const capacityValues = priorities.map((priority) => priority.request_capacity);
-    const hasUnlimited = capacityValues.some(
-      (capacity) => capacity.mode === 'unlimited' || capacity.mode === 'mixed'
-    );
-    const hasLimited = capacityValues.some(
-      (capacity) =>
-        capacity.mode === 'limited' ||
-        capacity.mode === 'mixed' ||
-        Math.max(0, capacity.limited_credentials ?? 0) > 0
-    );
-    const configuredSlots = capacityValues.reduce(
-      (total, capacity) => total + Math.max(0, capacity.configured_slots ?? 0),
-      0
-    );
-    const remainingSlots = capacityValues.reduce(
-      (total, capacity) => total + Math.max(0, capacity.remaining_slots ?? 0),
-      0
-    );
-    const configuredRpm = capacityValues.reduce(
-      (total, capacity) => total + Math.max(0, capacity.configured_rpm ?? 0),
-      0
-    );
-    const resetCandidates = capacityValues
-      .map((capacity) => capacity.earliest_consumed_reset_at)
-      .filter((value): value is string => Boolean(value))
-      .sort((left, right) => new Date(left).getTime() - new Date(right).getTime());
-    return {
-      priorities,
-      total: sum((priority) => priority.total),
-      ready: sum((priority) => priority.ready_before_request_limit),
-      eligible: sum((priority) => priority.eligible_now),
-      requestLimited: sum((priority) => priority.request_limited),
-      quotaExhausted: sum((priority) => priority.quota_exhausted),
-      unavailable: sum((priority) => priority.unavailable),
-      cooldown: sum((priority) => priority.cooldown),
-      hasUnlimited,
-      hasLimited,
-      configuredSlots,
-      remainingSlots,
-      configuredRpm,
-      earliestResetAt: resetCandidates[0] ?? null,
-    };
-  }, [routingDiagnostics]);
-  const formatRoutingCapacity = (value: number): number | string => {
-    const normalized = Math.round(Math.max(0, value));
-    if (!routingSummary.hasUnlimited) return normalized;
-    const unlimitedLabel = t('chatgpt_web.account_info.routing.unlimited');
-    return routingSummary.hasLimited
-      ? `${unlimitedLabel} + ${normalized.toLocaleString()}`
-      : unlimitedLabel;
-  };
-
   const handleRuntimeRefresh = useCallback(() => {
     void loadSnapshot();
-    void loadRoutingDiagnostics(true);
-  }, [loadRoutingDiagnostics, loadSnapshot]);
+  }, [loadSnapshot]);
 
   return (
     <>
@@ -1898,7 +1733,7 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
               variant="secondary"
               size="sm"
               onClick={handleRuntimeRefresh}
-              loading={loading || routingLoading}
+              loading={loading}
               disabled={
                 disabled || externalSaving || saving || dirty || unsupported || generationConflict
               }
@@ -2005,70 +1840,6 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
               ) : null}
             </>
           )}
-
-          <section className={styles.routingCapacityPanel}>
-            <div className={styles.routingCapacityHeader}>
-              <div>
-                <h3>{t('chatgpt_web.account_info.routing.title')}</h3>
-                <p>{t('chatgpt_web.account_info.routing.description')}</p>
-              </div>
-              <span>gpt-image-2</span>
-            </div>
-            {routingUnsupported || unsupported ? (
-              <div className={styles.statusEmpty}>
-                {t('chatgpt_web.account_info.routing.unsupported')}
-              </div>
-            ) : routingError && !routingDiagnostics ? (
-              <div className={styles.statusEmpty}>
-                {t('chatgpt_web.account_info.routing.load_failed')}: {routingError}
-              </div>
-            ) : !routingDiagnostics ? (
-              <div className={styles.statusEmpty}>
-                {routingLoading ? <LoadingSpinner size={18} /> : null}
-                {t('chatgpt_web.account_info.routing.loading')}
-              </div>
-            ) : (
-              <>
-                {routingError ? (
-                  <p className={styles.routingCapacityWarning}>
-                    {t('chatgpt_web.account_info.routing.stale')}: {routingError}
-                  </p>
-                ) : null}
-                <dl className={styles.routingCapacityGrid}>
-                  {[
-                    ['total', routingSummary.total],
-                    ['ready', routingSummary.ready],
-                    ['eligible', routingSummary.eligible],
-                    ['remaining_slots', formatRoutingCapacity(routingSummary.remainingSlots)],
-                    ['configured_slots', formatRoutingCapacity(routingSummary.configuredSlots)],
-                    ['configured_rpm', formatRoutingCapacity(routingSummary.configuredRpm)],
-                    ['request_limited', routingSummary.requestLimited],
-                    ['quota_exhausted', routingSummary.quotaExhausted],
-                    ['unavailable', routingSummary.unavailable],
-                    ['cooldown', routingSummary.cooldown],
-                    [
-                      'earliest_reset',
-                      routingSummary.earliestResetAt
-                        ? formatDateTime(routingSummary.earliestResetAt)
-                        : '—',
-                    ],
-                  ].map(([key, value]) => (
-                    <div key={String(key)}>
-                      <dt>{t(`chatgpt_web.account_info.routing.${key}`)}</dt>
-                      <dd>{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-                <div className={styles.routingPriorityList}>
-                  {routingSummary.priorities.map((priority) => (
-                    <span key={priority.priority}>
-                      P{priority.priority} · {priority.eligible_now}/{priority.total}
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
-          </section>
 
           <ConfigDisclosure
             id="config-chatgpt-web-account-info-diagnostics"

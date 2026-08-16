@@ -91,6 +91,8 @@
     "connect_button": "连接",
     "submit_button": "登录",
     "submitting": "连接中...",
+    "retrying_startup": "服务器启动中，正在重试（{{attempt}}/{{total}}）",
+    "retrying_startup_hint": "管理接口尚未就绪，页面会在短时间内自动重试；认证失败不会进入此重试。",
     "error_title": "登录失败",
     "error_required": "请填写完整的连接信息",
     "error_invalid": "连接失败，请检查地址和密钥",

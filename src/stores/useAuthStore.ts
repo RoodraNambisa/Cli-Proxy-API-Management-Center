@@ -17,6 +17,7 @@ import {
   detectManagementAccessPathFromLocation,
   parseConnectionTarget,
 } from '@/utils/connection';
+import { retryStartupLogin } from '@/utils/loginRetry';
 
 interface AuthStoreState extends AuthState {
   connectionStatus: ConnectionStatus;
@@ -91,12 +92,14 @@ export const useAuthStore = create<AuthStoreState>()(
 
           if (wasLoggedIn && resolvedTarget.apiBase && resolvedKey) {
             try {
-              await get().login({
-                apiBase: resolvedTarget.apiBase,
-                managementAccessPath: resolvedTarget.managementAccessPath,
-                managementKey: resolvedKey,
-                rememberPassword: resolvedRememberPassword,
-              });
+              await retryStartupLogin(() =>
+                get().login({
+                  apiBase: resolvedTarget.apiBase,
+                  managementAccessPath: resolvedTarget.managementAccessPath,
+                  managementKey: resolvedKey,
+                  rememberPassword: resolvedRememberPassword,
+                })
+              );
               return true;
             } catch (error) {
               console.warn('Auto login failed:', error);

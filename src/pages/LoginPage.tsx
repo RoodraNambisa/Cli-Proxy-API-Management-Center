@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +14,7 @@ import {
 } from '@/utils/connection';
 import { LANGUAGE_LABEL_KEYS, LANGUAGE_ORDER } from '@/utils/constants';
 import { isSupportedLanguage } from '@/utils/language';
+import { retryStartupLogin, type StartupLoginRetryProgress } from '@/utils/loginRetry';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
 import type { ApiError } from '@/types';
 import styles from './LoginPage.module.scss';
@@ -95,6 +96,8 @@ export function LoginPage() {
   const [autoLoading, setAutoLoading] = useState(true);
   const [autoLoginSuccess, setAutoLoginSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [retryProgress, setRetryProgress] = useState<StartupLoginRetryProgress | null>(null);
+  const loginAbortRef = useRef<AbortController | null>(null);
 
   const detectedBase = useMemo(() => detectApiBaseFromLocation(), []);
   const detectedManagementAccessPath = useMemo(() => detectManagementAccessPathFromLocation(), []);
@@ -158,6 +161,14 @@ export function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(
+    () => () => {
+      loginAbortRef.current?.abort();
+      loginAbortRef.current = null;
+    },
+    []
+  );
+
   const handleSubmit = useCallback(async () => {
     if (!managementKey.trim()) {
       setError(t('login.error_required'));
@@ -168,23 +179,42 @@ export function LoginPage() {
       apiBase || detectedBase,
       effectiveAccessPathForCustomConnection
     );
+    loginAbortRef.current?.abort();
+    const abortController = new AbortController();
+    loginAbortRef.current = abortController;
     setLoading(true);
     setError('');
+    setRetryProgress(null);
     try {
-      await login({
-        apiBase: target.apiBase,
-        managementAccessPath: target.managementAccessPath,
-        managementKey: managementKey.trim(),
-        rememberPassword,
-      });
+      await retryStartupLogin(
+        () =>
+          login({
+            apiBase: target.apiBase,
+            managementAccessPath: target.managementAccessPath,
+            managementKey: managementKey.trim(),
+            rememberPassword,
+          }),
+        {
+          signal: abortController.signal,
+          onRetry: setRetryProgress,
+        }
+      );
+      if (abortController.signal.aborted) return;
       showNotification(t('common.connected_status'), 'success');
       navigate('/', { replace: true });
     } catch (err: unknown) {
+      if (abortController.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
+        return;
+      }
       const message = getLocalizedErrorMessage(err, t);
       setError(message);
       showNotification(`${t('notification.login_failed')}: ${message}`, 'error');
     } finally {
-      setLoading(false);
+      if (loginAbortRef.current === abortController) {
+        loginAbortRef.current = null;
+        setLoading(false);
+        setRetryProgress(null);
+      }
     }
   }, [
     apiBase,
@@ -337,8 +367,21 @@ export function LoginPage() {
               </div>
 
               <Button fullWidth onClick={handleSubmit} loading={loading}>
-                {loading ? t('login.submitting') : t('login.submit_button')}
+                {loading
+                  ? retryProgress
+                    ? t('login.retrying_startup', {
+                        attempt: retryProgress.attempt,
+                        total: retryProgress.total,
+                      })
+                    : t('login.submitting')
+                  : t('login.submit_button')}
               </Button>
+
+              {retryProgress ? (
+                <div className={styles.retryNotice} role="status">
+                  {t('login.retrying_startup_hint')}
+                </div>
+              ) : null}
 
               {error && <div className={styles.errorBox}>{error}</div>}
             </div>

@@ -51,6 +51,7 @@ import { CodexAgentIdentityConversionModal } from '@/features/authFiles/componen
 import { AuthFilesDependencyDeleteModal } from '@/features/authFiles/components/AuthFilesDependencyDeleteModal';
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
+import { ChatGptWebRoutingCapacityCard } from '@/features/authFiles/components/ChatGptWebRoutingCapacityCard';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
 import { useAuthFilesBatchSettings } from '@/features/authFiles/hooks/useAuthFilesBatchSettings';
@@ -1839,6 +1840,13 @@ export function AuthFilesPage() {
 
         <div className={styles.filterSection}>
           {renderFilterTags()}
+
+          {normalizedFilter === 'chatgpt-web' ? (
+            <ChatGptWebRoutingCapacityCard
+              key={connectionGenerationKey}
+              active={isCurrentLayer && !disableControls}
+            />
+          ) : null}
 
           <div className={styles.filterContent}>
             <div className={styles.filterControlsPanel}>

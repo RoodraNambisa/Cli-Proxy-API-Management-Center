@@ -253,8 +253,7 @@
   }
 }
 
-.runtimeBadges,
-.routingPriorityList {
+.runtimeBadges {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -272,89 +271,6 @@
 
 .persistenceGrid {
   border-top: 0;
-}
-
-.routingCapacityPanel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 13px;
-  border: 1px solid color-mix(in srgb, #18835e 32%, var(--border-color));
-  border-radius: 10px;
-  background:
-    radial-gradient(100% 160% at 100% 0%, rgba(24, 131, 94, 0.11), transparent 58%),
-    var(--bg-secondary);
-}
-
-.routingCapacityHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-
-  h3,
-  p {
-    margin: 0;
-  }
-
-  h3 {
-    color: var(--text-primary);
-    font-size: 14px;
-  }
-
-  p {
-    margin-top: 3px;
-    color: var(--text-tertiary);
-    font-size: 11px;
-    line-height: 1.45;
-  }
-
-  > span {
-    flex-shrink: 0;
-    padding: 3px 7px;
-    border-radius: 999px;
-    background: rgba(24, 131, 94, 0.12);
-    color: #18835e;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 10px;
-    font-weight: 700;
-  }
-}
-
-.routingCapacityGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-
-  > div {
-    min-width: 0;
-    padding: 9px 10px;
-    border-right: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  dt {
-    color: var(--text-tertiary);
-    font-size: 10px;
-  }
-
-  dd {
-    margin: 3px 0 0;
-    color: var(--text-primary);
-    font-size: 13px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
-  }
-}
-
-.routingCapacityWarning {
-  margin: 0;
-  color: var(--warning-text);
-  font-size: 11px;
 }
 
 .statusEmpty {
@@ -541,7 +457,6 @@
   .settingsGrid,
   .statusGrid,
   .accountInfoRuntimeDetails,
-  .routingCapacityGrid,
   .diagnosticsStats,
   .diagnosticDetails {
     grid-template-columns: 1fr;
