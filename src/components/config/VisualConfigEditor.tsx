@@ -61,6 +61,7 @@ import type {
   VisualConfigValues,
 } from '@/types/visualConfig';
 import { makeClientId } from '@/types/visualConfig';
+import type { CodexTurnStatePolicy } from '@/types/config';
 import { configApi, type ProxyUrlCheckResult } from '@/services/api/config';
 import { chatGptWebApi } from '@/services/api/chatgptWeb';
 import { useFrontendFeatureStore } from '@/stores';
@@ -985,6 +986,43 @@ export function VisualConfigEditor({
     ],
     [t]
   );
+  const codexTurnStatePolicyOptions = useMemo(
+    () => [
+      {
+        value: 'passthrough',
+        label: t('config_management.visual.sections.network.codex_turn_state_policy_passthrough'),
+      },
+      {
+        value: 'guard-cross-account',
+        label: t(
+          'config_management.visual.sections.network.codex_turn_state_policy_guard_cross_account'
+        ),
+      },
+      {
+        value: 'same-account-only',
+        label: t(
+          'config_management.visual.sections.network.codex_turn_state_policy_same_account_only'
+        ),
+      },
+      {
+        value: 'strip',
+        label: t('config_management.visual.sections.network.codex_turn_state_policy_strip'),
+      },
+    ],
+    [t]
+  );
+  const codexTurnStatePolicyHint = {
+    passthrough: t(
+      'config_management.visual.sections.network.codex_turn_state_policy_passthrough_desc'
+    ),
+    'guard-cross-account': t(
+      'config_management.visual.sections.network.codex_turn_state_policy_guard_cross_account_desc'
+    ),
+    'same-account-only': t(
+      'config_management.visual.sections.network.codex_turn_state_policy_same_account_only_desc'
+    ),
+    strip: t('config_management.visual.sections.network.codex_turn_state_policy_strip_desc'),
+  }[values.codexTurnStatePolicy];
 
   const portError = getValidationMessage(t, validationErrors?.port);
   const rmAccessPathError = getValidationMessage(t, validationErrors?.rmAccessPath);
@@ -4225,6 +4263,23 @@ export function VisualConfigEditor({
                         onChange({ codexSpoofSessionIdentity })
                       }
                     />
+                    <FieldShell
+                      label={t('config_management.visual.sections.network.codex_turn_state_policy')}
+                      htmlFor="config-codex-turn-state-policy"
+                      hint={codexTurnStatePolicyHint}
+                    >
+                      <Select
+                        id="config-codex-turn-state-policy"
+                        value={values.codexTurnStatePolicy}
+                        options={codexTurnStatePolicyOptions}
+                        disabled={disabled}
+                        onChange={(codexTurnStatePolicy) =>
+                          onChange({
+                            codexTurnStatePolicy: codexTurnStatePolicy as CodexTurnStatePolicy,
+                          })
+                        }
+                      />
+                    </FieldShell>
                     <ToggleRow
                       title={t('config_management.visual.sections.network.codex_fingerprint_ja3')}
                       description={t(

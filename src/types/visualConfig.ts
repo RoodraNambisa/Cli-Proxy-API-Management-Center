@@ -1,4 +1,5 @@
-import type { CodexCustomModelGroup } from './config';
+import type { CodexCustomModelGroup, CodexTurnStatePolicy } from './config';
+import { DEFAULT_CODEX_TURN_STATE_POLICY } from './config';
 
 export type PayloadParamValueType = 'string' | 'number' | 'boolean' | 'json';
 export type PayloadParamValidationErrorCode =
@@ -275,6 +276,7 @@ export type VisualConfigValues = {
   forceModelPrefix: boolean;
   codexIdentityConfuse: boolean;
   codexSpoofSessionIdentity: boolean;
+  codexTurnStatePolicy: CodexTurnStatePolicy;
   codexFingerprintJA3: boolean;
   codexFingerprintForceHTTP1: boolean;
   codexFingerprintImagesForceHTTP1: boolean;
@@ -364,6 +366,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   forceModelPrefix: false,
   codexIdentityConfuse: false,
   codexSpoofSessionIdentity: false,
+  codexTurnStatePolicy: DEFAULT_CODEX_TURN_STATE_POLICY,
   codexFingerprintJA3: false,
   codexFingerprintForceHTTP1: false,
   codexFingerprintImagesForceHTTP1: false,

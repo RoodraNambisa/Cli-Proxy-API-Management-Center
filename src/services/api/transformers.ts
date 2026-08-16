@@ -8,6 +8,7 @@ import type {
 } from '@/types';
 import {
   CODEX_CUSTOM_MODEL_GROUPS,
+  normalizeCodexTurnStatePolicy,
   type CodexCustomModelConfig,
   type CodexCustomModelGroup,
   type Config,
@@ -859,6 +860,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       identityConfuse: normalizeBoolean(codex['identity-confuse'] ?? codex.identityConfuse),
       spoofSessionIdentity: normalizeBoolean(
         codex['spoof-session-identity'] ?? codex.spoofSessionIdentity
+      ),
+      turnStatePolicy: normalizeCodexTurnStatePolicy(
+        codex['turn-state-policy'] ?? codex.turnStatePolicy
       ),
     };
   }

@@ -155,9 +155,29 @@ export interface CodexHeaderDefaultsConfig {
   originator?: string;
 }
 
+export const CODEX_TURN_STATE_POLICIES = [
+  'passthrough',
+  'guard-cross-account',
+  'same-account-only',
+  'strip',
+] as const;
+
+export type CodexTurnStatePolicy = (typeof CODEX_TURN_STATE_POLICIES)[number];
+
+export const DEFAULT_CODEX_TURN_STATE_POLICY: CodexTurnStatePolicy = 'guard-cross-account';
+
+export const normalizeCodexTurnStatePolicy = (value: unknown): CodexTurnStatePolicy => {
+  if (typeof value !== 'string') return DEFAULT_CODEX_TURN_STATE_POLICY;
+  const normalized = value.trim().toLowerCase();
+  return CODEX_TURN_STATE_POLICIES.includes(normalized as CodexTurnStatePolicy)
+    ? (normalized as CodexTurnStatePolicy)
+    : DEFAULT_CODEX_TURN_STATE_POLICY;
+};
+
 export interface CodexConfig {
   identityConfuse?: boolean;
   spoofSessionIdentity?: boolean;
+  turnStatePolicy?: CodexTurnStatePolicy;
 }
 
 export interface RemoteManagementConfig {

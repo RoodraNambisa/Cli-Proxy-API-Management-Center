@@ -1,4 +1,12 @@
-import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
@@ -81,6 +89,16 @@ const translations: Record<string, string> = {
     'Request limit per credential',
   'config_management.visual.sections.network.routing_per_auth_request_window_minutes':
     'Request limit window',
+  'config_management.visual.sections.network.codex_turn_state_policy': 'Codex turn-state policy',
+  'config_management.visual.sections.network.codex_turn_state_policy_passthrough':
+    'Pass through all',
+  'config_management.visual.sections.network.codex_turn_state_policy_guard_cross_account':
+    'Drop known cross-account states',
+  'config_management.visual.sections.network.codex_turn_state_policy_same_account_only':
+    'Keep known same-account states only',
+  'config_management.visual.sections.network.codex_turn_state_policy_strip': 'Strip all',
+  'config_management.visual.sections.network.codex_turn_state_policy_guard_cross_account_desc':
+    'Default compatibility mode',
   'config_management.settings_center.search_placeholder': 'Search configuration',
   'config_management.status_dirty_short': 'Unsaved',
   'config_management.visual.validation_blocked_short': 'Fix errors',
@@ -148,6 +166,20 @@ describe('configuration settings center', () => {
     fireEvent.click(screen.getByRole('button', { name: /Codex/ }));
     expect(screen.getByTestId('location').textContent).toBe('/config?section=provider-codex');
     expect(localStorage.getItem('config-management:visual-page')).toBe('provider-codex');
+  });
+
+  test('offers Codex turn-state policy as a fixed dropdown', async () => {
+    const onChange = vi.fn();
+    renderEditor('/config?section=provider-codex', { onChange });
+
+    const policySelect = screen.getByLabelText('Codex turn-state policy');
+    expect(policySelect.tagName).toBe('BUTTON');
+    fireEvent.click(policySelect);
+
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(4));
+    expect(screen.queryByRole('textbox', { name: 'Codex turn-state policy' })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: 'Strip all' }));
+    expect(onChange).toHaveBeenCalledWith({ codexTurnStatePolicy: 'strip' });
   });
 
   test('uses local memory when the URL has no section', () => {
@@ -359,7 +391,8 @@ describe('configuration settings center', () => {
       validationErrors: { 'images.unsupportedStatusCode': 'invalid_status_code' },
     });
 
-    const codexButton = screen.getByRole('button', { name: /Codex/ });
+    const navigation = screen.getByRole('navigation', { name: 'Configuration categories' });
+    const codexButton = within(navigation).getByRole('button', { name: /Codex/ });
     expect(codexButton.children).toHaveLength(3);
     expect(codexButton.lastElementChild?.textContent).toContain('1');
 
@@ -787,6 +820,57 @@ describe('legacy quota fallback config', () => {
       'antigravity-credits': true,
     });
     expect(result.current.visualDirtyFields).toEqual(['quotaAntigravityCredits']);
+  });
+});
+
+describe('Codex turn-state policy config', () => {
+  test('uses the default without creating a Codex block in unrelated YAML', () => {
+    const yaml = 'debug: false\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => {
+      expect(result.current.loadVisualValuesFromYaml(yaml)).toEqual({ ok: true });
+    });
+
+    expect(result.current.visualValues.codexTurnStatePolicy).toBe('guard-cross-account');
+    const merged = parseYaml(result.current.applyVisualChangesToYaml(yaml)) as Record<
+      string,
+      unknown
+    >;
+    expect(merged.codex).toBeUndefined();
+  });
+
+  test('round-trips a selected policy and tracks it as a Codex change', () => {
+    const yaml = [
+      'codex:',
+      '  identity-confuse: true',
+      '  turn-state-policy: passthrough',
+      '',
+    ].join('\n');
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => {
+      expect(result.current.loadVisualValuesFromYaml(yaml)).toEqual({ ok: true });
+    });
+    expect(result.current.visualValues.codexTurnStatePolicy).toBe('passthrough');
+
+    act(() => {
+      result.current.setVisualValues({ codexTurnStatePolicy: 'same-account-only' });
+    });
+
+    const savedYaml = result.current.applyVisualChangesToYaml(yaml);
+    const merged = parseYaml(savedYaml) as Record<string, Record<string, unknown>>;
+    expect(merged.codex).toMatchObject({
+      'identity-confuse': true,
+      'turn-state-policy': 'same-account-only',
+    });
+    expect(result.current.visualDirtyFields).toContain('codexTurnStatePolicy');
+
+    const reloaded = renderHook(() => useVisualConfig());
+    act(() => {
+      expect(reloaded.result.current.loadVisualValuesFromYaml(savedYaml)).toEqual({ ok: true });
+    });
+    expect(reloaded.result.current.visualValues.codexTurnStatePolicy).toBe('same-account-only');
   });
 });
 

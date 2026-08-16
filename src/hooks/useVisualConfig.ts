@@ -24,7 +24,12 @@ import type {
   PayloadParamValidationErrorCode,
 } from '@/types/visualConfig';
 import { DEFAULT_VISUAL_VALUES, makeClientId } from '@/types/visualConfig';
-import { CODEX_CUSTOM_MODEL_GROUPS, type CodexCustomModelGroup } from '@/types/config';
+import {
+  CODEX_CUSTOM_MODEL_GROUPS,
+  DEFAULT_CODEX_TURN_STATE_POLICY,
+  normalizeCodexTurnStatePolicy,
+  type CodexCustomModelGroup,
+} from '@/types/config';
 import {
   normalizeAuthModelExclusionModels,
   normalizeAuthModelExclusionProviders,
@@ -2177,6 +2182,12 @@ function getNextDirtyFields(
       nextValues.codexSpoofSessionIdentity === baselineValues.codexSpoofSessionIdentity
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexTurnStatePolicy')) {
+    updateDirty(
+      'codexTurnStatePolicy',
+      nextValues.codexTurnStatePolicy === baselineValues.codexTurnStatePolicy
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintJA3')) {
     updateDirty(
       'codexFingerprintJA3',
@@ -2922,6 +2933,9 @@ export function useVisualConfig() {
         codexSpoofSessionIdentity: Boolean(
           codex?.['spoof-session-identity'] ?? codex?.spoofSessionIdentity
         ),
+        codexTurnStatePolicy: normalizeCodexTurnStatePolicy(
+          codex?.['turn-state-policy'] ?? codex?.turnStatePolicy
+        ),
         codexFingerprintJA3,
         codexFingerprintForceHTTP1,
         codexFingerprintImagesForceHTTP1,
@@ -3343,11 +3357,13 @@ export function useVisualConfig() {
         if (
           docHas(doc, ['codex']) ||
           values.codexIdentityConfuse ||
-          values.codexSpoofSessionIdentity
+          values.codexSpoofSessionIdentity ||
+          values.codexTurnStatePolicy !== DEFAULT_CODEX_TURN_STATE_POLICY
         ) {
           ensureMapInDoc(doc, ['codex']);
           doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
           doc.setIn(['codex', 'spoof-session-identity'], values.codexSpoofSessionIdentity);
+          doc.setIn(['codex', 'turn-state-policy'], values.codexTurnStatePolicy);
           deleteIfMapEmpty(doc, ['codex']);
         }
         if (

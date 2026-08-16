@@ -21,14 +21,39 @@ describe('normalizeConfigResponse Codex configuration', () => {
   it('reads session identity spoofing from YAML and camel-case keys', () => {
     expect(
       normalizeConfigResponse({
-        codex: { 'identity-confuse': true, 'spoof-session-identity': true },
+        codex: {
+          'identity-confuse': true,
+          'spoof-session-identity': true,
+          'turn-state-policy': 'same-account-only',
+        },
       }).codex
-    ).toEqual({ identityConfuse: true, spoofSessionIdentity: true });
+    ).toEqual({
+      identityConfuse: true,
+      spoofSessionIdentity: true,
+      turnStatePolicy: 'same-account-only',
+    });
 
     expect(
       normalizeConfigResponse({
-        codex: { identityConfuse: false, spoofSessionIdentity: true },
+        codex: {
+          identityConfuse: false,
+          spoofSessionIdentity: true,
+          turnStatePolicy: 'strip',
+        },
       }).codex
-    ).toEqual({ identityConfuse: false, spoofSessionIdentity: true });
+    ).toEqual({
+      identityConfuse: false,
+      spoofSessionIdentity: true,
+      turnStatePolicy: 'strip',
+    });
+  });
+
+  it('falls back to the safe default for missing or invalid turn-state policies', () => {
+    expect(normalizeConfigResponse({ codex: {} }).codex?.turnStatePolicy).toBe(
+      'guard-cross-account'
+    );
+    expect(
+      normalizeConfigResponse({ codex: { 'turn-state-policy': 'unknown' } }).codex?.turnStatePolicy
+    ).toBe('guard-cross-account');
   });
 });
