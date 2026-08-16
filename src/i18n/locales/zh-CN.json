@@ -681,7 +681,7 @@
       "full": "完整"
     },
     "codex_fingerprint_mode_hints": {
-      "off": "不补齐或覆盖 Codex installation 与会话身份。",
+      "off": "关闭该凭证的账号级 installation 与会话指纹收敛；全局会话身份伪装仍可独立生效。",
       "device": "为每个凭证固定一个 installation ID，并覆盖客户端传入的 installation ID。",
       "session": "同时固定 Session ID，Thread 身份仍按客户端会话派生。",
       "full": "为该凭证固定 installation、Session 和 Thread 身份。"

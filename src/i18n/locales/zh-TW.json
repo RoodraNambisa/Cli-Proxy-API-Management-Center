@@ -678,7 +678,7 @@
       "full": "完整"
     },
     "codex_fingerprint_mode_hints": {
-      "off": "不補齊或覆寫 Codex installation 與工作階段身分。",
+      "off": "關閉此憑證的帳號級 installation 與工作階段指紋收斂；全域工作階段身分偽裝仍可獨立生效。",
       "device": "為每個憑證固定一個 installation ID，並覆寫用戶端傳入的 installation ID。",
       "session": "同時固定 Session ID，Thread 身分仍依用戶端工作階段衍生。",
       "full": "為該憑證固定 installation、Session 和 Thread 身分。"

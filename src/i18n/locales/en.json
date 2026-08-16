@@ -681,7 +681,7 @@
       "full": "Full"
     },
     "codex_fingerprint_mode_hints": {
-      "off": "Do not add or override Codex installation and session identity.",
+      "off": "Disable credential-level installation and session convergence; global session identity spoofing can still apply independently.",
       "device": "Keep one stable installation ID per credential and override client-provided installation IDs.",
       "session": "Also keep the session ID stable while deriving thread identity from each client session.",
       "full": "Keep installation, session, and thread identity stable for this credential."
