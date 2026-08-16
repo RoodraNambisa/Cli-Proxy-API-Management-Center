@@ -20,6 +20,7 @@ import type {
   RoutingPriorityOverrideVisualEntry,
   RoutingSubscriptionOverrideVisualEntry,
   VisualConfigValues,
+  VisualConfigValidationErrorCode,
   VisualConfigValidationErrors,
   PayloadParamValidationErrorCode,
 } from '@/types/visualConfig';
@@ -1238,8 +1239,8 @@ function getIntegerRangeError(
   value: string,
   min: number,
   max: number,
-  errorCode: 'integer_range_1_3840' | 'integer_range_1_256' | 'integer_range_1_10'
-): 'integer_range_1_3840' | 'integer_range_1_256' | 'integer_range_1_10' | undefined {
+  errorCode: Extract<VisualConfigValidationErrorCode, `integer_range_${string}`>
+): Extract<VisualConfigValidationErrorCode, `integer_range_${string}`> | undefined {
   const trimmed = value.trim();
   if (!/^\d+$/.test(trimmed)) return errorCode;
   const parsed = Number(trimmed);
@@ -1547,6 +1548,42 @@ export function getVisualConfigValidationErrors(
       'integer_range_1_256'
     ),
     chatgptWebMaxN: getIntegerRangeError(values.chatgptWebMaxN, 1, 10, 'integer_range_1_10'),
+    chatgptWebImageMaxInFlight: getIntegerRangeError(
+      values.chatgptWebImageMaxInFlight,
+      1,
+      512,
+      'integer_range_1_512'
+    ),
+    chatgptWebImageAdmissionQueueSize: getIntegerRangeError(
+      values.chatgptWebImageAdmissionQueueSize,
+      0,
+      512,
+      'integer_range_0_512'
+    ),
+    chatgptWebImageAdmissionWaitMilliseconds: getIntegerRangeError(
+      values.chatgptWebImageAdmissionWaitMilliseconds,
+      0,
+      30000,
+      'integer_range_0_30000'
+    ),
+    chatgptWebImageMaxFinalizers: getIntegerRangeError(
+      values.chatgptWebImageMaxFinalizers,
+      1,
+      64,
+      'integer_range_1_64'
+    ),
+    chatgptWebImageCompletionReserveMegabytes: getIntegerRangeError(
+      values.chatgptWebImageCompletionReserveMegabytes,
+      0,
+      32,
+      'integer_range_0_32'
+    ),
+    chatgptWebImageMemoryCapacityMegabytes: getIntegerRangeError(
+      values.chatgptWebImageMemoryCapacityMegabytes,
+      64,
+      8192,
+      'integer_range_64_8192'
+    ),
     routingFillFirstRange: routingFillFirstRangeError,
     routingFillFirstPerAuthRpm: routingFillFirstPerAuthRpmError,
     routingPerAuthRequestLimit: routingPerAuthRequestLimitError,
@@ -2335,6 +2372,46 @@ function getNextDirtyFields(
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebMaxN')) {
     updateDirty('chatgptWebMaxN', nextValues.chatgptWebMaxN === baselineValues.chatgptWebMaxN);
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageMaxInFlight')) {
+    updateDirty(
+      'chatgptWebImageMaxInFlight',
+      nextValues.chatgptWebImageMaxInFlight === baselineValues.chatgptWebImageMaxInFlight
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageAdmissionQueueSize')) {
+    updateDirty(
+      'chatgptWebImageAdmissionQueueSize',
+      nextValues.chatgptWebImageAdmissionQueueSize ===
+        baselineValues.chatgptWebImageAdmissionQueueSize
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageAdmissionWaitMilliseconds')) {
+    updateDirty(
+      'chatgptWebImageAdmissionWaitMilliseconds',
+      nextValues.chatgptWebImageAdmissionWaitMilliseconds ===
+        baselineValues.chatgptWebImageAdmissionWaitMilliseconds
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageMaxFinalizers')) {
+    updateDirty(
+      'chatgptWebImageMaxFinalizers',
+      nextValues.chatgptWebImageMaxFinalizers === baselineValues.chatgptWebImageMaxFinalizers
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageCompletionReserveMegabytes')) {
+    updateDirty(
+      'chatgptWebImageCompletionReserveMegabytes',
+      nextValues.chatgptWebImageCompletionReserveMegabytes ===
+        baselineValues.chatgptWebImageCompletionReserveMegabytes
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageMemoryCapacityMegabytes')) {
+    updateDirty(
+      'chatgptWebImageMemoryCapacityMegabytes',
+      nextValues.chatgptWebImageMemoryCapacityMegabytes ===
+        baselineValues.chatgptWebImageMemoryCapacityMegabytes
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'requestRetry')) {
     updateDirty('requestRetry', nextValues.requestRetry === baselineValues.requestRetry);
   }
@@ -3019,6 +3096,36 @@ export function useVisualConfig() {
             imagesChatGPTWeb?.maxN ??
             DEFAULT_VISUAL_VALUES.chatgptWebMaxN
         ),
+        chatgptWebImageMaxInFlight: String(
+          imagesChatGPTWeb?.['max-in-flight'] ??
+            imagesChatGPTWeb?.maxInFlight ??
+            DEFAULT_VISUAL_VALUES.chatgptWebImageMaxInFlight
+        ),
+        chatgptWebImageAdmissionQueueSize: String(
+          imagesChatGPTWeb?.['admission-queue-size'] ??
+            imagesChatGPTWeb?.admissionQueueSize ??
+            DEFAULT_VISUAL_VALUES.chatgptWebImageAdmissionQueueSize
+        ),
+        chatgptWebImageAdmissionWaitMilliseconds: String(
+          imagesChatGPTWeb?.['admission-wait-milliseconds'] ??
+            imagesChatGPTWeb?.admissionWaitMilliseconds ??
+            DEFAULT_VISUAL_VALUES.chatgptWebImageAdmissionWaitMilliseconds
+        ),
+        chatgptWebImageMaxFinalizers: String(
+          imagesChatGPTWeb?.['max-finalizers'] ??
+            imagesChatGPTWeb?.maxFinalizers ??
+            DEFAULT_VISUAL_VALUES.chatgptWebImageMaxFinalizers
+        ),
+        chatgptWebImageCompletionReserveMegabytes: String(
+          imagesChatGPTWeb?.['completion-reserve-megabytes'] ??
+            imagesChatGPTWeb?.completionReserveMegabytes ??
+            DEFAULT_VISUAL_VALUES.chatgptWebImageCompletionReserveMegabytes
+        ),
+        chatgptWebImageMemoryCapacityMegabytes: String(
+          imagesChatGPTWeb?.['memory-capacity-megabytes'] ??
+            imagesChatGPTWeb?.memoryCapacityMegabytes ??
+            DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryCapacityMegabytes
+        ),
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryCredentials: String(parsed['max-retry-credentials'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
@@ -3673,6 +3780,17 @@ export function useVisualConfig() {
           values.chatgptWebMaxImageResponseMegabytes !==
             DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes ||
           values.chatgptWebMaxN !== DEFAULT_VISUAL_VALUES.chatgptWebMaxN ||
+          values.chatgptWebImageMaxInFlight !== DEFAULT_VISUAL_VALUES.chatgptWebImageMaxInFlight ||
+          values.chatgptWebImageAdmissionQueueSize !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImageAdmissionQueueSize ||
+          values.chatgptWebImageAdmissionWaitMilliseconds !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImageAdmissionWaitMilliseconds ||
+          values.chatgptWebImageMaxFinalizers !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImageMaxFinalizers ||
+          values.chatgptWebImageCompletionReserveMegabytes !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImageCompletionReserveMegabytes ||
+          values.chatgptWebImageMemoryCapacityMegabytes !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryCapacityMegabytes ||
           docHas(doc, ['images', 'chatgpt-web']) ||
           docHas(doc, ['images', 'native']) ||
           !areNativeImagesEqual(values.images.native, imagesDefaults.native);
@@ -3732,7 +3850,19 @@ export function useVisualConfig() {
               DEFAULT_VISUAL_VALUES.chatgptWebMaxResizeEdgePixels ||
             values.chatgptWebMaxImageResponseMegabytes !==
               DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes ||
-            values.chatgptWebMaxN !== DEFAULT_VISUAL_VALUES.chatgptWebMaxN
+            values.chatgptWebMaxN !== DEFAULT_VISUAL_VALUES.chatgptWebMaxN ||
+            values.chatgptWebImageMaxInFlight !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImageMaxInFlight ||
+            values.chatgptWebImageAdmissionQueueSize !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImageAdmissionQueueSize ||
+            values.chatgptWebImageAdmissionWaitMilliseconds !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImageAdmissionWaitMilliseconds ||
+            values.chatgptWebImageMaxFinalizers !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImageMaxFinalizers ||
+            values.chatgptWebImageCompletionReserveMegabytes !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImageCompletionReserveMegabytes ||
+            values.chatgptWebImageMemoryCapacityMegabytes !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryCapacityMegabytes
           ) {
             ensureMapInDoc(doc, ['images', 'chatgpt-web']);
             setStringInDoc(
@@ -3774,6 +3904,48 @@ export function useVisualConfig() {
               values.chatgptWebMaxImageResponseMegabytes
             );
             setIntFromStringInDoc(doc, ['images', 'chatgpt-web', 'max-n'], values.chatgptWebMaxN);
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'max-in-flight'],
+              values.chatgptWebImageMaxInFlight
+            );
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'admission-queue-size'],
+              values.chatgptWebImageAdmissionQueueSize
+            );
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'admission-wait-milliseconds'],
+              values.chatgptWebImageAdmissionWaitMilliseconds
+            );
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'max-finalizers'],
+              values.chatgptWebImageMaxFinalizers
+            );
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'completion-reserve-megabytes'],
+              values.chatgptWebImageCompletionReserveMegabytes
+            );
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'memory-capacity-megabytes'],
+              values.chatgptWebImageMemoryCapacityMegabytes
+            );
+            for (const legacyKey of [
+              'maxInFlight',
+              'admissionQueueSize',
+              'admissionWaitMilliseconds',
+              'maxFinalizers',
+              'completionReserveMegabytes',
+              'memoryCapacityMegabytes',
+            ]) {
+              if (docHas(doc, ['images', 'chatgpt-web', legacyKey])) {
+                doc.deleteIn(['images', 'chatgpt-web', legacyKey]);
+              }
+            }
             deleteIfMapEmpty(doc, ['images', 'chatgpt-web']);
           }
           if (

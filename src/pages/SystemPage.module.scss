@@ -188,6 +188,211 @@
   }
 }
 
+.imageRuntimeSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding-top: $spacing-sm;
+}
+
+.imageRuntimeHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+
+  h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
+.imageRuntimeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm;
+}
+
+.imageMetricPanel {
+  min-width: 0;
+  padding: $spacing-md;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+  background: color-mix(in srgb, var(--bg-secondary) 84%, transparent);
+}
+
+.imageMetricHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+
+  h4 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 10px;
+    text-align: right;
+  }
+}
+
+.imageMetricLead {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 8px;
+
+  strong {
+    color: var(--text-primary);
+    font-size: 19px;
+    font-weight: 750;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 12px;
+  }
+}
+
+.imageCapacityTrack {
+  height: 6px;
+  margin-bottom: $spacing-md;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+    transition: width 180ms ease;
+  }
+}
+
+.imageMetricStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin: 0;
+
+  div {
+    min-width: 0;
+  }
+
+  dt {
+    color: var(--text-tertiary);
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  dd {
+    margin: 3px 0 0;
+    color: var(--text-primary);
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+      monospace;
+    font-size: 12px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+}
+
+.imageMetricWide {
+  grid-column: 1 / -1;
+}
+
+.imageMetricUnavailable {
+  margin: $spacing-sm 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.imagePhaseDetails {
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+  background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    padding: 11px $spacing-md;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+
+    span:last-child {
+      color: var(--text-tertiary);
+      font-size: 11px;
+      font-weight: 500;
+    }
+  }
+}
+
+.imagePhaseTableWrap {
+  overflow-x: auto;
+  border-top: 1px solid var(--border-color);
+}
+
+.imagePhaseTable {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  font-size: 11px;
+
+  th,
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  th {
+    color: var(--text-tertiary);
+    font-weight: 600;
+  }
+
+  td {
+    color: var(--text-secondary);
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+      monospace;
+  }
+
+  th:first-child,
+  td:first-child {
+    text-align: left;
+  }
+}
+
+.imagePhaseNote {
+  margin: 0;
+  padding: 10px $spacing-md;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
 .filesystemList {
   display: flex;
   flex-direction: column;
@@ -373,7 +578,8 @@
 
 @include mobile {
   .metricsGrid,
-  .filesystemStats {
+  .filesystemStats,
+  .imageRuntimeGrid {
     grid-template-columns: 1fr;
   }
 

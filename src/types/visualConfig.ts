@@ -24,6 +24,12 @@ export type VisualConfigFieldPath =
   | 'chatgptWebResizeFilter'
   | 'chatgptWebMaxImageResponseMegabytes'
   | 'chatgptWebMaxN'
+  | 'chatgptWebImageMaxInFlight'
+  | 'chatgptWebImageAdmissionQueueSize'
+  | 'chatgptWebImageAdmissionWaitMilliseconds'
+  | 'chatgptWebImageMaxFinalizers'
+  | 'chatgptWebImageCompletionReserveMegabytes'
+  | 'chatgptWebImageMemoryCapacityMegabytes'
   | 'routingFillFirstRange'
   | 'routingFillFirstPerAuthRpm'
   | 'routingPerAuthRequestLimit'
@@ -79,6 +85,12 @@ export type VisualConfigValidationErrorCode =
   | 'integer_range_1_3840'
   | 'integer_range_1_256'
   | 'integer_range_1_10'
+  | 'integer_range_1_512'
+  | 'integer_range_0_512'
+  | 'integer_range_0_30000'
+  | 'integer_range_1_64'
+  | 'integer_range_0_32'
+  | 'integer_range_64_8192'
   | 'strict_size_requires_aspect_adaptation'
   | 'resize_requires_aspect_adaptation'
   | 'resize_filter';
@@ -300,6 +312,12 @@ export type VisualConfigValues = {
   chatgptWebMaxResizeEdgePixels: string;
   chatgptWebMaxImageResponseMegabytes: string;
   chatgptWebMaxN: string;
+  chatgptWebImageMaxInFlight: string;
+  chatgptWebImageAdmissionQueueSize: string;
+  chatgptWebImageAdmissionWaitMilliseconds: string;
+  chatgptWebImageMaxFinalizers: string;
+  chatgptWebImageCompletionReserveMegabytes: string;
+  chatgptWebImageMemoryCapacityMegabytes: string;
   requestRetry: string;
   maxRetryCredentials: string;
   maxRetryInterval: string;
@@ -390,6 +408,12 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebMaxResizeEdgePixels: '3840',
   chatgptWebMaxImageResponseMegabytes: '128',
   chatgptWebMaxN: '1',
+  chatgptWebImageMaxInFlight: '64',
+  chatgptWebImageAdmissionQueueSize: '64',
+  chatgptWebImageAdmissionWaitMilliseconds: '1000',
+  chatgptWebImageMaxFinalizers: '8',
+  chatgptWebImageCompletionReserveMegabytes: '1',
+  chatgptWebImageMemoryCapacityMegabytes: '512',
   requestRetry: '',
   maxRetryCredentials: '',
   maxRetryInterval: '',

@@ -1080,6 +1080,30 @@ export function VisualConfigEditor({
     validationErrors?.chatgptWebMaxImageResponseMegabytes
   );
   const chatGptWebMaxNError = getValidationMessage(t, validationErrors?.chatgptWebMaxN);
+  const chatGptWebImageMaxInFlightError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImageMaxInFlight
+  );
+  const chatGptWebImageAdmissionQueueSizeError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImageAdmissionQueueSize
+  );
+  const chatGptWebImageAdmissionWaitMillisecondsError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImageAdmissionWaitMilliseconds
+  );
+  const chatGptWebImageMaxFinalizersError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImageMaxFinalizers
+  );
+  const chatGptWebImageCompletionReserveMegabytesError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImageCompletionReserveMegabytes
+  );
+  const chatGptWebImageMemoryCapacityMegabytesError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImageMemoryCapacityMegabytes
+  );
   const fixedErrorCooldownsErrorCount = useMemo(
     () =>
       Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('fixedErrorCooldowns.'))
@@ -1163,6 +1187,22 @@ export function VisualConfigEditor({
     chatGptWebResizeFilterError,
     chatGptWebMaxImageResponseMegabytesError,
     chatGptWebMaxNError,
+  ].filter(Boolean).length;
+  const chatGptWebImageCapacityDirty = hasDirtyConfigField(dirtyFields, [
+    'chatgptWebImageMaxInFlight',
+    'chatgptWebImageAdmissionQueueSize',
+    'chatgptWebImageAdmissionWaitMilliseconds',
+    'chatgptWebImageMaxFinalizers',
+    'chatgptWebImageCompletionReserveMegabytes',
+    'chatgptWebImageMemoryCapacityMegabytes',
+  ]);
+  const chatGptWebImageCapacityErrorCount = [
+    chatGptWebImageMaxInFlightError,
+    chatGptWebImageAdmissionQueueSizeError,
+    chatGptWebImageAdmissionWaitMillisecondsError,
+    chatGptWebImageMaxFinalizersError,
+    chatGptWebImageCompletionReserveMegabytesError,
+    chatGptWebImageMemoryCapacityMegabytesError,
   ].filter(Boolean).length;
   const retrySettingsErrorCount = [
     requestRetryError,
@@ -1650,6 +1690,12 @@ export function VisualConfigEditor({
           'chatgptWebResizeFilter',
           'chatgptWebMaxImageResponseMegabytes',
           'chatgptWebMaxN',
+          'chatgptWebImageMaxInFlight',
+          'chatgptWebImageAdmissionQueueSize',
+          'chatgptWebImageAdmissionWaitMilliseconds',
+          'chatgptWebImageMaxFinalizers',
+          'chatgptWebImageCompletionReserveMegabytes',
+          'chatgptWebImageMemoryCapacityMegabytes',
         ]),
       'provider-grok': 0,
       'advanced-payload': hasPayloadValidationErrors ? 1 : 0,
@@ -2297,6 +2343,151 @@ export function VisualConfigEditor({
                       value={values.chatgptWebMaxN}
                       disabled={disabled}
                       onChange={(event) => onChange({ chatgptWebMaxN: event.target.value })}
+                    />
+                  </SectionGrid>
+                </SectionStack>
+              </SettingsDisclosure>
+              <SettingsDisclosure
+                id="config-chatgpt-web-image-capacity"
+                title={t('config_management.settings_center.chatgpt_web.image_capacity_title')}
+                description={t(
+                  'config_management.settings_center.chatgpt_web.image_capacity_description'
+                )}
+                summary={t('config_management.settings_center.chatgpt_web.image_capacity_summary', {
+                  inFlight: values.chatgptWebImageMaxInFlight,
+                  queue: values.chatgptWebImageAdmissionQueueSize,
+                })}
+                focusTarget={focusTarget}
+                targetIds={[
+                  'config-chatgpt-web-image-max-in-flight',
+                  'config-chatgpt-web-image-admission-queue-size',
+                  'config-chatgpt-web-image-admission-wait-milliseconds',
+                  'config-chatgpt-web-image-max-finalizers',
+                  'config-chatgpt-web-image-completion-reserve-megabytes',
+                  'config-chatgpt-web-image-memory-capacity-megabytes',
+                ]}
+                dirty={chatGptWebImageCapacityDirty}
+                errorCount={chatGptWebImageCapacityErrorCount}
+              >
+                <SectionStack>
+                  <SectionGrid>
+                    <Input
+                      id="config-chatgpt-web-image-memory-capacity-megabytes"
+                      type="number"
+                      min={64}
+                      max={8192}
+                      step={1}
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.image_memory_capacity_megabytes'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_memory_capacity_megabytes_description'
+                      )}
+                      error={chatGptWebImageMemoryCapacityMegabytesError}
+                      value={values.chatgptWebImageMemoryCapacityMegabytes}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({
+                          chatgptWebImageMemoryCapacityMegabytes: event.target.value,
+                        })
+                      }
+                    />
+                    <Input
+                      id="config-chatgpt-web-image-max-in-flight"
+                      type="number"
+                      min={1}
+                      max={512}
+                      step={1}
+                      label={t('config_management.settings_center.chatgpt_web.image_max_in_flight')}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_max_in_flight_description'
+                      )}
+                      error={chatGptWebImageMaxInFlightError}
+                      value={values.chatgptWebImageMaxInFlight}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({ chatgptWebImageMaxInFlight: event.target.value })
+                      }
+                    />
+                    <Input
+                      id="config-chatgpt-web-image-admission-queue-size"
+                      type="number"
+                      min={0}
+                      max={512}
+                      step={1}
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.image_admission_queue_size'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_admission_queue_size_description'
+                      )}
+                      error={chatGptWebImageAdmissionQueueSizeError}
+                      value={values.chatgptWebImageAdmissionQueueSize}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({ chatgptWebImageAdmissionQueueSize: event.target.value })
+                      }
+                    />
+                    <Input
+                      id="config-chatgpt-web-image-admission-wait-milliseconds"
+                      type="number"
+                      min={0}
+                      max={30000}
+                      step={1}
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.image_admission_wait_milliseconds'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_admission_wait_milliseconds_description'
+                      )}
+                      error={chatGptWebImageAdmissionWaitMillisecondsError}
+                      value={values.chatgptWebImageAdmissionWaitMilliseconds}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({
+                          chatgptWebImageAdmissionWaitMilliseconds: event.target.value,
+                        })
+                      }
+                    />
+                    <Input
+                      id="config-chatgpt-web-image-max-finalizers"
+                      type="number"
+                      min={1}
+                      max={64}
+                      step={1}
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.image_max_finalizers'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_max_finalizers_description'
+                      )}
+                      error={chatGptWebImageMaxFinalizersError}
+                      value={values.chatgptWebImageMaxFinalizers}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({ chatgptWebImageMaxFinalizers: event.target.value })
+                      }
+                    />
+                    <Input
+                      id="config-chatgpt-web-image-completion-reserve-megabytes"
+                      type="number"
+                      min={0}
+                      max={32}
+                      step={1}
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.image_completion_reserve_megabytes'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_completion_reserve_megabytes_description'
+                      )}
+                      error={chatGptWebImageCompletionReserveMegabytesError}
+                      value={values.chatgptWebImageCompletionReserveMegabytes}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({
+                          chatgptWebImageCompletionReserveMegabytes: event.target.value,
+                        })
+                      }
                     />
                   </SectionGrid>
                 </SectionStack>

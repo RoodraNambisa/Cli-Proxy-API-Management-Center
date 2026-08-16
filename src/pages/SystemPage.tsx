@@ -80,6 +80,47 @@ const formatBytes = (value: number): string => {
   return `${(value / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
 };
 
+const formatDurationNanos = (value: number): string => {
+  if (!Number.isFinite(value) || value <= 0) return '0 ms';
+  const milliseconds = value / 1_000_000;
+  if (milliseconds < 1) return `${Math.round(value / 1000)} μs`;
+  if (milliseconds < 1000) return `${milliseconds.toFixed(milliseconds < 10 ? 2 : 1)} ms`;
+  const seconds = milliseconds / 1000;
+  if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 2 : 1)} s`;
+  const minutes = seconds / 60;
+  return `${minutes.toFixed(minutes < 10 ? 2 : 1)} min`;
+};
+
+const IMAGE_PHASE_ORDER = [
+  'route_request_total',
+  'route_input_admission',
+  'route_input_parse',
+  'web_execution_admission',
+  'route_credential_selection',
+  'route_request_slot',
+  'web_input_upload',
+  'web_requirements',
+  'web_conversation_prepare',
+  'web_upstream_initial',
+  'web_stream_settle',
+  'web_poll_slot_wait',
+  'web_poll_request',
+  'web_finalizer_wait',
+  'web_download',
+  'web_response_encode',
+  'route_response_encode',
+  'route_response_write_operation',
+];
+
+const sortImagePhaseEntries = <T,>(entries: Array<[string, T]>): Array<[string, T]> => {
+  const order = new Map(IMAGE_PHASE_ORDER.map((name, index) => [name, index]));
+  return entries.sort(([left], [right]) => {
+    const leftIndex = order.get(left) ?? IMAGE_PHASE_ORDER.length;
+    const rightIndex = order.get(right) ?? IMAGE_PHASE_ORDER.length;
+    return leftIndex === rightIndex ? left.localeCompare(right) : leftIndex - rightIndex;
+  });
+};
+
 const getErrorStatus = (error: unknown): number | undefined => {
   if (!error || typeof error !== 'object') return undefined;
   const direct = (error as { status?: unknown }).status;
@@ -555,6 +596,20 @@ export function SystemPage() {
         { key: 'usage_cache', value: systemMetrics.filesystems.usage_cache },
       ]
     : [];
+  const imageMemory = systemMetrics?.image_request_memory;
+  const imageInFlight = systemMetrics?.chatgpt_web_image_in_flight;
+  const imageFinalizers = systemMetrics?.chatgpt_web_image_finalizers;
+  const imagePollSlots = systemMetrics?.chatgpt_web_image_poll_slots;
+  const imagePhaseEntries = systemMetrics
+    ? sortImagePhaseEntries(Object.entries(systemMetrics.image_request_phases.metrics))
+    : [];
+  const hasImageRuntimeMetrics = Boolean(
+    imageMemory?.available ||
+    imageInFlight?.available ||
+    imageFinalizers?.available ||
+    imagePollSlots?.available ||
+    systemMetrics?.image_request_phases.available
+  );
 
   return (
     <div className={styles.container}>
@@ -669,6 +724,313 @@ export function SystemPage() {
                   </div>
                 ))}
               </dl>
+
+              <section className={styles.imageRuntimeSection} data-testid="image-runtime-metrics">
+                <div className={styles.imageRuntimeHeader}>
+                  <div>
+                    <h3>{t('system_info.image_runtime.title')}</h3>
+                    <p>{t('system_info.image_runtime.description')}</p>
+                  </div>
+                </div>
+                {!hasImageRuntimeMetrics ? (
+                  <div className="hint">{t('system_info.image_runtime.unavailable')}</div>
+                ) : (
+                  <>
+                    <div className={styles.imageRuntimeGrid}>
+                      <article className={styles.imageMetricPanel}>
+                        <div className={styles.imageMetricHeader}>
+                          <h4>{t('system_info.image_runtime.memory')}</h4>
+                          <span>{t('system_info.image_runtime.shared')}</span>
+                        </div>
+                        {!imageMemory?.available ? (
+                          <p className={styles.imageMetricUnavailable}>
+                            {t('system_info.image_runtime.group_unavailable')}
+                          </p>
+                        ) : (
+                          <>
+                            <div className={styles.imageMetricLead}>
+                              <strong>{formatBytes(imageMemory.processing_bytes)}</strong>
+                              <span>
+                                /{' '}
+                                {imageMemory.capacity_bytes > 0
+                                  ? formatBytes(imageMemory.capacity_bytes)
+                                  : '-'}
+                              </span>
+                            </div>
+                            <div className={styles.imageCapacityTrack}>
+                              <span
+                                style={{
+                                  width: `${
+                                    imageMemory.capacity_bytes > 0
+                                      ? Math.min(
+                                          100,
+                                          (imageMemory.processing_bytes /
+                                            imageMemory.capacity_bytes) *
+                                            100
+                                        )
+                                      : 0
+                                  }%`,
+                                }}
+                              />
+                            </div>
+                            <dl className={styles.imageMetricStats}>
+                              <div>
+                                <dt>{t('system_info.image_runtime.processing')}</dt>
+                                <dd>{imageMemory.processing_tasks}</dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.peak')}</dt>
+                                <dd>{formatBytes(imageMemory.peak_processing_bytes)}</dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.waiting')}</dt>
+                                <dd>
+                                  {imageMemory.waiting_tasks} / {imageMemory.queue_limit} ·{' '}
+                                  {formatBytes(imageMemory.waiting_bytes)}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.rejected')}</dt>
+                                <dd>
+                                  {imageMemory.immediate_rejected + imageMemory.queue_rejected}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.completion_reservations')}</dt>
+                                <dd>{imageMemory.completion_reservations}</dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.finalization')}</dt>
+                                <dd>
+                                  {imageMemory.finalization_active} /{' '}
+                                  {imageMemory.finalization_waiting}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.bypassed_reservations')}</dt>
+                                <dd>{imageMemory.bypassed_completion_reservations}</dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.revoked_reservations')}</dt>
+                                <dd>{imageMemory.revoked_completion_reservations}</dd>
+                              </div>
+                            </dl>
+                          </>
+                        )}
+                      </article>
+
+                      <article className={styles.imageMetricPanel}>
+                        <div className={styles.imageMetricHeader}>
+                          <h4>{t('system_info.image_runtime.in_flight')}</h4>
+                          <span>{t('system_info.image_runtime.full_lifecycle')}</span>
+                        </div>
+                        {!imageInFlight?.available ? (
+                          <p className={styles.imageMetricUnavailable}>
+                            {t('system_info.image_runtime.group_unavailable')}
+                          </p>
+                        ) : (
+                          <dl className={styles.imageMetricStats}>
+                            <div>
+                              <dt>{t('system_info.image_runtime.active_limit')}</dt>
+                              <dd>
+                                {imageInFlight.active} / {imageInFlight.limit || '-'}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.queue')}</dt>
+                              <dd>
+                                {imageInFlight.queued} / {imageInFlight.queue_limit}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.peak')}</dt>
+                              <dd>
+                                {imageInFlight.peak_active} / {imageInFlight.peak_queued}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.rejected')}</dt>
+                              <dd>
+                                {imageInFlight.immediate_rejects + imageInFlight.queue_rejects}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.timed_out')}</dt>
+                              <dd>{imageInFlight.timed_out}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.oldest_active')}</dt>
+                              <dd>{formatDurationNanos(imageInFlight.oldest_active_age_nanos)}</dd>
+                            </div>
+                            <div className={styles.imageMetricWide}>
+                              <dt>{t('system_info.image_runtime.long_running')}</dt>
+                              <dd>
+                                {imageInFlight.active_over_5_minutes} /{' '}
+                                {imageInFlight.active_over_15_minutes} /{' '}
+                                {imageInFlight.active_over_25_minutes}
+                              </dd>
+                            </div>
+                          </dl>
+                        )}
+                      </article>
+
+                      <article className={styles.imageMetricPanel}>
+                        <div className={styles.imageMetricHeader}>
+                          <h4>{t('system_info.image_runtime.finalizers')}</h4>
+                          <span>{t('system_info.image_runtime.settled_staging')}</span>
+                        </div>
+                        {!imageFinalizers?.available ? (
+                          <p className={styles.imageMetricUnavailable}>
+                            {t('system_info.image_runtime.group_unavailable')}
+                          </p>
+                        ) : (
+                          <dl className={styles.imageMetricStats}>
+                            <div>
+                              <dt>{t('system_info.image_runtime.active_limit')}</dt>
+                              <dd>
+                                {imageFinalizers.active} / {imageFinalizers.limit || '-'}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.queue')}</dt>
+                              <dd>
+                                {imageFinalizers.queued} / {imageFinalizers.queue_limit}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.peak')}</dt>
+                              <dd>
+                                {imageFinalizers.peak_active} / {imageFinalizers.peak_queued}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.rejected')}</dt>
+                              <dd>
+                                {imageFinalizers.immediate_rejects + imageFinalizers.queue_rejects}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.oldest_active')}</dt>
+                              <dd>
+                                {formatDurationNanos(imageFinalizers.oldest_active_age_nanos)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.timed_out')}</dt>
+                              <dd>{imageFinalizers.timed_out}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.max_wait')}</dt>
+                              <dd>{formatDurationNanos(imageFinalizers.max_wait_nanos)}</dd>
+                            </div>
+                            <div className={styles.imageMetricWide}>
+                              <dt>{t('system_info.image_runtime.long_running')}</dt>
+                              <dd>
+                                {imageFinalizers.active_over_5_minutes} /{' '}
+                                {imageFinalizers.active_over_15_minutes} /{' '}
+                                {imageFinalizers.active_over_25_minutes}
+                              </dd>
+                            </div>
+                          </dl>
+                        )}
+                      </article>
+
+                      <article className={styles.imageMetricPanel}>
+                        <div className={styles.imageMetricHeader}>
+                          <h4>{t('system_info.image_runtime.poll_slots')}</h4>
+                          <span>{t('system_info.image_runtime.poll_http')}</span>
+                        </div>
+                        {!imagePollSlots?.available ? (
+                          <p className={styles.imageMetricUnavailable}>
+                            {t('system_info.image_runtime.group_unavailable')}
+                          </p>
+                        ) : (
+                          <dl className={styles.imageMetricStats}>
+                            <div>
+                              <dt>{t('system_info.image_runtime.active_limit')}</dt>
+                              <dd>
+                                {imagePollSlots.active} / {imagePollSlots.limit || '-'}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.peak')}</dt>
+                              <dd>{imagePollSlots.peak_active}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.acquired_attempts')}</dt>
+                              <dd>
+                                {imagePollSlots.acquired} / {imagePollSlots.acquire_attempts}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.canceled')}</dt>
+                              <dd>{imagePollSlots.canceled}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.max_wait')}</dt>
+                              <dd>{formatDurationNanos(imagePollSlots.max_wait_nanos)}</dd>
+                            </div>
+                          </dl>
+                        )}
+                      </article>
+                    </div>
+
+                    {systemMetrics.image_request_phases.available ? (
+                      <details className={styles.imagePhaseDetails}>
+                        <summary>
+                          <span>{t('system_info.image_runtime.phases')}</span>
+                          <span>
+                            {t('system_info.image_runtime.phase_count', {
+                              count: imagePhaseEntries.length,
+                            })}
+                          </span>
+                        </summary>
+                        {imagePhaseEntries.length === 0 ? (
+                          <p className={styles.imageMetricUnavailable}>
+                            {t('system_info.image_runtime.no_phase_samples')}
+                          </p>
+                        ) : (
+                          <div className={styles.imagePhaseTableWrap}>
+                            <table className={styles.imagePhaseTable}>
+                              <thead>
+                                <tr>
+                                  <th>{t('system_info.image_runtime.phase')}</th>
+                                  <th>{t('system_info.image_runtime.count')}</th>
+                                  <th>{t('system_info.image_runtime.average')}</th>
+                                  <th>{t('system_info.image_runtime.maximum')}</th>
+                                  <th>{t('system_info.image_runtime.over_10_seconds')}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {imagePhaseEntries.map(([name, metric]) => (
+                                  <tr key={name}>
+                                    <td>
+                                      {t(`system_info.image_runtime.phase_names.${name}`, {
+                                        defaultValue: name,
+                                      })}
+                                    </td>
+                                    <td>{metric.count}</td>
+                                    <td>
+                                      {formatDurationNanos(
+                                        metric.count > 0 ? metric.total_nanos / metric.count : 0
+                                      )}
+                                    </td>
+                                    <td>{formatDurationNanos(metric.max_nanos)}</td>
+                                    <td>{metric.over_10_seconds}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                        <p className={styles.imagePhaseNote}>
+                          {t('system_info.image_runtime.phase_note')}
+                        </p>
+                      </details>
+                    ) : null}
+                  </>
+                )}
+              </section>
 
               <div className={styles.filesystemList}>
                 {filesystemEntries.map(({ key, value }) => {

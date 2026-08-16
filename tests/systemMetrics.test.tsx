@@ -97,6 +97,95 @@ const createSystemSnapshot = (): SystemMetricsSnapshot => ({
       used_percent: 50,
     },
   },
+  image_request_memory: {
+    available: true,
+    capacity_bytes: 512 * 1024 ** 2,
+    queue_limit: 64,
+    waiting_tasks: 3,
+    waiting_bytes: 12 * 1024 ** 2,
+    processing_tasks: 20,
+    processing_bytes: 128 * 1024 ** 2,
+    peak_processing_bytes: 256 * 1024 ** 2,
+    acquisitions: 100,
+    canceled_waits: 2,
+    queue_rejected: 4,
+    immediate_rejected: 5,
+    completion_reservations: 6,
+    revoked_completion_reservations: 7,
+    bypassed_completion_reservations: 8,
+    finalization_active: 1,
+    finalization_waiting: 2,
+  },
+  chatgpt_web_image_in_flight: {
+    available: true,
+    limit: 64,
+    queue_limit: 64,
+    active: 40,
+    queued: 5,
+    peak_active: 64,
+    peak_queued: 20,
+    admitted: 200,
+    immediate_rejects: 9,
+    queue_rejects: 10,
+    timed_out: 11,
+    canceled: 12,
+    total_wait_nanos: 2_000_000,
+    max_wait_nanos: 1_000_000,
+    oldest_active_age_nanos: 6 * 60 * 1_000_000_000,
+    active_over_5_minutes: 3,
+    active_over_15_minutes: 2,
+    active_over_25_minutes: 1,
+  },
+  chatgpt_web_image_finalizers: {
+    available: true,
+    limit: 8,
+    queue_limit: 64,
+    active: 2,
+    queued: 4,
+    peak_active: 8,
+    peak_queued: 12,
+    admitted: 80,
+    immediate_rejects: 0,
+    queue_rejects: 0,
+    timed_out: 1,
+    canceled: 2,
+    total_wait_nanos: 4_000_000,
+    max_wait_nanos: 3_000_000,
+    oldest_active_age_nanos: 16 * 60 * 1_000_000_000,
+    active_over_5_minutes: 2,
+    active_over_15_minutes: 1,
+    active_over_25_minutes: 0,
+  },
+  chatgpt_web_image_poll_slots: {
+    available: true,
+    limit: 64,
+    active: 10,
+    peak_active: 32,
+    acquire_attempts: 500,
+    acquired: 480,
+    canceled: 20,
+    total_wait_nanos: 5_000_000,
+    max_wait_nanos: 2_000_000,
+  },
+  image_request_phases: {
+    available: true,
+    handler_scope: 'all_image_routes',
+    chatgpt_web_scope: 'chatgpt_web_only_after_executor_selection',
+    response_write_count_semantics: 'write_operations',
+    metrics: {
+      route_request_total: {
+        count: 10,
+        total_nanos: 100_000_000,
+        max_nanos: 30_000_000,
+        up_to_1_millisecond: 0,
+        over_1_to_10_milliseconds: 2,
+        over_10_to_100_milliseconds: 8,
+        over_100_milliseconds_to_1_second: 0,
+        over_1_to_10_seconds: 0,
+        over_10_seconds: 0,
+      },
+    },
+  },
 });
 
 describe('system metrics and filesystem capacity', () => {
@@ -148,6 +237,45 @@ describe('system metrics and filesystem capacity', () => {
       path: '/app',
     });
     expect(snapshot.filesystems.auth_directory.status).toBe('unsupported');
+    expect(snapshot.image_request_memory.available).toBe(false);
+    expect(snapshot.chatgpt_web_image_in_flight.available).toBe(false);
+    expect(snapshot.chatgpt_web_image_finalizers.available).toBe(false);
+    expect(snapshot.chatgpt_web_image_poll_slots.available).toBe(false);
+    expect(snapshot.image_request_phases.available).toBe(false);
+
+    const imageSnapshot = normalizeSystemMetricsSnapshot({
+      image_post_processing: {
+        capacity_bytes: '536870912',
+        processing_bytes: -1,
+        bypassed_completion_reservations: 17,
+      },
+      chatgpt_web_image_in_flight: { active: 4, limit: 64, timed_out: '3' },
+      chatgpt_web_image_finalizers: { active_over_25_minutes: 2 },
+      chatgpt_web_image_poll_slots: { active: 5, max_wait_nanos: '9000000' },
+      image_request_phases: {
+        metrics: {
+          route_request_total: { count: 2, total_nanos: 100, max_nanos: -5 },
+          malformed: null,
+        },
+      },
+    });
+    expect(imageSnapshot.image_request_memory).toMatchObject({
+      available: true,
+      capacity_bytes: 536870912,
+      processing_bytes: 0,
+      bypassed_completion_reservations: 17,
+    });
+    expect(imageSnapshot.chatgpt_web_image_in_flight).toMatchObject({
+      available: true,
+      active: 4,
+      limit: 64,
+      timed_out: 3,
+    });
+    expect(imageSnapshot.chatgpt_web_image_finalizers.active_over_25_minutes).toBe(2);
+    expect(imageSnapshot.chatgpt_web_image_poll_slots.max_wait_nanos).toBe(9_000_000);
+    expect(imageSnapshot.image_request_phases.metrics).toEqual({
+      route_request_total: expect.objectContaining({ count: 2, total_nanos: 100, max_nanos: 0 }),
+    });
   });
 
   test('uses the lightweight management endpoint and normalizes its response', async () => {
@@ -476,6 +604,52 @@ describe('system metrics and filesystem capacity', () => {
     expect((document.getElementById('chatgpt-web-usage-max-disk') as HTMLInputElement).value).toBe(
       '2048'
     );
+  });
+
+  test('shows bounded image runtime capacity and compact phase diagnostics', async () => {
+    vi.spyOn(systemMetricsApi, 'get').mockResolvedValue(createSystemSnapshot());
+    vi.spyOn(configApi, 'getControlPanelUpdateStatus').mockResolvedValue({} as never);
+    vi.spyOn(apiKeysApi, 'list').mockResolvedValue([]);
+    vi.spyOn(useConfigStore.getState(), 'fetchConfig').mockResolvedValue({} as never);
+    vi.spyOn(useModelsStore.getState(), 'fetchModels').mockResolvedValue([]);
+
+    render(<SystemPage />);
+    const runtime = await screen.findByTestId('image-runtime-metrics');
+    expect(within(runtime).getByText('system_info.image_runtime.title')).toBeTruthy();
+    expect(within(runtime).getByText('128.0 MiB')).toBeTruthy();
+    expect(within(runtime).getByText('/ 512.0 MiB')).toBeTruthy();
+    expect(within(runtime).getByText('40 / 64')).toBeTruthy();
+    expect(within(runtime).getByText('2 / 8')).toBeTruthy();
+    expect(within(runtime).getByText('10 / 64')).toBeTruthy();
+    expect(
+      within(runtime).getByText('system_info.image_runtime.bypassed_reservations').parentElement
+        ?.textContent
+    ).toContain('8');
+
+    fireEvent.click(within(runtime).getByText('system_info.image_runtime.phases'));
+    expect(
+      within(runtime).getByText('system_info.image_runtime.phase_names.route_request_total')
+    ).toBeTruthy();
+    expect(within(runtime).getByText('system_info.image_runtime.phase_note')).toBeTruthy();
+  });
+
+  test('does not present missing image runtime groups as healthy zero capacity', async () => {
+    vi.spyOn(systemMetricsApi, 'get').mockResolvedValue(
+      normalizeSystemMetricsSnapshot({
+        collected_at: '2026-07-29T12:00:00Z',
+        runtime: { goroutines: 1 },
+        filesystems: {},
+      })
+    );
+    vi.spyOn(configApi, 'getControlPanelUpdateStatus').mockResolvedValue({} as never);
+    vi.spyOn(apiKeysApi, 'list').mockResolvedValue([]);
+    vi.spyOn(useConfigStore.getState(), 'fetchConfig').mockResolvedValue({} as never);
+    vi.spyOn(useModelsStore.getState(), 'fetchModels').mockResolvedValue([]);
+
+    render(<SystemPage />);
+    const runtime = await screen.findByTestId('image-runtime-metrics');
+    expect(within(runtime).getByText('system_info.image_runtime.unavailable')).toBeTruthy();
+    expect(within(runtime).queryByText('/ 0 B')).toBeNull();
   });
 
   test('polls while mounted and stops after leaving the system page', async () => {
