@@ -910,6 +910,30 @@ describe('ChatGPT Web management compatibility', () => {
     );
   });
 
+  test('treats an empty recovery state as idle', () => {
+    render(
+      <MemoryRouter>
+        <AuthFileCard
+          {...createCardProps({
+            name: 'idle-recovery.json',
+            type: 'chatgpt-web',
+            lifecycle_state: 'active',
+            account_info_recovery_state: '',
+            account_info_recovery_attempts: 0,
+            account_info_recovery_max_attempts: 4,
+            account_info_consecutive_failures: 0,
+            account_info_manual_recheckable: true,
+          })}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText('auth_files.chatgpt_web_recovery_label')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /auth_files.chatgpt_web_manual_recheck/ })
+    ).toBeNull();
+  });
+
   test('keeps critical Web lifecycle states above credential mode hints', () => {
     render(
       <MemoryRouter>

@@ -184,9 +184,10 @@ export function AuthFileCard(props: AuthFileCardProps) {
     .trim()
     .toLowerCase();
   const lifecycleReason = String(file.lifecycle_reason ?? '').trim();
-  const accountInfoRecoveryState = String(file.account_info_recovery_state ?? 'idle')
-    .trim()
-    .toLowerCase();
+  const accountInfoRecoveryState =
+    String(file.account_info_recovery_state ?? 'idle')
+      .trim()
+      .toLowerCase() || 'idle';
   const accountInfoRecoveryStateKey = `auth_files.chatgpt_web_recovery_states.${accountInfoRecoveryState}`;
   const translatedAccountInfoRecoveryState = t(accountInfoRecoveryStateKey);
   const accountInfoRecoveryStateLabel =
