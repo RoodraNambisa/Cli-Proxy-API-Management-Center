@@ -11,7 +11,10 @@ export type VisualConfigFieldPath =
   | 'port'
   | 'rmAccessPath'
   | 'logsMaxTotalSizeMb'
+  | 'logsRetentionDays'
   | 'usageStatisticsPersistIntervalSeconds'
+  | 'usageStatisticsDetailRetentionDays'
+  | 'usageStatisticsMaxStorageMegabytes'
   | 'requestRetry'
   | 'maxRetryCredentials'
   | 'maxRetryInterval'
@@ -277,8 +280,12 @@ export type VisualConfigValues = {
   commercialMode: boolean;
   loggingToFile: boolean;
   logsMaxTotalSizeMb: string;
+  logsRetentionDays: string;
   usageStatisticsEnabled: boolean;
+  usageStatisticsPersistenceEnabled: boolean;
   usageStatisticsPersistIntervalSeconds: string;
+  usageStatisticsDetailRetentionDays: string;
+  usageStatisticsMaxStorageMegabytes: string;
   pprofEnable: boolean;
   pprofAddr: string;
   proxyUrl: string;
@@ -375,8 +382,12 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   commercialMode: false,
   loggingToFile: false,
   logsMaxTotalSizeMb: '',
+  logsRetentionDays: '',
   usageStatisticsEnabled: false,
+  usageStatisticsPersistenceEnabled: true,
   usageStatisticsPersistIntervalSeconds: '',
+  usageStatisticsDetailRetentionDays: '',
+  usageStatisticsMaxStorageMegabytes: '',
   pprofEnable: false,
   pprofAddr: '',
   proxyUrl: '',

@@ -44,12 +44,16 @@ const SECTION_KEYS: RawConfigSection[] = [
   'error-response-rewrites',
   'quota-exceeded',
   'usage-statistics-enabled',
+  'usage-statistics-persistence-enabled',
   'usage-statistics-persist-interval-seconds',
+  'usage-statistics-detail-retention-days',
+  'usage-statistics-max-storage-megabytes',
   'request-log',
   'request-body-release',
   'request-body-audit',
   'logging-to-file',
   'logs-max-total-size-mb',
+  'logs-retention-days',
   'ws-auth',
   'force-model-prefix',
   'remote-management',
@@ -102,8 +106,14 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.quotaExceeded;
     case 'usage-statistics-enabled':
       return config.usageStatisticsEnabled;
+    case 'usage-statistics-persistence-enabled':
+      return config.usageStatisticsPersistenceEnabled;
     case 'usage-statistics-persist-interval-seconds':
       return config.usageStatisticsPersistIntervalSeconds;
+    case 'usage-statistics-detail-retention-days':
+      return config.usageStatisticsDetailRetentionDays;
+    case 'usage-statistics-max-storage-megabytes':
+      return config.usageStatisticsMaxStorageMegabytes;
     case 'request-log':
       return config.requestLog;
     case 'request-body-release':
@@ -114,6 +124,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.loggingToFile;
     case 'logs-max-total-size-mb':
       return config.logsMaxTotalSizeMb;
+    case 'logs-retention-days':
+      return config.logsRetentionDays;
     case 'ws-auth':
       return config.wsAuth;
     case 'force-model-prefix':
@@ -296,9 +308,21 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         case 'usage-statistics-enabled':
           nextConfig.usageStatisticsEnabled = value as Config['usageStatisticsEnabled'];
           break;
+        case 'usage-statistics-persistence-enabled':
+          nextConfig.usageStatisticsPersistenceEnabled =
+            value as Config['usageStatisticsPersistenceEnabled'];
+          break;
         case 'usage-statistics-persist-interval-seconds':
           nextConfig.usageStatisticsPersistIntervalSeconds =
             value as Config['usageStatisticsPersistIntervalSeconds'];
+          break;
+        case 'usage-statistics-detail-retention-days':
+          nextConfig.usageStatisticsDetailRetentionDays =
+            value as Config['usageStatisticsDetailRetentionDays'];
+          break;
+        case 'usage-statistics-max-storage-megabytes':
+          nextConfig.usageStatisticsMaxStorageMegabytes =
+            value as Config['usageStatisticsMaxStorageMegabytes'];
           break;
         case 'request-log':
           nextConfig.requestLog = value as Config['requestLog'];
@@ -314,6 +338,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'logs-max-total-size-mb':
           nextConfig.logsMaxTotalSizeMb = value as Config['logsMaxTotalSizeMb'];
+          break;
+        case 'logs-retention-days':
+          nextConfig.logsRetentionDays = value as Config['logsRetentionDays'];
           break;
         case 'ws-auth':
           nextConfig.wsAuth = value as Config['wsAuth'];

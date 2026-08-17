@@ -1027,9 +1027,18 @@ export function VisualConfigEditor({
   const portError = getValidationMessage(t, validationErrors?.port);
   const rmAccessPathError = getValidationMessage(t, validationErrors?.rmAccessPath);
   const logsMaxSizeError = getValidationMessage(t, validationErrors?.logsMaxTotalSizeMb);
+  const logsRetentionDaysError = getValidationMessage(t, validationErrors?.logsRetentionDays);
   const usageStatisticsPersistIntervalError = getValidationMessage(
     t,
     validationErrors?.usageStatisticsPersistIntervalSeconds
+  );
+  const usageStatisticsDetailRetentionDaysError = getValidationMessage(
+    t,
+    validationErrors?.usageStatisticsDetailRetentionDays
+  );
+  const usageStatisticsMaxStorageMegabytesError = getValidationMessage(
+    t,
+    validationErrors?.usageStatisticsMaxStorageMegabytes
   );
   const requestRetryError = getValidationMessage(t, validationErrors?.requestRetry);
   const maxRetryCredentialsError = getValidationMessage(t, validationErrors?.maxRetryCredentials);
@@ -1666,7 +1675,10 @@ export function VisualConfigEditor({
         requestBodyErrorCount,
       'global-observability': countErrors([
         'logsMaxTotalSizeMb',
+        'logsRetentionDays',
         'usageStatisticsPersistIntervalSeconds',
+        'usageStatisticsDetailRetentionDays',
+        'usageStatisticsMaxStorageMegabytes',
         'authMaintenance.scanIntervalSeconds',
         'authMaintenance.deleteIntervalSeconds',
         'authMaintenance.deleteStatusCodes',
@@ -3201,6 +3213,19 @@ export function VisualConfigEditor({
                       disabled={disabled}
                       onChange={(usageStatisticsEnabled) => onChange({ usageStatisticsEnabled })}
                     />
+                    <ToggleRow
+                      title={t(
+                        'config_management.visual.sections.system.usage_statistics_persistence'
+                      )}
+                      description={t(
+                        'config_management.visual.sections.system.usage_statistics_persistence_desc'
+                      )}
+                      checked={values.usageStatisticsPersistenceEnabled}
+                      disabled={disabled}
+                      onChange={(usageStatisticsPersistenceEnabled) =>
+                        onChange({ usageStatisticsPersistenceEnabled })
+                      }
+                    />
                   </div>
                   <div id="config-pprof" className={styles.pageGroup}>
                     <ToggleRow
@@ -3217,6 +3242,7 @@ export function VisualConfigEditor({
                   <Input
                     label={t('config_management.visual.sections.system.logs_max_size')}
                     type="number"
+                    min={0}
                     placeholder="0"
                     value={values.logsMaxTotalSizeMb}
                     onChange={(e) => onChange({ logsMaxTotalSizeMb: e.target.value })}
@@ -3224,8 +3250,20 @@ export function VisualConfigEditor({
                     error={logsMaxSizeError}
                   />
                   <Input
+                    label={t('config_management.visual.sections.system.logs_retention_days')}
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={values.logsRetentionDays}
+                    onChange={(e) => onChange({ logsRetentionDays: e.target.value })}
+                    disabled={disabled}
+                    hint={t('config_management.visual.sections.system.logs_retention_days_desc')}
+                    error={logsRetentionDaysError}
+                  />
+                  <Input
                     label={t('config_management.visual.sections.system.usage_statistics_persist')}
                     type="number"
+                    min={0}
                     placeholder="0"
                     value={values.usageStatisticsPersistIntervalSeconds}
                     onChange={(e) =>
@@ -3236,6 +3274,40 @@ export function VisualConfigEditor({
                       'config_management.visual.sections.system.usage_statistics_persist_desc'
                     )}
                     error={usageStatisticsPersistIntervalError}
+                  />
+                  <Input
+                    label={t(
+                      'config_management.visual.sections.system.usage_statistics_retention_days'
+                    )}
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={values.usageStatisticsDetailRetentionDays}
+                    onChange={(e) =>
+                      onChange({ usageStatisticsDetailRetentionDays: e.target.value })
+                    }
+                    disabled={disabled}
+                    hint={t(
+                      'config_management.visual.sections.system.usage_statistics_retention_days_desc'
+                    )}
+                    error={usageStatisticsDetailRetentionDaysError}
+                  />
+                  <Input
+                    label={t(
+                      'config_management.visual.sections.system.usage_statistics_max_storage'
+                    )}
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={values.usageStatisticsMaxStorageMegabytes}
+                    onChange={(e) =>
+                      onChange({ usageStatisticsMaxStorageMegabytes: e.target.value })
+                    }
+                    disabled={disabled}
+                    hint={t(
+                      'config_management.visual.sections.system.usage_statistics_max_storage_desc'
+                    )}
+                    error={usageStatisticsMaxStorageMegabytesError}
                   />
                   <Input
                     label={t('config_management.visual.sections.system.pprof_addr')}

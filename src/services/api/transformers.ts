@@ -759,8 +759,20 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   config.usageStatisticsEnabled = normalizeBoolean(
     raw['usage-statistics-enabled'] ?? raw.usageStatisticsEnabled
   );
+  const usageStatisticsPersistenceEnabled =
+    raw['usage-statistics-persistence-enabled'] ?? raw.usageStatisticsPersistenceEnabled;
+  config.usageStatisticsPersistenceEnabled =
+    usageStatisticsPersistenceEnabled === undefined
+      ? true
+      : normalizeBoolean(usageStatisticsPersistenceEnabled);
   config.usageStatisticsPersistIntervalSeconds = normalizeNumber(
     raw['usage-statistics-persist-interval-seconds'] ?? raw.usageStatisticsPersistIntervalSeconds
+  );
+  config.usageStatisticsDetailRetentionDays = normalizeNumber(
+    raw['usage-statistics-detail-retention-days'] ?? raw.usageStatisticsDetailRetentionDays
+  );
+  config.usageStatisticsMaxStorageMegabytes = normalizeNumber(
+    raw['usage-statistics-max-storage-megabytes'] ?? raw.usageStatisticsMaxStorageMegabytes
   );
   config.requestLog = normalizeBoolean(raw['request-log'] ?? raw.requestLog);
   config.requestBodyRelease = normalizeRequestBodyRelease(
@@ -772,6 +784,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   config.loggingToFile = normalizeBoolean(raw['logging-to-file'] ?? raw.loggingToFile);
   const logsMaxTotalSizeMb = raw['logs-max-total-size-mb'] ?? raw.logsMaxTotalSizeMb;
   config.logsMaxTotalSizeMb = normalizeNumber(logsMaxTotalSizeMb);
+  config.logsRetentionDays = normalizeNumber(raw['logs-retention-days'] ?? raw.logsRetentionDays);
   config.wsAuth = normalizeBoolean(raw['ws-auth'] ?? raw.wsAuth);
   config.forceModelPrefix = normalizeBoolean(raw['force-model-prefix'] ?? raw.forceModelPrefix);
   config.noCooldownStatusCodes = normalizeIntegerArray(

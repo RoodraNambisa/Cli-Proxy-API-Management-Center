@@ -237,12 +237,16 @@ export interface Config {
   disabledImageGenerationToolError?: DisabledImageGenerationToolErrorConfig;
   quotaExceeded?: QuotaExceededConfig;
   usageStatisticsEnabled?: boolean;
+  usageStatisticsPersistenceEnabled?: boolean;
   usageStatisticsPersistIntervalSeconds?: number;
+  usageStatisticsDetailRetentionDays?: number;
+  usageStatisticsMaxStorageMegabytes?: number;
   requestLog?: boolean;
   requestBodyRelease?: RequestBodyReleaseConfig;
   requestBodyAudit?: RequestBodyAuditConfig;
   loggingToFile?: boolean;
   logsMaxTotalSizeMb?: number;
+  logsRetentionDays?: number;
   wsAuth?: boolean;
   forceModelPrefix?: boolean;
   remoteManagement?: RemoteManagementConfig;
@@ -285,12 +289,16 @@ export type RawConfigSection =
   | 'error-response-rewrites'
   | 'quota-exceeded'
   | 'usage-statistics-enabled'
+  | 'usage-statistics-persistence-enabled'
   | 'usage-statistics-persist-interval-seconds'
+  | 'usage-statistics-detail-retention-days'
+  | 'usage-statistics-max-storage-megabytes'
   | 'request-log'
   | 'request-body-release'
   | 'request-body-audit'
   | 'logging-to-file'
   | 'logs-max-total-size-mb'
+  | 'logs-retention-days'
   | 'ws-auth'
   | 'force-model-prefix'
   | 'remote-management'

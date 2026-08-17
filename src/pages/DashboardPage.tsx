@@ -260,13 +260,18 @@ export function DashboardPage() {
           ? styles.configBadgeRandom
           : styles.configBadgeUnknown;
   const authMaintenanceEnabled = config?.authMaintenance?.enable === true;
+  const usageStatisticsPersistenceEnabled =
+    config?.usageStatisticsPersistenceEnabled === undefined
+      ? true
+      : config.usageStatisticsPersistenceEnabled;
   const usageStatisticsPersistInterval = config?.usageStatisticsPersistIntervalSeconds;
-  const usageStatisticsPersistDisplay =
-    usageStatisticsPersistInterval === undefined
+  const usageStatisticsPersistDisplay = !usageStatisticsPersistenceEnabled
+    ? t('dashboard.setting_disabled')
+    : usageStatisticsPersistInterval === undefined
       ? '-'
       : usageStatisticsPersistInterval > 0
         ? `${usageStatisticsPersistInterval}${t('dashboard.seconds_short')}`
-        : t('dashboard.setting_disabled');
+        : t('dashboard.usage_statistics_shutdown_only');
   const maxRetryCredentials = config?.maxRetryCredentials;
   const maxRetryCredentialsDisplay =
     maxRetryCredentials === undefined

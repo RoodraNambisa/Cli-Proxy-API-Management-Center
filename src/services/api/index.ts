@@ -18,3 +18,4 @@ export * from './chatgptWeb';
 export * from './proxyPools';
 export * from './codexAgentIdentity';
 export * from './systemMetrics';
+export * from './historyStorage';

@@ -1517,8 +1517,15 @@ export function getVisualConfigValidationErrors(
     port: getPortError(values.port),
     rmAccessPath: getManagementAccessPathError(values.rmAccessPath),
     logsMaxTotalSizeMb: getNonNegativeIntegerError(values.logsMaxTotalSizeMb),
+    logsRetentionDays: getNonNegativeIntegerError(values.logsRetentionDays),
     usageStatisticsPersistIntervalSeconds: getNonNegativeIntegerError(
       values.usageStatisticsPersistIntervalSeconds
+    ),
+    usageStatisticsDetailRetentionDays: getNonNegativeIntegerError(
+      values.usageStatisticsDetailRetentionDays
+    ),
+    usageStatisticsMaxStorageMegabytes: getNonNegativeIntegerError(
+      values.usageStatisticsMaxStorageMegabytes
     ),
     requestRetry: getNonNegativeIntegerError(values.requestRetry),
     maxRetryCredentials: getNonNegativeIntegerError(values.maxRetryCredentials),
@@ -2180,10 +2187,23 @@ function getNextDirtyFields(
       nextValues.logsMaxTotalSizeMb === baselineValues.logsMaxTotalSizeMb
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'logsRetentionDays')) {
+    updateDirty(
+      'logsRetentionDays',
+      nextValues.logsRetentionDays === baselineValues.logsRetentionDays
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'usageStatisticsEnabled')) {
     updateDirty(
       'usageStatisticsEnabled',
       nextValues.usageStatisticsEnabled === baselineValues.usageStatisticsEnabled
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'usageStatisticsPersistenceEnabled')) {
+    updateDirty(
+      'usageStatisticsPersistenceEnabled',
+      nextValues.usageStatisticsPersistenceEnabled ===
+        baselineValues.usageStatisticsPersistenceEnabled
     );
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'usageStatisticsPersistIntervalSeconds')) {
@@ -2191,6 +2211,20 @@ function getNextDirtyFields(
       'usageStatisticsPersistIntervalSeconds',
       nextValues.usageStatisticsPersistIntervalSeconds ===
         baselineValues.usageStatisticsPersistIntervalSeconds
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'usageStatisticsDetailRetentionDays')) {
+    updateDirty(
+      'usageStatisticsDetailRetentionDays',
+      nextValues.usageStatisticsDetailRetentionDays ===
+        baselineValues.usageStatisticsDetailRetentionDays
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'usageStatisticsMaxStorageMegabytes')) {
+    updateDirty(
+      'usageStatisticsMaxStorageMegabytes',
+      nextValues.usageStatisticsMaxStorageMegabytes ===
+        baselineValues.usageStatisticsMaxStorageMegabytes
     );
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'pprofEnable')) {
@@ -3010,10 +3044,33 @@ export function useVisualConfig() {
         debug: Boolean(parsed.debug),
         commercialMode: Boolean(parsed['commercial-mode']),
         loggingToFile: Boolean(parsed['logging-to-file']),
-        logsMaxTotalSizeMb: String(parsed['logs-max-total-size-mb'] ?? ''),
+        logsMaxTotalSizeMb: String(
+          parsed['logs-max-total-size-mb'] ?? parsed.logsMaxTotalSizeMb ?? ''
+        ),
+        logsRetentionDays: String(parsed['logs-retention-days'] ?? parsed.logsRetentionDays ?? ''),
         usageStatisticsEnabled: Boolean(parsed['usage-statistics-enabled']),
+        usageStatisticsPersistenceEnabled:
+          parsed['usage-statistics-persistence-enabled'] === undefined &&
+          parsed.usageStatisticsPersistenceEnabled === undefined
+            ? true
+            : parseBooleanValue(
+                parsed['usage-statistics-persistence-enabled'] ??
+                  parsed.usageStatisticsPersistenceEnabled
+              ),
         usageStatisticsPersistIntervalSeconds: String(
-          parsed['usage-statistics-persist-interval-seconds'] ?? ''
+          parsed['usage-statistics-persist-interval-seconds'] ??
+            parsed.usageStatisticsPersistIntervalSeconds ??
+            ''
+        ),
+        usageStatisticsDetailRetentionDays: String(
+          parsed['usage-statistics-detail-retention-days'] ??
+            parsed.usageStatisticsDetailRetentionDays ??
+            ''
+        ),
+        usageStatisticsMaxStorageMegabytes: String(
+          parsed['usage-statistics-max-storage-megabytes'] ??
+            parsed.usageStatisticsMaxStorageMegabytes ??
+            ''
         ),
         pprofEnable: Boolean(pprof?.enable),
         pprofAddr: typeof pprof?.addr === 'string' ? pprof.addr : '',
@@ -3462,7 +3519,18 @@ export function useVisualConfig() {
         setBooleanInDoc(doc, ['commercial-mode'], values.commercialMode);
         setBooleanInDoc(doc, ['logging-to-file'], values.loggingToFile);
         setIntFromStringInDoc(doc, ['logs-max-total-size-mb'], values.logsMaxTotalSizeMb);
+        setIntFromStringInDoc(doc, ['logs-retention-days'], values.logsRetentionDays);
         setBooleanInDoc(doc, ['usage-statistics-enabled'], values.usageStatisticsEnabled);
+        if (
+          docHas(doc, ['usage-statistics-persistence-enabled']) ||
+          docHas(doc, ['usageStatisticsPersistenceEnabled']) ||
+          !values.usageStatisticsPersistenceEnabled
+        ) {
+          doc.setIn(
+            ['usage-statistics-persistence-enabled'],
+            values.usageStatisticsPersistenceEnabled
+          );
+        }
         if (
           docHas(doc, ['usage-statistics-persist-interval-seconds']) ||
           values.usageStatisticsPersistIntervalSeconds.trim()
@@ -3472,6 +3540,26 @@ export function useVisualConfig() {
             ['usage-statistics-persist-interval-seconds'],
             values.usageStatisticsPersistIntervalSeconds
           );
+        }
+        setIntFromStringInDoc(
+          doc,
+          ['usage-statistics-detail-retention-days'],
+          values.usageStatisticsDetailRetentionDays
+        );
+        setIntFromStringInDoc(
+          doc,
+          ['usage-statistics-max-storage-megabytes'],
+          values.usageStatisticsMaxStorageMegabytes
+        );
+        for (const legacyKey of [
+          'logsMaxTotalSizeMb',
+          'logsRetentionDays',
+          'usageStatisticsPersistenceEnabled',
+          'usageStatisticsPersistIntervalSeconds',
+          'usageStatisticsDetailRetentionDays',
+          'usageStatisticsMaxStorageMegabytes',
+        ]) {
+          if (docHas(doc, [legacyKey])) doc.deleteIn([legacyKey]);
         }
         if (docHas(doc, ['pprof']) || values.pprofEnable || values.pprofAddr.trim()) {
           ensureMapInDoc(doc, ['pprof']);

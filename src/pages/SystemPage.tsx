@@ -19,6 +19,7 @@ import type { SystemFilesystemSnapshot, SystemMetricsSnapshot } from '@/types';
 import { classifyModels } from '@/utils/models';
 import { STORAGE_KEY_AUTH } from '@/utils/constants';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
+import { StartupHistoryPanel } from '@/features/system/StartupHistoryPanel';
 import iconGemini from '@/assets/icons/gemini.svg';
 import iconClaude from '@/assets/icons/claude.svg';
 import iconOpenaiLight from '@/assets/icons/openai-light.svg';
@@ -788,6 +789,11 @@ export function SystemPage() {
             </div>
           </div>
         </Card>
+
+        <StartupHistoryPanel
+          connected={auth.connectionStatus === 'connected'}
+          connectionKey={currentSystemMetricsConnectionKey}
+        />
 
         <Card
           title={t('system_info.metrics_title')}

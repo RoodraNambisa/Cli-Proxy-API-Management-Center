@@ -6,7 +6,7 @@ import {
   type ChatGptWebUsageCachePanelHandle,
 } from '@/features/chatgptWeb/components/ChatGptWebUsageCachePanel';
 import { SystemPage } from '@/pages/SystemPage';
-import { chatGptWebApi, configApi, systemMetricsApi } from '@/services/api';
+import { chatGptWebApi, configApi, historyStorageApi, systemMetricsApi } from '@/services/api';
 import { apiKeysApi } from '@/services/api/apiKeys';
 import { apiClient } from '@/services/api/client';
 import {
@@ -243,6 +243,12 @@ describe('system metrics and filesystem capacity', () => {
       connectionStatus: 'connected',
     });
     useNotificationStore.setState({ showNotification: vi.fn() });
+    vi.spyOn(historyStorageApi, 'getStartupStatus').mockRejectedValue(
+      Object.assign(new Error('not found'), { status: 404 })
+    );
+    vi.spyOn(historyStorageApi, 'getStorageHistory').mockRejectedValue(
+      Object.assign(new Error('not found'), { status: 404 })
+    );
   });
 
   afterEach(() => {
