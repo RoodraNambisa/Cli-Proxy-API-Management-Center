@@ -2390,8 +2390,7 @@ export function VisualConfigEditor({
                     <Input
                       id="config-chatgpt-web-image-memory-capacity-megabytes"
                       type="number"
-                      min={64}
-                      max={8192}
+                      min={1}
                       step={1}
                       label={t(
                         'config_management.settings_center.chatgpt_web.image_memory_capacity_megabytes'
@@ -2412,7 +2411,6 @@ export function VisualConfigEditor({
                       id="config-chatgpt-web-image-max-in-flight"
                       type="number"
                       min={1}
-                      max={4096}
                       step={1}
                       label={t('config_management.settings_center.chatgpt_web.image_max_in_flight')}
                       hint={t(
@@ -2429,7 +2427,6 @@ export function VisualConfigEditor({
                       id="config-chatgpt-web-image-poll-concurrency"
                       type="number"
                       min={1}
-                      max={512}
                       step={1}
                       label={t(
                         'config_management.settings_center.chatgpt_web.image_poll_concurrency'
@@ -2448,7 +2445,6 @@ export function VisualConfigEditor({
                       id="config-chatgpt-web-image-admission-queue-size"
                       type="number"
                       min={0}
-                      max={4096}
                       step={1}
                       label={t(
                         'config_management.settings_center.chatgpt_web.image_admission_queue_size'
@@ -2467,7 +2463,6 @@ export function VisualConfigEditor({
                       id="config-chatgpt-web-image-admission-wait-milliseconds"
                       type="number"
                       min={0}
-                      max={30000}
                       step={1}
                       label={t(
                         'config_management.settings_center.chatgpt_web.image_admission_wait_milliseconds'
@@ -2488,7 +2483,6 @@ export function VisualConfigEditor({
                       id="config-chatgpt-web-image-max-finalizers"
                       type="number"
                       min={1}
-                      max={64}
                       step={1}
                       label={t(
                         'config_management.settings_center.chatgpt_web.image_max_finalizers'
@@ -2507,7 +2501,6 @@ export function VisualConfigEditor({
                       id="config-chatgpt-web-image-completion-reserve-megabytes"
                       type="number"
                       min={0}
-                      max={32}
                       step={1}
                       label={t(
                         'config_management.settings_center.chatgpt_web.image_completion_reserve_megabytes'
@@ -2528,7 +2521,6 @@ export function VisualConfigEditor({
                       id="config-chatgpt-web-image-memory-finalizer-concurrency"
                       type="number"
                       min={1}
-                      max={64}
                       step={1}
                       label={t(
                         'config_management.settings_center.chatgpt_web.image_memory_finalizer_concurrency'

@@ -91,6 +91,27 @@ const formatDurationNanos = (value: number): string => {
   return `${minutes.toFixed(minutes < 10 ? 2 : 1)} min`;
 };
 
+const metricUtilizationPercent = (current: number, limit: number): number | null => {
+  if (!Number.isFinite(current) || !Number.isFinite(limit) || current < 0 || limit <= 0) {
+    return null;
+  }
+  const percent = (current / limit) * 100;
+  return Number.isFinite(percent) ? percent : null;
+};
+
+const formatMetricUtilization = (value: number | null): string =>
+  value === null ? '-' : `${value.toFixed(value >= 10 ? 0 : 1)}%`;
+
+const metricPressureState = (
+  value: number | null,
+  available: boolean
+): 'unavailable' | 'normal' | 'warning' | 'critical' => {
+  if (!available || value === null) return 'unavailable';
+  if (value >= 90) return 'critical';
+  if (value >= 80) return 'warning';
+  return 'normal';
+};
+
 const IMAGE_PHASE_ORDER = [
   'route_request_total',
   'route_input_admission',
@@ -601,6 +622,7 @@ export function SystemPage() {
   const imageFinalizers = systemMetrics?.chatgpt_web_image_finalizers;
   const imageMemoryFinalizers = systemMetrics?.chatgpt_web_image_memory_finalizers;
   const imagePollSlots = systemMetrics?.chatgpt_web_image_poll_slots;
+  const imageSpool = systemMetrics?.image_spool;
   const imagePhaseEntries = systemMetrics
     ? sortImagePhaseEntries(Object.entries(systemMetrics.image_request_phases.metrics))
     : [];
@@ -610,8 +632,108 @@ export function SystemPage() {
     imageFinalizers?.available ||
     imageMemoryFinalizers?.available ||
     imagePollSlots?.available ||
+    imageSpool?.available ||
     systemMetrics?.image_request_phases.available
   );
+  const imagePressureMetrics = [
+    {
+      key: 'memory',
+      available: imageMemory?.available === true && imageMemory.capacity_bytes > 0,
+      detailsAvailable: imageMemory?.available === true,
+      utilization: metricUtilizationPercent(
+        imageMemory?.processing_bytes ?? 0,
+        imageMemory?.capacity_bytes ?? 0
+      ),
+      current: imageMemory ? formatBytes(imageMemory.processing_bytes) : '-',
+      limit: imageMemory?.capacity_bytes ? formatBytes(imageMemory.capacity_bytes) : '-',
+      queued: imageMemory?.waiting_tasks ?? 0,
+      peak: imageMemory ? formatBytes(imageMemory.peak_processing_bytes) : '-',
+      rejected: (imageMemory?.immediate_rejected ?? 0) + (imageMemory?.queue_rejected ?? 0),
+      timedOut: null,
+    },
+    {
+      key: 'in_flight',
+      available: imageInFlight?.available === true && imageInFlight.limit > 0,
+      detailsAvailable: imageInFlight?.available === true,
+      utilization: metricUtilizationPercent(imageInFlight?.active ?? 0, imageInFlight?.limit ?? 0),
+      current: imageInFlight?.active ?? 0,
+      limit: imageInFlight?.limit || '-',
+      queued: imageInFlight?.queued ?? 0,
+      peak: imageInFlight?.peak_active ?? 0,
+      rejected: (imageInFlight?.immediate_rejects ?? 0) + (imageInFlight?.queue_rejects ?? 0),
+      timedOut: imageInFlight?.timed_out ?? 0,
+    },
+    {
+      key: 'poll_slots',
+      available: imagePollSlots?.available === true && imagePollSlots.limit > 0,
+      detailsAvailable: imagePollSlots?.capacity_details_available === true,
+      utilization: metricUtilizationPercent(
+        imagePollSlots?.active ?? 0,
+        imagePollSlots?.limit ?? 0
+      ),
+      current: imagePollSlots?.active ?? 0,
+      limit: imagePollSlots?.limit || '-',
+      queued: imagePollSlots?.queued ?? 0,
+      peak: imagePollSlots?.peak_active ?? 0,
+      rejected: (imagePollSlots?.immediate_rejects ?? 0) + (imagePollSlots?.queue_rejects ?? 0),
+      timedOut: imagePollSlots?.timed_out ?? 0,
+    },
+    {
+      key: 'memory_finalizers',
+      available: imageMemoryFinalizers?.available === true && imageMemoryFinalizers.limit > 0,
+      detailsAvailable: imageMemoryFinalizers?.available === true,
+      utilization: metricUtilizationPercent(
+        imageMemoryFinalizers?.active ?? 0,
+        imageMemoryFinalizers?.limit ?? 0
+      ),
+      current: imageMemoryFinalizers?.active ?? 0,
+      limit: imageMemoryFinalizers?.limit || '-',
+      queued: imageMemoryFinalizers?.queued ?? 0,
+      peak: imageMemoryFinalizers?.peak_active ?? 0,
+      rejected:
+        (imageMemoryFinalizers?.immediate_rejects ?? 0) +
+        (imageMemoryFinalizers?.queue_rejects ?? 0),
+      timedOut: imageMemoryFinalizers?.timed_out ?? 0,
+    },
+  ];
+  const imageTuningHints: string[] = [];
+  if (
+    imageInFlight?.available &&
+    imageInFlight.limit > 0 &&
+    (metricUtilizationPercent(imageInFlight.active, imageInFlight.limit) ?? 0) >= 80 &&
+    imageInFlight.queued > 0
+  ) {
+    imageTuningHints.push('lifecycle');
+  }
+  if (
+    imagePollSlots?.available &&
+    imagePollSlots.limit > 0 &&
+    imagePollSlots.capacity_details_available &&
+    (imagePollSlots.queued > 0 ||
+      (metricUtilizationPercent(imagePollSlots.active, imagePollSlots.limit) ?? 0) >= 90)
+  ) {
+    imageTuningHints.push('poll');
+  }
+  const imageMemoryUtilization = metricUtilizationPercent(
+    imageMemory?.processing_bytes ?? 0,
+    imageMemory?.capacity_bytes ?? 0
+  );
+  if (
+    imageMemoryFinalizers?.available &&
+    imageMemoryFinalizers.limit > 0 &&
+    imageMemoryFinalizers.queued > 0 &&
+    imageMemoryUtilization !== null &&
+    imageMemoryUtilization < 80
+  ) {
+    imageTuningHints.push('memory_finalizer');
+  }
+  if (
+    imageMemory?.available &&
+    imageMemory.capacity_bytes > 0 &&
+    ((imageMemoryUtilization ?? 0) >= 85 || imageMemory.waiting_tasks > 0)
+  ) {
+    imageTuningHints.push('memory');
+  }
 
   return (
     <div className={styles.container}>
@@ -738,6 +860,96 @@ export function SystemPage() {
                   <div className="hint">{t('system_info.image_runtime.unavailable')}</div>
                 ) : (
                   <>
+                    <section
+                      className={styles.imagePressureOverview}
+                      data-testid="image-resource-pressure"
+                    >
+                      <div className={styles.imagePressureHeader}>
+                        <div>
+                          <h4>{t('system_info.image_runtime.pressure_title')}</h4>
+                          <p>{t('system_info.image_runtime.pressure_description')}</p>
+                        </div>
+                        <span>{t('system_info.image_runtime.no_cpu_automation')}</span>
+                      </div>
+                      <div className={styles.imagePressureGrid}>
+                        {imagePressureMetrics.map((metric) => (
+                          <article
+                            key={metric.key}
+                            className={styles.imagePressureTile}
+                            data-state={metricPressureState(metric.utilization, metric.available)}
+                            aria-label={`${t(`system_info.image_runtime.${metric.key}`)}: ${formatMetricUtilization(metric.utilization)}, ${t(
+                              `system_info.image_runtime.pressure_${metricPressureState(
+                                metric.utilization,
+                                metric.available
+                              )}`
+                            )}`}
+                          >
+                            <div className={styles.imagePressureTileHeader}>
+                              <span>{t(`system_info.image_runtime.${metric.key}`)}</span>
+                              <strong>{formatMetricUtilization(metric.utilization)}</strong>
+                            </div>
+                            {!metric.available ? (
+                              <p className={styles.imageMetricUnavailable}>
+                                {t('system_info.image_runtime.group_unavailable')}
+                              </p>
+                            ) : (
+                              <>
+                                <div className={styles.imageCapacityTrack}>
+                                  <span
+                                    style={{
+                                      width: `${Math.min(100, Math.max(0, metric.utilization ?? 0))}%`,
+                                    }}
+                                  />
+                                </div>
+                                <div className={styles.imagePressureCurrent}>
+                                  {metric.current} / {metric.limit}
+                                </div>
+                                <dl className={styles.imagePressureStats}>
+                                  <div>
+                                    <dt>{t('system_info.image_runtime.peak_cumulative')}</dt>
+                                    <dd>{metric.peak}</dd>
+                                  </div>
+                                  {metric.detailsAvailable ? (
+                                    <>
+                                      <div>
+                                        <dt>{t('system_info.image_runtime.current_queue')}</dt>
+                                        <dd>{metric.queued}</dd>
+                                      </div>
+                                      <div>
+                                        <dt>
+                                          {t('system_info.image_runtime.rejected_cumulative')}
+                                        </dt>
+                                        <dd>{metric.rejected}</dd>
+                                      </div>
+                                      {metric.timedOut !== null ? (
+                                        <div>
+                                          <dt>
+                                            {t('system_info.image_runtime.timed_out_cumulative')}
+                                          </dt>
+                                          <dd>{metric.timedOut}</dd>
+                                        </div>
+                                      ) : null}
+                                    </>
+                                  ) : null}
+                                </dl>
+                              </>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                      <div className={styles.imageTuningHints}>
+                        <strong>{t('system_info.image_runtime.tuning_title')}</strong>
+                        {imageTuningHints.length > 0 ? (
+                          <ul>
+                            {imageTuningHints.map((hint) => (
+                              <li key={hint}>{t(`system_info.image_runtime.tuning_${hint}`)}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>{t('system_info.image_runtime.tuning_observe')}</p>
+                        )}
+                      </div>
+                    </section>
                     <div className={styles.imageRuntimeGrid}>
                       <article className={styles.imageMetricPanel}>
                         <div className={styles.imageMetricHeader}>
@@ -1080,6 +1292,45 @@ export function SystemPage() {
                                 </dd>
                               </div>
                             ) : null}
+                          </dl>
+                        )}
+                      </article>
+
+                      <article className={styles.imageMetricPanel}>
+                        <div className={styles.imageMetricHeader}>
+                          <h4>{t('system_info.image_runtime.spool')}</h4>
+                          <span>{t('system_info.image_runtime.temporary_files')}</span>
+                        </div>
+                        {!imageSpool?.available ? (
+                          <p className={styles.imageMetricUnavailable}>
+                            {t('system_info.image_runtime.group_unavailable')}
+                          </p>
+                        ) : (
+                          <dl className={styles.imageMetricStats}>
+                            <div>
+                              <dt>{t('system_info.image_runtime.current_files')}</dt>
+                              <dd>{imageSpool.current_files}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.current_bytes')}</dt>
+                              <dd>{formatBytes(imageSpool.current_bytes)}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.peak_bytes_cumulative')}</dt>
+                              <dd>{formatBytes(imageSpool.peak_bytes)}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.created_cumulative')}</dt>
+                              <dd>{imageSpool.created_files}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.cleaned_cumulative')}</dt>
+                              <dd>{imageSpool.cleaned_files}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.cleanup_failed_cumulative')}</dt>
+                              <dd>{imageSpool.cleanup_failures}</dd>
+                            </div>
                           </dl>
                         )}
                       </article>

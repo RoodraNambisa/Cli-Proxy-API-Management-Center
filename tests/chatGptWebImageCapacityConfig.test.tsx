@@ -103,7 +103,7 @@ describe('ChatGPT Web image concurrency and capacity config', () => {
     }
   });
 
-  test('uses backend-identical defaults and validation bounds', () => {
+  test('keeps backend-identical defaults and treats former upper bounds as recommendations', () => {
     expect(DEFAULT_VISUAL_VALUES).toMatchObject({
       chatgptWebImageMaxInFlight: '64',
       chatgptWebImageAdmissionQueueSize: '64',
@@ -116,25 +116,61 @@ describe('ChatGPT Web image concurrency and capacity config', () => {
     });
     const values = cloneValues();
     Object.assign(values, {
-      chatgptWebImageMaxInFlight: '4097',
-      chatgptWebImageAdmissionQueueSize: '4097',
+      chatgptWebImageMaxInFlight: '5000',
+      chatgptWebImageAdmissionQueueSize: '5000',
       chatgptWebImageAdmissionWaitMilliseconds: '30001',
       chatgptWebImageMaxFinalizers: '65',
       chatgptWebImageCompletionReserveMegabytes: '33',
-      chatgptWebImageMemoryCapacityMegabytes: '63',
-      chatgptWebImagePollConcurrency: '513',
+      chatgptWebImageMemoryCapacityMegabytes: '8193',
+      chatgptWebImagePollConcurrency: '600',
       chatgptWebImageMemoryFinalizerConcurrency: '65',
     });
-    expect(getVisualConfigValidationErrors(values)).toMatchObject({
-      chatgptWebImageMaxInFlight: 'integer_range_1_4096',
-      chatgptWebImageAdmissionQueueSize: 'integer_range_0_4096',
-      chatgptWebImageAdmissionWaitMilliseconds: 'integer_range_0_30000',
-      chatgptWebImageMaxFinalizers: 'integer_range_1_64',
-      chatgptWebImageCompletionReserveMegabytes: 'integer_range_0_32',
-      chatgptWebImageMemoryCapacityMegabytes: 'integer_range_64_8192',
-      chatgptWebImagePollConcurrency: 'integer_range_1_512',
-      chatgptWebImageMemoryFinalizerConcurrency: 'integer_range_1_64',
-    });
+    const errors = getVisualConfigValidationErrors(values);
+    for (const field of [
+      'chatgptWebImageMaxInFlight',
+      'chatgptWebImageAdmissionQueueSize',
+      'chatgptWebImageAdmissionWaitMilliseconds',
+      'chatgptWebImageMaxFinalizers',
+      'chatgptWebImageCompletionReserveMegabytes',
+      'chatgptWebImageMemoryCapacityMegabytes',
+      'chatgptWebImagePollConcurrency',
+      'chatgptWebImageMemoryFinalizerConcurrency',
+    ]) {
+      expect(errors[field]).toBeUndefined();
+    }
+  });
+
+  test('rejects only invalid capacity semantics and unsafe JavaScript integers', () => {
+    const requiredFields = [
+      'chatgptWebImageMaxInFlight',
+      'chatgptWebImageMaxFinalizers',
+      'chatgptWebImageMemoryCapacityMegabytes',
+      'chatgptWebImagePollConcurrency',
+      'chatgptWebImageMemoryFinalizerConcurrency',
+    ] as const;
+    for (const field of requiredFields) {
+      const values = cloneValues();
+      values[field] = '0';
+      expect(getVisualConfigValidationErrors(values)[field]).toBe('positive_integer');
+    }
+    const optionalFields = [
+      'chatgptWebImageAdmissionQueueSize',
+      'chatgptWebImageAdmissionWaitMilliseconds',
+      'chatgptWebImageCompletionReserveMegabytes',
+    ] as const;
+    for (const field of optionalFields) {
+      const values = cloneValues();
+      values[field] = '-1';
+      expect(getVisualConfigValidationErrors(values)[field]).toBe('non_negative_integer');
+    }
+    for (const [field, error] of [
+      ['chatgptWebImageMaxInFlight', 'positive_integer'],
+      ['chatgptWebImageAdmissionQueueSize', 'non_negative_integer'],
+    ] as const) {
+      const values = cloneValues();
+      values[field] = String(Number.MAX_SAFE_INTEGER + 1);
+      expect(getVisualConfigValidationErrors(values)[field]).toBe(error);
+    }
   });
 
   test('accepts a bounded 2000-task lifecycle and queue without changing defaults', () => {
@@ -194,12 +230,18 @@ describe('ChatGPT Web image concurrency and capacity config', () => {
     ]) {
       expect(document.getElementById(id)).not.toBeNull();
     }
-    expect(
-      document.getElementById('config-chatgpt-web-image-max-in-flight')?.getAttribute('max')
-    ).toBe('4096');
-    expect(
-      document.getElementById('config-chatgpt-web-image-admission-queue-size')?.getAttribute('max')
-    ).toBe('4096');
+    for (const id of [
+      'config-chatgpt-web-image-memory-capacity-megabytes',
+      'config-chatgpt-web-image-max-in-flight',
+      'config-chatgpt-web-image-admission-queue-size',
+      'config-chatgpt-web-image-admission-wait-milliseconds',
+      'config-chatgpt-web-image-max-finalizers',
+      'config-chatgpt-web-image-completion-reserve-megabytes',
+      'config-chatgpt-web-image-poll-concurrency',
+      'config-chatgpt-web-image-memory-finalizer-concurrency',
+    ]) {
+      expect(document.getElementById(id)?.getAttribute('max')).toBeNull();
+    }
   });
 
   test('indexes all eight settings and defines labels in every locale', () => {
@@ -227,6 +269,7 @@ describe('ChatGPT Web image concurrency and capacity config', () => {
 
     for (const locale of [enLocale, ruLocale, zhCNLocale, zhTWLocale]) {
       const labels = locale.config_management.settings_center.chatgpt_web;
+      const validationKeys = Object.keys(locale.config_management.visual.validation);
       expect(labels.image_capacity_title).toBeTruthy();
       expect(labels.image_max_in_flight).toBeTruthy();
       expect(labels.image_admission_queue_size).toBeTruthy();
@@ -236,9 +279,22 @@ describe('ChatGPT Web image concurrency and capacity config', () => {
       expect(labels.image_memory_capacity_megabytes).toBeTruthy();
       expect(labels.image_poll_concurrency).toBeTruthy();
       expect(labels.image_memory_finalizer_concurrency).toBeTruthy();
-      expect(locale.config_management.visual.validation.integer_range_64_8192).toBeTruthy();
-      expect(locale.config_management.visual.validation.integer_range_1_4096).toBeTruthy();
-      expect(locale.config_management.visual.validation.integer_range_0_4096).toBeTruthy();
+      expect(labels.image_max_in_flight_description).toMatch(/4096/);
+      expect(labels.image_poll_concurrency_description).toMatch(/512/);
+      expect(labels.image_memory_capacity_megabytes_description).toMatch(/8192/);
+      for (const obsoleteCode of [
+        'integer_range_1_512',
+        'integer_range_1_4096',
+        'integer_range_0_4096',
+        'integer_range_0_30000',
+        'integer_range_1_64',
+        'integer_range_0_32',
+        'integer_range_64_8192',
+      ]) {
+        expect(validationKeys).not.toContain(obsoleteCode);
+      }
+      expect(locale.system_info.image_runtime.no_cpu_automation).toContain('CPU');
+      expect(locale.system_info.image_runtime.temporary_files).toBeTruthy();
     }
   });
 });

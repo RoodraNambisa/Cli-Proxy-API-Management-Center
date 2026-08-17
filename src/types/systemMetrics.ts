@@ -108,6 +108,16 @@ export interface SystemImageRequestPhasesSnapshot {
   metrics: Record<string, SystemImageRequestPhaseMetricSnapshot>;
 }
 
+export interface SystemImageSpoolSnapshot {
+  available: boolean;
+  current_files: number;
+  current_bytes: number;
+  peak_bytes: number;
+  created_files: number;
+  cleaned_files: number;
+  cleanup_failures: number;
+}
+
 export interface SystemMetricsSnapshot {
   collected_at: string;
   runtime: SystemRuntimeSnapshot;
@@ -121,5 +131,6 @@ export interface SystemMetricsSnapshot {
   chatgpt_web_image_finalizers: SystemImageExecutionAdmissionSnapshot;
   chatgpt_web_image_memory_finalizers: SystemImageExecutionAdmissionSnapshot;
   chatgpt_web_image_poll_slots: SystemImagePollSlotsSnapshot;
+  image_spool: SystemImageSpoolSnapshot;
   image_request_phases: SystemImageRequestPhasesSnapshot;
 }

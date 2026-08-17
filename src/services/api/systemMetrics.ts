@@ -4,6 +4,7 @@ import type {
   SystemImagePollSlotsSnapshot,
   SystemImageRequestPhaseMetricSnapshot,
   SystemImageRequestPhasesSnapshot,
+  SystemImageSpoolSnapshot,
   SystemFilesystemSnapshot,
   SystemFilesystemStatus,
   SystemMetricsSnapshot,
@@ -179,6 +180,21 @@ const normalizeImageRequestPhases = (value: unknown): SystemImageRequestPhasesSn
   };
 };
 
+const normalizeImageSpool = (value: unknown): SystemImageSpoolSnapshot => {
+  const available = isRecord(value);
+  const source = available ? value : {};
+  const currentBytes = toNonNegativeNumber(source.current_bytes);
+  return {
+    available,
+    current_files: toNonNegativeNumber(source.current_files),
+    current_bytes: currentBytes,
+    peak_bytes: Math.max(currentBytes, toNonNegativeNumber(source.peak_bytes)),
+    created_files: toNonNegativeNumber(source.created_files),
+    cleaned_files: toNonNegativeNumber(source.cleaned_files),
+    cleanup_failures: toNonNegativeNumber(source.cleanup_failures),
+  };
+};
+
 export const normalizeSystemMetricsSnapshot = (value: unknown): SystemMetricsSnapshot => {
   const source = isRecord(value) ? value : {};
   const filesystems = isRecord(source.filesystems) ? source.filesystems : {};
@@ -200,6 +216,7 @@ export const normalizeSystemMetricsSnapshot = (value: unknown): SystemMetricsSna
       source.chatgpt_web_image_memory_finalizers
     ),
     chatgpt_web_image_poll_slots: normalizeImagePollSlots(source.chatgpt_web_image_poll_slots),
+    image_spool: normalizeImageSpool(source.image_spool),
     image_request_phases: normalizeImageRequestPhases(source.image_request_phases),
   };
 };

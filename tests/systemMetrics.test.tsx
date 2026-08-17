@@ -101,8 +101,8 @@ const createSystemSnapshot = (): SystemMetricsSnapshot => ({
     available: true,
     capacity_bytes: 512 * 1024 ** 2,
     queue_limit: 64,
-    waiting_tasks: 3,
-    waiting_bytes: 12 * 1024 ** 2,
+    waiting_tasks: 0,
+    waiting_bytes: 0,
     processing_tasks: 20,
     processing_bytes: 128 * 1024 ** 2,
     peak_processing_bytes: 256 * 1024 ** 2,
@@ -120,7 +120,7 @@ const createSystemSnapshot = (): SystemMetricsSnapshot => ({
     available: true,
     limit: 64,
     queue_limit: 64,
-    active: 40,
+    active: 55,
     queued: 5,
     peak_active: 64,
     peak_queued: 20,
@@ -184,7 +184,7 @@ const createSystemSnapshot = (): SystemMetricsSnapshot => ({
     capacity_details_available: true,
     limit: 64,
     queue_limit: 64,
-    active: 10,
+    active: 70,
     queued: 6,
     peak_active: 32,
     peak_queued: 12,
@@ -197,6 +197,15 @@ const createSystemSnapshot = (): SystemMetricsSnapshot => ({
     canceled: 20,
     total_wait_nanos: 5_000_000,
     max_wait_nanos: 2_000_000,
+  },
+  image_spool: {
+    available: true,
+    current_files: 2,
+    current_bytes: 6 * 1024 ** 2,
+    peak_bytes: 24 * 1024 ** 2,
+    created_files: 120,
+    cleaned_files: 118,
+    cleanup_failures: 0,
   },
   image_request_phases: {
     available: true,
@@ -274,6 +283,7 @@ describe('system metrics and filesystem capacity', () => {
     expect(snapshot.chatgpt_web_image_memory_finalizers.available).toBe(false);
     expect(snapshot.chatgpt_web_image_poll_slots.available).toBe(false);
     expect(snapshot.chatgpt_web_image_poll_slots.capacity_details_available).toBe(false);
+    expect(snapshot.image_spool.available).toBe(false);
     expect(snapshot.image_request_phases.available).toBe(false);
 
     const imageSnapshot = normalizeSystemMetricsSnapshot({
@@ -299,6 +309,14 @@ describe('system metrics and filesystem capacity', () => {
         timed_out: 3,
         shrinking: false,
         max_wait_nanos: '9000000',
+      },
+      image_spool: {
+        current_files: -1,
+        current_bytes: '2048',
+        peak_bytes: 1024,
+        created_files: 5,
+        cleaned_files: 4,
+        cleanup_failures: '1',
       },
       image_request_phases: {
         metrics: {
@@ -334,6 +352,13 @@ describe('system metrics and filesystem capacity', () => {
       timed_out: 3,
     });
     expect(imageSnapshot.chatgpt_web_image_poll_slots.max_wait_nanos).toBe(9_000_000);
+    expect(imageSnapshot.image_spool).toMatchObject({
+      available: true,
+      current_files: 0,
+      current_bytes: 2048,
+      peak_bytes: 2048,
+      cleanup_failures: 1,
+    });
 
     const legacyPoll = normalizeSystemMetricsSnapshot({
       chatgpt_web_image_poll_slots: { active: 5, peak_active: 6, max_wait_nanos: 7 },
@@ -690,16 +715,46 @@ describe('system metrics and filesystem capacity', () => {
     expect(within(runtime).getByText('system_info.image_runtime.title')).toBeTruthy();
     expect(within(runtime).getByText('128.0 MiB')).toBeTruthy();
     expect(within(runtime).getByText('/ 512.0 MiB')).toBeTruthy();
-    expect(within(runtime).getByText('40 / 64')).toBeTruthy();
+    expect(within(runtime).getAllByText('55 / 64').length).toBeGreaterThan(0);
     expect(within(runtime).getByText('2 / 8')).toBeTruthy();
-    expect(within(runtime).getByText('3 / 4')).toBeTruthy();
-    expect(within(runtime).getByText('10 / 64')).toBeTruthy();
-    expect(within(runtime).getByText('system_info.image_runtime.memory_finalizers')).toBeTruthy();
+    expect(within(runtime).getAllByText('3 / 4').length).toBeGreaterThan(0);
+    expect(within(runtime).getAllByText('70 / 64').length).toBeGreaterThan(0);
+    expect(
+      within(runtime).getAllByText('system_info.image_runtime.memory_finalizers').length
+    ).toBeGreaterThan(0);
     expect(within(runtime).getByText('system_info.image_runtime.shrinking')).toBeTruthy();
     expect(
       within(runtime).getByText('system_info.image_runtime.bypassed_reservations').parentElement
         ?.textContent
     ).toContain('8');
+    const pressure = within(runtime).getByTestId('image-resource-pressure');
+    expect(
+      within(pressure)
+        .getByText('system_info.image_runtime.in_flight')
+        .closest('article')
+        ?.getAttribute('data-state')
+    ).toBe('warning');
+    const pressurePoll = within(pressure)
+      .getByText('system_info.image_runtime.poll_slots')
+      .closest('article');
+    expect(pressurePoll?.getAttribute('data-state')).toBe('critical');
+    expect(within(pressurePoll as HTMLElement).getByText('109%')).toBeTruthy();
+    expect((pressurePoll as HTMLElement).querySelector('[style="width: 100%;"]')).not.toBeNull();
+    expect(
+      within(pressure).getAllByText('system_info.image_runtime.rejected_cumulative')
+    ).toHaveLength(4);
+    expect(within(pressure).getByText('system_info.image_runtime.tuning_lifecycle')).toBeTruthy();
+    expect(within(pressure).getByText('system_info.image_runtime.tuning_poll')).toBeTruthy();
+    expect(
+      within(pressure).getByText('system_info.image_runtime.tuning_memory_finalizer')
+    ).toBeTruthy();
+    expect(within(pressure).queryByText('system_info.image_runtime.tuning_memory')).toBeNull();
+    const spoolPanel = within(runtime)
+      .getByText('system_info.image_runtime.spool')
+      .closest('article');
+    expect(spoolPanel).not.toBeNull();
+    expect(within(spoolPanel as HTMLElement).getByText('6.0 MiB')).toBeTruthy();
+    expect(within(spoolPanel as HTMLElement).getByText('24.0 MiB')).toBeTruthy();
 
     fireEvent.click(within(runtime).getByText('system_info.image_runtime.phases'));
     expect(
@@ -750,7 +805,10 @@ describe('system metrics and filesystem capacity', () => {
 
     render(<SystemPage />);
     const runtime = await screen.findByTestId('image-runtime-metrics');
-    const pollHeading = within(runtime).getByText('system_info.image_runtime.poll_slots');
+    const pollHeading = within(runtime)
+      .getAllByText('system_info.image_runtime.poll_slots')
+      .find((element) => element.tagName === 'H4');
+    expect(pollHeading).toBeTruthy();
     const pollPanel = pollHeading.closest('article');
     expect(pollPanel).not.toBeNull();
     const poll = within(pollPanel as HTMLElement);
@@ -758,6 +816,16 @@ describe('system metrics and filesystem capacity', () => {
     expect(poll.queryByText('system_info.image_runtime.queue')).toBeNull();
     expect(poll.queryByText('system_info.image_runtime.rejected')).toBeNull();
     expect(poll.queryByText('system_info.image_runtime.resize_state')).toBeNull();
+    const pressure = within(runtime).getByTestId('image-resource-pressure');
+    const pressurePollPanel = within(pressure)
+      .getByText('system_info.image_runtime.poll_slots')
+      .closest('article');
+    expect(pressurePollPanel).not.toBeNull();
+    const pressurePoll = within(pressurePollPanel as HTMLElement);
+    expect(pressurePoll.getByText('5 / 64')).toBeTruthy();
+    expect(pressurePoll.queryByText('system_info.image_runtime.current_queue')).toBeNull();
+    expect(pressurePoll.queryByText('system_info.image_runtime.rejected_cumulative')).toBeNull();
+    expect(pressurePoll.queryByText('system_info.image_runtime.timed_out_cumulative')).toBeNull();
   });
 
   test('polls while mounted and stops after leaving the system page', async () => {

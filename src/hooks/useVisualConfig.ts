@@ -1247,6 +1247,17 @@ function getIntegerRangeError(
   return Number.isSafeInteger(parsed) && parsed >= min && parsed <= max ? undefined : errorCode;
 }
 
+function getCapacityIntegerError(
+  value: string,
+  minimum: 0 | 1
+): 'non_negative_integer' | 'positive_integer' | undefined {
+  const errorCode = minimum === 0 ? 'non_negative_integer' : 'positive_integer';
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return errorCode;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) && parsed >= minimum ? undefined : errorCode;
+}
+
 function getHttpStatusListError(value: string): 'integer_list' | 'http_status_list' | undefined {
   const parsed = parseIntegerListText(value);
   if (!parsed.valid) return 'integer_list';
@@ -1548,53 +1559,31 @@ export function getVisualConfigValidationErrors(
       'integer_range_1_256'
     ),
     chatgptWebMaxN: getIntegerRangeError(values.chatgptWebMaxN, 1, 10, 'integer_range_1_10'),
-    chatgptWebImageMaxInFlight: getIntegerRangeError(
-      values.chatgptWebImageMaxInFlight,
-      1,
-      4096,
-      'integer_range_1_4096'
-    ),
-    chatgptWebImageAdmissionQueueSize: getIntegerRangeError(
+    chatgptWebImageMaxInFlight: getCapacityIntegerError(values.chatgptWebImageMaxInFlight, 1),
+    chatgptWebImageAdmissionQueueSize: getCapacityIntegerError(
       values.chatgptWebImageAdmissionQueueSize,
-      0,
-      4096,
-      'integer_range_0_4096'
+      0
     ),
-    chatgptWebImageAdmissionWaitMilliseconds: getIntegerRangeError(
+    chatgptWebImageAdmissionWaitMilliseconds: getCapacityIntegerError(
       values.chatgptWebImageAdmissionWaitMilliseconds,
-      0,
-      30000,
-      'integer_range_0_30000'
+      0
     ),
-    chatgptWebImageMaxFinalizers: getIntegerRangeError(
-      values.chatgptWebImageMaxFinalizers,
-      1,
-      64,
-      'integer_range_1_64'
-    ),
-    chatgptWebImageCompletionReserveMegabytes: getIntegerRangeError(
+    chatgptWebImageMaxFinalizers: getCapacityIntegerError(values.chatgptWebImageMaxFinalizers, 1),
+    chatgptWebImageCompletionReserveMegabytes: getCapacityIntegerError(
       values.chatgptWebImageCompletionReserveMegabytes,
-      0,
-      32,
-      'integer_range_0_32'
+      0
     ),
-    chatgptWebImageMemoryCapacityMegabytes: getIntegerRangeError(
+    chatgptWebImageMemoryCapacityMegabytes: getCapacityIntegerError(
       values.chatgptWebImageMemoryCapacityMegabytes,
-      64,
-      8192,
-      'integer_range_64_8192'
+      1
     ),
-    chatgptWebImagePollConcurrency: getIntegerRangeError(
+    chatgptWebImagePollConcurrency: getCapacityIntegerError(
       values.chatgptWebImagePollConcurrency,
-      1,
-      512,
-      'integer_range_1_512'
+      1
     ),
-    chatgptWebImageMemoryFinalizerConcurrency: getIntegerRangeError(
+    chatgptWebImageMemoryFinalizerConcurrency: getCapacityIntegerError(
       values.chatgptWebImageMemoryFinalizerConcurrency,
-      1,
-      64,
-      'integer_range_1_64'
+      1
     ),
     routingFillFirstRange: routingFillFirstRangeError,
     routingFillFirstPerAuthRpm: routingFillFirstPerAuthRpmError,
