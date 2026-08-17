@@ -1067,6 +1067,14 @@ export function VisualConfigEditor({
     t,
     validationErrors?.chatgptWebAutoDeleteDeadPriorities
   );
+  const chatGptWebAutoReloginWorkersError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebAutoReloginWorkers
+  );
+  const chatGptWebAutoReloginQueueSizeError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebAutoReloginQueueSize
+  );
   const chatGptWebAspectRatioMaxErrorPercentError = getValidationMessage(
     t,
     validationErrors?.chatgptWebAspectRatioMaxErrorPercent
@@ -2040,6 +2048,74 @@ export function VisualConfigEditor({
                 disabled={disabled}
                 onChange={(chatgptWebAutoRelogin) => onChange({ chatgptWebAutoRelogin })}
               />
+              <SettingsDisclosure
+                id="config-chatgpt-web-auto-relogin-capacity"
+                title={t(
+                  'config_management.settings_center.chatgpt_web.auto_relogin_capacity_title'
+                )}
+                description={t(
+                  'config_management.settings_center.chatgpt_web.auto_relogin_capacity_description'
+                )}
+                summary={t(
+                  'config_management.settings_center.chatgpt_web.auto_relogin_capacity_summary',
+                  {
+                    workers: values.chatgptWebAutoReloginWorkers,
+                    queue: values.chatgptWebAutoReloginQueueSize,
+                  }
+                )}
+                focusTarget={focusTarget}
+                targetIds={[
+                  'config-chatgpt-web-auto-relogin-workers',
+                  'config-chatgpt-web-auto-relogin-queue-size',
+                ]}
+                dirty={hasDirtyConfigField(dirtyFields, [
+                  'chatgptWebAutoReloginWorkers',
+                  'chatgptWebAutoReloginQueueSize',
+                ])}
+                errorCount={
+                  Number(Boolean(chatGptWebAutoReloginWorkersError)) +
+                  Number(Boolean(chatGptWebAutoReloginQueueSizeError))
+                }
+              >
+                <SectionGrid>
+                  <Input
+                    id="config-chatgpt-web-auto-relogin-workers"
+                    type="number"
+                    min={1}
+                    max={256}
+                    step={1}
+                    label={t('config_management.settings_center.chatgpt_web.auto_relogin_workers')}
+                    hint={t(
+                      'config_management.settings_center.chatgpt_web.auto_relogin_workers_description'
+                    )}
+                    error={chatGptWebAutoReloginWorkersError}
+                    value={values.chatgptWebAutoReloginWorkers}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      onChange({ chatgptWebAutoReloginWorkers: event.target.value })
+                    }
+                  />
+                  <Input
+                    id="config-chatgpt-web-auto-relogin-queue-size"
+                    type="number"
+                    min={1}
+                    max={1_000_000}
+                    step={1}
+                    label={t(
+                      'config_management.settings_center.chatgpt_web.auto_relogin_queue_size'
+                    )}
+                    hint={t(
+                      'config_management.settings_center.chatgpt_web.auto_relogin_queue_size_description'
+                    )}
+                    error={chatGptWebAutoReloginQueueSizeError}
+                    value={values.chatgptWebAutoReloginQueueSize}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      onChange({ chatgptWebAutoReloginQueueSize: event.target.value })
+                    }
+                  />
+                </SectionGrid>
+              </SettingsDisclosure>
               <div id="config-chatgpt-web-api798-auto-login">
                 <ToggleRow
                   title={t('config_management.settings_center.chatgpt_web.api798_auto_login')}

@@ -521,6 +521,15 @@ describe('ChatGPT Web account info and image quota', () => {
       expect(locale.chatgpt_web.account_info.diagnostics.description).toBeTruthy();
       expect(locale.chatgpt_web.account_info.diagnostics.clear_confirm).toBeTruthy();
       expect(locale.chatgpt_web.account_info.diagnostics.fields.remaining_range).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.request_refresh_title).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.request_refresh.same_token).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.request_refresh.probe_unauthorized).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.request_refresh.dead_confirmed).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.background_relogin_title).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.background_relogin.running).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.background_relogin.backpressured).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.background_relogin.shrinking).toBeTruthy();
+      expect(locale.chatgpt_web.account_info.background_relogin.historical_exhausted).toBeTruthy();
     }
   });
 
@@ -598,6 +607,76 @@ describe('ChatGPT Web account info and image quota', () => {
     expect(screen.getByText(/manual_recovery_required.*27/)).not.toBeNull();
     expect(screen.queryByText('chatgpt_web.account_info.routing.title')).toBeNull();
     expect(getRouting).not.toHaveBeenCalled();
+  });
+
+  test('shows safe 401 recovery and bounded relogin metrics without credential identity', async () => {
+    const initial = createSnapshot();
+    initial.runtime.request_refresh = {
+      received: 13,
+      queued: 2,
+      running: 1,
+      scheduler_blocked: 3,
+      deduplicated: 4,
+      succeeded: 5,
+      failed: 6,
+      backpressured: 7,
+      no_start: 8,
+      same_token: 9,
+      probe_succeeded: 10,
+      probe_unauthorized: 11,
+      probe_transient: 12,
+      dead_confirmed: 13,
+    };
+    initial.runtime.background_relogin = {
+      workers: 6,
+      worker_limit: 4,
+      queue_limit: 4096,
+      queued: 14,
+      delayed: 2,
+      running: 3,
+      shrinking: true,
+      promoted: 1,
+      deduplicated: 15,
+      backpressured: 16,
+      succeeded: 17,
+      failed: 18,
+      exhausted: 19,
+      dead: 20,
+      canceled: 0,
+      historical_eligible: 21,
+      historical_blocked_by_method: 22,
+      historical_cooling: 23,
+      historical_exhausted: 24,
+    };
+    vi.spyOn(chatGptWebApi, 'getAccountInfo').mockResolvedValue(initial);
+
+    render(<ChatGptWebAccountInfoPanel />);
+    await waitFor(() => expect(chatGptWebApi.getAccountInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: /chatgpt_web\.account_info\.title/ }));
+
+    expect(
+      document.querySelector('[data-runtime-field="request_refresh_same_token"]')?.textContent
+    ).toContain('9');
+    expect(
+      document.querySelector('[data-runtime-field="request_refresh_scheduler_blocked"]')
+        ?.textContent
+    ).toContain('3');
+    expect(
+      document.querySelector('[data-runtime-field="request_refresh_dead_confirmed"]')?.textContent
+    ).toContain('13');
+    expect(
+      document.querySelector('[data-runtime-field="background_relogin_workers"]')?.textContent
+    ).toContain('6 / 4');
+    expect(
+      document.querySelector('[data-runtime-field="background_relogin_queue"]')?.textContent
+    ).toContain('16 / 4,096');
+    expect(
+      document.querySelector('[data-runtime-field="background_relogin_running"]')?.textContent
+    ).toContain('3');
+    expect(
+      document.querySelector('[data-runtime-field="background_relogin_shrinking"]')?.textContent
+    ).toContain('common.yes');
+    expect(document.body.textContent).not.toContain('credential@example.com');
   });
 
   test('defaults a missing auto-refresh field to enabled and saves the disabled switch', async () => {
@@ -795,7 +874,7 @@ describe('ChatGPT Web account info and image quota', () => {
       screen.getByRole('button', { name: /chatgpt_web\.account_info\.raw_quota\.title/ })
     );
     await waitFor(() => expect(getRawQuota).toHaveBeenCalledTimes(1));
-    expect(screen.getByText(/"remaining":17/)).not.toBeNull();
+    await waitFor(() => expect(screen.getByText(/"remaining":17/)).not.toBeNull());
     const rawSection = document.getElementById(
       'config-chatgpt-web-account-info-raw-quota'
     ) as HTMLElement;

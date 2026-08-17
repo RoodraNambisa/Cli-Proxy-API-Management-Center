@@ -151,7 +151,25 @@ export interface ChatGptWebAccountInfoRuntime {
   last_success_at?: string;
   failure_counts?: Record<string, number>;
   recovery_state_counts?: Record<string, number>;
+  request_refresh?: ChatGptWebRequestRefreshRuntime;
   background_relogin?: ChatGptWebBackgroundReloginRuntime;
+}
+
+export interface ChatGptWebRequestRefreshRuntime {
+  received?: number;
+  queued?: number;
+  running?: number;
+  scheduler_blocked?: number;
+  deduplicated?: number;
+  succeeded?: number;
+  failed?: number;
+  backpressured?: number;
+  no_start?: number;
+  same_token?: number;
+  probe_succeeded?: number;
+  probe_unauthorized?: number;
+  probe_transient?: number;
+  dead_confirmed?: number;
 }
 
 export interface ChatGptWebBackgroundReloginRuntime {
@@ -161,6 +179,19 @@ export interface ChatGptWebBackgroundReloginRuntime {
   promoted: number;
   deduplicated: number;
   canceled: number;
+  workers?: number;
+  worker_limit?: number;
+  queue_limit?: number;
+  shrinking?: boolean;
+  backpressured?: number;
+  succeeded?: number;
+  failed?: number;
+  exhausted?: number;
+  dead?: number;
+  historical_eligible?: number;
+  historical_blocked_by_method?: number;
+  historical_cooling?: number;
+  historical_exhausted?: number;
 }
 
 export interface ChatGptWebRefreshPersistenceRuntime {

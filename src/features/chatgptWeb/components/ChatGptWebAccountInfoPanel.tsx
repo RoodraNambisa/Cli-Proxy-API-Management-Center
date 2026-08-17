@@ -84,6 +84,16 @@ const RAW_QUOTA_DISCLOSURE_STORAGE_KEY =
   'config-management:chatgpt-web-account-info-raw-quota-expanded';
 const POLL_INTERVAL_MS = 5000;
 
+const safeRuntimeCount = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.trunc(parsed) : 0;
+};
+
+const safeRuntimeLimit = (value: unknown): string => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.trunc(parsed).toLocaleString() : '—';
+};
+
 const ACCOUNT_INFO_FIELDS = [
   {
     field: 'periodicMinutes',
@@ -1563,6 +1573,55 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
   const failureCounts = Object.entries(snapshot?.runtime.failure_counts ?? {})
     .filter(([, count]) => Number(count) > 0)
     .sort((left, right) => Number(right[1]) - Number(left[1]));
+  const requestRefreshRuntime = snapshot?.runtime.request_refresh;
+  const backgroundReloginRuntime = snapshot?.runtime.background_relogin;
+  const requestRefreshItems = requestRefreshRuntime
+    ? [
+        ['received', requestRefreshRuntime.received],
+        ['queued', requestRefreshRuntime.queued],
+        ['running', requestRefreshRuntime.running],
+        ['scheduler_blocked', requestRefreshRuntime.scheduler_blocked],
+        ['deduplicated', requestRefreshRuntime.deduplicated],
+        ['succeeded', requestRefreshRuntime.succeeded],
+        ['failed', requestRefreshRuntime.failed],
+        ['backpressured', requestRefreshRuntime.backpressured],
+        ['no_start', requestRefreshRuntime.no_start],
+        ['same_token', requestRefreshRuntime.same_token],
+        ['probe_succeeded', requestRefreshRuntime.probe_succeeded],
+        ['probe_unauthorized', requestRefreshRuntime.probe_unauthorized],
+        ['probe_transient', requestRefreshRuntime.probe_transient],
+        ['dead_confirmed', requestRefreshRuntime.dead_confirmed],
+      ]
+    : [];
+  const backgroundReloginItems = backgroundReloginRuntime
+    ? [
+        [
+          'workers',
+          `${safeRuntimeCount(
+            backgroundReloginRuntime.workers ?? backgroundReloginRuntime.running
+          )} / ${safeRuntimeLimit(backgroundReloginRuntime.worker_limit)}`,
+        ],
+        [
+          'queue',
+          `${
+            safeRuntimeCount(backgroundReloginRuntime.queued) +
+            safeRuntimeCount(backgroundReloginRuntime.delayed)
+          } / ${safeRuntimeLimit(backgroundReloginRuntime.queue_limit)}`,
+        ],
+        ['running', backgroundReloginRuntime.running],
+        ['deduplicated', backgroundReloginRuntime.deduplicated],
+        ['shrinking', backgroundReloginRuntime.shrinking ? t('common.yes') : t('common.no')],
+        ['backpressured', backgroundReloginRuntime.backpressured],
+        ['succeeded', backgroundReloginRuntime.succeeded],
+        ['failed', backgroundReloginRuntime.failed],
+        ['exhausted', backgroundReloginRuntime.exhausted],
+        ['dead', backgroundReloginRuntime.dead],
+        ['historical_eligible', backgroundReloginRuntime.historical_eligible],
+        ['historical_blocked_by_method', backgroundReloginRuntime.historical_blocked_by_method],
+        ['historical_cooling', backgroundReloginRuntime.historical_cooling],
+        ['historical_exhausted', backgroundReloginRuntime.historical_exhausted],
+      ]
+    : [];
   const handleRuntimeRefresh = useCallback(() => {
     void loadSnapshot();
   }, [loadSnapshot]);
@@ -1812,6 +1871,32 @@ export const ChatGptWebAccountInfoPanel = forwardRef<
                     )}
                   </div>
                 </div>
+                {requestRefreshRuntime ? (
+                  <div>
+                    <strong>{t('chatgpt_web.account_info.request_refresh_title')}</strong>
+                    <div className={styles.runtimeBadges}>
+                      {requestRefreshItems.map(([key, value]) => (
+                        <span key={String(key)} data-runtime-field={`request_refresh_${key}`}>
+                          {t(`chatgpt_web.account_info.request_refresh.${key}`)} ·{' '}
+                          {safeRuntimeCount(value)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {backgroundReloginRuntime ? (
+                  <div>
+                    <strong>{t('chatgpt_web.account_info.background_relogin_title')}</strong>
+                    <div className={styles.runtimeBadges}>
+                      {backgroundReloginItems.map(([key, value]) => (
+                        <span key={String(key)} data-runtime-field={`background_relogin_${key}`}>
+                          {t(`chatgpt_web.account_info.background_relogin.${key}`)} ·{' '}
+                          {typeof value === 'string' ? value : safeRuntimeCount(value)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
               {snapshot.refresh_persistence?.enabled ? (
                 <dl className={`${styles.statusGrid} ${styles.persistenceGrid}`}>

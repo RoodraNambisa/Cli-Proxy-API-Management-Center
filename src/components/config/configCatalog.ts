@@ -144,6 +144,8 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     descriptionKey: 'config_management.settings_center.pages.provider_chatgpt_web.description',
     dirtyPrefixes: [
       'chatgptWebAutoRelogin',
+      'chatgptWebAutoReloginWorkers',
+      'chatgptWebAutoReloginQueueSize',
       'chatgptWebApi798AutoLoginEnabled',
       'chatgptWebSessionCookieRefreshOnTokenFailure',
       'chatgptWebForceSessionRefreshOnImport',
@@ -556,6 +558,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.settings_center.chatgpt_web.auto_relogin',
     yamlKeys: ['chatgpt-web.auto-relogin'],
     aliases: ['chatgpt web', '自动重登', 'auto relogin'],
+  },
+  {
+    id: 'config-chatgpt-web-auto-relogin-capacity',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.auto_relogin_capacity_title',
+    yamlKeys: ['chatgpt-web.auto-relogin-workers', 'chatgpt-web.auto-relogin-queue-size'],
+    aliases: ['重登并发', '重登队列', 'relogin workers', 'relogin queue'],
   },
   {
     id: 'config-chatgpt-web-api798-auto-login',

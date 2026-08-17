@@ -9,6 +9,10 @@ import { apiClient } from '@/services/api/client';
 import { usageApi } from '@/services/api/usage';
 import { useAuthStore, useUsageStatsStore } from '@/stores';
 import { buildSharedModelPricesFromLegacy } from '@/utils/usage';
+import enLocale from '@/i18n/locales/en.json';
+import ruLocale from '@/i18n/locales/ru.json';
+import zhCNLocale from '@/i18n/locales/zh-CN.json';
+import zhTWLocale from '@/i18n/locales/zh-TW.json';
 
 describe('lightweight usage management API', () => {
   beforeEach(() => {
@@ -107,6 +111,52 @@ describe('lightweight usage management API', () => {
     expect(screen.getAllByText(/2 · 66\.7%/)).toHaveLength(2);
     expect(document.body.textContent).not.toContain('response_body');
     expect(document.body.textContent).not.toContain('credential-token');
+  });
+
+  test('renders readable labels for safe ChatGPT Web settle error codes', () => {
+    const codes = [
+      'chatgpt_web_image_upstream_failed',
+      'chatgpt_web_image_no_output',
+      'chatgpt_web_image_missing_terminal',
+      'chatgpt_web_image_poll_not_converged',
+      'chatgpt_web_image_poll_failed',
+    ] as const;
+    render(
+      createElement(FailureSummaryCard, {
+        resource: {
+          status: 'ready',
+          error: '',
+          data: {
+            as_of: '2026-08-18T00:00:00Z',
+            total: codes.length,
+            main: codes.length,
+            auxiliary: 0,
+            boundaries: {
+              credential_selected: codes.length,
+              upstream_committed: codes.length,
+              auth_request_slot_consumed: codes.length,
+            },
+            by_error_code: codes.map((value) => ({ value, count: 1, percent: 20 })),
+            by_failure_stage: [{ value: 'settle', count: codes.length, percent: 100 }],
+            by_model: [],
+            by_source: [],
+            by_hour: [],
+          },
+        },
+      })
+    );
+
+    expect(screen.getByText('Web image upstream task failed')).not.toBeNull();
+    expect(screen.getByText('Web image produced no deliverable output')).not.toBeNull();
+    expect(screen.getByText('Web image terminal state or session is missing')).not.toBeNull();
+    expect(screen.getByText('Web image polling did not converge')).not.toBeNull();
+    expect(screen.getByText('Web image polling failed')).not.toBeNull();
+
+    for (const locale of [enLocale, ruLocale, zhCNLocale, zhTWLocale]) {
+      for (const code of codes) {
+        expect(locale.usage_stats.failure_error_codes[code]).toBeTruthy();
+      }
+    }
   });
 
   test('normalizes server-side details paging, auth filters, and source facets', async () => {

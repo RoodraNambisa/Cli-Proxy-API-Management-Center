@@ -1534,6 +1534,18 @@ export function getVisualConfigValidationErrors(
     chatgptWebAutoDeleteDeadPriorities: getSafeIntegerStringListError(
       values.chatgptWebAutoDeleteDeadPriorities
     ),
+    chatgptWebAutoReloginWorkers: getIntegerRangeError(
+      values.chatgptWebAutoReloginWorkers,
+      1,
+      256,
+      'integer_range_1_256'
+    ),
+    chatgptWebAutoReloginQueueSize: getIntegerRangeError(
+      values.chatgptWebAutoReloginQueueSize,
+      1,
+      1_000_000,
+      'integer_range_1_1000000'
+    ),
     chatgptWebAspectRatioMaxErrorPercent: getNumberRangeError(
       values.chatgptWebAspectRatioMaxErrorPercent,
       0,
@@ -2301,6 +2313,18 @@ function getNextDirtyFields(
     updateDirty(
       'chatgptWebAutoRelogin',
       nextValues.chatgptWebAutoRelogin === baselineValues.chatgptWebAutoRelogin
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAutoReloginWorkers')) {
+    updateDirty(
+      'chatgptWebAutoReloginWorkers',
+      nextValues.chatgptWebAutoReloginWorkers === baselineValues.chatgptWebAutoReloginWorkers
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAutoReloginQueueSize')) {
+    updateDirty(
+      'chatgptWebAutoReloginQueueSize',
+      nextValues.chatgptWebAutoReloginQueueSize === baselineValues.chatgptWebAutoReloginQueueSize
     );
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebApi798AutoLoginEnabled')) {
@@ -3102,6 +3126,16 @@ export function useVisualConfig() {
         codexHeaderDefaultsOriginator:
           typeof codexHeaderDefaults?.originator === 'string' ? codexHeaderDefaults.originator : '',
         chatgptWebAutoRelogin: Boolean(chatgptWeb?.['auto-relogin'] ?? chatgptWeb?.autoRelogin),
+        chatgptWebAutoReloginWorkers: String(
+          chatgptWeb?.['auto-relogin-workers'] ??
+            chatgptWeb?.autoReloginWorkers ??
+            DEFAULT_VISUAL_VALUES.chatgptWebAutoReloginWorkers
+        ),
+        chatgptWebAutoReloginQueueSize: String(
+          chatgptWeb?.['auto-relogin-queue-size'] ??
+            chatgptWeb?.autoReloginQueueSize ??
+            DEFAULT_VISUAL_VALUES.chatgptWebAutoReloginQueueSize
+        ),
         chatgptWebApi798AutoLoginEnabled: Boolean(
           chatgptWeb?.['api798-auto-login-enabled'] ?? chatgptWeb?.api798AutoLoginEnabled
         ),
@@ -3632,6 +3666,10 @@ export function useVisualConfig() {
         if (
           docHas(doc, ['chatgpt-web']) ||
           values.chatgptWebAutoRelogin ||
+          values.chatgptWebAutoReloginWorkers !==
+            DEFAULT_VISUAL_VALUES.chatgptWebAutoReloginWorkers ||
+          values.chatgptWebAutoReloginQueueSize !==
+            DEFAULT_VISUAL_VALUES.chatgptWebAutoReloginQueueSize ||
           values.chatgptWebApi798AutoLoginEnabled ||
           values.chatgptWebSessionCookieRefreshOnTokenFailure ||
           !values.chatgptWebForceSessionRefreshOnImport ||
@@ -3641,6 +3679,35 @@ export function useVisualConfig() {
         ) {
           ensureMapInDoc(doc, ['chatgpt-web']);
           doc.setIn(['chatgpt-web', 'auto-relogin'], values.chatgptWebAutoRelogin);
+          if (
+            docHas(doc, ['chatgpt-web', 'auto-relogin-workers']) ||
+            docHas(doc, ['chatgpt-web', 'autoReloginWorkers']) ||
+            values.chatgptWebAutoReloginWorkers !==
+              DEFAULT_VISUAL_VALUES.chatgptWebAutoReloginWorkers
+          ) {
+            setIntFromStringInDoc(
+              doc,
+              ['chatgpt-web', 'auto-relogin-workers'],
+              values.chatgptWebAutoReloginWorkers
+            );
+          }
+          if (
+            docHas(doc, ['chatgpt-web', 'auto-relogin-queue-size']) ||
+            docHas(doc, ['chatgpt-web', 'autoReloginQueueSize']) ||
+            values.chatgptWebAutoReloginQueueSize !==
+              DEFAULT_VISUAL_VALUES.chatgptWebAutoReloginQueueSize
+          ) {
+            setIntFromStringInDoc(
+              doc,
+              ['chatgpt-web', 'auto-relogin-queue-size'],
+              values.chatgptWebAutoReloginQueueSize
+            );
+          }
+          for (const legacyKey of ['autoReloginWorkers', 'autoReloginQueueSize']) {
+            if (docHas(doc, ['chatgpt-web', legacyKey])) {
+              doc.deleteIn(['chatgpt-web', legacyKey]);
+            }
+          }
           if (
             docHas(doc, ['chatgpt-web', 'api798-auto-login-enabled']) ||
             values.chatgptWebApi798AutoLoginEnabled

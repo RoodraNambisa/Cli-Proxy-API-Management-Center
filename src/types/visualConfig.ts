@@ -20,6 +20,8 @@ export type VisualConfigFieldPath =
   | 'maxRetryInterval'
   | 'noCooldownStatusCodes'
   | 'chatgptWebAutoDeleteDeadPriorities'
+  | 'chatgptWebAutoReloginWorkers'
+  | 'chatgptWebAutoReloginQueueSize'
   | 'chatgptWebStrictSize'
   | 'chatgptWebAspectRatioMaxErrorPercent'
   | 'chatgptWebMaxResizeEdgePixels'
@@ -89,6 +91,7 @@ export type VisualConfigValidationErrorCode =
   | 'number_range_0_10'
   | 'integer_range_1_3840'
   | 'integer_range_1_256'
+  | 'integer_range_1_1000000'
   | 'integer_range_1_10'
   | 'integer_range_0_512'
   | 'strict_size_requires_aspect_adaptation'
@@ -300,6 +303,8 @@ export type VisualConfigValues = {
   codexHeaderDefaultsBetaFeatures: string;
   codexHeaderDefaultsOriginator: string;
   chatgptWebAutoRelogin: boolean;
+  chatgptWebAutoReloginWorkers: string;
+  chatgptWebAutoReloginQueueSize: string;
   chatgptWebApi798AutoLoginEnabled: boolean;
   chatgptWebSessionCookieRefreshOnTokenFailure: boolean;
   chatgptWebForceSessionRefreshOnImport: boolean;
@@ -402,6 +407,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexHeaderDefaultsBetaFeatures: '',
   codexHeaderDefaultsOriginator: '',
   chatgptWebAutoRelogin: false,
+  chatgptWebAutoReloginWorkers: '4',
+  chatgptWebAutoReloginQueueSize: '4096',
   chatgptWebApi798AutoLoginEnabled: false,
   chatgptWebSessionCookieRefreshOnTokenFailure: false,
   chatgptWebForceSessionRefreshOnImport: true,
