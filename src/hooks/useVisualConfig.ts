@@ -1551,14 +1551,14 @@ export function getVisualConfigValidationErrors(
     chatgptWebImageMaxInFlight: getIntegerRangeError(
       values.chatgptWebImageMaxInFlight,
       1,
-      512,
-      'integer_range_1_512'
+      4096,
+      'integer_range_1_4096'
     ),
     chatgptWebImageAdmissionQueueSize: getIntegerRangeError(
       values.chatgptWebImageAdmissionQueueSize,
       0,
-      512,
-      'integer_range_0_512'
+      4096,
+      'integer_range_0_4096'
     ),
     chatgptWebImageAdmissionWaitMilliseconds: getIntegerRangeError(
       values.chatgptWebImageAdmissionWaitMilliseconds,
@@ -1583,6 +1583,18 @@ export function getVisualConfigValidationErrors(
       64,
       8192,
       'integer_range_64_8192'
+    ),
+    chatgptWebImagePollConcurrency: getIntegerRangeError(
+      values.chatgptWebImagePollConcurrency,
+      1,
+      512,
+      'integer_range_1_512'
+    ),
+    chatgptWebImageMemoryFinalizerConcurrency: getIntegerRangeError(
+      values.chatgptWebImageMemoryFinalizerConcurrency,
+      1,
+      64,
+      'integer_range_1_64'
     ),
     routingFillFirstRange: routingFillFirstRangeError,
     routingFillFirstPerAuthRpm: routingFillFirstPerAuthRpmError,
@@ -2412,6 +2424,19 @@ function getNextDirtyFields(
         baselineValues.chatgptWebImageMemoryCapacityMegabytes
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImagePollConcurrency')) {
+    updateDirty(
+      'chatgptWebImagePollConcurrency',
+      nextValues.chatgptWebImagePollConcurrency === baselineValues.chatgptWebImagePollConcurrency
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageMemoryFinalizerConcurrency')) {
+    updateDirty(
+      'chatgptWebImageMemoryFinalizerConcurrency',
+      nextValues.chatgptWebImageMemoryFinalizerConcurrency ===
+        baselineValues.chatgptWebImageMemoryFinalizerConcurrency
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'requestRetry')) {
     updateDirty('requestRetry', nextValues.requestRetry === baselineValues.requestRetry);
   }
@@ -3126,6 +3151,16 @@ export function useVisualConfig() {
             imagesChatGPTWeb?.memoryCapacityMegabytes ??
             DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryCapacityMegabytes
         ),
+        chatgptWebImagePollConcurrency: String(
+          imagesChatGPTWeb?.['poll-concurrency'] ??
+            imagesChatGPTWeb?.pollConcurrency ??
+            DEFAULT_VISUAL_VALUES.chatgptWebImagePollConcurrency
+        ),
+        chatgptWebImageMemoryFinalizerConcurrency: String(
+          imagesChatGPTWeb?.['memory-finalizer-concurrency'] ??
+            imagesChatGPTWeb?.memoryFinalizerConcurrency ??
+            DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryFinalizerConcurrency
+        ),
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryCredentials: String(parsed['max-retry-credentials'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
@@ -3791,6 +3826,10 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebImageCompletionReserveMegabytes ||
           values.chatgptWebImageMemoryCapacityMegabytes !==
             DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryCapacityMegabytes ||
+          values.chatgptWebImagePollConcurrency !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImagePollConcurrency ||
+          values.chatgptWebImageMemoryFinalizerConcurrency !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryFinalizerConcurrency ||
           docHas(doc, ['images', 'chatgpt-web']) ||
           docHas(doc, ['images', 'native']) ||
           !areNativeImagesEqual(values.images.native, imagesDefaults.native);
@@ -3862,7 +3901,11 @@ export function useVisualConfig() {
             values.chatgptWebImageCompletionReserveMegabytes !==
               DEFAULT_VISUAL_VALUES.chatgptWebImageCompletionReserveMegabytes ||
             values.chatgptWebImageMemoryCapacityMegabytes !==
-              DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryCapacityMegabytes
+              DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryCapacityMegabytes ||
+            values.chatgptWebImagePollConcurrency !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImagePollConcurrency ||
+            values.chatgptWebImageMemoryFinalizerConcurrency !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryFinalizerConcurrency
           ) {
             ensureMapInDoc(doc, ['images', 'chatgpt-web']);
             setStringInDoc(
@@ -3934,6 +3977,16 @@ export function useVisualConfig() {
               ['images', 'chatgpt-web', 'memory-capacity-megabytes'],
               values.chatgptWebImageMemoryCapacityMegabytes
             );
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'poll-concurrency'],
+              values.chatgptWebImagePollConcurrency
+            );
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'memory-finalizer-concurrency'],
+              values.chatgptWebImageMemoryFinalizerConcurrency
+            );
             for (const legacyKey of [
               'maxInFlight',
               'admissionQueueSize',
@@ -3941,6 +3994,8 @@ export function useVisualConfig() {
               'maxFinalizers',
               'completionReserveMegabytes',
               'memoryCapacityMegabytes',
+              'pollConcurrency',
+              'memoryFinalizerConcurrency',
             ]) {
               if (docHas(doc, ['images', 'chatgpt-web', legacyKey])) {
                 doc.deleteIn(['images', 'chatgpt-web', legacyKey]);

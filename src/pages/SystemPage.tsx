@@ -599,6 +599,7 @@ export function SystemPage() {
   const imageMemory = systemMetrics?.image_request_memory;
   const imageInFlight = systemMetrics?.chatgpt_web_image_in_flight;
   const imageFinalizers = systemMetrics?.chatgpt_web_image_finalizers;
+  const imageMemoryFinalizers = systemMetrics?.chatgpt_web_image_memory_finalizers;
   const imagePollSlots = systemMetrics?.chatgpt_web_image_poll_slots;
   const imagePhaseEntries = systemMetrics
     ? sortImagePhaseEntries(Object.entries(systemMetrics.image_request_phases.metrics))
@@ -607,6 +608,7 @@ export function SystemPage() {
     imageMemory?.available ||
     imageInFlight?.available ||
     imageFinalizers?.available ||
+    imageMemoryFinalizers?.available ||
     imagePollSlots?.available ||
     systemMetrics?.image_request_phases.available
   );
@@ -821,6 +823,76 @@ export function SystemPage() {
 
                       <article className={styles.imageMetricPanel}>
                         <div className={styles.imageMetricHeader}>
+                          <h4>{t('system_info.image_runtime.memory_finalizers')}</h4>
+                          <span>{t('system_info.image_runtime.whole_workspace')}</span>
+                        </div>
+                        {!imageMemoryFinalizers?.available ? (
+                          <p className={styles.imageMetricUnavailable}>
+                            {t('system_info.image_runtime.group_unavailable')}
+                          </p>
+                        ) : (
+                          <dl className={styles.imageMetricStats}>
+                            <div>
+                              <dt>{t('system_info.image_runtime.active_limit')}</dt>
+                              <dd>
+                                {imageMemoryFinalizers.active} /{' '}
+                                {imageMemoryFinalizers.limit || '-'}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.queue')}</dt>
+                              <dd>
+                                {imageMemoryFinalizers.queued} / {imageMemoryFinalizers.queue_limit}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.peak')}</dt>
+                              <dd>
+                                {imageMemoryFinalizers.peak_active} /{' '}
+                                {imageMemoryFinalizers.peak_queued}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.rejected')}</dt>
+                              <dd>
+                                {imageMemoryFinalizers.immediate_rejects +
+                                  imageMemoryFinalizers.queue_rejects}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.timed_out')}</dt>
+                              <dd>{imageMemoryFinalizers.timed_out}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.oldest_active')}</dt>
+                              <dd>
+                                {formatDurationNanos(imageMemoryFinalizers.oldest_active_age_nanos)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{t('system_info.image_runtime.resize_state')}</dt>
+                              <dd>
+                                {t(
+                                  imageMemoryFinalizers.shrinking
+                                    ? 'system_info.image_runtime.shrinking'
+                                    : 'system_info.image_runtime.stable'
+                                )}
+                              </dd>
+                            </div>
+                            <div className={styles.imageMetricWide}>
+                              <dt>{t('system_info.image_runtime.long_running')}</dt>
+                              <dd>
+                                {imageMemoryFinalizers.active_over_5_minutes} /{' '}
+                                {imageMemoryFinalizers.active_over_15_minutes} /{' '}
+                                {imageMemoryFinalizers.active_over_25_minutes}
+                              </dd>
+                            </div>
+                          </dl>
+                        )}
+                      </article>
+
+                      <article className={styles.imageMetricPanel}>
+                        <div className={styles.imageMetricHeader}>
                           <h4>{t('system_info.image_runtime.in_flight')}</h4>
                           <span>{t('system_info.image_runtime.full_lifecycle')}</span>
                         </div>
@@ -954,8 +1026,34 @@ export function SystemPage() {
                             </div>
                             <div>
                               <dt>{t('system_info.image_runtime.peak')}</dt>
-                              <dd>{imagePollSlots.peak_active}</dd>
+                              <dd>
+                                {imagePollSlots.peak_active}
+                                {imagePollSlots.capacity_details_available
+                                  ? ` / ${imagePollSlots.peak_queued}`
+                                  : ''}
+                              </dd>
                             </div>
+                            {imagePollSlots.capacity_details_available ? (
+                              <>
+                                <div>
+                                  <dt>{t('system_info.image_runtime.queue')}</dt>
+                                  <dd>
+                                    {imagePollSlots.queued} / {imagePollSlots.queue_limit}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>{t('system_info.image_runtime.rejected')}</dt>
+                                  <dd>
+                                    {imagePollSlots.immediate_rejects +
+                                      imagePollSlots.queue_rejects}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>{t('system_info.image_runtime.timed_out')}</dt>
+                                  <dd>{imagePollSlots.timed_out}</dd>
+                                </div>
+                              </>
+                            ) : null}
                             <div>
                               <dt>{t('system_info.image_runtime.acquired_attempts')}</dt>
                               <dd>
@@ -970,6 +1068,18 @@ export function SystemPage() {
                               <dt>{t('system_info.image_runtime.max_wait')}</dt>
                               <dd>{formatDurationNanos(imagePollSlots.max_wait_nanos)}</dd>
                             </div>
+                            {imagePollSlots.capacity_details_available ? (
+                              <div>
+                                <dt>{t('system_info.image_runtime.resize_state')}</dt>
+                                <dd>
+                                  {t(
+                                    imagePollSlots.shrinking
+                                      ? 'system_info.image_runtime.shrinking'
+                                      : 'system_info.image_runtime.stable'
+                                  )}
+                                </dd>
+                              </div>
+                            ) : null}
                           </dl>
                         )}
                       </article>

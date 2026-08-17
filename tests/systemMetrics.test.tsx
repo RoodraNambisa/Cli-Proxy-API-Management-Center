@@ -135,6 +135,7 @@ const createSystemSnapshot = (): SystemMetricsSnapshot => ({
     active_over_5_minutes: 3,
     active_over_15_minutes: 2,
     active_over_25_minutes: 1,
+    shrinking: false,
   },
   chatgpt_web_image_finalizers: {
     available: true,
@@ -155,14 +156,44 @@ const createSystemSnapshot = (): SystemMetricsSnapshot => ({
     active_over_5_minutes: 2,
     active_over_15_minutes: 1,
     active_over_25_minutes: 0,
+    shrinking: false,
+  },
+  chatgpt_web_image_memory_finalizers: {
+    available: true,
+    limit: 4,
+    queue_limit: 64,
+    active: 3,
+    queued: 2,
+    peak_active: 4,
+    peak_queued: 7,
+    admitted: 50,
+    immediate_rejects: 1,
+    queue_rejects: 2,
+    timed_out: 3,
+    canceled: 4,
+    total_wait_nanos: 6_000_000,
+    max_wait_nanos: 5_000_000,
+    oldest_active_age_nanos: 7 * 60 * 1_000_000_000,
+    active_over_5_minutes: 1,
+    active_over_15_minutes: 0,
+    active_over_25_minutes: 0,
+    shrinking: true,
   },
   chatgpt_web_image_poll_slots: {
     available: true,
+    capacity_details_available: true,
     limit: 64,
+    queue_limit: 64,
     active: 10,
+    queued: 6,
     peak_active: 32,
+    peak_queued: 12,
+    shrinking: false,
     acquire_attempts: 500,
     acquired: 480,
+    immediate_rejects: 3,
+    queue_rejects: 4,
+    timed_out: 5,
     canceled: 20,
     total_wait_nanos: 5_000_000,
     max_wait_nanos: 2_000_000,
@@ -240,7 +271,9 @@ describe('system metrics and filesystem capacity', () => {
     expect(snapshot.image_request_memory.available).toBe(false);
     expect(snapshot.chatgpt_web_image_in_flight.available).toBe(false);
     expect(snapshot.chatgpt_web_image_finalizers.available).toBe(false);
+    expect(snapshot.chatgpt_web_image_memory_finalizers.available).toBe(false);
     expect(snapshot.chatgpt_web_image_poll_slots.available).toBe(false);
+    expect(snapshot.chatgpt_web_image_poll_slots.capacity_details_available).toBe(false);
     expect(snapshot.image_request_phases.available).toBe(false);
 
     const imageSnapshot = normalizeSystemMetricsSnapshot({
@@ -251,7 +284,22 @@ describe('system metrics and filesystem capacity', () => {
       },
       chatgpt_web_image_in_flight: { active: 4, limit: 64, timed_out: '3' },
       chatgpt_web_image_finalizers: { active_over_25_minutes: 2 },
-      chatgpt_web_image_poll_slots: { active: 5, max_wait_nanos: '9000000' },
+      chatgpt_web_image_memory_finalizers: {
+        active: 3,
+        limit: 2,
+        shrinking: true,
+      },
+      chatgpt_web_image_poll_slots: {
+        active: 5,
+        queue_limit: 8,
+        queued: 2,
+        peak_queued: 3,
+        immediate_rejects: 1,
+        queue_rejects: 4,
+        timed_out: 3,
+        shrinking: false,
+        max_wait_nanos: '9000000',
+      },
       image_request_phases: {
         metrics: {
           route_request_total: { count: 2, total_nanos: 100, max_nanos: -5 },
@@ -272,7 +320,31 @@ describe('system metrics and filesystem capacity', () => {
       timed_out: 3,
     });
     expect(imageSnapshot.chatgpt_web_image_finalizers.active_over_25_minutes).toBe(2);
+    expect(imageSnapshot.chatgpt_web_image_memory_finalizers).toMatchObject({
+      available: true,
+      active: 3,
+      limit: 2,
+      shrinking: true,
+    });
+    expect(imageSnapshot.chatgpt_web_image_poll_slots).toMatchObject({
+      capacity_details_available: true,
+      queue_limit: 8,
+      queued: 2,
+      queue_rejects: 4,
+      timed_out: 3,
+    });
     expect(imageSnapshot.chatgpt_web_image_poll_slots.max_wait_nanos).toBe(9_000_000);
+
+    const legacyPoll = normalizeSystemMetricsSnapshot({
+      chatgpt_web_image_poll_slots: { active: 5, peak_active: 6, max_wait_nanos: 7 },
+    }).chatgpt_web_image_poll_slots;
+    expect(legacyPoll).toMatchObject({
+      available: true,
+      capacity_details_available: false,
+      active: 5,
+      peak_active: 6,
+      max_wait_nanos: 7,
+    });
     expect(imageSnapshot.image_request_phases.metrics).toEqual({
       route_request_total: expect.objectContaining({ count: 2, total_nanos: 100, max_nanos: 0 }),
     });
@@ -620,7 +692,10 @@ describe('system metrics and filesystem capacity', () => {
     expect(within(runtime).getByText('/ 512.0 MiB')).toBeTruthy();
     expect(within(runtime).getByText('40 / 64')).toBeTruthy();
     expect(within(runtime).getByText('2 / 8')).toBeTruthy();
+    expect(within(runtime).getByText('3 / 4')).toBeTruthy();
     expect(within(runtime).getByText('10 / 64')).toBeTruthy();
+    expect(within(runtime).getByText('system_info.image_runtime.memory_finalizers')).toBeTruthy();
+    expect(within(runtime).getByText('system_info.image_runtime.shrinking')).toBeTruthy();
     expect(
       within(runtime).getByText('system_info.image_runtime.bypassed_reservations').parentElement
         ?.textContent
@@ -650,6 +725,39 @@ describe('system metrics and filesystem capacity', () => {
     const runtime = await screen.findByTestId('image-runtime-metrics');
     expect(within(runtime).getByText('system_info.image_runtime.unavailable')).toBeTruthy();
     expect(within(runtime).queryByText('/ 0 B')).toBeNull();
+  });
+
+  test('does not fabricate queue health for a legacy poll snapshot', async () => {
+    vi.spyOn(systemMetricsApi, 'get').mockResolvedValue(
+      normalizeSystemMetricsSnapshot({
+        runtime: { goroutines: 1 },
+        filesystems: {},
+        chatgpt_web_image_poll_slots: {
+          limit: 64,
+          active: 5,
+          peak_active: 6,
+          acquire_attempts: 12,
+          acquired: 10,
+          canceled: 2,
+          max_wait_nanos: 7,
+        },
+      })
+    );
+    vi.spyOn(configApi, 'getControlPanelUpdateStatus').mockResolvedValue({} as never);
+    vi.spyOn(apiKeysApi, 'list').mockResolvedValue([]);
+    vi.spyOn(useConfigStore.getState(), 'fetchConfig').mockResolvedValue({} as never);
+    vi.spyOn(useModelsStore.getState(), 'fetchModels').mockResolvedValue([]);
+
+    render(<SystemPage />);
+    const runtime = await screen.findByTestId('image-runtime-metrics');
+    const pollHeading = within(runtime).getByText('system_info.image_runtime.poll_slots');
+    const pollPanel = pollHeading.closest('article');
+    expect(pollPanel).not.toBeNull();
+    const poll = within(pollPanel as HTMLElement);
+    expect(poll.getByText('5 / 64')).toBeTruthy();
+    expect(poll.queryByText('system_info.image_runtime.queue')).toBeNull();
+    expect(poll.queryByText('system_info.image_runtime.rejected')).toBeNull();
+    expect(poll.queryByText('system_info.image_runtime.resize_state')).toBeNull();
   });
 
   test('polls while mounted and stops after leaving the system page', async () => {

@@ -1104,6 +1104,14 @@ export function VisualConfigEditor({
     t,
     validationErrors?.chatgptWebImageMemoryCapacityMegabytes
   );
+  const chatGptWebImagePollConcurrencyError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImagePollConcurrency
+  );
+  const chatGptWebImageMemoryFinalizerConcurrencyError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImageMemoryFinalizerConcurrency
+  );
   const fixedErrorCooldownsErrorCount = useMemo(
     () =>
       Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('fixedErrorCooldowns.'))
@@ -1195,6 +1203,8 @@ export function VisualConfigEditor({
     'chatgptWebImageMaxFinalizers',
     'chatgptWebImageCompletionReserveMegabytes',
     'chatgptWebImageMemoryCapacityMegabytes',
+    'chatgptWebImagePollConcurrency',
+    'chatgptWebImageMemoryFinalizerConcurrency',
   ]);
   const chatGptWebImageCapacityErrorCount = [
     chatGptWebImageMaxInFlightError,
@@ -1203,6 +1213,8 @@ export function VisualConfigEditor({
     chatGptWebImageMaxFinalizersError,
     chatGptWebImageCompletionReserveMegabytesError,
     chatGptWebImageMemoryCapacityMegabytesError,
+    chatGptWebImagePollConcurrencyError,
+    chatGptWebImageMemoryFinalizerConcurrencyError,
   ].filter(Boolean).length;
   const retrySettingsErrorCount = [
     requestRetryError,
@@ -1696,6 +1708,8 @@ export function VisualConfigEditor({
           'chatgptWebImageMaxFinalizers',
           'chatgptWebImageCompletionReserveMegabytes',
           'chatgptWebImageMemoryCapacityMegabytes',
+          'chatgptWebImagePollConcurrency',
+          'chatgptWebImageMemoryFinalizerConcurrency',
         ]),
       'provider-grok': 0,
       'advanced-payload': hasPayloadValidationErrors ? 1 : 0,
@@ -2365,6 +2379,8 @@ export function VisualConfigEditor({
                   'config-chatgpt-web-image-max-finalizers',
                   'config-chatgpt-web-image-completion-reserve-megabytes',
                   'config-chatgpt-web-image-memory-capacity-megabytes',
+                  'config-chatgpt-web-image-poll-concurrency',
+                  'config-chatgpt-web-image-memory-finalizer-concurrency',
                 ]}
                 dirty={chatGptWebImageCapacityDirty}
                 errorCount={chatGptWebImageCapacityErrorCount}
@@ -2396,7 +2412,7 @@ export function VisualConfigEditor({
                       id="config-chatgpt-web-image-max-in-flight"
                       type="number"
                       min={1}
-                      max={512}
+                      max={4096}
                       step={1}
                       label={t('config_management.settings_center.chatgpt_web.image_max_in_flight')}
                       hint={t(
@@ -2410,10 +2426,29 @@ export function VisualConfigEditor({
                       }
                     />
                     <Input
+                      id="config-chatgpt-web-image-poll-concurrency"
+                      type="number"
+                      min={1}
+                      max={512}
+                      step={1}
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.image_poll_concurrency'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_poll_concurrency_description'
+                      )}
+                      error={chatGptWebImagePollConcurrencyError}
+                      value={values.chatgptWebImagePollConcurrency}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({ chatgptWebImagePollConcurrency: event.target.value })
+                      }
+                    />
+                    <Input
                       id="config-chatgpt-web-image-admission-queue-size"
                       type="number"
                       min={0}
-                      max={512}
+                      max={4096}
                       step={1}
                       label={t(
                         'config_management.settings_center.chatgpt_web.image_admission_queue_size'
@@ -2486,6 +2521,27 @@ export function VisualConfigEditor({
                       onChange={(event) =>
                         onChange({
                           chatgptWebImageCompletionReserveMegabytes: event.target.value,
+                        })
+                      }
+                    />
+                    <Input
+                      id="config-chatgpt-web-image-memory-finalizer-concurrency"
+                      type="number"
+                      min={1}
+                      max={64}
+                      step={1}
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.image_memory_finalizer_concurrency'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_memory_finalizer_concurrency_description'
+                      )}
+                      error={chatGptWebImageMemoryFinalizerConcurrencyError}
+                      value={values.chatgptWebImageMemoryFinalizerConcurrency}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({
+                          chatgptWebImageMemoryFinalizerConcurrency: event.target.value,
                         })
                       }
                     />

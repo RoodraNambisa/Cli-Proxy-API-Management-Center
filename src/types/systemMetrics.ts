@@ -65,15 +65,24 @@ export interface SystemImageExecutionAdmissionSnapshot {
   active_over_5_minutes: number;
   active_over_15_minutes: number;
   active_over_25_minutes: number;
+  shrinking: boolean;
 }
 
 export interface SystemImagePollSlotsSnapshot {
   available: boolean;
+  capacity_details_available: boolean;
   limit: number;
+  queue_limit: number;
   active: number;
+  queued: number;
   peak_active: number;
+  peak_queued: number;
+  shrinking: boolean;
   acquire_attempts: number;
   acquired: number;
+  immediate_rejects: number;
+  queue_rejects: number;
+  timed_out: number;
   canceled: number;
   total_wait_nanos: number;
   max_wait_nanos: number;
@@ -110,6 +119,7 @@ export interface SystemMetricsSnapshot {
   image_request_memory: SystemImageMemorySnapshot;
   chatgpt_web_image_in_flight: SystemImageExecutionAdmissionSnapshot;
   chatgpt_web_image_finalizers: SystemImageExecutionAdmissionSnapshot;
+  chatgpt_web_image_memory_finalizers: SystemImageExecutionAdmissionSnapshot;
   chatgpt_web_image_poll_slots: SystemImagePollSlotsSnapshot;
   image_request_phases: SystemImageRequestPhasesSnapshot;
 }

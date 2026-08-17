@@ -30,6 +30,8 @@ export type VisualConfigFieldPath =
   | 'chatgptWebImageMaxFinalizers'
   | 'chatgptWebImageCompletionReserveMegabytes'
   | 'chatgptWebImageMemoryCapacityMegabytes'
+  | 'chatgptWebImagePollConcurrency'
+  | 'chatgptWebImageMemoryFinalizerConcurrency'
   | 'routingFillFirstRange'
   | 'routingFillFirstPerAuthRpm'
   | 'routingPerAuthRequestLimit'
@@ -86,7 +88,9 @@ export type VisualConfigValidationErrorCode =
   | 'integer_range_1_256'
   | 'integer_range_1_10'
   | 'integer_range_1_512'
+  | 'integer_range_1_4096'
   | 'integer_range_0_512'
+  | 'integer_range_0_4096'
   | 'integer_range_0_30000'
   | 'integer_range_1_64'
   | 'integer_range_0_32'
@@ -318,6 +322,8 @@ export type VisualConfigValues = {
   chatgptWebImageMaxFinalizers: string;
   chatgptWebImageCompletionReserveMegabytes: string;
   chatgptWebImageMemoryCapacityMegabytes: string;
+  chatgptWebImagePollConcurrency: string;
+  chatgptWebImageMemoryFinalizerConcurrency: string;
   requestRetry: string;
   maxRetryCredentials: string;
   maxRetryInterval: string;
@@ -414,6 +420,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebImageMaxFinalizers: '8',
   chatgptWebImageCompletionReserveMegabytes: '1',
   chatgptWebImageMemoryCapacityMegabytes: '512',
+  chatgptWebImagePollConcurrency: '64',
+  chatgptWebImageMemoryFinalizerConcurrency: '1',
   requestRetry: '',
   maxRetryCredentials: '',
   maxRetryInterval: '',

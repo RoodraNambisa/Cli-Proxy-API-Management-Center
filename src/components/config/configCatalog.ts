@@ -164,6 +164,8 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebImageMaxFinalizers',
       'chatgptWebImageCompletionReserveMegabytes',
       'chatgptWebImageMemoryCapacityMegabytes',
+      'chatgptWebImagePollConcurrency',
+      'chatgptWebImageMemoryFinalizerConcurrency',
     ],
   },
   {
@@ -652,6 +654,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.max-finalizers',
       'images.chatgpt-web.completion-reserve-megabytes',
       'images.chatgpt-web.memory-capacity-megabytes',
+      'images.chatgpt-web.poll-concurrency',
+      'images.chatgpt-web.memory-finalizer-concurrency',
     ],
     aliases: [
       'image concurrency',
@@ -661,11 +665,15 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'completion reserve',
       'working set memory',
       'memory capacity',
+      'poll concurrency',
+      'memory finalizer concurrency',
       '图片并发',
       '图片容量',
       '收尾队列',
       '生成排队',
       '工作集内存',
+      '轮询并发',
+      '重收尾并发',
     ],
   },
   {

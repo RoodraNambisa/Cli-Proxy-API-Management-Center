@@ -105,19 +105,39 @@ const normalizeImageAdmission = (value: unknown): SystemImageExecutionAdmissionS
     active_over_5_minutes: toNonNegativeNumber(source.active_over_5_minutes),
     active_over_15_minutes: toNonNegativeNumber(source.active_over_15_minutes),
     active_over_25_minutes: toNonNegativeNumber(source.active_over_25_minutes),
+    shrinking: source.shrinking === true,
   };
 };
 
 const normalizeImagePollSlots = (value: unknown): SystemImagePollSlotsSnapshot => {
   const available = isRecord(value);
   const source = available ? value : {};
+  const capacityDetailsAvailable =
+    available &&
+    [
+      'queue_limit',
+      'queued',
+      'peak_queued',
+      'immediate_rejects',
+      'queue_rejects',
+      'timed_out',
+      'shrinking',
+    ].every((key) => Object.prototype.hasOwnProperty.call(source, key));
   return {
     available,
+    capacity_details_available: capacityDetailsAvailable,
     limit: toNonNegativeNumber(source.limit),
+    queue_limit: toNonNegativeNumber(source.queue_limit),
     active: toNonNegativeNumber(source.active),
+    queued: toNonNegativeNumber(source.queued),
     peak_active: toNonNegativeNumber(source.peak_active),
+    peak_queued: toNonNegativeNumber(source.peak_queued),
+    shrinking: source.shrinking === true,
     acquire_attempts: toNonNegativeNumber(source.acquire_attempts),
     acquired: toNonNegativeNumber(source.acquired),
+    immediate_rejects: toNonNegativeNumber(source.immediate_rejects),
+    queue_rejects: toNonNegativeNumber(source.queue_rejects),
+    timed_out: toNonNegativeNumber(source.timed_out),
     canceled: toNonNegativeNumber(source.canceled),
     total_wait_nanos: toNonNegativeNumber(source.total_wait_nanos),
     max_wait_nanos: toNonNegativeNumber(source.max_wait_nanos),
@@ -176,6 +196,9 @@ export const normalizeSystemMetricsSnapshot = (value: unknown): SystemMetricsSna
     image_request_memory: normalizeImageMemory(imageMemorySource),
     chatgpt_web_image_in_flight: normalizeImageAdmission(source.chatgpt_web_image_in_flight),
     chatgpt_web_image_finalizers: normalizeImageAdmission(source.chatgpt_web_image_finalizers),
+    chatgpt_web_image_memory_finalizers: normalizeImageAdmission(
+      source.chatgpt_web_image_memory_finalizers
+    ),
     chatgpt_web_image_poll_slots: normalizeImagePollSlots(source.chatgpt_web_image_poll_slots),
     image_request_phases: normalizeImageRequestPhases(source.image_request_phases),
   };
