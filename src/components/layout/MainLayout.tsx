@@ -11,6 +11,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { PageTransition } from '@/components/common/PageTransition';
+import { StartupStatusBanner } from '@/components/layout/StartupStatusBanner';
 import { MainRoutes } from '@/router/MainRoutes';
 import {
   IconSidebarAuthFiles,
@@ -31,6 +32,7 @@ import {
   useConfigStore,
   useLanguageStore,
   useNotificationStore,
+  useStartupStatusStore,
   useThemeStore,
 } from '@/stores';
 import { triggerHeaderRefresh } from '@/hooks/useHeaderRefresh';
@@ -213,6 +215,10 @@ export function MainLayout() {
   const location = useLocation();
 
   const logout = useAuthStore((state) => state.logout);
+  const connectionStatus = useAuthStore((state) => state.connectionStatus);
+  const startupConnectionKey = useAuthStore((state) =>
+    JSON.stringify([state.apiBase, state.managementAccessPath, state.connectionGeneration ?? 0])
+  );
 
   const config = useConfigStore((state) => state.config);
   const fetchConfig = useConfigStore((state) => state.fetchConfig);
@@ -222,6 +228,9 @@ export function MainLayout() {
   const setTheme = useThemeStore((state) => state.setTheme);
   const language = useLanguageStore((state) => state.language);
   const setLanguage = useLanguageStore((state) => state.setLanguage);
+  const startup = useStartupStatusStore((state) => state.snapshot);
+  const loadStartup = useStartupStatusStore((state) => state.load);
+  const resetStartup = useStartupStatusStore((state) => state.reset);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -384,6 +393,23 @@ export function MainLayout() {
       // ignore initial failure; login flow会提示
     });
   }, [fetchConfig]);
+
+  useEffect(() => {
+    if (connectionStatus !== 'connected') {
+      resetStartup();
+      return undefined;
+    }
+    void loadStartup(startupConnectionKey);
+    return () => resetStartup();
+  }, [connectionStatus, loadStartup, resetStartup, startupConnectionKey]);
+
+  useEffect(() => {
+    if (connectionStatus !== 'connected' || startup?.status !== 'initializing') return undefined;
+    const timer = window.setInterval(() => {
+      void loadStartup(startupConnectionKey);
+    }, 2000);
+    return () => window.clearInterval(timer);
+  }, [connectionStatus, loadStartup, startup?.status, startupConnectionKey]);
 
   const navItems = [
     { path: '/', label: t('nav.dashboard'), icon: sidebarIcons.dashboard, end: true },
@@ -674,6 +700,7 @@ export function MainLayout() {
 
         <div className={`content${isLogsPage ? ' content-logs' : ''}`} ref={contentRef}>
           <main className={`main-content${isLogsPage ? ' main-content-logs' : ''}`}>
+            <StartupStatusBanner />
             <PageTransition
               render={(location) => <MainRoutes location={location} />}
               getRouteOrder={getRouteOrder}

@@ -4,8 +4,13 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { historyStorageApi } from '@/services/api';
-import { useNotificationStore } from '@/stores';
-import type { HistoryPruneRequest, StartupStatusSnapshot, StorageHistorySnapshot } from '@/types';
+import { startupMutationsBlocked, useNotificationStore, useStartupStatusStore } from '@/stores';
+import type {
+  HistoryPruneRequest,
+  StartupStatusSnapshot,
+  StorageHistorySnapshot,
+  UsagePruneTask,
+} from '@/types';
 import styles from './StartupHistoryPanel.module.scss';
 
 interface StartupHistoryPanelProps {
@@ -51,10 +56,13 @@ const parseRetention = (days: string, megabytes: string): HistoryPruneRequest | 
 export function StartupHistoryPanel({ connected, connectionKey }: StartupHistoryPanelProps) {
   const { t, i18n } = useTranslation();
   const { showNotification, showConfirmation } = useNotificationStore();
-  const [startup, setStartup] = useState<StartupStatusSnapshot | null>(null);
+  const startup = useStartupStatusStore((state) => state.snapshot);
+  const startupSupport = useStartupStatusStore((state) => state.support);
+  const startupLoading = useStartupStatusStore((state) => state.loading);
+  const startupError = useStartupStatusStore((state) => state.error);
+  const loadStartup = useStartupStatusStore((state) => state.load);
   const [history, setHistory] = useState<StorageHistorySnapshot | null>(null);
   const [loading, setLoading] = useState(false);
-  const [startupUnsupported, setStartupUnsupported] = useState(false);
   const [historyUnsupported, setHistoryUnsupported] = useState(false);
   const [error, setError] = useState('');
   const [usageDays, setUsageDays] = useState('0');
@@ -62,7 +70,9 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
   const [logDays, setLogDays] = useState('0');
   const [logMegabytes, setLogMegabytes] = useState('0');
   const [cleaning, setCleaning] = useState<'usage' | 'logs' | null>(null);
+  const [usageTask, setUsageTask] = useState<UsagePruneTask | null>(null);
   const requestSequence = useRef(0);
+  const notifiedUsageTasks = useRef(new Set<string>());
 
   const formatDate = useCallback(
     (value: string | null): string => {
@@ -79,19 +89,12 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
     setLoading(true);
     setError('');
     const [startupResult, historyResult] = await Promise.allSettled([
-      historyStorageApi.getStartupStatus(),
+      loadStartup(connectionKey),
       historyStorageApi.getStorageHistory(),
     ]);
     if (sequence !== requestSequence.current) return;
 
-    if (startupResult.status === 'fulfilled') {
-      setStartup(startupResult.value);
-      setStartupUnsupported(false);
-    } else if (getErrorStatus(startupResult.reason) === 404) {
-      setStartup(null);
-      setStartupUnsupported(true);
-    } else {
-      setStartup(null);
+    if (startupResult.status === 'rejected') {
       setError(startupResult.reason instanceof Error ? startupResult.reason.message : 'startup');
     }
 
@@ -102,6 +105,11 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
       setUsageMegabytes(String(historyResult.value.usage.max_storage_megabytes));
       setLogDays(String(historyResult.value.logs.retention_days));
       setLogMegabytes(String(historyResult.value.logs.max_total_size_mb));
+      setUsageTask(
+        historyResult.value.usage.prune_tasks.active ??
+          historyResult.value.usage.prune_tasks.recent[0] ??
+          null
+      );
     } else if (getErrorStatus(historyResult.reason) === 404) {
       setHistory(null);
       setHistoryUnsupported(true);
@@ -114,15 +122,14 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
       );
     }
     setLoading(false);
-  }, [connected]);
+  }, [connected, connectionKey, loadStartup]);
 
   useEffect(() => {
     requestSequence.current += 1;
-    setStartup(null);
     setHistory(null);
     setError('');
-    setStartupUnsupported(false);
     setHistoryUnsupported(false);
+    setUsageTask(null);
     if (connected) void load();
     return () => {
       requestSequence.current += 1;
@@ -130,29 +137,61 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
   }, [connected, connectionKey, load]);
 
   useEffect(() => {
-    if (!connected || !startup || startup.ready) return undefined;
+    if (
+      !connected ||
+      !usageTask?.task_id ||
+      (usageTask.status !== 'queued' && usageTask.status !== 'running')
+    ) {
+      return undefined;
+    }
     let canceled = false;
-    const timer = window.setInterval(async () => {
+    let timer = 0;
+    const poll = async () => {
       try {
-        const next = await historyStorageApi.getStartupStatus();
+        const next = await historyStorageApi.getUsagePruneTask(usageTask.task_id);
         if (canceled) return;
-        setStartup(next);
-        if (next.ready) void load();
-      } catch {
-        // Keep the last safe snapshot while the listener is transitioning.
+        setUsageTask(next);
+        if (next.status === 'completed' || next.status === 'failed') {
+          if (!notifiedUsageTasks.current.has(next.task_id)) {
+            notifiedUsageTasks.current.add(next.task_id);
+            if (next.status === 'completed') {
+              showNotification(
+                t('system_info.history_storage.cleanup_success', { count: next.pruned }),
+                'success'
+              );
+            } else {
+              showNotification(
+                t('system_info.history_storage.cleanup_task_failed', {
+                  code: next.safe_error_code || 'usage_prune_failed',
+                }),
+                'error'
+              );
+            }
+          }
+          await load();
+          return;
+        }
+      } catch (pollError) {
+        if (!canceled && getErrorStatus(pollError) !== 404) {
+          setError(pollError instanceof Error ? pollError.message : 'usage-prune');
+        }
       }
-    }, 2000);
+      if (!canceled) timer = window.setTimeout(() => void poll(), 1500);
+    };
+    timer = window.setTimeout(() => void poll(), 1000);
     return () => {
       canceled = true;
-      window.clearInterval(timer);
+      window.clearTimeout(timer);
     };
-  }, [connected, startup, load]);
+  }, [connected, load, showNotification, t, usageTask?.status, usageTask?.task_id]);
 
   const usageRequest = useMemo(
     () => parseRetention(usageDays, usageMegabytes),
     [usageDays, usageMegabytes]
   );
   const logRequest = useMemo(() => parseRetention(logDays, logMegabytes), [logDays, logMegabytes]);
+  const mutationsBlocked = startupMutationsBlocked(startup);
+  const usageTaskActive = usageTask?.status === 'queued' || usageTask?.status === 'running';
 
   const prune = useCallback(
     (kind: 'usage' | 'logs') => {
@@ -169,17 +208,41 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
         onConfirm: async () => {
           setCleaning(kind);
           try {
-            const result =
-              kind === 'usage'
-                ? await historyStorageApi.pruneUsage(request)
-                : await historyStorageApi.pruneLogs(request);
-            const removed = 'pruned' in result ? result.pruned : result.removed_files;
-            showNotification(
-              t('system_info.history_storage.cleanup_success', { count: removed }),
-              'success'
-            );
-            await load();
+            if (kind === 'usage') {
+              const task = await historyStorageApi.pruneUsage(request);
+              setUsageTask(task);
+              if (!task.task_id || task.status === 'completed') {
+                showNotification(
+                  t('system_info.history_storage.cleanup_success', { count: task.pruned }),
+                  'success'
+                );
+                await load();
+              } else if (task.status === 'failed') {
+                showNotification(
+                  t('system_info.history_storage.cleanup_task_failed', {
+                    code: task.safe_error_code || 'usage_prune_failed',
+                  }),
+                  'error'
+                );
+              } else {
+                showNotification(t('system_info.history_storage.cleanup_started'), 'info');
+              }
+            } else {
+              const result = await historyStorageApi.pruneLogs(request);
+              showNotification(
+                t('system_info.history_storage.cleanup_success', {
+                  count: result.removed_files,
+                }),
+                'success'
+              );
+              await load();
+            }
           } catch (cleanupError) {
+            if (kind === 'usage' && getErrorStatus(cleanupError) === 409) {
+              showNotification(t('system_info.history_storage.cleanup_in_progress'), 'info');
+              await load();
+              return;
+            }
             showNotification(
               `${t('system_info.history_storage.cleanup_failed')}: ${
                 cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
@@ -214,11 +277,11 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
         }
       >
         <p className={styles.description}>{t('system_info.startup.description')}</p>
-        {startupUnsupported ? (
+        {startupSupport === 'unsupported' ? (
           <div className="hint">{t('system_info.startup.unsupported')}</div>
         ) : startup ? (
           <div className={styles.startupContent} data-testid="startup-status">
-            <div className={styles.startupSummary} data-ready={startup.ready ? 'true' : 'false'}>
+            <div className={styles.startupSummary} data-status={startup.status}>
               <span className={styles.statusDot} aria-hidden="true" />
               <div>
                 <strong>
@@ -226,11 +289,7 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
                     defaultValue: startup.phase || '-',
                   })}
                 </strong>
-                <span>
-                  {startup.ready
-                    ? t('system_info.startup.proxy_ready')
-                    : t('system_info.startup.proxy_blocked')}
-                </span>
+                <span>{t(`system_info.startup.service_status.${startup.status}`)}</span>
               </div>
               <time>{formatDate(startup.updated_at)}</time>
             </div>
@@ -255,15 +314,29 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
                       {stage.processed > 0
                         ? t('system_info.startup.processed', { count: stage.processed })
                         : stage.error_code || '-'}
+                      {stage.skipped > 0
+                        ? ` · ${t('system_info.startup.skipped', { count: stage.skipped })}`
+                        : ''}
                     </span>
                   </div>
+                ))}
+              </div>
+            )}
+            {startup.issues.length > 0 && (
+              <div className={styles.issueList} data-testid="startup-issues">
+                {startup.issues.map((issue) => (
+                  <span data-severity={issue.severity} key={`${issue.stage}:${issue.code}`}>
+                    {t(`system_info.startup.issues.${issue.code}`, { defaultValue: issue.code })}
+                  </span>
                 ))}
               </div>
             )}
           </div>
         ) : (
           <div className="hint">
-            {loading ? t('common.loading') : error || t('system_info.startup.unavailable')}
+            {startupLoading
+              ? t('common.loading')
+              : startupError || error || t('system_info.startup.unavailable')}
           </div>
         )}
       </Card>
@@ -327,6 +400,39 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
                   </dd>
                 </div>
               </dl>
+              <p className={styles.storageCaveat}>
+                {t('system_info.history_storage.usage_storage_caveat')}
+              </p>
+              {usageTask && (
+                <div
+                  className={styles.taskStatus}
+                  data-status={usageTask.status}
+                  data-testid="usage-prune-task"
+                >
+                  <div>
+                    <strong>
+                      {t(`system_info.history_storage.task_status.${usageTask.status}`)}
+                    </strong>
+                    <span>
+                      {usageTask.status === 'completed'
+                        ? t('system_info.history_storage.task_removed', {
+                            count: usageTask.pruned,
+                          })
+                        : usageTask.status === 'failed'
+                          ? t('system_info.history_storage.task_error', {
+                              code: usageTask.safe_error_code || 'usage_prune_failed',
+                            })
+                          : t('system_info.history_storage.task_background')}
+                    </span>
+                  </div>
+                  <time>{formatDate(usageTask.started_at || usageTask.created_at)}</time>
+                </div>
+              )}
+              {mutationsBlocked && (
+                <p className={styles.readOnlyNotice}>
+                  {t('system_info.history_storage.startup_read_only')}
+                </p>
+              )}
               <div className={styles.cleanupForm}>
                 <Input
                   label={t('system_info.history_storage.older_than_days')}
@@ -346,7 +452,9 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
                   type="button"
                   variant="danger"
                   size="sm"
-                  disabled={cleaning !== null || !usageRequest}
+                  disabled={
+                    cleaning !== null || !usageRequest || usageTaskActive || mutationsBlocked
+                  }
                   loading={cleaning === 'usage'}
                   onClick={() => prune('usage')}
                 >
@@ -406,7 +514,7 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
                   type="button"
                   variant="danger"
                   size="sm"
-                  disabled={cleaning !== null || !logRequest}
+                  disabled={cleaning !== null || !logRequest || mutationsBlocked}
                   loading={cleaning === 'logs'}
                   onClick={() => prune('logs')}
                 >

@@ -1662,6 +1662,9 @@
     "status_dirty_short": "Unsaved",
     "status_disconnected": "Connect to the server to load the configuration",
     "status_disconnected_short": "Disconnected",
+    "status_startup_read_only": "Startup is still read-only",
+    "status_startup_read_only_short": "Read-only",
+    "startup_read_only": "Configuration changes are disabled until startup reaches ready or degraded state.",
     "status_load_failed": "Load failed",
     "status_load_failed_short": "Failed",
     "status_saving": "Saving configuration...",
@@ -2055,7 +2058,7 @@
           "usage_statistics_retention_days": "Usage Detail Retention (days)",
           "usage_statistics_retention_days_desc": "Remove older request details before saving. 0 disables age-based cleanup.",
           "usage_statistics_max_storage": "Maximum Usage Snapshot Size (MB)",
-          "usage_statistics_max_storage_desc": "Trim old details before saving to meet this capacity. 0 disables size-based cleanup.",
+          "usage_statistics_max_storage_desc": "Limit the serialized snapshot file on disk by trimming old details before saving. This is not a Go heap limit; decoded objects, strings, and indexes can use several times more memory. 0 disables size-based cleanup.",
           "pprof_enable": "Enable pprof profiling",
           "pprof_enable_desc": "Expose management-authenticated /v0/management/pprof/* sampling endpoints when enabled",
           "pprof_addr": "pprof Listen Address",
@@ -2612,12 +2615,46 @@
     "metrics_collected_at": "Collected at",
     "startup": {
       "title": "Startup and Proxy Readiness",
-      "description": "Management starts listening first. Proxy requests receive a retryable 503 until essential routing is ready. Safe stage timings are shown here.",
+      "description": "Management reads start first. During initialization, management writes are read-only and proxy requests receive a retryable 503 until essential routing is ready.",
       "unsupported": "This backend version does not expose startup diagnostics.",
       "unavailable": "Startup status has not been loaded",
       "proxy_ready": "Proxy routes are open",
       "proxy_blocked": "Proxy routes are not open yet",
       "processed": "{{count}} items processed",
+      "skipped": "{{count}} skipped",
+      "view_details": "View startup details",
+      "more_issues": "+{{count}} more",
+      "service_status": {
+        "initializing": "Management is read-only; proxy routes remain closed",
+        "ready": "Proxy routes and management writes are open",
+        "degraded": "Service is ready with startup warnings",
+        "failed": "Startup failed; proxy routes and management writes remain closed"
+      },
+      "global": {
+        "initializing": {
+          "title": "Service initialization is still running",
+          "description": "Management reads are available. Configuration changes and history cleanup remain disabled, and proxy requests return a retryable 503."
+        },
+        "degraded": {
+          "title": "Service started in degraded mode",
+          "description": "Proxy traffic is available, but part of the startup data was skipped or an optional stage reported a warning."
+        },
+        "failed": {
+          "title": "Service startup failed",
+          "description": "Read-only diagnostics remain available. Proxy traffic and management changes stay disabled until the startup failure is resolved."
+        }
+      },
+      "issues": {
+        "listener_start_failed": "Management listener failed",
+        "auth_store_load_failed": "Credential store load failed",
+        "auth_records_skipped": "Some credential records were skipped",
+        "credential_dependency_reconcile_failed": "Credential dependency reconciliation failed",
+        "token_provider_load_failed": "Token providers failed to load",
+        "api_key_provider_load_failed": "API key providers failed to load",
+        "watcher_create_failed": "Configuration watcher could not be created",
+        "watcher_start_failed": "Configuration watcher could not start",
+        "watcher_initial_sync_failed": "Configuration watcher initial sync failed"
+      },
       "phases": {
         "starting": "Starting",
         "listener_ready": "Management listener ready",
@@ -2645,7 +2682,7 @@
     },
     "history_storage": {
       "title": "History Storage Governance",
-      "description": "Only aggregate counts and sizes are shown; paths and request contents are never exposed. Edit automatic retention in System Configuration or run one cleanup now.",
+      "description": "Only aggregate counts and sizes are shown; paths and request contents are never exposed. Usage restores records in the background with bounded temporary buffers.",
       "unsupported": "This backend version does not support history storage governance.",
       "unavailable": "History storage has not been loaded",
       "usage_title": "Usage history",
@@ -2666,6 +2703,8 @@
       "policy": "Automatic policy",
       "older_than_days": "Remove older than (days)",
       "max_megabytes": "Post-cleanup limit (MB)",
+      "usage_storage_caveat": "The size policy limits the serialized snapshot file on disk, not Go heap usage. Decoded records, strings, and indexes may consume several times more memory.",
+      "startup_read_only": "Cleanup is disabled while startup is initializing or failed.",
       "cleanup_usage": "Clean Usage now",
       "cleanup_logs": "Clean logs now",
       "cleanup_action": "Confirm cleanup",
@@ -2675,6 +2714,18 @@
       "logs_cleanup_confirm": "Old logs will be cleaned using {{days}} days and {{megabytes}} MB. The active main log is protected.",
       "cleanup_success": "Cleanup complete; {{count}} items removed",
       "cleanup_failed": "Cleanup failed",
+      "cleanup_started": "Usage cleanup started in the background",
+      "cleanup_in_progress": "A Usage cleanup task is already running",
+      "cleanup_task_failed": "Usage cleanup failed ({{code}})",
+      "task_background": "The task continues even if this page is closed.",
+      "task_removed": "{{count}} detail rows removed",
+      "task_error": "Safe error code: {{code}}",
+      "task_status": {
+        "queued": "Cleanup queued",
+        "running": "Cleanup running",
+        "completed": "Cleanup completed",
+        "failed": "Cleanup failed"
+      },
       "restore": {
         "disabled": "Disabled",
         "pending": "Waiting for background restore",

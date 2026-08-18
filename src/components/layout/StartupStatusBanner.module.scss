@@ -1,0 +1,70 @@
+.banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--warning-color) 42%, var(--border-color));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--warning-color) 8%, var(--bg-primary));
+  color: var(--text-secondary);
+
+  &[data-status='failed'] {
+    border-color: color-mix(in srgb, var(--error-color) 46%, var(--border-color));
+    background: color-mix(in srgb, var(--error-color) 8%, var(--bg-primary));
+  }
+
+  > svg {
+    margin-top: 1px;
+    color: var(--warning-color);
+  }
+
+  &[data-status='failed'] > svg {
+    color: var(--error-color);
+  }
+
+  > a {
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: auto minmax(0, 1fr);
+
+    > a {
+      grid-column: 2;
+    }
+  }
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.45;
+
+  strong {
+    color: var(--text-primary);
+    font-size: 13px;
+  }
+}
+
+.issues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+
+  span {
+    padding: 2px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+    color: var(--text-tertiary);
+    font-size: 11px;
+  }
+}

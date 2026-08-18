@@ -3,8 +3,13 @@ import { parse as parseYaml } from 'yaml';
 import { describe, expect, test } from 'vitest';
 import { CONFIG_SEARCH_DEFINITIONS } from '@/components/config/configCatalog';
 import { getVisualConfigValidationErrors, useVisualConfig } from '@/hooks/useVisualConfig';
-import { normalizeStorageHistory, normalizeStartupStatus } from '@/services/api/historyStorage';
+import {
+  normalizeStorageHistory,
+  normalizeStartupStatus,
+  normalizeUsagePruneTask,
+} from '@/services/api/historyStorage';
 import { DEFAULT_VISUAL_VALUES } from '@/types/visualConfig';
+import { startupMutationsBlocked } from '@/stores/useStartupStatusStore';
 import enLocale from '@/i18n/locales/en.json';
 import ruLocale from '@/i18n/locales/ru.json';
 import zhCNLocale from '@/i18n/locales/zh-CN.json';
@@ -102,7 +107,10 @@ describe('startup and history storage configuration', () => {
   test('normalizes missing and malformed management snapshots without NaN values', () => {
     expect(normalizeStartupStatus({ phase: 'ready', ready: true, stages: null })).toMatchObject({
       phase: 'ready',
+      status: 'ready',
       ready: true,
+      degraded: false,
+      issues: [],
       stages: [],
     });
     const history = normalizeStorageHistory({
@@ -112,8 +120,51 @@ describe('startup and history storage configuration', () => {
     expect(history.usage.detail_count).toBe(12);
     expect(history.usage.total_requests).toBe(90);
     expect(history.usage.storage.total_bytes).toBe(0);
+    expect(history.usage.prune_tasks).toEqual({ active: null, recent: [] });
     expect(history.logs.storage.file_count).toBe(3);
     expect(history.logs.storage.total_bytes).toBe(4096);
+  });
+
+  test('normalizes degraded startup reports and asynchronous cleanup tasks safely', () => {
+    expect(
+      normalizeStartupStatus({
+        phase: 'ready',
+        status: 'degraded',
+        ready: true,
+        degraded: true,
+        issues: [{ stage: 'auth_store_load', code: 'auth_records_skipped', severity: 'warning' }],
+        stages: [{ name: 'auth_store_load', skipped: '3' }],
+      })
+    ).toMatchObject({
+      status: 'degraded',
+      degraded: true,
+      issues: [{ code: 'auth_records_skipped' }],
+      stages: [{ skipped: 3 }],
+    });
+    expect(
+      normalizeUsagePruneTask({
+        task_id: 'task-1',
+        status: 'running',
+        policy: { older_than_days: '7', max_storage_megabytes: '128' },
+        processed: '12',
+      })
+    ).toMatchObject({
+      task_id: 'task-1',
+      status: 'running',
+      policy: { older_than_days: 7, max_storage_megabytes: 128 },
+      processed: 12,
+      safe_error_code: '',
+    });
+  });
+
+  test('blocks management mutations only for known non-ready startup states', () => {
+    const initializing = normalizeStartupStatus({ status: 'initializing', ready: false });
+    const failed = normalizeStartupStatus({ status: 'failed', ready: false });
+    const degraded = normalizeStartupStatus({ status: 'degraded', ready: true, degraded: true });
+    expect(startupMutationsBlocked(initializing)).toBe(true);
+    expect(startupMutationsBlocked(failed)).toBe(true);
+    expect(startupMutationsBlocked(degraded)).toBe(false);
+    expect(startupMutationsBlocked(null)).toBe(false);
   });
 
   test('ships configuration and management copy in every supported locale', () => {
@@ -125,7 +176,10 @@ describe('startup and history storage configuration', () => {
       expect(system.logs_retention_days).toBeTruthy();
       expect(locale.dashboard.usage_statistics_shutdown_only).toBeTruthy();
       expect(locale.system_info.startup.title).toBeTruthy();
+      expect(locale.system_info.startup.global.degraded.title).toBeTruthy();
       expect(locale.system_info.history_storage.cleanup_usage).toBeTruthy();
+      expect(locale.system_info.history_storage.usage_storage_caveat).toBeTruthy();
+      expect(locale.system_info.history_storage.task_status.running).toBeTruthy();
     }
   });
 });

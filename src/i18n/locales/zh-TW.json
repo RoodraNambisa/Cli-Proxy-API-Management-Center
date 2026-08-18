@@ -1686,6 +1686,9 @@
     "status_dirty_short": "未儲存",
     "status_disconnected": "請先連線伺服器以載入設定",
     "status_disconnected_short": "未連線",
+    "status_startup_read_only": "啟動期間僅允許唯讀操作",
+    "status_startup_read_only_short": "唯讀",
+    "startup_read_only": "服務達到就緒或降級就緒狀態前，設定修改暫不可用。",
     "status_load_failed": "載入失敗",
     "status_load_failed_short": "失敗",
     "status_saving": "正在儲存設定...",
@@ -2079,7 +2082,7 @@
           "usage_statistics_retention_days": "Usage 明細保留天數",
           "usage_statistics_retention_days_desc": "寫入前刪除更早的請求明細；0 表示不按時間清理",
           "usage_statistics_max_storage": "Usage 快照最大容量（MB）",
-          "usage_statistics_max_storage_desc": "寫入前收斂舊明細以滿足容量；0 表示不按容量清理",
+          "usage_statistics_max_storage_desc": "寫入前收斂舊明細，限制序列化快照檔案的磁碟大小。此值不是 Go Heap 上限；解碼後的物件、字串與索引可能使用數倍記憶體。0 表示不按容量清理",
           "pprof_enable": "啟用 pprof 效能分析",
           "pprof_enable_desc": "開啟後會暴露受管理驗證保護的 /v0/management/pprof/* 採樣介面",
           "pprof_addr": "pprof 監聽位址",
@@ -2636,12 +2639,46 @@
     "metrics_collected_at": "採集時間",
     "startup": {
       "title": "啟動與代理就緒狀態",
-      "description": "管理介面會先開放；必要路由尚未完成時，代理請求返回可重試 503。這裡顯示各啟動階段的安全耗時。",
+      "description": "管理唯讀介面會先開放；初始化期間管理寫入保持關閉，必要路由尚未完成時代理請求返回可重試 503。",
       "unsupported": "目前後端版本不支援啟動狀態診斷。",
       "unavailable": "尚未讀取啟動狀態",
       "proxy_ready": "代理路由已開放",
       "proxy_blocked": "代理路由暫未開放",
       "processed": "已處理 {{count}} 項",
+      "skipped": "已略過 {{count}} 項",
+      "view_details": "查看啟動詳情",
+      "more_issues": "另有 {{count}} 項",
+      "service_status": {
+        "initializing": "管理端唯讀，代理路由保持關閉",
+        "ready": "代理路由與管理寫入已開放",
+        "degraded": "服務已就緒，但啟動過程存在警告",
+        "failed": "啟動失敗，代理路由與管理寫入保持關閉"
+      },
+      "global": {
+        "initializing": {
+          "title": "服務仍在初始化",
+          "description": "管理唯讀查詢可用；設定修改與歷史清理暫不可用，代理請求會返回可重試 503。"
+        },
+        "degraded": {
+          "title": "服務以降級狀態啟動",
+          "description": "代理已可用，但部分啟動資料被略過，或可選階段回報了警告。"
+        },
+        "failed": {
+          "title": "服務啟動失敗",
+          "description": "唯讀診斷仍可使用；解決啟動錯誤前，代理請求與管理修改均保持關閉。"
+        }
+      },
+      "issues": {
+        "listener_start_failed": "管理監聽啟動失敗",
+        "auth_store_load_failed": "憑證儲存載入失敗",
+        "auth_records_skipped": "部分憑證記錄已略過",
+        "credential_dependency_reconcile_failed": "憑證依賴核對失敗",
+        "token_provider_load_failed": "Token Provider 載入失敗",
+        "api_key_provider_load_failed": "API Key Provider 載入失敗",
+        "watcher_create_failed": "設定監聽器建立失敗",
+        "watcher_start_failed": "設定監聽器啟動失敗",
+        "watcher_initial_sync_failed": "設定監聽器首次同步失敗"
+      },
       "phases": {
         "starting": "正在啟動",
         "listener_ready": "管理監聽已就緒",
@@ -2669,7 +2706,7 @@
     },
     "history_storage": {
       "title": "歷史儲存治理",
-      "description": "只顯示聚合條數和空間占用，不暴露檔案路徑或請求內容。自動保留策略在系統設定中編輯，也可在此立即執行一次清理。",
+      "description": "只顯示聚合條數和空間占用，不暴露檔案路徑或請求內容。Usage 使用記錄級背景恢復與有界暫存緩衝。",
       "unsupported": "目前後端版本不支援歷史儲存治理。",
       "unavailable": "尚未讀取歷史儲存狀態",
       "usage_title": "Usage 歷史",
@@ -2690,6 +2727,8 @@
       "policy": "自動策略",
       "older_than_days": "刪除早於（天）",
       "max_megabytes": "清理後上限（MB）",
+      "usage_storage_caveat": "容量策略限制的是序列化快照檔案的磁碟大小，不是 Go Heap。解碼後的記錄、字串與索引可能使用數倍記憶體。",
+      "startup_read_only": "服務仍在初始化或啟動失敗時，歷史清理保持停用。",
       "cleanup_usage": "立即清理 Usage",
       "cleanup_logs": "立即清理記錄",
       "cleanup_action": "確認清理",
@@ -2699,6 +2738,18 @@
       "logs_cleanup_confirm": "將按 {{days}} 天和 {{megabytes}} MB 策略清理舊記錄。目前主記錄不會被刪除。",
       "cleanup_success": "清理完成，共移除 {{count}} 項",
       "cleanup_failed": "清理失敗",
+      "cleanup_started": "Usage 清理工作已在背景啟動",
+      "cleanup_in_progress": "已有一個 Usage 清理工作正在執行",
+      "cleanup_task_failed": "Usage 清理失敗（{{code}}）",
+      "task_background": "關閉或重新整理此頁面不會中斷工作。",
+      "task_removed": "已移除 {{count}} 筆明細",
+      "task_error": "安全錯誤碼：{{code}}",
+      "task_status": {
+        "queued": "清理工作排隊中",
+        "running": "正在清理",
+        "completed": "清理完成",
+        "failed": "清理失敗"
+      },
       "restore": {
         "disabled": "已關閉",
         "pending": "等待背景恢復",

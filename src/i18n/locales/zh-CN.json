@@ -1662,6 +1662,9 @@
     "status_dirty_short": "未保存",
     "status_disconnected": "请先连接服务器以加载配置",
     "status_disconnected_short": "未连接",
+    "status_startup_read_only": "启动期间仅允许只读操作",
+    "status_startup_read_only_short": "只读",
+    "startup_read_only": "服务达到就绪或降级就绪状态前，配置修改暂不可用。",
     "status_load_failed": "加载失败",
     "status_load_failed_short": "失败",
     "status_saving": "正在保存配置...",
@@ -2059,7 +2062,7 @@
           "usage_statistics_retention_days": "Usage 明细保留天数",
           "usage_statistics_retention_days_desc": "写入前删除更早的请求明细；0 表示不按时间清理",
           "usage_statistics_max_storage": "Usage 快照最大容量 (MB)",
-          "usage_statistics_max_storage_desc": "写入前收敛旧明细以满足容量；0 表示不按容量清理",
+          "usage_statistics_max_storage_desc": "写入前收敛旧明细，限制序列化快照文件的磁盘大小。该值不是 Go Heap 上限；解码后的对象、字符串和索引可能占用数倍内存。0 表示不按容量清理",
           "pprof_enable": "启用 pprof 性能分析",
           "pprof_enable_desc": "开启后会暴露受管理鉴权保护的 /v0/management/pprof/* 采样接口",
           "pprof_addr": "pprof 监听地址",
@@ -2616,12 +2619,46 @@
     "metrics_collected_at": "采集时间",
     "startup": {
       "title": "启动与代理就绪状态",
-      "description": "管理接口会先开放；必要路由尚未完成时，代理请求返回可重试 503。这里显示各启动阶段的安全耗时。",
+      "description": "管理只读接口会先开放；初始化期间管理写操作保持关闭，必要路由尚未完成时代理请求返回可重试 503。",
       "unsupported": "当前后端版本不支持启动状态诊断。",
       "unavailable": "尚未读取启动状态",
       "proxy_ready": "代理路由已开放",
       "proxy_blocked": "代理路由暂未开放",
       "processed": "已处理 {{count}} 项",
+      "skipped": "已跳过 {{count}} 项",
+      "view_details": "查看启动详情",
+      "more_issues": "另有 {{count}} 项",
+      "service_status": {
+        "initializing": "管理端只读，代理路由保持关闭",
+        "ready": "代理路由和管理写操作已开放",
+        "degraded": "服务已就绪，但启动过程存在警告",
+        "failed": "启动失败，代理路由和管理写操作保持关闭"
+      },
+      "global": {
+        "initializing": {
+          "title": "服务仍在初始化",
+          "description": "管理只读查询可用；配置修改和历史清理暂不可用，代理请求会返回可重试 503。"
+        },
+        "degraded": {
+          "title": "服务以降级状态启动",
+          "description": "代理已可用，但部分启动数据被跳过，或可选阶段报告了警告。"
+        },
+        "failed": {
+          "title": "服务启动失败",
+          "description": "只读诊断仍可使用；解决启动错误前，代理请求和管理修改均保持关闭。"
+        }
+      },
+      "issues": {
+        "listener_start_failed": "管理监听启动失败",
+        "auth_store_load_failed": "凭证存储加载失败",
+        "auth_records_skipped": "部分凭证记录已跳过",
+        "credential_dependency_reconcile_failed": "凭证依赖核对失败",
+        "token_provider_load_failed": "Token Provider 加载失败",
+        "api_key_provider_load_failed": "API Key Provider 加载失败",
+        "watcher_create_failed": "配置监听器创建失败",
+        "watcher_start_failed": "配置监听器启动失败",
+        "watcher_initial_sync_failed": "配置监听器首轮同步失败"
+      },
       "phases": {
         "starting": "正在启动",
         "listener_ready": "管理监听已就绪",
@@ -2649,7 +2686,7 @@
     },
     "history_storage": {
       "title": "历史存储治理",
-      "description": "只显示聚合条数和空间占用，不暴露文件路径或请求内容。自动保留策略在系统配置中编辑，也可在此立即执行一次清理。",
+      "description": "只显示聚合条数和空间占用，不暴露文件路径或请求内容。Usage 使用记录级后台恢复和有界临时缓冲。",
       "unsupported": "当前后端版本不支持历史存储治理。",
       "unavailable": "尚未读取历史存储状态",
       "usage_title": "Usage 历史",
@@ -2670,6 +2707,8 @@
       "policy": "自动策略",
       "older_than_days": "删除早于（天）",
       "max_megabytes": "清理后上限 (MB)",
+      "usage_storage_caveat": "容量策略限制的是序列化快照文件的磁盘大小，不是 Go Heap。解码后的记录、字符串和索引可能占用数倍内存。",
+      "startup_read_only": "服务仍在初始化或启动失败时，历史清理保持禁用。",
       "cleanup_usage": "立即清理 Usage",
       "cleanup_logs": "立即清理日志",
       "cleanup_action": "确认清理",
@@ -2679,6 +2718,18 @@
       "logs_cleanup_confirm": "将按 {{days}} 天和 {{megabytes}} MB 策略清理旧日志。当前主日志不会被删除。",
       "cleanup_success": "清理完成，共移除 {{count}} 项",
       "cleanup_failed": "清理失败",
+      "cleanup_started": "Usage 清理任务已在后台启动",
+      "cleanup_in_progress": "已有一个 Usage 清理任务正在运行",
+      "cleanup_task_failed": "Usage 清理失败（{{code}}）",
+      "task_background": "关闭或刷新本页面不会中断任务。",
+      "task_removed": "已移除 {{count}} 条明细",
+      "task_error": "安全错误码：{{code}}",
+      "task_status": {
+        "queued": "清理任务排队中",
+        "running": "正在清理",
+        "completed": "清理完成",
+        "failed": "清理失败"
+      },
       "restore": {
         "disabled": "已关闭",
         "pending": "等待后台恢复",

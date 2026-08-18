@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { ConfigPage } from '@/pages/ConfigPage';
+import { useStartupStatusStore } from '@/stores/useStartupStatusStore';
 
 const harness = vi.hoisted(() => ({
   visualDirty: false,
@@ -459,6 +460,7 @@ async function clickSave() {
 describe('ConfigPage save coordination', () => {
   beforeEach(() => {
     localStorage.clear();
+    useStartupStatusStore.getState().reset();
     harness.visualDirty = false;
     harness.releaseDirty = false;
     harness.auditDirty = false;
@@ -510,6 +512,32 @@ describe('ConfigPage save coordination', () => {
     expect(harness.loadVisualValues).toHaveBeenLastCalledWith(
       'request-body-release:\n  enable: true\n'
     );
+  });
+
+  test('keeps configuration writes disabled while startup is initializing', async () => {
+    harness.visualDirty = true;
+    useStartupStatusStore.setState({
+      snapshot: {
+        phase: 'auth_loading',
+        status: 'initializing',
+        ready: false,
+        degraded: false,
+        started_at: '2026-08-18T00:00:00Z',
+        updated_at: '2026-08-18T00:00:01Z',
+        issues: [],
+        stages: [],
+      },
+      support: 'supported',
+    });
+
+    renderPage();
+    await waitFor(() => expect(harness.fetchYaml).toHaveBeenCalled());
+    const saveButton = screen.getByRole('button', { name: 'config_management.save' });
+    expect(saveButton.hasAttribute('disabled')).toBe(true);
+    expect(
+      screen.getAllByText('config_management.status_startup_read_only').length
+    ).toBeGreaterThan(0);
+    expect(harness.saveYaml).not.toHaveBeenCalled();
   });
 
   test('saves Sentinel through the unified sidecar flow and refreshes YAML', async () => {

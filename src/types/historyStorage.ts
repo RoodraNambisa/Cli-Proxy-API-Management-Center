@@ -5,14 +5,26 @@ export interface StartupStageSnapshot {
   completed_at: string | null;
   duration_milliseconds: number;
   processed: number;
+  skipped: number;
   error_code: string;
 }
 
+export interface StartupIssueSnapshot {
+  stage: string;
+  code: string;
+  severity: string;
+}
+
+export type StartupServiceStatus = 'initializing' | 'ready' | 'degraded' | 'failed';
+
 export interface StartupStatusSnapshot {
   phase: string;
+  status: StartupServiceStatus;
   ready: boolean;
+  degraded: boolean;
   started_at: string | null;
   updated_at: string | null;
+  issues: StartupIssueSnapshot[];
   stages: StartupStageSnapshot[];
 }
 
@@ -57,6 +69,7 @@ export interface UsageHistorySnapshot {
   newest_at: string | null;
   storage: UsageStorageSnapshot;
   restore: UsageRestoreSnapshot;
+  prune_tasks: UsagePruneTaskHistory;
 }
 
 export interface LogDirectorySnapshot {
@@ -84,14 +97,30 @@ export interface HistoryPruneRequest {
   max_storage_megabytes: number;
 }
 
-export interface UsagePruneResult {
+export type UsagePruneTaskStatus = 'queued' | 'running' | 'completed' | 'failed';
+
+export interface UsagePruneTask {
+  task_id: string;
+  status: UsagePruneTaskStatus;
+  created_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  policy: HistoryPruneRequest;
+  safe_error_code: string;
+  processed: number;
   pruned: number;
   saved: boolean;
-  size_bytes: number;
+  storage_bytes_before: number;
+  storage_bytes_after: number;
   detail_count_before: number;
   detail_count_after: number;
   total_requests_before: number;
   total_requests_after: number;
+}
+
+export interface UsagePruneTaskHistory {
+  active: UsagePruneTask | null;
+  recent: UsagePruneTask[];
 }
 
 export interface LogPruneResult {

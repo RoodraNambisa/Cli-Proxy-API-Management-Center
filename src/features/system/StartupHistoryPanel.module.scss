@@ -23,12 +23,17 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--bg-secondary) 76%, transparent);
 
-  &[data-ready='true'] .statusDot {
+  &[data-status='ready'] .statusDot {
     background: var(--success-color);
   }
 
-  &[data-ready='false'] .statusDot {
+  &[data-status='initializing'] .statusDot,
+  &[data-status='degraded'] .statusDot {
     background: var(--warning-color);
+  }
+
+  &[data-status='failed'] .statusDot {
+    background: var(--error-color);
   }
 
   > div {
@@ -46,6 +51,26 @@
   time {
     color: var(--text-tertiary);
     font-size: 12px;
+  }
+}
+
+.issueList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  span {
+    padding: 3px 7px;
+    border: 1px solid color-mix(in srgb, var(--warning-color) 35%, var(--border-color));
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--warning-color) 7%, var(--bg-secondary));
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+
+  span[data-severity='error'] {
+    border-color: color-mix(in srgb, var(--error-color) 38%, var(--border-color));
+    background: color-mix(in srgb, var(--error-color) 7%, var(--bg-secondary));
   }
 }
 
@@ -173,5 +198,59 @@
 
   @media (max-width: 700px) {
     grid-template-columns: 1fr;
+  }
+}
+
+.storageCaveat,
+.readOnlyNotice {
+  margin: -4px 0 12px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.readOnlyNotice {
+  color: var(--warning-color);
+}
+
+.taskStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 0 14px;
+  padding: 9px 10px;
+  border-left: 3px solid var(--warning-color);
+  background: color-mix(in srgb, var(--warning-color) 7%, transparent);
+
+  &[data-status='completed'] {
+    border-left-color: var(--success-color);
+    background: color-mix(in srgb, var(--success-color) 7%, transparent);
+  }
+
+  &[data-status='failed'] {
+    border-left-color: var(--error-color);
+    background: color-mix(in srgb, var(--error-color) 7%, transparent);
+  }
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 12px;
+  }
+
+  span,
+  time {
+    color: var(--text-tertiary);
+    font-size: 11px;
+  }
+
+  time {
+    white-space: nowrap;
   }
 }

@@ -47,6 +47,7 @@ import { DiffModal } from '@/components/config/DiffModal';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
 import { useNotificationStore, useAuthStore, useThemeStore, useConfigStore } from '@/stores';
+import { startupMutationsBlocked, useStartupStatusStore } from '@/stores/useStartupStatusStore';
 import { configFileApi } from '@/services/api/configFile';
 import styles from './ConfigPage.module.scss';
 
@@ -106,6 +107,7 @@ export function ConfigPage() {
     ])
   );
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
+  const startup = useStartupStatusStore((state) => state.snapshot);
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   const {
@@ -169,7 +171,8 @@ export function ConfigPage() {
   const chatGptWebSentinelRef = useRef<ChatGptWebSentinelPanelHandle | null>(null);
   const chatGptWebUsageCacheRef = useRef<ChatGptWebUsageCachePanelHandle | null>(null);
 
-  const disableControls = connectionStatus !== 'connected';
+  const startupWriteBlocked = startupMutationsBlocked(startup);
+  const disableControls = connectionStatus !== 'connected' || startupWriteBlocked;
   const yamlDirty = dirty || visualDirty;
   const isDirty =
     yamlDirty ||
@@ -452,6 +455,10 @@ export function ConfigPage() {
   );
 
   const handleConfirmSave = async () => {
+    if (startupWriteBlocked) {
+      showNotification(t('config_management.startup_read_only'), 'warning');
+      return;
+    }
     if (!validateDirtySidecars()) return;
     const sidecarSnapshot: ConfigSidecarDirtySnapshot = {
       release: requestBodyReleaseDirty,
@@ -502,6 +509,10 @@ export function ConfigPage() {
   };
 
   const handleSave = async () => {
+    if (startupWriteBlocked) {
+      showNotification(t('config_management.startup_read_only'), 'warning');
+      return;
+    }
     if (!validateDirtySidecars()) return;
 
     if (
@@ -785,6 +796,7 @@ export function ConfigPage() {
 
   // Status text
   const getStatusText = () => {
+    if (startupWriteBlocked) return t('config_management.status_startup_read_only');
     if (disableControls) return t('config_management.status_disconnected');
     if (loading) return t('config_management.status_loading');
     if (error) return t('config_management.status_load_failed');
@@ -805,6 +817,8 @@ export function ConfigPage() {
 
   const getFloatingStatusText = () => {
     if (!isMobile) return getStatusText();
+    if (startupWriteBlocked)
+      return t('config_management.status_startup_read_only_short', { defaultValue: 'Read-only' });
     if (disableControls)
       return t('config_management.status_disconnected_short', { defaultValue: 'Disconnected' });
     if (loading) return t('config_management.status_loading_short', { defaultValue: 'Loading' });

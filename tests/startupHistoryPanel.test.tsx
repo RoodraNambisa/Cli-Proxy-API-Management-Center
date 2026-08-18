@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { StartupHistoryPanel } from '@/features/system/StartupHistoryPanel';
 import { historyStorageApi } from '@/services/api';
 import { useNotificationStore } from '@/stores';
+import { useStartupStatusStore } from '@/stores/useStartupStatusStore';
 import type { StartupStatusSnapshot, StorageHistorySnapshot } from '@/types';
 
 vi.mock('react-i18next', async (importOriginal) => {
@@ -15,9 +16,12 @@ vi.mock('react-i18next', async (importOriginal) => {
 
 const startup: StartupStatusSnapshot = {
   phase: 'ready',
+  status: 'ready',
   ready: true,
+  degraded: false,
   started_at: '2026-08-18T00:00:00Z',
   updated_at: '2026-08-18T00:00:10Z',
+  issues: [],
   stages: [
     {
       name: 'auth_store_load',
@@ -26,6 +30,7 @@ const startup: StartupStatusSnapshot = {
       completed_at: '2026-08-18T00:00:05Z',
       duration_milliseconds: 4000,
       processed: 100,
+      skipped: 0,
       error_code: '',
     },
   ],
@@ -63,6 +68,7 @@ const history: StorageHistorySnapshot = {
       skipped: 0,
       error_code: '',
     },
+    prune_tasks: { active: null, recent: [] },
   },
   logs: {
     file_logging_enabled: false,
@@ -81,6 +87,7 @@ const history: StorageHistorySnapshot = {
 describe('startup and history storage panel', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    useStartupStatusStore.getState().reset();
     vi.spyOn(historyStorageApi, 'getStartupStatus').mockResolvedValue(startup);
     vi.spyOn(historyStorageApi, 'getStorageHistory').mockResolvedValue(history);
   });
@@ -106,9 +113,18 @@ describe('startup and history storage panel', () => {
       showNotification: notification,
     });
     const pruneUsage = vi.spyOn(historyStorageApi, 'pruneUsage').mockResolvedValue({
+      task_id: '',
+      status: 'completed',
+      created_at: null,
+      started_at: null,
+      completed_at: null,
+      policy: { older_than_days: 14, max_storage_megabytes: 0 },
+      safe_error_code: '',
+      processed: 100,
       pruned: 42,
       saved: true,
-      size_bytes: 1024,
+      storage_bytes_before: 2048,
+      storage_bytes_after: 1024,
       detail_count_before: 100,
       detail_count_after: 58,
       total_requests_before: 100,
@@ -141,6 +157,92 @@ describe('startup and history storage panel', () => {
       'system_info.history_storage.cleanup_success',
       'success'
     );
+  });
+
+  test('resumes and polls an active Usage cleanup task after reloading the page', async () => {
+    const notification = vi.fn();
+    useNotificationStore.setState({ showNotification: notification });
+    const runningTask = {
+      task_id: 'task-running',
+      status: 'running' as const,
+      created_at: '2026-08-18T00:00:00Z',
+      started_at: '2026-08-18T00:00:01Z',
+      completed_at: null,
+      policy: { older_than_days: 14, max_storage_megabytes: 256 },
+      safe_error_code: '',
+      processed: 100,
+      pruned: 0,
+      saved: false,
+      storage_bytes_before: 4096,
+      storage_bytes_after: 0,
+      detail_count_before: 100,
+      detail_count_after: 100,
+      total_requests_before: 100,
+      total_requests_after: 100,
+    };
+    const completedTask = {
+      ...runningTask,
+      status: 'completed' as const,
+      completed_at: '2026-08-18T00:00:03Z',
+      pruned: 42,
+      saved: true,
+      storage_bytes_after: 2048,
+      detail_count_after: 58,
+      total_requests_after: 58,
+    };
+    vi.mocked(historyStorageApi.getStorageHistory)
+      .mockResolvedValueOnce({
+        ...history,
+        usage: {
+          ...history.usage,
+          prune_tasks: { active: runningTask, recent: [] },
+        },
+      })
+      .mockResolvedValue({
+        ...history,
+        usage: {
+          ...history.usage,
+          prune_tasks: { active: null, recent: [completedTask] },
+        },
+      });
+    const getTask = vi
+      .spyOn(historyStorageApi, 'getUsagePruneTask')
+      .mockResolvedValue(completedTask);
+
+    render(<StartupHistoryPanel connected connectionKey="server-a" />);
+    expect((await screen.findByTestId('usage-prune-task')).getAttribute('data-status')).toBe(
+      'running'
+    );
+    await waitFor(() => expect(getTask).toHaveBeenCalledWith('task-running'), { timeout: 3000 });
+    await waitFor(() =>
+      expect(notification).toHaveBeenCalledWith(
+        'system_info.history_storage.cleanup_success',
+        'success'
+      )
+    );
+  });
+
+  test('disables cleanup while startup is initializing', async () => {
+    vi.mocked(historyStorageApi.getStartupStatus).mockResolvedValue({
+      ...startup,
+      phase: 'auth_loading',
+      status: 'initializing',
+      ready: false,
+    });
+    render(<StartupHistoryPanel connected connectionKey="server-a" />);
+
+    const panel = await screen.findByTestId('history-storage');
+    expect(
+      within(panel).getByText('system_info.history_storage.cleanup_usage').closest('button')
+        ?.disabled
+    ).toBe(true);
+    expect(
+      within(panel).getByText('system_info.history_storage.cleanup_logs').closest('button')
+        ?.disabled
+    ).toBe(true);
+    expect(
+      within(panel).getAllByText('system_info.history_storage.startup_read_only')
+    ).toHaveLength(1);
   });
 
   test('degrades safely against an older backend', async () => {
