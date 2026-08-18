@@ -3323,7 +3323,7 @@
         "failed": "累计失败",
         "backpressured": "累计背压",
         "no_start": "累计无法启动",
-        "same_token": "累计同 Token 无效刷新",
+        "same_token": "刷新后 Token 未变化（累计）",
         "probe_succeeded": "累计认证探测成功",
         "probe_unauthorized": "累计认证探测拒绝",
         "probe_transient": "累计认证探测瞬时失败",

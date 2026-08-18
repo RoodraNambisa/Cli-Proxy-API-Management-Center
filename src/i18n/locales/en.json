@@ -3319,7 +3319,7 @@
         "failed": "Failed (cumulative)",
         "backpressured": "Backpressured (cumulative)",
         "no_start": "Could not start (cumulative)",
-        "same_token": "Same-token ineffective refreshes (cumulative)",
+        "same_token": "Token unchanged after refresh (cumulative)",
         "probe_succeeded": "Authenticated probes succeeded (cumulative)",
         "probe_unauthorized": "Authenticated probes rejected (cumulative)",
         "probe_transient": "Transient probe failures (cumulative)",

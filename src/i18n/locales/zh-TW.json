@@ -3343,7 +3343,7 @@
         "failed": "累計失敗",
         "backpressured": "累計背壓",
         "no_start": "累計無法啟動",
-        "same_token": "累計同 Token 無效更新",
+        "same_token": "更新後 Token 未變更（累計）",
         "probe_succeeded": "累計認證探測成功",
         "probe_unauthorized": "累計認證探測拒絕",
         "probe_transient": "累計認證探測瞬時失敗",

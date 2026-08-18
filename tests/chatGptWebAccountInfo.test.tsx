@@ -533,6 +533,21 @@ describe('ChatGPT Web account info and image quota', () => {
     }
   });
 
+  test('describes same-token refreshes as an observation instead of a failed outcome', () => {
+    expect(enLocale.chatgpt_web.account_info.request_refresh.same_token).toBe(
+      'Token unchanged after refresh (cumulative)'
+    );
+    expect(ruLocale.chatgpt_web.account_info.request_refresh.same_token).toBe(
+      'Токен не изменился после обновления (всего)'
+    );
+    expect(zhCNLocale.chatgpt_web.account_info.request_refresh.same_token).toBe(
+      '刷新后 Token 未变化（累计）'
+    );
+    expect(zhTWLocale.chatgpt_web.account_info.request_refresh.same_token).toBe(
+      '更新後 Token 未變更（累計）'
+    );
+  });
+
   test('loads runtime state and saves only changed refresh-pool fields', async () => {
     const initial = createSnapshot();
     const updated = {
