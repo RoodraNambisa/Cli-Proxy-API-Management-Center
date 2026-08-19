@@ -3015,6 +3015,7 @@
   },
   "footer": {
     "api_version": "CLI Proxy API 版本",
+    "api_commit": "後端提交",
     "build_date": "建置時間",
     "version": "管理中心版本",
     "author": "作者"

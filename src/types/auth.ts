@@ -19,6 +19,7 @@ export interface AuthState {
   managementKey: string;
   rememberPassword: boolean;
   serverVersion: string | null;
+  serverCommit: string | null;
   serverBuildDate: string | null;
 }
 

@@ -203,6 +203,7 @@ export function SystemPage() {
 
   const appVersion = __APP_VERSION__ || t('system_info.version_unknown');
   const apiVersion = auth.serverVersion || t('system_info.version_unknown');
+  const apiCommit = auth.serverCommit || t('system_info.version_unknown');
   const buildTime = auth.serverBuildDate
     ? new Date(auth.serverBuildDate).toLocaleString(i18n.language)
     : t('system_info.version_unknown');
@@ -775,6 +776,11 @@ export function SystemPage() {
                 </Button>
               </div>
               <div className={styles.tileValue}>{apiVersion}</div>
+            </div>
+
+            <div className={styles.infoTile}>
+              <div className={styles.tileLabel}>{t('footer.api_commit')}</div>
+              <div className={styles.tileValue}>{apiCommit}</div>
             </div>
 
             <div className={styles.infoTile}>

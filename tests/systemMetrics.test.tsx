@@ -241,6 +241,9 @@ describe('system metrics and filesystem capacity', () => {
     useAuthStore.setState({
       apiBase: 'http://metrics.test',
       connectionStatus: 'connected',
+      serverVersion: null,
+      serverCommit: null,
+      serverBuildDate: null,
     });
     useNotificationStore.setState({ showNotification: vi.fn() });
     vi.spyOn(historyStorageApi, 'getStartupStatus').mockRejectedValue(
@@ -256,6 +259,9 @@ describe('system metrics and filesystem capacity', () => {
     useAuthStore.setState({
       apiBase: '',
       connectionStatus: 'disconnected',
+      serverVersion: null,
+      serverCommit: null,
+      serverBuildDate: null,
     });
   });
 
@@ -710,6 +716,11 @@ describe('system metrics and filesystem capacity', () => {
   });
 
   test('shows bounded image runtime capacity and compact phase diagnostics', async () => {
+    useAuthStore.setState({
+      serverVersion: 'v7.2.136-fork.1',
+      serverCommit: 'abcdef123456',
+      serverBuildDate: '2026-08-19T09:00:00Z',
+    });
     vi.spyOn(systemMetricsApi, 'get').mockResolvedValue(createSystemSnapshot());
     vi.spyOn(configApi, 'getControlPanelUpdateStatus').mockResolvedValue({} as never);
     vi.spyOn(apiKeysApi, 'list').mockResolvedValue([]);
@@ -717,6 +728,8 @@ describe('system metrics and filesystem capacity', () => {
     vi.spyOn(useModelsStore.getState(), 'fetchModels').mockResolvedValue([]);
 
     render(<SystemPage />);
+    expect(screen.getByText('v7.2.136-fork.1')).toBeTruthy();
+    expect(screen.getByText('abcdef123456')).toBeTruthy();
     const runtime = await screen.findByTestId('image-runtime-metrics');
     expect(within(runtime).getByText('system_info.image_runtime.title')).toBeTruthy();
     expect(within(runtime).getByText('128.0 MiB')).toBeTruthy();

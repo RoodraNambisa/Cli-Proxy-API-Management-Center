@@ -395,12 +395,25 @@ describe('ChatGPT Web account info and image quota', () => {
         data: {},
         status: 200,
         statusText: 'OK',
-        headers: { 'x-cpa-version': 'new-version' },
+        headers: {
+          'x-cpa-version': 'new-version',
+          'x-cpa-commit': 'abcdef123456',
+          'x-cpa-build-date': '2026-08-19T09:00:00Z',
+        },
         config,
         request: {},
       }),
     });
     expect(versionListener).toHaveBeenCalledTimes(1);
+    expect(versionListener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: {
+          version: 'new-version',
+          commit: 'abcdef123456',
+          buildDate: '2026-08-19T09:00:00Z',
+        },
+      })
+    );
 
     window.removeEventListener('server-version-update', versionListener);
     window.removeEventListener('unauthorized', unauthorizedListener);

@@ -5,7 +5,12 @@
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import type { ApiClientConfig, ApiError } from '@/types';
-import { BUILD_DATE_HEADER_KEYS, REQUEST_TIMEOUT_MS, VERSION_HEADER_KEYS } from '@/utils/constants';
+import {
+  BUILD_DATE_HEADER_KEYS,
+  COMMIT_HEADER_KEYS,
+  REQUEST_TIMEOUT_MS,
+  VERSION_HEADER_KEYS,
+} from '@/utils/constants';
 import { computeApiUrl } from '@/utils/connection';
 
 export type ApiClientConnectionSnapshot = Readonly<{
@@ -127,13 +132,18 @@ class ApiClient {
         const connection = (response.config as ScopedAxiosRequestConfig).__apiClientConnection;
         const headers = response.headers as Record<string, string | undefined>;
         const version = this.readHeader(headers, VERSION_HEADER_KEYS);
+        const commit = this.readHeader(headers, COMMIT_HEADER_KEYS);
         const buildDate = this.readHeader(headers, BUILD_DATE_HEADER_KEYS);
 
         // 触发版本更新事件（后续通过 store 处理）
-        if ((version || buildDate) && this.connectionIsCurrent(connection)) {
+        if ((version || commit || buildDate) && this.connectionIsCurrent(connection)) {
           window.dispatchEvent(
             new CustomEvent('server-version-update', {
-              detail: { version: version || null, buildDate: buildDate || null },
+              detail: {
+                version: version || null,
+                commit: commit || null,
+                buildDate: buildDate || null,
+              },
             })
           );
         }

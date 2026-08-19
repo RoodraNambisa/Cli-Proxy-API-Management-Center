@@ -25,6 +25,7 @@ export interface RequestOptions {
 // 服务器版本信息
 export interface ServerVersion {
   version: string;
+  commit?: string;
   buildDate?: string;
 }
 

@@ -29,7 +29,11 @@ interface AuthStoreState extends AuthState {
   logout: () => void;
   checkAuth: () => Promise<boolean>;
   restoreSession: () => Promise<boolean>;
-  updateServerVersion: (version: string | null, buildDate?: string | null) => void;
+  updateServerVersion: (
+    version: string | null,
+    buildDate?: string | null,
+    commit?: string | null
+  ) => void;
   updateConnectionStatus: (status: ConnectionStatus, error?: string | null) => void;
 }
 
@@ -45,6 +49,7 @@ export const useAuthStore = create<AuthStoreState>()(
       managementKey: '',
       rememberPassword: false,
       serverVersion: null,
+      serverCommit: null,
       serverBuildDate: null,
       connectionStatus: 'disconnected',
       connectionError: null,
@@ -186,6 +191,7 @@ export const useAuthStore = create<AuthStoreState>()(
           managementAccessPath: '',
           managementKey: '',
           serverVersion: null,
+          serverCommit: null,
           serverBuildDate: null,
           connectionStatus: 'disconnected',
           connectionError: null,
@@ -225,8 +231,12 @@ export const useAuthStore = create<AuthStoreState>()(
       },
 
       // 更新服务器版本
-      updateServerVersion: (version, buildDate) => {
-        set({ serverVersion: version || null, serverBuildDate: buildDate || null });
+      updateServerVersion: (version, buildDate, commit) => {
+        set({
+          serverVersion: version || null,
+          serverCommit: commit || null,
+          serverBuildDate: buildDate || null,
+        });
       },
 
       // 更新连接状态
@@ -257,6 +267,7 @@ export const useAuthStore = create<AuthStoreState>()(
         ...(state.rememberPassword ? { managementKey: state.managementKey } : {}),
         rememberPassword: state.rememberPassword,
         serverVersion: state.serverVersion,
+        serverCommit: state.serverCommit,
         serverBuildDate: state.serverBuildDate,
       }),
     }
@@ -271,6 +282,12 @@ if (typeof window !== 'undefined') {
 
   window.addEventListener('server-version-update', ((e: CustomEvent) => {
     const detail = e.detail || {};
-    useAuthStore.getState().updateServerVersion(detail.version || null, detail.buildDate || null);
+    useAuthStore
+      .getState()
+      .updateServerVersion(
+        detail.version || null,
+        detail.buildDate || null,
+        detail.commit || null
+      );
   }) as EventListener);
 }

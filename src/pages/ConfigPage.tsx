@@ -102,6 +102,7 @@ export function ConfigPage() {
       state.managementAccessPath,
       state.connectionStatus,
       state.serverVersion,
+      state.serverCommit,
       state.serverBuildDate,
       state.connectionGeneration ?? 0,
     ])

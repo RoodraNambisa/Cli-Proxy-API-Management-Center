@@ -2988,6 +2988,7 @@
   },
   "footer": {
     "api_version": "Версия CLI Proxy API",
+    "api_commit": "Коммит бэкенда",
     "build_date": "Время сборки",
     "version": "Версия интерфейса управления",
     "author": "Автор"
