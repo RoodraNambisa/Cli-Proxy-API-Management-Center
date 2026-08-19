@@ -1546,6 +1546,10 @@ export function getVisualConfigValidationErrors(
       1_000_000,
       'integer_range_1_1000000'
     ),
+    chatgptWebManualReloginConcurrency: getCapacityIntegerError(
+      values.chatgptWebManualReloginConcurrency,
+      1
+    ),
     chatgptWebAspectRatioMaxErrorPercent: getNumberRangeError(
       values.chatgptWebAspectRatioMaxErrorPercent,
       0,
@@ -2325,6 +2329,13 @@ function getNextDirtyFields(
     updateDirty(
       'chatgptWebAutoReloginQueueSize',
       nextValues.chatgptWebAutoReloginQueueSize === baselineValues.chatgptWebAutoReloginQueueSize
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebManualReloginConcurrency')) {
+    updateDirty(
+      'chatgptWebManualReloginConcurrency',
+      nextValues.chatgptWebManualReloginConcurrency ===
+        baselineValues.chatgptWebManualReloginConcurrency
     );
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebApi798AutoLoginEnabled')) {
@@ -3136,6 +3147,11 @@ export function useVisualConfig() {
             chatgptWeb?.autoReloginQueueSize ??
             DEFAULT_VISUAL_VALUES.chatgptWebAutoReloginQueueSize
         ),
+        chatgptWebManualReloginConcurrency: String(
+          chatgptWeb?.['manual-relogin-concurrency'] ??
+            chatgptWeb?.manualReloginConcurrency ??
+            DEFAULT_VISUAL_VALUES.chatgptWebManualReloginConcurrency
+        ),
         chatgptWebApi798AutoLoginEnabled: Boolean(
           chatgptWeb?.['api798-auto-login-enabled'] ?? chatgptWeb?.api798AutoLoginEnabled
         ),
@@ -3670,6 +3686,8 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebAutoReloginWorkers ||
           values.chatgptWebAutoReloginQueueSize !==
             DEFAULT_VISUAL_VALUES.chatgptWebAutoReloginQueueSize ||
+          values.chatgptWebManualReloginConcurrency !==
+            DEFAULT_VISUAL_VALUES.chatgptWebManualReloginConcurrency ||
           values.chatgptWebApi798AutoLoginEnabled ||
           values.chatgptWebSessionCookieRefreshOnTokenFailure ||
           !values.chatgptWebForceSessionRefreshOnImport ||
@@ -3703,7 +3721,23 @@ export function useVisualConfig() {
               values.chatgptWebAutoReloginQueueSize
             );
           }
-          for (const legacyKey of ['autoReloginWorkers', 'autoReloginQueueSize']) {
+          if (
+            docHas(doc, ['chatgpt-web', 'manual-relogin-concurrency']) ||
+            docHas(doc, ['chatgpt-web', 'manualReloginConcurrency']) ||
+            values.chatgptWebManualReloginConcurrency !==
+              DEFAULT_VISUAL_VALUES.chatgptWebManualReloginConcurrency
+          ) {
+            setIntFromStringInDoc(
+              doc,
+              ['chatgpt-web', 'manual-relogin-concurrency'],
+              values.chatgptWebManualReloginConcurrency
+            );
+          }
+          for (const legacyKey of [
+            'autoReloginWorkers',
+            'autoReloginQueueSize',
+            'manualReloginConcurrency',
+          ]) {
             if (docHas(doc, ['chatgpt-web', legacyKey])) {
               doc.deleteIn(['chatgpt-web', legacyKey]);
             }

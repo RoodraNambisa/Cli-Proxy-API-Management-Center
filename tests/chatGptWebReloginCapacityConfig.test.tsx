@@ -22,14 +22,15 @@ vi.mock('react-i18next', async (importOriginal) => {
 const cloneValues = (): VisualConfigValues =>
   JSON.parse(JSON.stringify(DEFAULT_VISUAL_VALUES)) as VisualConfigValues;
 
-describe('ChatGPT Web background relogin capacity config', () => {
+describe('ChatGPT Web relogin capacity config', () => {
   beforeEach(() => localStorage.clear());
 
-  test('reads camel aliases and writes only canonical bounded capacity keys', () => {
+  test('reads camel aliases and writes only canonical capacity keys', () => {
     const initialYaml = `chatgpt-web:
   auto-relogin: true
   autoReloginWorkers: 7
   autoReloginQueueSize: 9000
+  manualReloginConcurrency: 5
 `;
     const { result } = renderHook(() => useVisualConfig());
 
@@ -37,47 +38,71 @@ describe('ChatGPT Web background relogin capacity config', () => {
     expect(result.current.visualValues).toMatchObject({
       chatgptWebAutoReloginWorkers: '7',
       chatgptWebAutoReloginQueueSize: '9000',
+      chatgptWebManualReloginConcurrency: '5',
     });
 
     act(() =>
       result.current.setVisualValues({
         chatgptWebAutoReloginWorkers: '12',
         chatgptWebAutoReloginQueueSize: '12000',
+        chatgptWebManualReloginConcurrency: '5000',
       })
     );
     expect(result.current.visualDirtyFields).toEqual(
-      expect.arrayContaining(['chatgptWebAutoReloginWorkers', 'chatgptWebAutoReloginQueueSize'])
+      expect.arrayContaining([
+        'chatgptWebAutoReloginWorkers',
+        'chatgptWebAutoReloginQueueSize',
+        'chatgptWebManualReloginConcurrency',
+      ])
     );
 
     const saved = parse(result.current.applyVisualChangesToYaml(initialYaml));
     expect(saved['chatgpt-web']).toMatchObject({
       'auto-relogin-workers': 12,
       'auto-relogin-queue-size': 12000,
+      'manual-relogin-concurrency': 5000,
     });
     expect(Object.keys(saved['chatgpt-web'])).not.toContain('autoReloginWorkers');
     expect(Object.keys(saved['chatgpt-web'])).not.toContain('autoReloginQueueSize');
+    expect(Object.keys(saved['chatgpt-web'])).not.toContain('manualReloginConcurrency');
   });
 
-  test('preserves backend defaults and rejects invalid worker or queue values', () => {
+  test('preserves backend defaults and rejects invalid capacity values', () => {
     expect(DEFAULT_VISUAL_VALUES.chatgptWebAutoReloginWorkers).toBe('4');
     expect(DEFAULT_VISUAL_VALUES.chatgptWebAutoReloginQueueSize).toBe('4096');
+    expect(DEFAULT_VISUAL_VALUES.chatgptWebManualReloginConcurrency).toBe('4');
 
     const values = cloneValues();
     values.chatgptWebAutoReloginWorkers = '0';
     values.chatgptWebAutoReloginQueueSize = String(Number.MAX_SAFE_INTEGER + 1);
+    values.chatgptWebManualReloginConcurrency = '0';
     expect(getVisualConfigValidationErrors(values)).toMatchObject({
       chatgptWebAutoReloginWorkers: 'integer_range_1_256',
       chatgptWebAutoReloginQueueSize: 'integer_range_1_1000000',
+      chatgptWebManualReloginConcurrency: 'positive_integer',
     });
+
+    const unsafeManual = cloneValues();
+    unsafeManual.chatgptWebManualReloginConcurrency = String(Number.MAX_SAFE_INTEGER + 1);
+    expect(getVisualConfigValidationErrors(unsafeManual).chatgptWebManualReloginConcurrency).toBe(
+      'positive_integer'
+    );
+
+    const aboveRecommendation = cloneValues();
+    aboveRecommendation.chatgptWebManualReloginConcurrency = '5000';
+    expect(
+      getVisualConfigValidationErrors(aboveRecommendation).chatgptWebManualReloginConcurrency
+    ).toBeUndefined();
   });
 
-  test('renders both controls behind progressive disclosure and indexes their YAML keys', () => {
+  test('renders all controls behind progressive disclosure and indexes their YAML keys', () => {
+    const onChange = vi.fn();
     render(
       <MemoryRouter initialEntries={['/config?section=provider-chatgpt-web']}>
         <VisualConfigEditor
           values={cloneValues()}
           baselineValues={cloneValues()}
-          onChange={vi.fn()}
+          onChange={onChange}
           renderRequestBodyPanels={() => null}
         />
       </MemoryRouter>
@@ -90,6 +115,13 @@ describe('ChatGPT Web background relogin capacity config', () => {
     fireEvent.click(disclosure);
     expect(document.getElementById('config-chatgpt-web-auto-relogin-workers')).not.toBeNull();
     expect(document.getElementById('config-chatgpt-web-auto-relogin-queue-size')).not.toBeNull();
+    const manualInput = document.getElementById(
+      'config-chatgpt-web-manual-relogin-concurrency'
+    ) as HTMLInputElement | null;
+    expect(manualInput).not.toBeNull();
+    expect(manualInput?.max).toBe('');
+    fireEvent.change(manualInput!, { target: { value: '5000' } });
+    expect(onChange).toHaveBeenCalledWith({ chatgptWebManualReloginConcurrency: '5000' });
 
     const searchEntry = CONFIG_SEARCH_DEFINITIONS.find(
       (entry) => entry.id === 'config-chatgpt-web-auto-relogin-capacity'
@@ -98,6 +130,7 @@ describe('ChatGPT Web background relogin capacity config', () => {
       expect.arrayContaining([
         'chatgpt-web.auto-relogin-workers',
         'chatgpt-web.auto-relogin-queue-size',
+        'chatgpt-web.manual-relogin-concurrency',
       ])
     );
   });
@@ -111,6 +144,8 @@ describe('ChatGPT Web background relogin capacity config', () => {
       expect(labels.auto_relogin_workers_description).toBeTruthy();
       expect(labels.auto_relogin_queue_size).toBeTruthy();
       expect(labels.auto_relogin_queue_size_description).toBeTruthy();
+      expect(labels.manual_relogin_concurrency).toBeTruthy();
+      expect(labels.manual_relogin_concurrency_description).toBeTruthy();
     }
   });
 });

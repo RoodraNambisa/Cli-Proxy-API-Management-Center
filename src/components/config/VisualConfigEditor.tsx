@@ -1075,6 +1075,10 @@ export function VisualConfigEditor({
     t,
     validationErrors?.chatgptWebAutoReloginQueueSize
   );
+  const chatGptWebManualReloginConcurrencyError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebManualReloginConcurrency
+  );
   const chatGptWebAspectRatioMaxErrorPercentError = getValidationMessage(
     t,
     validationErrors?.chatgptWebAspectRatioMaxErrorPercent
@@ -2061,20 +2065,24 @@ export function VisualConfigEditor({
                   {
                     workers: values.chatgptWebAutoReloginWorkers,
                     queue: values.chatgptWebAutoReloginQueueSize,
+                    manual: values.chatgptWebManualReloginConcurrency,
                   }
                 )}
                 focusTarget={focusTarget}
                 targetIds={[
                   'config-chatgpt-web-auto-relogin-workers',
                   'config-chatgpt-web-auto-relogin-queue-size',
+                  'config-chatgpt-web-manual-relogin-concurrency',
                 ]}
                 dirty={hasDirtyConfigField(dirtyFields, [
                   'chatgptWebAutoReloginWorkers',
                   'chatgptWebAutoReloginQueueSize',
+                  'chatgptWebManualReloginConcurrency',
                 ])}
                 errorCount={
                   Number(Boolean(chatGptWebAutoReloginWorkersError)) +
-                  Number(Boolean(chatGptWebAutoReloginQueueSizeError))
+                  Number(Boolean(chatGptWebAutoReloginQueueSizeError)) +
+                  Number(Boolean(chatGptWebManualReloginConcurrencyError))
                 }
               >
                 <SectionGrid>
@@ -2112,6 +2120,24 @@ export function VisualConfigEditor({
                     disabled={disabled}
                     onChange={(event) =>
                       onChange({ chatgptWebAutoReloginQueueSize: event.target.value })
+                    }
+                  />
+                  <Input
+                    id="config-chatgpt-web-manual-relogin-concurrency"
+                    type="number"
+                    min={1}
+                    step={1}
+                    label={t(
+                      'config_management.settings_center.chatgpt_web.manual_relogin_concurrency'
+                    )}
+                    hint={t(
+                      'config_management.settings_center.chatgpt_web.manual_relogin_concurrency_description'
+                    )}
+                    error={chatGptWebManualReloginConcurrencyError}
+                    value={values.chatgptWebManualReloginConcurrency}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      onChange({ chatgptWebManualReloginConcurrency: event.target.value })
                     }
                   />
                 </SectionGrid>

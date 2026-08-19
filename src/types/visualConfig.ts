@@ -22,6 +22,7 @@ export type VisualConfigFieldPath =
   | 'chatgptWebAutoDeleteDeadPriorities'
   | 'chatgptWebAutoReloginWorkers'
   | 'chatgptWebAutoReloginQueueSize'
+  | 'chatgptWebManualReloginConcurrency'
   | 'chatgptWebStrictSize'
   | 'chatgptWebAspectRatioMaxErrorPercent'
   | 'chatgptWebMaxResizeEdgePixels'
@@ -305,6 +306,7 @@ export type VisualConfigValues = {
   chatgptWebAutoRelogin: boolean;
   chatgptWebAutoReloginWorkers: string;
   chatgptWebAutoReloginQueueSize: string;
+  chatgptWebManualReloginConcurrency: string;
   chatgptWebApi798AutoLoginEnabled: boolean;
   chatgptWebSessionCookieRefreshOnTokenFailure: boolean;
   chatgptWebForceSessionRefreshOnImport: boolean;
@@ -409,6 +411,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebAutoRelogin: false,
   chatgptWebAutoReloginWorkers: '4',
   chatgptWebAutoReloginQueueSize: '4096',
+  chatgptWebManualReloginConcurrency: '4',
   chatgptWebApi798AutoLoginEnabled: false,
   chatgptWebSessionCookieRefreshOnTokenFailure: false,
   chatgptWebForceSessionRefreshOnImport: true,

@@ -563,8 +563,19 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-chatgpt-web-auto-relogin-capacity',
     pageId: 'provider-chatgpt-web',
     labelKey: 'config_management.settings_center.chatgpt_web.auto_relogin_capacity_title',
-    yamlKeys: ['chatgpt-web.auto-relogin-workers', 'chatgpt-web.auto-relogin-queue-size'],
-    aliases: ['重登并发', '重登队列', 'relogin workers', 'relogin queue'],
+    yamlKeys: [
+      'chatgpt-web.auto-relogin-workers',
+      'chatgpt-web.auto-relogin-queue-size',
+      'chatgpt-web.manual-relogin-concurrency',
+    ],
+    aliases: [
+      '自动重登并发',
+      '自动重登队列',
+      '手动重登并发',
+      'relogin workers',
+      'relogin queue',
+      'manual relogin',
+    ],
   },
   {
     id: 'config-chatgpt-web-api798-auto-login',
