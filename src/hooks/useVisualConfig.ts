@@ -27,7 +27,9 @@ import type {
 import { DEFAULT_VISUAL_VALUES, makeClientId } from '@/types/visualConfig';
 import {
   CODEX_CUSTOM_MODEL_GROUPS,
+  DEFAULT_CODEX_FINGERPRINT_MODE,
   DEFAULT_CODEX_TURN_STATE_POLICY,
+  normalizeCodexFingerprintMode,
   normalizeCodexTurnStatePolicy,
   type CodexCustomModelGroup,
 } from '@/types/config';
@@ -2295,6 +2297,12 @@ function getNextDirtyFields(
         baselineValues.codexFingerprintImagesForceHTTP1
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintDefaultMode')) {
+    updateDirty(
+      'codexFingerprintDefaultMode',
+      nextValues.codexFingerprintDefaultMode === baselineValues.codexFingerprintDefaultMode
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexHeaderDefaultsUserAgent')) {
     updateDirty(
       'codexHeaderDefaultsUserAgent',
@@ -3032,6 +3040,9 @@ export function useVisualConfig() {
             codexFingerprint?.imagesForceHTTP1 ??
             codexFingerprint?.imagesForceHttp1
           );
+      const codexFingerprintDefaultMode = normalizeCodexFingerprintMode(
+        codexFingerprint?.['default-mode'] ?? codexFingerprint?.defaultMode
+      );
       const authFilesPagination = asRecord(remoteManagement?.['auth-files-pagination']);
       const liveLogs = asRecord(remoteManagement?.['live-logs'] ?? remoteManagement?.liveLogs);
       const diagnostics = asRecord(remoteManagement?.diagnostics);
@@ -3122,6 +3133,7 @@ export function useVisualConfig() {
         codexFingerprintJA3,
         codexFingerprintForceHTTP1,
         codexFingerprintImagesForceHTTP1,
+        codexFingerprintDefaultMode,
         codexHeaderDefaultsUserAgent:
           typeof codexHeaderDefaults?.['user-agent'] === 'string'
             ? codexHeaderDefaults['user-agent']
@@ -3639,7 +3651,8 @@ export function useVisualConfig() {
           docHas(doc, ['codex-fingerprint']) ||
           values.codexFingerprintJA3 ||
           values.codexFingerprintForceHTTP1 ||
-          values.codexFingerprintImagesForceHTTP1
+          values.codexFingerprintImagesForceHTTP1 ||
+          values.codexFingerprintDefaultMode !== DEFAULT_CODEX_FINGERPRINT_MODE
         ) {
           const codexFingerprintForceHTTP1 = values.codexFingerprintJA3
             ? false
@@ -3653,6 +3666,8 @@ export function useVisualConfig() {
           doc.deleteIn(['codex-fingerprint', 'stabilize-per-account']);
           doc.setIn(['codex-fingerprint', 'force-http1'], codexFingerprintForceHTTP1);
           doc.setIn(['codex-fingerprint', 'images-force-http1'], codexFingerprintImagesForceHTTP1);
+          doc.setIn(['codex-fingerprint', 'default-mode'], values.codexFingerprintDefaultMode);
+          doc.deleteIn(['codex-fingerprint', 'defaultMode']);
           deleteIfMapEmpty(doc, ['codex-fingerprint']);
         }
         if (

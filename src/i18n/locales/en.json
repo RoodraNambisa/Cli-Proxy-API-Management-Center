@@ -2214,6 +2214,8 @@
           "codex_turn_state_policy_same_account_only_desc": "Forward only states registered to the current account. After restart, expiry, or capacity eviction, old states are dropped because ownership is unknown.",
           "codex_turn_state_policy_strip": "Strip all",
           "codex_turn_state_policy_strip_desc": "Remove every outbound turn state. New states from upstream responses are still recorded and returned to the client.",
+          "codex_fingerprint_default_mode": "Default fingerprint mode for future uploads",
+          "codex_fingerprint_default_mode_desc": "Write this mode only to future Codex OAuth/file credential uploads that omit codex_fingerprint_mode. Existing credentials and explicit upload values are unchanged.",
           "codex_fingerprint_ja3": "Force Codex TLS Profile",
           "codex_fingerprint_ja3_desc": "Force Codex upstream requests to use the native Codex TLS 1.2 ClientHello, HTTP/1.1, and Codex request header order. Disabled by default.",
           "codex_fingerprint_force_http1": "Force Codex HTTP/1.1",

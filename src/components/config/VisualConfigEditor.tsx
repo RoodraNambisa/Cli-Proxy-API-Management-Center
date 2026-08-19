@@ -61,7 +61,11 @@ import type {
   VisualConfigValues,
 } from '@/types/visualConfig';
 import { makeClientId } from '@/types/visualConfig';
-import type { CodexTurnStatePolicy } from '@/types/config';
+import {
+  CODEX_FINGERPRINT_MODES,
+  type CodexFingerprintDefaultMode,
+  type CodexTurnStatePolicy,
+} from '@/types/config';
 import { configApi, type ProxyUrlCheckResult } from '@/services/api/config';
 import { chatGptWebApi } from '@/services/api/chatgptWeb';
 import { useFrontendFeatureStore } from '@/stores';
@@ -1009,6 +1013,14 @@ export function VisualConfigEditor({
         label: t('config_management.visual.sections.network.codex_turn_state_policy_strip'),
       },
     ],
+    [t]
+  );
+  const codexFingerprintDefaultModeOptions = useMemo(
+    () =>
+      CODEX_FINGERPRINT_MODES.map((mode) => ({
+        value: mode,
+        label: t(`auth_files.codex_fingerprint_modes.${mode}`),
+      })),
     [t]
   );
   const codexTurnStatePolicyHint = {
@@ -4689,6 +4701,28 @@ export function VisualConfigEditor({
                         onChange={(codexTurnStatePolicy) =>
                           onChange({
                             codexTurnStatePolicy: codexTurnStatePolicy as CodexTurnStatePolicy,
+                          })
+                        }
+                      />
+                    </FieldShell>
+                    <FieldShell
+                      label={t(
+                        'config_management.visual.sections.network.codex_fingerprint_default_mode'
+                      )}
+                      htmlFor="config-codex-fingerprint-default-mode"
+                      hint={t(
+                        'config_management.visual.sections.network.codex_fingerprint_default_mode_desc'
+                      )}
+                    >
+                      <Select
+                        id="config-codex-fingerprint-default-mode"
+                        value={values.codexFingerprintDefaultMode}
+                        options={codexFingerprintDefaultModeOptions}
+                        disabled={disabled}
+                        onChange={(codexFingerprintDefaultMode) =>
+                          onChange({
+                            codexFingerprintDefaultMode:
+                              codexFingerprintDefaultMode as CodexFingerprintDefaultMode,
                           })
                         }
                       />

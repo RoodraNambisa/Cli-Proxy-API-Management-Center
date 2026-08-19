@@ -2238,6 +2238,8 @@
           "codex_turn_state_policy_same_account_only_desc": "只透傳已登記為目前帳號的狀態；服務重啟、記錄過期或容量淘汰後，舊狀態會因歸屬未知而被清除。",
           "codex_turn_state_policy_strip": "全部清除",
           "codex_turn_state_policy_strip_desc": "刪除所有送往上游的回合狀態；上游回應中的新狀態仍會記錄並回傳用戶端。",
+          "codex_fingerprint_default_mode": "後續上傳的預設指紋模式",
+          "codex_fingerprint_default_mode_desc": "只為後續上傳且未攜帶 codex_fingerprint_mode 的 Codex OAuth/檔案憑證寫入此模式；既有憑證與上傳中的明確值不會改變。",
           "codex_fingerprint_ja3": "強制 Codex TLS 特徵",
           "codex_fingerprint_ja3_desc": "對 Codex 上游請求強制使用 Codex 原生 TLS 1.2 ClientHello、HTTP/1.1 和 Codex 請求頭順序，預設關閉",
           "codex_fingerprint_force_http1": "強制 Codex HTTP/1.1",

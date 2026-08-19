@@ -2211,6 +2211,8 @@
           "codex_turn_state_policy_same_account_only_desc": "Передавать только состояния, зарегистрированные для текущего аккаунта. После перезапуска, истечения срока или вытеснения старые состояния удаляются как неизвестные.",
           "codex_turn_state_policy_strip": "Удалять всё",
           "codex_turn_state_policy_strip_desc": "Удалять все исходящие состояния хода. Новые состояния из ответов upstream по-прежнему регистрируются и возвращаются клиенту.",
+          "codex_fingerprint_default_mode": "Режим отпечатка по умолчанию для будущих загрузок",
+          "codex_fingerprint_default_mode_desc": "Записывать этот режим только в будущие загрузки OAuth/файловых учётных данных Codex без codex_fingerprint_mode. Существующие учётные данные и явно заданные значения не изменяются.",
           "codex_fingerprint_ja3": "Принудительный TLS-профиль Codex",
           "codex_fingerprint_ja3_desc": "Заставлять upstream-запросы Codex использовать нативный Codex TLS 1.2 ClientHello, HTTP/1.1 и порядок заголовков Codex. По умолчанию выключено.",
           "codex_fingerprint_force_http1": "Принудительно Codex HTTP/1.1",

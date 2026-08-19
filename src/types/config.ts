@@ -143,10 +143,25 @@ export interface StreamingConfig {
   trustUpstreamSSE?: boolean;
 }
 
+export const CODEX_FINGERPRINT_MODES = ['off', 'device', 'session', 'full'] as const;
+
+export type CodexFingerprintDefaultMode = (typeof CODEX_FINGERPRINT_MODES)[number];
+
+export const DEFAULT_CODEX_FINGERPRINT_MODE: CodexFingerprintDefaultMode = 'device';
+
+export const normalizeCodexFingerprintMode = (value: unknown): CodexFingerprintDefaultMode => {
+  if (typeof value !== 'string') return DEFAULT_CODEX_FINGERPRINT_MODE;
+  const normalized = value.trim().toLowerCase();
+  return CODEX_FINGERPRINT_MODES.includes(normalized as CodexFingerprintDefaultMode)
+    ? (normalized as CodexFingerprintDefaultMode)
+    : DEFAULT_CODEX_FINGERPRINT_MODE;
+};
+
 export interface CodexFingerprintConfig {
   ja3?: boolean;
   forceHTTP1?: boolean;
   imagesForceHTTP1?: boolean;
+  defaultMode?: CodexFingerprintDefaultMode;
 }
 
 export interface CodexHeaderDefaultsConfig {

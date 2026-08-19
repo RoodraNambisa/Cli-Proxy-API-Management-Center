@@ -8,6 +8,7 @@ import type {
 } from '@/types';
 import {
   CODEX_CUSTOM_MODEL_GROUPS,
+  normalizeCodexFingerprintMode,
   normalizeCodexTurnStatePolicy,
   type CodexCustomModelConfig,
   type CodexCustomModelGroup,
@@ -892,6 +893,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
         codexFingerprint['images-force-http1'] ??
           codexFingerprint.imagesForceHTTP1 ??
           codexFingerprint.imagesForceHttp1
+      ),
+      defaultMode: normalizeCodexFingerprintMode(
+        codexFingerprint['default-mode'] ?? codexFingerprint.defaultMode
       ),
     };
   }

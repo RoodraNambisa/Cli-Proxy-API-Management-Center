@@ -1,5 +1,9 @@
-import type { CodexCustomModelGroup, CodexTurnStatePolicy } from './config';
-import { DEFAULT_CODEX_TURN_STATE_POLICY } from './config';
+import type {
+  CodexCustomModelGroup,
+  CodexFingerprintDefaultMode,
+  CodexTurnStatePolicy,
+} from './config';
+import { DEFAULT_CODEX_FINGERPRINT_MODE, DEFAULT_CODEX_TURN_STATE_POLICY } from './config';
 
 export type PayloadParamValueType = 'string' | 'number' | 'boolean' | 'json';
 export type PayloadParamValidationErrorCode =
@@ -300,6 +304,7 @@ export type VisualConfigValues = {
   codexFingerprintJA3: boolean;
   codexFingerprintForceHTTP1: boolean;
   codexFingerprintImagesForceHTTP1: boolean;
+  codexFingerprintDefaultMode: CodexFingerprintDefaultMode;
   codexHeaderDefaultsUserAgent: string;
   codexHeaderDefaultsBetaFeatures: string;
   codexHeaderDefaultsOriginator: string;
@@ -405,6 +410,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexFingerprintJA3: false,
   codexFingerprintForceHTTP1: false,
   codexFingerprintImagesForceHTTP1: false,
+  codexFingerprintDefaultMode: DEFAULT_CODEX_FINGERPRINT_MODE,
   codexHeaderDefaultsUserAgent: '',
   codexHeaderDefaultsBetaFeatures: '',
   codexHeaderDefaultsOriginator: '',
