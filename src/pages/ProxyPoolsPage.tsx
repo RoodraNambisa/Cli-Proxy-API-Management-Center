@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -20,7 +20,12 @@ import { proxyPoolsApi } from '@/services/api';
 import { useAuthStore, useNotificationStore } from '@/stores';
 import type {
   ProxyBindingStatus,
+  ApiError,
   ProxyCheckResult,
+  ProxyCheckTask,
+  ProxyHealthCheckConfig,
+  ProxyHealthCheckRuntime,
+  ProxyHealthEndpointTestResult,
   ProxyPool,
   ProxyPoolEntry,
   ProxyPoolStatus,
@@ -61,6 +66,29 @@ const createPool = (): ProxyPool => ({
   'spread-bindings': false,
   entries: [createEntry()],
 });
+
+const DEFAULT_HEALTH_CHECK: ProxyHealthCheckConfig = {
+  concurrency: 8,
+  'endpoint-timeout-seconds': 8,
+  'failure-threshold': 1,
+  endpoints: [
+    {
+      name: 'cloudflare',
+      url: 'https://cloudflare.com/cdn-cgi/trace',
+      mode: 'cloudflare-trace',
+    },
+  ],
+};
+
+const cloneHealthCheck = (value: ProxyHealthCheckConfig): ProxyHealthCheckConfig => ({
+  ...value,
+  endpoints: value.endpoints.map((endpoint) => ({ ...endpoint })),
+});
+
+const taskIsActive = (task?: ProxyCheckTask): boolean =>
+  task?.status === 'queued' || task?.status === 'running';
+
+const errorStatus = (error: unknown): number | undefined => (error as ApiError | undefined)?.status;
 
 const normalizeCheckSample = (value?: string): number => {
   const parsed = Math.trunc(Number(value));
@@ -174,6 +202,8 @@ export function ProxyPoolsPage() {
   const [bindings, setBindings] = useState<ProxyBindingStatus[]>([]);
   const [selectedAuthIds, setSelectedAuthIds] = useState<Set<string>>(new Set());
   const [checkResults, setCheckResults] = useState<Record<string, ProxyCheckResult[]>>({});
+  const [checkTasks, setCheckTasks] = useState<Record<string, ProxyCheckTask>>({});
+  const [asyncTasksSupported, setAsyncTasksSupported] = useState<boolean | null>(null);
   const [checkingPool, setCheckingPool] = useState('');
   const [checkSamples, setCheckSamples] = useState<Record<string, string>>({});
   const [editor, setEditor] = useState<PoolEditorState | null>(null);
@@ -182,7 +212,74 @@ export function ProxyPoolsPage() {
   const [savingRules, setSavingRules] = useState(false);
   const [rebinding, setRebinding] = useState(false);
   const [error, setError] = useState('');
+  const [healthConfig, setHealthConfig] = useState<ProxyHealthCheckConfig>(
+    cloneHealthCheck(DEFAULT_HEALTH_CHECK)
+  );
+  const [baselineHealthConfig, setBaselineHealthConfig] = useState<ProxyHealthCheckConfig>(
+    cloneHealthCheck(DEFAULT_HEALTH_CHECK)
+  );
+  const [healthRuntime, setHealthRuntime] = useState<ProxyHealthCheckRuntime | null>(null);
+  const [healthSupported, setHealthSupported] = useState<boolean | null>(null);
+  const [savingHealth, setSavingHealth] = useState(false);
+  const [testingEndpoints, setTestingEndpoints] = useState(false);
+  const [endpointTestResults, setEndpointTestResults] = useState<ProxyHealthEndpointTestResult[]>(
+    []
+  );
+  const notifiedTasks = useRef(new Set<string>());
+  const activeTasksRef = useRef<Array<[string, ProxyCheckTask]>>([]);
   const disabled = connectionStatus !== 'connected';
+
+  const loadHealthCheck = useCallback(async () => {
+    try {
+      const response = await proxyPoolsApi.getHealthCheck();
+      const normalized = cloneHealthCheck(response.config);
+      setHealthConfig(normalized);
+      setBaselineHealthConfig(cloneHealthCheck(normalized));
+      setHealthRuntime(response.runtime ?? null);
+      setHealthSupported(true);
+    } catch (loadError) {
+      if ([404, 405].includes(errorStatus(loadError) ?? 0)) {
+        setHealthSupported(false);
+        return;
+      }
+      throw loadError;
+    }
+  }, []);
+
+  const loadCheckTasks = useCallback(async (nextPools: ProxyPool[]) => {
+    if (nextPools.length === 0) return;
+    const settled = await Promise.allSettled(
+      nextPools.map(
+        async (pool) => [pool.name, await proxyPoolsApi.getCheckTasks(pool.name)] as const
+      )
+    );
+    let supported = false;
+    let unsupported = false;
+    const nextTasks: Record<string, ProxyCheckTask> = {};
+    settled.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        supported = true;
+        const [name, tasks] = result.value;
+        const task = tasks.find(taskIsActive) ?? tasks[0];
+        if (task) nextTasks[name] = task;
+        return;
+      }
+      if ([404, 405].includes(errorStatus(result.reason) ?? 0)) unsupported = true;
+    });
+    if (supported) {
+      setAsyncTasksSupported(true);
+      setCheckTasks(nextTasks);
+      setCheckResults((current) => {
+        const next = { ...current };
+        Object.entries(nextTasks).forEach(([name, task]) => {
+          if (Array.isArray(task.results)) next[name] = task.results;
+        });
+        return next;
+      });
+    } else if (unsupported) {
+      setAsyncTasksSupported(false);
+    }
+  }, []);
 
   const loadStatuses = useCallback(async (nextPools: ProxyPool[]) => {
     const settled = await Promise.allSettled(
@@ -215,22 +312,207 @@ export function ProxyPoolsPage() {
         return new Set(Array.from(current).filter((authId) => available.has(authId)));
       });
       void loadStatuses(nextPools);
+      void loadCheckTasks(nextPools);
+      void loadHealthCheck().catch((loadError) => {
+        setError(getErrorMessage(loadError));
+      });
     } catch (loadError) {
       setError(getErrorMessage(loadError));
     } finally {
       setLoading(false);
     }
-  }, [loadStatuses]);
+  }, [loadCheckTasks, loadHealthCheck, loadStatuses]);
 
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  useEffect(() => {
+    if (healthSupported !== true) return;
+    let canceled = false;
+    const refreshRuntime = async () => {
+      try {
+        const response = await proxyPoolsApi.getHealthCheck();
+        if (!canceled) setHealthRuntime(response.runtime ?? null);
+      } catch {
+        // Keep the latest runtime snapshot when a transient management read fails.
+      }
+    };
+    const timer = window.setInterval(() => void refreshRuntime(), 5000);
+    return () => {
+      canceled = true;
+      window.clearInterval(timer);
+    };
+  }, [healthSupported]);
+
+  const applyCheckTask = useCallback(
+    async (poolName: string, task: ProxyCheckTask, notify: boolean) => {
+      setCheckTasks((current) => ({ ...current, [poolName]: task }));
+      if (Array.isArray(task.results)) {
+        setCheckResults((current) => ({ ...current, [poolName]: task.results ?? [] }));
+      }
+      if (!taskIsActive(task)) {
+        if (notify && !notifiedTasks.current.has(task.task_id)) {
+          notifiedTasks.current.add(task.task_id);
+          showNotification(
+            task.status === 'completed'
+              ? t('proxy_pools.check_complete')
+              : t(`proxy_pools.task_errors.${task.error_code ?? 'proxy_check_failed'}`),
+            task.status === 'completed' && task.failed === 0 ? 'success' : 'warning'
+          );
+        }
+        try {
+          const status = await proxyPoolsApi.getPoolStatus(poolName);
+          setStatuses((current) => ({ ...current, [poolName]: status }));
+        } catch {
+          // The task result remains useful when a status refresh races a config change.
+        }
+      }
+    },
+    [showNotification, t]
+  );
+
+  activeTasksRef.current = Object.entries(checkTasks).filter(([, task]) => taskIsActive(task));
+  const activeTaskSignature = activeTasksRef.current
+    .map(([poolName, task]) => `${poolName}:${task.task_id}`)
+    .sort()
+    .join('|');
+
+  useEffect(() => {
+    const active = activeTasksRef.current;
+    if (!activeTaskSignature || asyncTasksSupported === false) return;
+    let canceled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      const settled = await Promise.allSettled(
+        active.map(
+          async ([poolName, task]) =>
+            [poolName, await proxyPoolsApi.getCheckTask(poolName, task.task_id)] as const
+        )
+      );
+      if (canceled) return;
+      settled.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          void applyCheckTask(result.value[0], result.value[1], true);
+          return;
+        }
+        const status = errorStatus(result.reason);
+        if (status === 404 || status === 405) {
+          const [poolName, task] = active[index];
+          setCheckTasks((current) => {
+            const next = { ...current };
+            delete next[poolName];
+            return next;
+          });
+          if (!notifiedTasks.current.has(task.task_id)) {
+            notifiedTasks.current.add(task.task_id);
+            showNotification(t('proxy_pools.task_errors.proxy_check_lost'), 'warning');
+          }
+          if (status === 405) setAsyncTasksSupported(false);
+        }
+      });
+      if (!canceled) timer = window.setTimeout(() => void poll(), 1000);
+    };
+    void poll();
+    return () => {
+      canceled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [activeTaskSignature, applyCheckTask, asyncTasksSupported, showNotification, t]);
 
   const poolOptions = useMemo(
     () => pools.map((pool) => ({ value: pool.name, label: pool.name })),
     [pools]
   );
   const rulesDirty = JSON.stringify(rules) !== JSON.stringify(baselineRules);
+  const healthDirty = JSON.stringify(healthConfig) !== JSON.stringify(baselineHealthConfig);
+
+  const validateHealthConfig = (): string => {
+    const integerFields = [
+      healthConfig.concurrency,
+      healthConfig['endpoint-timeout-seconds'],
+      healthConfig['failure-threshold'],
+    ];
+    if (integerFields.some((value) => !Number.isSafeInteger(value) || value < 1)) {
+      return t('proxy_pools.health_settings.validation_positive_integer');
+    }
+    if (healthConfig.endpoints.length === 0) {
+      return t('proxy_pools.health_settings.validation_endpoint_required');
+    }
+    const names = new Set<string>();
+    for (const endpoint of healthConfig.endpoints) {
+      const name = endpoint.name.trim().toLowerCase();
+      if (!name || !endpoint.url.trim()) {
+        return t('proxy_pools.health_settings.validation_endpoint_required');
+      }
+      if (names.has(name)) return t('proxy_pools.health_settings.validation_endpoint_duplicate');
+      names.add(name);
+      try {
+        const url = new URL(endpoint.url);
+        if (!['http:', 'https:'].includes(url.protocol)) throw new Error('unsupported protocol');
+      } catch {
+        return t('proxy_pools.health_settings.validation_endpoint_url');
+      }
+    }
+    return '';
+  };
+
+  const saveHealthCheck = async () => {
+    const validationError = validateHealthConfig();
+    if (validationError) {
+      showNotification(validationError, 'error');
+      return;
+    }
+    setSavingHealth(true);
+    try {
+      const normalized: ProxyHealthCheckConfig = {
+        ...healthConfig,
+        endpoints: healthConfig.endpoints.map((endpoint) => ({
+          ...endpoint,
+          name: endpoint.name.trim(),
+          url: endpoint.url.trim(),
+        })),
+      };
+      await proxyPoolsApi.updateHealthCheck(normalized);
+      setHealthConfig(cloneHealthCheck(normalized));
+      setBaselineHealthConfig(cloneHealthCheck(normalized));
+      setHealthSupported(true);
+      showNotification(t('proxy_pools.health_settings.saved'), 'success');
+      await loadHealthCheck();
+    } catch (saveError) {
+      showNotification(
+        `${t('proxy_pools.health_settings.save_failed')}: ${getErrorMessage(saveError)}`,
+        'error'
+      );
+    } finally {
+      setSavingHealth(false);
+    }
+  };
+
+  const testHealthEndpoints = async () => {
+    if (healthDirty) {
+      showNotification(t('proxy_pools.health_settings.save_before_test'), 'warning');
+      return;
+    }
+    setTestingEndpoints(true);
+    try {
+      const results = await proxyPoolsApi.testHealthEndpoints();
+      setEndpointTestResults(results);
+      showNotification(
+        results.every((result) => result.ok)
+          ? t('proxy_pools.health_settings.test_success')
+          : t('proxy_pools.health_settings.test_partial'),
+        results.every((result) => result.ok) ? 'success' : 'warning'
+      );
+    } catch (testError) {
+      showNotification(
+        `${t('proxy_pools.health_settings.test_failed')}: ${getErrorMessage(testError)}`,
+        'error'
+      );
+    } finally {
+      setTestingEndpoints(false);
+    }
+  };
 
   const openCreatePool = () => setEditor({ original: null, draft: createPool() });
   const openEditPool = (pool: ProxyPool) =>
@@ -248,6 +530,28 @@ export function ProxyPoolsPage() {
       entries: editor.draft.entries.map((entry, entryIndex) =>
         entryIndex === index ? { ...entry, ...patch } : entry
       ),
+    });
+  };
+
+  const updateHealthEndpoint = (
+    index: number,
+    patch: Partial<ProxyHealthCheckConfig['endpoints'][number]>
+  ) => {
+    setHealthConfig((current) => ({
+      ...current,
+      endpoints: current.endpoints.map((endpoint, endpointIndex) =>
+        endpointIndex === index ? { ...endpoint, ...patch } : endpoint
+      ),
+    }));
+  };
+
+  const moveHealthEndpoint = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= healthConfig.endpoints.length) return;
+    setHealthConfig((current) => {
+      const endpoints = [...current.endpoints];
+      [endpoints[index], endpoints[target]] = [endpoints[target], endpoints[index]];
+      return { ...current, endpoints };
     });
   };
 
@@ -351,10 +655,29 @@ export function ProxyPoolsPage() {
   const checkPool = async (pool: ProxyPool) => {
     setCheckingPool(pool.name);
     try {
-      const results = await proxyPoolsApi.checkPool(
-        pool.name,
-        normalizeCheckSample(checkSamples[pool.name])
-      );
+      const sample = normalizeCheckSample(checkSamples[pool.name]);
+      if (asyncTasksSupported !== false) {
+        try {
+          const task = await proxyPoolsApi.createCheckTask(pool.name, sample);
+          setAsyncTasksSupported(true);
+          setCheckTasks((current) => ({ ...current, [pool.name]: task }));
+          showNotification(t('proxy_pools.check_task_started'), 'success');
+          return;
+        } catch (taskError) {
+          if (errorStatus(taskError) === 409) {
+            const tasks = await proxyPoolsApi.getCheckTasks(pool.name);
+            const active = tasks.find(taskIsActive);
+            if (active) {
+              setCheckTasks((current) => ({ ...current, [pool.name]: active }));
+              showNotification(t('proxy_pools.check_task_reused'), 'warning');
+              return;
+            }
+          }
+          if (![404, 405].includes(errorStatus(taskError) ?? 0)) throw taskError;
+          setAsyncTasksSupported(false);
+        }
+      }
+      const results = await proxyPoolsApi.checkPool(pool.name, sample);
       setCheckResults((current) => ({ ...current, [pool.name]: results }));
       const status = await proxyPoolsApi.getPoolStatus(pool.name);
       setStatuses((current) => ({ ...current, [pool.name]: status }));
@@ -494,6 +817,228 @@ export function ProxyPoolsPage() {
 
       {view === 'pools' ? (
         <section className={styles.viewSection}>
+          {healthSupported === false ? (
+            <div className={styles.compatibilityNotice}>
+              {t('proxy_pools.health_settings.legacy_backend')}
+            </div>
+          ) : (
+            <article className={styles.healthSettingsCard}>
+              <div className={styles.sectionHeader}>
+                <div>
+                  <h2>{t('proxy_pools.health_settings.title')}</h2>
+                  <p>{t('proxy_pools.health_settings.description')}</p>
+                </div>
+                <div className={styles.rowActions}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void testHealthEndpoints()}
+                    loading={testingEndpoints}
+                    disabled={disabled || savingHealth || healthSupported !== true}
+                  >
+                    <IconCheck size={14} />
+                    {t('proxy_pools.health_settings.test_endpoints')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => void saveHealthCheck()}
+                    loading={savingHealth}
+                    disabled={disabled || healthSupported !== true || !healthDirty}
+                  >
+                    {t('common.save')}
+                  </Button>
+                </div>
+              </div>
+              <div className={styles.healthSettingsGrid}>
+                <Input
+                  label={t('proxy_pools.health_settings.concurrency')}
+                  hint={t('proxy_pools.health_settings.concurrency_hint')}
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={healthConfig.concurrency}
+                  onChange={(event) =>
+                    setHealthConfig((current) => ({
+                      ...current,
+                      concurrency: Number(event.target.value),
+                    }))
+                  }
+                  disabled={disabled || healthSupported !== true}
+                />
+                <Input
+                  label={t('proxy_pools.health_settings.timeout')}
+                  hint={t('proxy_pools.health_settings.timeout_hint')}
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={healthConfig['endpoint-timeout-seconds']}
+                  onChange={(event) =>
+                    setHealthConfig((current) => ({
+                      ...current,
+                      'endpoint-timeout-seconds': Number(event.target.value),
+                    }))
+                  }
+                  disabled={disabled || healthSupported !== true}
+                />
+                <Input
+                  label={t('proxy_pools.health_settings.failure_threshold')}
+                  hint={t('proxy_pools.health_settings.failure_threshold_hint')}
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={healthConfig['failure-threshold']}
+                  onChange={(event) =>
+                    setHealthConfig((current) => ({
+                      ...current,
+                      'failure-threshold': Number(event.target.value),
+                    }))
+                  }
+                  disabled={disabled || healthSupported !== true}
+                />
+                <div className={styles.healthRuntime}>
+                  <strong>{t('proxy_pools.health_settings.runtime')}</strong>
+                  <span>
+                    {t('proxy_pools.health_settings.runtime_value', {
+                      active: healthRuntime?.active ?? 0,
+                      limit: healthRuntime?.limit ?? healthConfig.concurrency,
+                      queued: healthRuntime?.queued ?? 0,
+                      peak: healthRuntime?.peak_active ?? 0,
+                      peakQueued: healthRuntime?.peak_queued ?? 0,
+                      completed: healthRuntime?.completed ?? 0,
+                      succeeded: healthRuntime?.succeeded ?? 0,
+                      failed: healthRuntime?.failed ?? 0,
+                    })}
+                  </span>
+                </div>
+              </div>
+              <div className={styles.endpointHeader}>
+                <div>
+                  <h3>{t('proxy_pools.health_settings.endpoints')}</h3>
+                  <p>{t('proxy_pools.health_settings.endpoints_hint')}</p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    setHealthConfig((current) => ({
+                      ...current,
+                      endpoints: [...current.endpoints, { name: '', url: '', mode: 'http-status' }],
+                    }))
+                  }
+                  disabled={disabled || healthSupported !== true}
+                >
+                  <IconPlus size={14} />
+                  {t('proxy_pools.health_settings.add_endpoint')}
+                </Button>
+              </div>
+              <div className={styles.endpointList}>
+                {healthConfig.endpoints.map((endpoint, index) => {
+                  const testResult = endpointTestResults.find(
+                    (result) => result.name === endpoint.name
+                  );
+                  return (
+                    <div key={`${index}-${endpoint.name}`} className={styles.endpointItem}>
+                      <div className={styles.endpointOrderControls}>
+                        <span className={styles.endpointOrder}>{index + 1}</span>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => moveHealthEndpoint(index, -1)}
+                          disabled={disabled || healthSupported !== true || index === 0}
+                          title={t('common.move_up')}
+                          aria-label={t('common.move_up')}
+                        >
+                          <IconChevronUp size={13} />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => moveHealthEndpoint(index, 1)}
+                          disabled={
+                            disabled ||
+                            healthSupported !== true ||
+                            index === healthConfig.endpoints.length - 1
+                          }
+                          title={t('common.move_down')}
+                          aria-label={t('common.move_down')}
+                        >
+                          <IconChevronDown size={13} />
+                        </Button>
+                      </div>
+                      <Input
+                        label={t('proxy_pools.health_settings.endpoint_name')}
+                        value={endpoint.name}
+                        onChange={(event) =>
+                          updateHealthEndpoint(index, { name: event.target.value })
+                        }
+                        disabled={disabled || healthSupported !== true}
+                      />
+                      <Input
+                        label={t('proxy_pools.health_settings.endpoint_url')}
+                        value={endpoint.url}
+                        onChange={(event) =>
+                          updateHealthEndpoint(index, { url: event.target.value })
+                        }
+                        disabled={disabled || healthSupported !== true}
+                      />
+                      <div className={styles.endpointMode}>
+                        <label>{t('proxy_pools.health_settings.endpoint_mode')}</label>
+                        <Select
+                          value={endpoint.mode}
+                          options={[
+                            {
+                              value: 'cloudflare-trace',
+                              label: t('proxy_pools.health_settings.modes.cloudflare_trace'),
+                            },
+                            {
+                              value: 'http-status',
+                              label: t('proxy_pools.health_settings.modes.http_status'),
+                            },
+                          ]}
+                          onChange={(value) =>
+                            updateHealthEndpoint(index, {
+                              mode: value as ProxyHealthCheckConfig['endpoints'][number]['mode'],
+                            })
+                          }
+                          disabled={disabled || healthSupported !== true}
+                        />
+                      </div>
+                      {testResult ? (
+                        <span className={testResult.ok ? styles.checkOk : styles.checkFailed}>
+                          {testResult.ok ? <IconCheck size={13} /> : <IconX size={13} />}
+                          {testResult.elapsed_ms} ms
+                          {!testResult.ok
+                            ? ` · ${t(
+                                `proxy_pools.health_settings.test_errors.${testResult.error ?? 'unknown'}`
+                              )}`
+                            : null}
+                        </span>
+                      ) : null}
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() =>
+                          setHealthConfig((current) => ({
+                            ...current,
+                            endpoints: current.endpoints.filter(
+                              (_, itemIndex) => itemIndex !== index
+                            ),
+                          }))
+                        }
+                        disabled={
+                          disabled || healthSupported !== true || healthConfig.endpoints.length <= 1
+                        }
+                        title={t('common.delete')}
+                        aria-label={t('common.delete')}
+                      >
+                        <IconTrash2 size={14} />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </article>
+          )}
           <div className={styles.sectionHeader}>
             <div>
               <h2>{t('proxy_pools.pool_list_title')}</h2>
@@ -511,6 +1056,8 @@ export function ProxyPoolsPage() {
               {pools.map((pool) => {
                 const status = statuses[pool.name];
                 const results = checkResults[pool.name] ?? [];
+                const task = checkTasks[pool.name];
+                const poolChecking = checkingPool === pool.name || taskIsActive(task);
                 return (
                   <article key={pool.name} className={styles.poolItem}>
                     <div className={styles.poolHeader}>
@@ -545,14 +1092,14 @@ export function ProxyPoolsPage() {
                                 [pool.name]: String(normalizeCheckSample(current[pool.name])),
                               }))
                             }
-                            disabled={disabled || checkingPool === pool.name}
+                            disabled={disabled || poolChecking}
                           />
                         </div>
                         <Button
                           variant="secondary"
                           size="sm"
                           onClick={() => void checkPool(pool)}
-                          loading={checkingPool === pool.name}
+                          loading={poolChecking}
                           disabled={disabled}
                         >
                           <IconRefreshCw size={14} />
@@ -598,6 +1145,19 @@ export function ProxyPoolsPage() {
                         })}
                       </span>
                       <span>
+                        {t('proxy_pools.next_check', { time: formatTime(status?.next_check_at) })}
+                      </span>
+                      {status?.check_running || (status?.check_total ?? 0) > 0 ? (
+                        <span>
+                          {t('proxy_pools.round_progress', {
+                            completed: status?.check_completed ?? 0,
+                            total: status?.check_total ?? 0,
+                            failed: status?.check_failed ?? 0,
+                          })}
+                        </span>
+                      ) : null}
+                      <span>{t('proxy_pools.schedule_after_completion')}</span>
+                      <span>
                         {t('proxy_pools.bind_attempts', { count: pool['bind-attempts'] ?? 3 })}
                       </span>
                       <span>
@@ -611,6 +1171,33 @@ export function ProxyPoolsPage() {
                         </span>
                       ) : null}
                     </div>
+                    {task ? (
+                      <div className={styles.taskProgress} data-status={task.status}>
+                        <strong>{t(`proxy_pools.task_status.${task.status}`)}</strong>
+                        <span>
+                          {t('proxy_pools.task_progress', {
+                            completed: task.completed,
+                            total: task.total,
+                            running: task.running,
+                            succeeded: task.succeeded,
+                            failed: task.failed,
+                          })}
+                        </span>
+                        <span>
+                          {t('proxy_pools.task_scope', {
+                            bound: task.bound,
+                            sampled: task.sampled,
+                          })}
+                        </span>
+                        {task.results_truncated ? (
+                          <span>{t('proxy_pools.results_truncated')}</span>
+                        ) : null}
+                      </div>
+                    ) : asyncTasksSupported === false ? (
+                      <div className={styles.compatibilityNotice}>
+                        {t('proxy_pools.legacy_sync_warning')}
+                      </div>
+                    ) : null}
                     {results.length > 0 ? (
                       <div className={styles.checkResults}>
                         {results.map((result, index) => (

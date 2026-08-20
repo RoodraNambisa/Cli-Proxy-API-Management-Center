@@ -82,6 +82,145 @@
   gap: $spacing-lg;
 }
 
+.healthSettingsCard {
+  padding: $spacing-lg;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+}
+
+.healthSettingsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+.healthRuntime {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+
+  strong {
+    font-size: 13px;
+  }
+
+  span {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
+.endpointHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+  padding-top: $spacing-md;
+  border-top: 1px solid var(--border-color);
+
+  h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+}
+
+.endpointList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: $spacing-md;
+}
+
+.endpointItem {
+  display: grid;
+  grid-template-columns:
+    104px minmax(120px, 0.55fr) minmax(260px, 1.4fr) minmax(150px, 0.7fr)
+    auto auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+}
+
+.endpointOrderControls {
+  align-self: end;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.endpointOrder {
+  align-self: center;
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.endpointMode {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  > label {
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
+.compatibilityNotice {
+  margin-top: $spacing-md;
+  padding: 10px 12px;
+  border-left: 3px solid var(--warning-color, #b7791f);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.taskProgress {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: $spacing-md;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+
+  strong {
+    color: var(--text-primary);
+  }
+
+  &[data-status='failed'] strong {
+    color: var(--danger-color, #c44536);
+  }
+}
+
 .sectionHeader {
   h2 {
     margin: 0 0 4px;
@@ -201,6 +340,27 @@
     gap: 10px;
     color: var(--text-secondary);
     font-size: 12px;
+  }
+}
+
+@media (max-width: 1050px) {
+  .healthSettingsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .endpointItem {
+    grid-template-columns: 104px minmax(120px, 0.6fr) minmax(220px, 1.4fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .healthSettingsGrid,
+  .endpointItem {
+    grid-template-columns: 1fr;
+  }
+
+  .endpointOrderControls {
+    justify-content: flex-start;
   }
 }
 

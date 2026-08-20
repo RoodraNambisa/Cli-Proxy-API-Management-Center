@@ -1340,4 +1340,62 @@ describe('structured proxy management API', () => {
 
     expect(post).toHaveBeenCalledWith('/proxy-pools/residential%20pool/check', { sample: 25 });
   });
+
+  test('reads and updates global proxy health settings without changing endpoint order', async () => {
+    const config = {
+      concurrency: 12,
+      'endpoint-timeout-seconds': 9,
+      'failure-threshold': 2,
+      endpoints: [
+        { name: 'primary', url: 'https://primary.example/check', mode: 'http-status' as const },
+        {
+          name: 'backup',
+          url: 'https://backup.example/cdn-cgi/trace',
+          mode: 'cloudflare-trace' as const,
+        },
+      ],
+    };
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({
+      'proxy-health-check': config,
+      runtime: { limit: 12, active: 2, queued: 1, peak_active: 8 },
+    });
+    const patch = vi.spyOn(apiClient, 'patch').mockResolvedValue({ status: 'ok' });
+
+    await expect(proxyPoolsApi.getHealthCheck()).resolves.toMatchObject({ config });
+    await proxyPoolsApi.updateHealthCheck(config);
+
+    expect(get).toHaveBeenCalledWith('/proxy-health-check');
+    expect(patch).toHaveBeenCalledWith('/proxy-health-check', config);
+  });
+
+  test('creates and resumes asynchronous proxy check tasks through encoded paths', async () => {
+    const task = {
+      task_id: 'task/1',
+      pool: 'residential pool',
+      status: 'running' as const,
+      total: 25,
+      completed: 10,
+      running: 8,
+      succeeded: 9,
+      failed: 1,
+      bound: 15,
+      sampled: 10,
+      created_at: '2026-08-20T00:00:00Z',
+    };
+    const post = vi.spyOn(apiClient, 'post').mockResolvedValue({ task });
+    const get = vi
+      .spyOn(apiClient, 'get')
+      .mockResolvedValueOnce({ tasks: [task] })
+      .mockResolvedValueOnce({ task });
+
+    await expect(proxyPoolsApi.createCheckTask('residential pool', 10)).resolves.toEqual(task);
+    await expect(proxyPoolsApi.getCheckTasks('residential pool')).resolves.toEqual([task]);
+    await expect(proxyPoolsApi.getCheckTask('residential pool', 'task/1')).resolves.toEqual(task);
+
+    expect(post).toHaveBeenCalledWith('/proxy-pools/residential%20pool/check-tasks', {
+      sample: 10,
+    });
+    expect(get).toHaveBeenNthCalledWith(1, '/proxy-pools/residential%20pool/check-tasks');
+    expect(get).toHaveBeenNthCalledWith(2, '/proxy-pools/residential%20pool/check-tasks/task%2F1');
+  });
 });
