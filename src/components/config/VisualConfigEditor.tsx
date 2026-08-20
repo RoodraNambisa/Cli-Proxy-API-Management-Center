@@ -4784,12 +4784,28 @@ export function VisualConfigEditor({
 
                   <div id="config-codex-headers">
                     <SectionGrid>
+                      <ToggleRow
+                        title={t(
+                          'config_management.visual.sections.network.codex_enforce_software_identity'
+                        )}
+                        description={t(
+                          'config_management.visual.sections.network.codex_enforce_software_identity_desc'
+                        )}
+                        checked={values.codexEnforceSoftwareIdentity}
+                        disabled={disabled}
+                        onChange={(codexEnforceSoftwareIdentity) =>
+                          onChange({ codexEnforceSoftwareIdentity })
+                        }
+                      />
                       <Input
                         label={t(
                           'config_management.visual.sections.network.codex_header_defaults_user_agent'
                         )}
                         value={values.codexHeaderDefaultsUserAgent}
                         onChange={(e) => onChange({ codexHeaderDefaultsUserAgent: e.target.value })}
+                        hint={t(
+                          'config_management.visual.sections.network.codex_header_defaults_user_agent_hint'
+                        )}
                         disabled={disabled}
                       />
                       <Input

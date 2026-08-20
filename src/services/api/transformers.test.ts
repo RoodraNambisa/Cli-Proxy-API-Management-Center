@@ -25,12 +25,14 @@ describe('normalizeConfigResponse Codex configuration', () => {
           'identity-confuse': true,
           'spoof-session-identity': true,
           'turn-state-policy': 'same-account-only',
+          'enforce-software-identity': false,
         },
       }).codex
     ).toEqual({
       identityConfuse: true,
       spoofSessionIdentity: true,
       turnStatePolicy: 'same-account-only',
+      enforceSoftwareIdentity: false,
     });
 
     expect(
@@ -39,12 +41,14 @@ describe('normalizeConfigResponse Codex configuration', () => {
           identityConfuse: false,
           spoofSessionIdentity: true,
           turnStatePolicy: 'strip',
+          enforceSoftwareIdentity: true,
         },
       }).codex
     ).toEqual({
       identityConfuse: false,
       spoofSessionIdentity: true,
       turnStatePolicy: 'strip',
+      enforceSoftwareIdentity: true,
     });
   });
 
@@ -55,5 +59,6 @@ describe('normalizeConfigResponse Codex configuration', () => {
     expect(
       normalizeConfigResponse({ codex: { 'turn-state-policy': 'unknown' } }).codex?.turnStatePolicy
     ).toBe('guard-cross-account');
+    expect(normalizeConfigResponse({ codex: {} }).codex?.enforceSoftwareIdentity).toBe(true);
   });
 });

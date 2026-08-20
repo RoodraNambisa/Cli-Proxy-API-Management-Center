@@ -2219,7 +2219,10 @@
           "codex_fingerprint_force_http1_desc": "Заставлять все HTTPS-запросы Codex upstream использовать HTTP/1.1. По умолчанию выключено.",
           "codex_fingerprint_images_force_http1": "HTTP/1.1 только для изображений",
           "codex_fingerprint_images_force_http1_desc": "Заставлять только image_generation запросы использовать HTTP/1.1. Можно включать вместе с глобальным переключателем HTTP/1.1.",
+          "codex_enforce_software_identity": "Унифицировать программную идентичность Codex",
+          "codex_enforce_software_identity_desc": "Включено по умолчанию. Унифицирует User-Agent, Originator и Version в исходящих запросах Codex OAuth/файловых учётных данных. Клиентские значения не меняют итоговый набор; ключи Codex API не затрагиваются.",
           "codex_header_defaults_user_agent": "Codex User-Agent по умолчанию",
+          "codex_header_defaults_user_agent_hint": "Минимальная совместимая версия — 0.144.0. Более старый номер обновляется только в исходящих запросах без изменения сохранённого значения. Нераспознаваемый формат заменяется встроенным Codex User-Agent.",
           "codex_header_defaults_beta_features": "Codex Beta-Features по умолчанию",
           "codex_header_defaults_originator": "Codex Originator по умолчанию"
         },

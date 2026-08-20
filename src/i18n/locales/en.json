@@ -2222,7 +2222,10 @@
           "codex_fingerprint_force_http1_desc": "Force all Codex HTTPS upstream requests to use HTTP/1.1. Disabled by default.",
           "codex_fingerprint_images_force_http1": "Force HTTP/1.1 for Images Only",
           "codex_fingerprint_images_force_http1_desc": "Only force image_generation requests to use HTTP/1.1. Can be enabled together with the global HTTP/1.1 switch.",
+          "codex_enforce_software_identity": "Enforce Codex Software Identity",
+          "codex_enforce_software_identity_desc": "Enabled by default. Normalize User-Agent, Originator, and Version for outbound Codex OAuth/file requests. Client values cannot change the final tuple; Codex API keys are unaffected.",
           "codex_header_defaults_user_agent": "Codex User-Agent Default",
+          "codex_header_defaults_user_agent_hint": "Minimum compatible version: 0.144.0. Older versions are upgraded only in outbound requests without changing the saved value. Unparseable values fall back to the built-in Codex User-Agent.",
           "codex_header_defaults_beta_features": "Codex Beta-Features Default",
           "codex_header_defaults_originator": "Codex Originator Default"
         },

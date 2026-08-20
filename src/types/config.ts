@@ -193,6 +193,7 @@ export interface CodexConfig {
   identityConfuse?: boolean;
   spoofSessionIdentity?: boolean;
   turnStatePolicy?: CodexTurnStatePolicy;
+  enforceSoftwareIdentity?: boolean;
 }
 
 export interface RemoteManagementConfig {

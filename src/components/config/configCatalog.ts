@@ -500,9 +500,18 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.codex_header_defaults_user_agent',
     yamlKeys: [
       'codex-header-defaults',
+      'codex.enforce-software-identity',
       'codex-header-defaults.user-agent',
       'codex-header-defaults.beta-features',
       'codex-header-defaults.originator',
+    ],
+    aliases: [
+      'software identity',
+      'codex identity enforcement',
+      'minimum user agent version',
+      '软件身份',
+      '统一软件身份',
+      '最低 user-agent 版本',
     ],
   },
   {

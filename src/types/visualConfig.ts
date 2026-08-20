@@ -301,6 +301,7 @@ export type VisualConfigValues = {
   codexIdentityConfuse: boolean;
   codexSpoofSessionIdentity: boolean;
   codexTurnStatePolicy: CodexTurnStatePolicy;
+  codexEnforceSoftwareIdentity: boolean;
   codexFingerprintJA3: boolean;
   codexFingerprintForceHTTP1: boolean;
   codexFingerprintImagesForceHTTP1: boolean;
@@ -407,6 +408,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexIdentityConfuse: false,
   codexSpoofSessionIdentity: false,
   codexTurnStatePolicy: DEFAULT_CODEX_TURN_STATE_POLICY,
+  codexEnforceSoftwareIdentity: true,
   codexFingerprintJA3: false,
   codexFingerprintForceHTTP1: false,
   codexFingerprintImagesForceHTTP1: false,

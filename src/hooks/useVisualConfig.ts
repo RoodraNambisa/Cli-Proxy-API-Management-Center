@@ -2278,6 +2278,12 @@ function getNextDirtyFields(
       nextValues.codexTurnStatePolicy === baselineValues.codexTurnStatePolicy
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexEnforceSoftwareIdentity')) {
+    updateDirty(
+      'codexEnforceSoftwareIdentity',
+      nextValues.codexEnforceSoftwareIdentity === baselineValues.codexEnforceSoftwareIdentity
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintJA3')) {
     updateDirty(
       'codexFingerprintJA3',
@@ -3130,6 +3136,13 @@ export function useVisualConfig() {
         codexTurnStatePolicy: normalizeCodexTurnStatePolicy(
           codex?.['turn-state-policy'] ?? codex?.turnStatePolicy
         ),
+        codexEnforceSoftwareIdentity:
+          codex?.['enforce-software-identity'] === undefined &&
+          codex?.enforceSoftwareIdentity === undefined
+            ? true
+            : parseBooleanValue(
+                codex?.['enforce-software-identity'] ?? codex?.enforceSoftwareIdentity
+              ),
         codexFingerprintJA3,
         codexFingerprintForceHTTP1,
         codexFingerprintImagesForceHTTP1,
@@ -3639,12 +3652,14 @@ export function useVisualConfig() {
           docHas(doc, ['codex']) ||
           values.codexIdentityConfuse ||
           values.codexSpoofSessionIdentity ||
-          values.codexTurnStatePolicy !== DEFAULT_CODEX_TURN_STATE_POLICY
+          values.codexTurnStatePolicy !== DEFAULT_CODEX_TURN_STATE_POLICY ||
+          !values.codexEnforceSoftwareIdentity
         ) {
           ensureMapInDoc(doc, ['codex']);
           doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
           doc.setIn(['codex', 'spoof-session-identity'], values.codexSpoofSessionIdentity);
           doc.setIn(['codex', 'turn-state-policy'], values.codexTurnStatePolicy);
+          doc.setIn(['codex', 'enforce-software-identity'], values.codexEnforceSoftwareIdentity);
           deleteIfMapEmpty(doc, ['codex']);
         }
         if (

@@ -2246,7 +2246,10 @@
           "codex_fingerprint_force_http1_desc": "強制所有 Codex HTTPS 上游請求使用 HTTP/1.1，預設關閉",
           "codex_fingerprint_images_force_http1": "僅圖片請求強制 HTTP/1.1",
           "codex_fingerprint_images_force_http1_desc": "僅對 image_generation 圖片請求強制使用 HTTP/1.1，可與全域 HTTP/1.1 開關同時開啟",
+          "codex_enforce_software_identity": "強制統一 Codex 軟體身份",
+          "codex_enforce_software_identity_desc": "預設開啟。統一 Codex OAuth/檔案憑證送出請求的 User-Agent、Originator 與 Version；用戶端值不會改變最終三元組，Codex API Key 不受影響。",
           "codex_header_defaults_user_agent": "Codex User-Agent 預設值",
+          "codex_header_defaults_user_agent_hint": "最低相容版本為 0.144.0。版本過低時只升級送出請求的版本欄位，不修改已儲存值；格式無法解析時使用內建 Codex User-Agent。",
           "codex_header_defaults_beta_features": "Codex Beta-Features 預設值",
           "codex_header_defaults_originator": "Codex Originator 預設值"
         },

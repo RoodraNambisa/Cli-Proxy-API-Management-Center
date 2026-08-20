@@ -878,6 +878,11 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       turnStatePolicy: normalizeCodexTurnStatePolicy(
         codex['turn-state-policy'] ?? codex.turnStatePolicy
       ),
+      enforceSoftwareIdentity:
+        codex['enforce-software-identity'] === undefined &&
+        codex.enforceSoftwareIdentity === undefined
+          ? true
+          : normalizeBoolean(codex['enforce-software-identity'] ?? codex.enforceSoftwareIdentity),
     };
   }
   const codexFingerprint = raw['codex-fingerprint'] ?? raw.codexFingerprint;
