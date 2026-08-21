@@ -198,6 +198,18 @@ const createSystemSnapshot = (): SystemMetricsSnapshot => ({
     total_wait_nanos: 5_000_000,
     max_wait_nanos: 2_000_000,
   },
+  chatgpt_web_image_protocol: {
+    available: true,
+    task_ids_observed: 41,
+    exact_streams_started: 37,
+    exact_streams_completed: 29,
+    exact_stream_fallbacks: 8,
+    final_messages_captured: 31,
+    task_pages_fetched: 52,
+    hidden_outputs_ignored: 6,
+    incomplete_pointers_observed: 14,
+    all_sources_exhausted_without_output: 3,
+  },
   image_spool: {
     available: true,
     current_files: 2,
@@ -295,6 +307,7 @@ describe('system metrics and filesystem capacity', () => {
     expect(snapshot.chatgpt_web_image_memory_finalizers.available).toBe(false);
     expect(snapshot.chatgpt_web_image_poll_slots.available).toBe(false);
     expect(snapshot.chatgpt_web_image_poll_slots.capacity_details_available).toBe(false);
+    expect(snapshot.chatgpt_web_image_protocol.available).toBe(false);
     expect(snapshot.image_spool.available).toBe(false);
     expect(snapshot.image_request_phases.available).toBe(false);
 
@@ -321,6 +334,12 @@ describe('system metrics and filesystem capacity', () => {
         timed_out: 3,
         shrinking: false,
         max_wait_nanos: '9000000',
+      },
+      chatgpt_web_image_protocol: {
+        task_ids_observed: '12',
+        exact_streams_started: -1,
+        exact_streams_completed: 7,
+        all_sources_exhausted_without_output: '2',
       },
       image_spool: {
         current_files: -1,
@@ -364,6 +383,14 @@ describe('system metrics and filesystem capacity', () => {
       timed_out: 3,
     });
     expect(imageSnapshot.chatgpt_web_image_poll_slots.max_wait_nanos).toBe(9_000_000);
+    expect(imageSnapshot.chatgpt_web_image_protocol).toMatchObject({
+      available: true,
+      task_ids_observed: 12,
+      exact_streams_started: 0,
+      exact_streams_completed: 7,
+      exact_stream_fallbacks: 0,
+      all_sources_exhausted_without_output: 2,
+    });
     expect(imageSnapshot.image_spool).toMatchObject({
       available: true,
       current_files: 0,
@@ -775,6 +802,22 @@ describe('system metrics and filesystem capacity', () => {
     expect(within(spoolPanel as HTMLElement).getByText('6.0 MiB')).toBeTruthy();
     expect(within(spoolPanel as HTMLElement).getByText('24.0 MiB')).toBeTruthy();
 
+    const protocol = within(runtime).getByTestId('image-protocol-convergence');
+    expect(
+      within(protocol).getByText('system_info.image_runtime.protocol_convergence')
+    ).toBeTruthy();
+    fireEvent.click(within(protocol).getByText('system_info.image_runtime.protocol_convergence'));
+    expect(
+      within(protocol).getByText('system_info.image_runtime.protocol_metrics.task_ids_observed')
+        .parentElement?.textContent
+    ).toContain('41');
+    expect(
+      within(protocol).getByText(
+        'system_info.image_runtime.protocol_metrics.all_sources_exhausted_without_output'
+      ).parentElement?.textContent
+    ).toContain('3');
+    expect(within(protocol).getByText('system_info.image_runtime.protocol_note')).toBeTruthy();
+
     fireEvent.click(within(runtime).getByText('system_info.image_runtime.phases'));
     expect(
       within(runtime).getByText('system_info.image_runtime.phase_names.route_request_total')
@@ -798,6 +841,7 @@ describe('system metrics and filesystem capacity', () => {
     render(<SystemPage />);
     const runtime = await screen.findByTestId('image-runtime-metrics');
     expect(within(runtime).getByText('system_info.image_runtime.unavailable')).toBeTruthy();
+    expect(within(runtime).queryByTestId('image-protocol-convergence')).toBeNull();
     expect(within(runtime).queryByText('/ 0 B')).toBeNull();
   });
 

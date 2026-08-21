@@ -2830,6 +2830,20 @@
       "maximum": "Maximum",
       "over_10_seconds": ">10 seconds",
       "phase_note": "Handler phases cover all image routes; web_* phases start only after ChatGPT Web is selected. route_response_write_operation count is the number of write operations, not requests.",
+      "protocol_convergence": "Official image protocol convergence",
+      "cumulative_counters": "Cumulative since process start",
+      "protocol_note": "These counters show how the initial stream, paginated tasks, exact task streams, and conversation fallback converge. They contain no task identities, image URLs, or message text.",
+      "protocol_metrics": {
+        "task_ids_observed": "Task IDs observed",
+        "exact_streams_started": "Exact streams started",
+        "exact_streams_completed": "Exact streams completed",
+        "exact_stream_fallbacks": "Exact stream fallbacks",
+        "final_messages_captured": "Final messages captured",
+        "task_pages_fetched": "Task pages fetched",
+        "hidden_outputs_ignored": "Hidden outputs ignored",
+        "incomplete_pointers_observed": "Incomplete pointers observed",
+        "all_sources_exhausted_without_output": "All sources exhausted without output"
+      },
       "phase_names": {
         "route_request_total": "Total route time",
         "route_input_admission": "Input admission",

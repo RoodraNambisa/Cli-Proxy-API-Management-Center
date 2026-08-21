@@ -2834,6 +2834,20 @@
       "maximum": "最大",
       "over_10_seconds": "超过 10 秒",
       "phase_note": "Handler 阶段覆盖全部图片路由；web_* 阶段仅在选中 ChatGPT Web 后开始。route_response_write_operation 的计数是写操作次数，不是请求数。",
+      "protocol_convergence": "官方图片协议收敛",
+      "cumulative_counters": "进程启动后累计",
+      "protocol_note": "这些计数用于判断初始流、分页任务、精确任务流与 conversation 回退如何收敛；仅为累计次数，不包含任务标识、图片地址或正文。",
+      "protocol_metrics": {
+        "task_ids_observed": "发现任务 ID",
+        "exact_streams_started": "精确任务流启动",
+        "exact_streams_completed": "精确任务流完成",
+        "exact_stream_fallbacks": "精确任务流回退",
+        "final_messages_captured": "捕获 final_message",
+        "task_pages_fetched": "读取任务分页",
+        "hidden_outputs_ignored": "忽略隐藏输出",
+        "incomplete_pointers_observed": "观察到未完整图片指针",
+        "all_sources_exhausted_without_output": "所有来源耗尽仍无图"
+      },
       "phase_names": {
         "route_request_total": "路由总耗时",
         "route_input_admission": "输入内存准入",

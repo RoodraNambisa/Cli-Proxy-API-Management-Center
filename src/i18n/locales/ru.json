@@ -2827,6 +2827,20 @@
       "maximum": "Максимум",
       "over_10_seconds": ">10 секунд",
       "phase_note": "Этапы Handler охватывают все маршруты изображений; этапы web_* начинаются только после выбора ChatGPT Web. Счётчик route_response_write_operation — число операций записи, а не запросов.",
+      "protocol_convergence": "Сведение официального протокола изображений",
+      "cumulative_counters": "Накопительно с запуска процесса",
+      "protocol_note": "Счётчики показывают сведение начального потока, страниц задач, точных потоков задач и резервного чтения conversation. Они не содержат идентификаторы задач, URL изображений или текст сообщений.",
+      "protocol_metrics": {
+        "task_ids_observed": "Обнаружено ID задач",
+        "exact_streams_started": "Запущено точных потоков",
+        "exact_streams_completed": "Завершено точных потоков",
+        "exact_stream_fallbacks": "Откатов точных потоков",
+        "final_messages_captured": "Получено final_message",
+        "task_pages_fetched": "Загружено страниц задач",
+        "hidden_outputs_ignored": "Скрытых результатов пропущено",
+        "incomplete_pointers_observed": "Обнаружено неполных указателей",
+        "all_sources_exhausted_without_output": "Все источники исчерпаны без результата"
+      },
       "phase_names": {
         "route_request_total": "Общее время маршрута",
         "route_input_admission": "Допуск входных данных",

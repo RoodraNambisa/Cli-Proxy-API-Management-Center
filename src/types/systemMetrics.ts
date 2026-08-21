@@ -118,6 +118,19 @@ export interface SystemImageSpoolSnapshot {
   cleanup_failures: number;
 }
 
+export interface SystemChatGptWebImageProtocolSnapshot {
+  available: boolean;
+  task_ids_observed: number;
+  exact_streams_started: number;
+  exact_streams_completed: number;
+  exact_stream_fallbacks: number;
+  final_messages_captured: number;
+  task_pages_fetched: number;
+  hidden_outputs_ignored: number;
+  incomplete_pointers_observed: number;
+  all_sources_exhausted_without_output: number;
+}
+
 export interface SystemMetricsSnapshot {
   collected_at: string;
   runtime: SystemRuntimeSnapshot;
@@ -131,6 +144,7 @@ export interface SystemMetricsSnapshot {
   chatgpt_web_image_finalizers: SystemImageExecutionAdmissionSnapshot;
   chatgpt_web_image_memory_finalizers: SystemImageExecutionAdmissionSnapshot;
   chatgpt_web_image_poll_slots: SystemImagePollSlotsSnapshot;
+  chatgpt_web_image_protocol: SystemChatGptWebImageProtocolSnapshot;
   image_spool: SystemImageSpoolSnapshot;
   image_request_phases: SystemImageRequestPhasesSnapshot;
 }

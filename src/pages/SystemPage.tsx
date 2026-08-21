@@ -624,7 +624,24 @@ export function SystemPage() {
   const imageFinalizers = systemMetrics?.chatgpt_web_image_finalizers;
   const imageMemoryFinalizers = systemMetrics?.chatgpt_web_image_memory_finalizers;
   const imagePollSlots = systemMetrics?.chatgpt_web_image_poll_slots;
+  const imageProtocol = systemMetrics?.chatgpt_web_image_protocol;
   const imageSpool = systemMetrics?.image_spool;
+  const imageProtocolEntries: Array<[string, number]> = imageProtocol?.available
+    ? [
+        ['task_ids_observed', imageProtocol.task_ids_observed],
+        ['exact_streams_started', imageProtocol.exact_streams_started],
+        ['exact_streams_completed', imageProtocol.exact_streams_completed],
+        ['exact_stream_fallbacks', imageProtocol.exact_stream_fallbacks],
+        ['final_messages_captured', imageProtocol.final_messages_captured],
+        ['task_pages_fetched', imageProtocol.task_pages_fetched],
+        ['hidden_outputs_ignored', imageProtocol.hidden_outputs_ignored],
+        ['incomplete_pointers_observed', imageProtocol.incomplete_pointers_observed],
+        [
+          'all_sources_exhausted_without_output',
+          imageProtocol.all_sources_exhausted_without_output,
+        ],
+      ]
+    : [];
   const imagePhaseEntries = systemMetrics
     ? sortImagePhaseEntries(Object.entries(systemMetrics.image_request_phases.metrics))
     : [];
@@ -634,6 +651,7 @@ export function SystemPage() {
     imageFinalizers?.available ||
     imageMemoryFinalizers?.available ||
     imagePollSlots?.available ||
+    imageProtocol?.available ||
     imageSpool?.available ||
     systemMetrics?.image_request_phases.available
   );
@@ -1347,6 +1365,29 @@ export function SystemPage() {
                         )}
                       </article>
                     </div>
+
+                    {imageProtocol?.available ? (
+                      <details
+                        className={styles.imagePhaseDetails}
+                        data-testid="image-protocol-convergence"
+                      >
+                        <summary>
+                          <span>{t('system_info.image_runtime.protocol_convergence')}</span>
+                          <span>{t('system_info.image_runtime.cumulative_counters')}</span>
+                        </summary>
+                        <dl className={styles.imageProtocolGrid}>
+                          {imageProtocolEntries.map(([key, value]) => (
+                            <div key={key}>
+                              <dt>{t(`system_info.image_runtime.protocol_metrics.${key}`)}</dt>
+                              <dd>{value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                        <p className={styles.imagePhaseNote}>
+                          {t('system_info.image_runtime.protocol_note')}
+                        </p>
+                      </details>
+                    ) : null}
 
                     {systemMetrics.image_request_phases.available ? (
                       <details className={styles.imagePhaseDetails}>
