@@ -9,6 +9,7 @@ import type {
 import {
   CODEX_CUSTOM_MODEL_GROUPS,
   normalizeCodexFingerprintMode,
+  normalizeCodexSessionIdentityPoolSize,
   normalizeCodexTurnStatePolicy,
   type CodexCustomModelConfig,
   type CodexCustomModelGroup,
@@ -898,6 +899,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
         codexFingerprint['images-force-http1'] ??
           codexFingerprint.imagesForceHTTP1 ??
           codexFingerprint.imagesForceHttp1
+      ),
+      sessionIdentityPoolSize: normalizeCodexSessionIdentityPoolSize(
+        codexFingerprint['session-identity-pool-size'] ?? codexFingerprint.sessionIdentityPoolSize
       ),
       defaultMode: normalizeCodexFingerprintMode(
         codexFingerprint['default-mode'] ?? codexFingerprint.defaultMode

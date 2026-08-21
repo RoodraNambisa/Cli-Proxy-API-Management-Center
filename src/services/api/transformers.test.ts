@@ -61,4 +61,22 @@ describe('normalizeConfigResponse Codex configuration', () => {
     ).toBe('guard-cross-account');
     expect(normalizeConfigResponse({ codex: {} }).codex?.enforceSoftwareIdentity).toBe(true);
   });
+
+  it('normalizes the Codex session identity pool size', () => {
+    expect(
+      normalizeConfigResponse({
+        'codex-fingerprint': { 'session-identity-pool-size': 4 },
+      }).codexFingerprint?.sessionIdentityPoolSize
+    ).toBe(4);
+    expect(
+      normalizeConfigResponse({
+        codexFingerprint: { sessionIdentityPoolSize: '8' },
+      }).codexFingerprint?.sessionIdentityPoolSize
+    ).toBe(8);
+    expect(
+      normalizeConfigResponse({
+        'codex-fingerprint': { 'session-identity-pool-size': 0 },
+      }).codexFingerprint?.sessionIdentityPoolSize
+    ).toBe(1);
+  });
 });

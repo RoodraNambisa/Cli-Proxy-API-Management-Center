@@ -28,8 +28,12 @@ import { DEFAULT_VISUAL_VALUES, makeClientId } from '@/types/visualConfig';
 import {
   CODEX_CUSTOM_MODEL_GROUPS,
   DEFAULT_CODEX_FINGERPRINT_MODE,
+  DEFAULT_CODEX_SESSION_IDENTITY_POOL_SIZE,
   DEFAULT_CODEX_TURN_STATE_POLICY,
+  MAX_CODEX_SESSION_IDENTITY_POOL_SIZE,
+  MIN_CODEX_SESSION_IDENTITY_POOL_SIZE,
   normalizeCodexFingerprintMode,
+  normalizeCodexSessionIdentityPoolSize,
   normalizeCodexTurnStatePolicy,
   type CodexCustomModelGroup,
 } from '@/types/config';
@@ -1532,6 +1536,12 @@ export function getVisualConfigValidationErrors(
     requestRetry: getNonNegativeIntegerError(values.requestRetry),
     maxRetryCredentials: getNonNegativeIntegerError(values.maxRetryCredentials),
     maxRetryInterval: getNonNegativeIntegerError(values.maxRetryInterval),
+    codexFingerprintSessionIdentityPoolSize: getIntegerRangeError(
+      values.codexFingerprintSessionIdentityPoolSize,
+      MIN_CODEX_SESSION_IDENTITY_POOL_SIZE,
+      MAX_CODEX_SESSION_IDENTITY_POOL_SIZE,
+      'integer_range_1_64'
+    ),
     noCooldownStatusCodes: getHttpStatusListError(values.noCooldownStatusCodes),
     chatgptWebAutoDeleteDeadPriorities: getSafeIntegerStringListError(
       values.chatgptWebAutoDeleteDeadPriorities
@@ -2303,6 +2313,13 @@ function getNextDirtyFields(
         baselineValues.codexFingerprintImagesForceHTTP1
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintSessionIdentityPoolSize')) {
+    updateDirty(
+      'codexFingerprintSessionIdentityPoolSize',
+      nextValues.codexFingerprintSessionIdentityPoolSize ===
+        baselineValues.codexFingerprintSessionIdentityPoolSize
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexFingerprintDefaultMode')) {
     updateDirty(
       'codexFingerprintDefaultMode',
@@ -3049,6 +3066,12 @@ export function useVisualConfig() {
       const codexFingerprintDefaultMode = normalizeCodexFingerprintMode(
         codexFingerprint?.['default-mode'] ?? codexFingerprint?.defaultMode
       );
+      const codexFingerprintSessionIdentityPoolSize = String(
+        normalizeCodexSessionIdentityPoolSize(
+          codexFingerprint?.['session-identity-pool-size'] ??
+            codexFingerprint?.sessionIdentityPoolSize
+        )
+      );
       const authFilesPagination = asRecord(remoteManagement?.['auth-files-pagination']);
       const liveLogs = asRecord(remoteManagement?.['live-logs'] ?? remoteManagement?.liveLogs);
       const diagnostics = asRecord(remoteManagement?.diagnostics);
@@ -3146,6 +3169,7 @@ export function useVisualConfig() {
         codexFingerprintJA3,
         codexFingerprintForceHTTP1,
         codexFingerprintImagesForceHTTP1,
+        codexFingerprintSessionIdentityPoolSize,
         codexFingerprintDefaultMode,
         codexHeaderDefaultsUserAgent:
           typeof codexHeaderDefaults?.['user-agent'] === 'string'
@@ -3667,6 +3691,8 @@ export function useVisualConfig() {
           values.codexFingerprintJA3 ||
           values.codexFingerprintForceHTTP1 ||
           values.codexFingerprintImagesForceHTTP1 ||
+          values.codexFingerprintSessionIdentityPoolSize !==
+            String(DEFAULT_CODEX_SESSION_IDENTITY_POOL_SIZE) ||
           values.codexFingerprintDefaultMode !== DEFAULT_CODEX_FINGERPRINT_MODE
         ) {
           const codexFingerprintForceHTTP1 = values.codexFingerprintJA3
@@ -3681,6 +3707,12 @@ export function useVisualConfig() {
           doc.deleteIn(['codex-fingerprint', 'stabilize-per-account']);
           doc.setIn(['codex-fingerprint', 'force-http1'], codexFingerprintForceHTTP1);
           doc.setIn(['codex-fingerprint', 'images-force-http1'], codexFingerprintImagesForceHTTP1);
+          setIntFromStringInDoc(
+            doc,
+            ['codex-fingerprint', 'session-identity-pool-size'],
+            values.codexFingerprintSessionIdentityPoolSize
+          );
+          doc.deleteIn(['codex-fingerprint', 'sessionIdentityPoolSize']);
           doc.setIn(['codex-fingerprint', 'default-mode'], values.codexFingerprintDefaultMode);
           doc.deleteIn(['codex-fingerprint', 'defaultMode']);
           deleteIfMapEmpty(doc, ['codex-fingerprint']);

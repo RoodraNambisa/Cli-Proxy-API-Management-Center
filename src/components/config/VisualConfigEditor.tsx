@@ -63,6 +63,8 @@ import type {
 import { makeClientId } from '@/types/visualConfig';
 import {
   CODEX_FINGERPRINT_MODES,
+  MAX_CODEX_SESSION_IDENTITY_POOL_SIZE,
+  MIN_CODEX_SESSION_IDENTITY_POOL_SIZE,
   type CodexFingerprintDefaultMode,
   type CodexTurnStatePolicy,
 } from '@/types/config';
@@ -1055,6 +1057,10 @@ export function VisualConfigEditor({
   const requestRetryError = getValidationMessage(t, validationErrors?.requestRetry);
   const maxRetryCredentialsError = getValidationMessage(t, validationErrors?.maxRetryCredentials);
   const maxRetryIntervalError = getValidationMessage(t, validationErrors?.maxRetryInterval);
+  const codexFingerprintSessionIdentityPoolSizeError = getValidationMessage(
+    t,
+    validationErrors?.codexFingerprintSessionIdentityPoolSize
+  );
   const routingFillFirstRangeError = getValidationMessage(
     t,
     validationErrors?.routingFillFirstRange
@@ -1719,6 +1725,7 @@ export function VisualConfigEditor({
       'provider-codex':
         authSectionErrorCount +
         countErrors([
+          'codexFingerprintSessionIdentityPoolSize',
           'disabledImageGenerationToolError.statusCode',
           'images.unsupportedStatusCode',
           'images.streamFlushIntervalMs',
@@ -4727,6 +4734,27 @@ export function VisualConfigEditor({
                         }
                       />
                     </FieldShell>
+                    <Input
+                      id="config-codex-fingerprint-session-identity-pool-size"
+                      type="number"
+                      min={MIN_CODEX_SESSION_IDENTITY_POOL_SIZE}
+                      max={MAX_CODEX_SESSION_IDENTITY_POOL_SIZE}
+                      step={1}
+                      label={t(
+                        'config_management.visual.sections.network.codex_fingerprint_session_identity_pool_size'
+                      )}
+                      hint={t(
+                        'config_management.visual.sections.network.codex_fingerprint_session_identity_pool_size_desc'
+                      )}
+                      error={codexFingerprintSessionIdentityPoolSizeError}
+                      value={values.codexFingerprintSessionIdentityPoolSize}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({
+                          codexFingerprintSessionIdentityPoolSize: event.target.value,
+                        })
+                      }
+                    />
                     <ToggleRow
                       title={t('config_management.visual.sections.network.codex_fingerprint_ja3')}
                       description={t(

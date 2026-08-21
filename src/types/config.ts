@@ -149,6 +149,10 @@ export type CodexFingerprintDefaultMode = (typeof CODEX_FINGERPRINT_MODES)[numbe
 
 export const DEFAULT_CODEX_FINGERPRINT_MODE: CodexFingerprintDefaultMode = 'device';
 
+export const DEFAULT_CODEX_SESSION_IDENTITY_POOL_SIZE = 1;
+export const MIN_CODEX_SESSION_IDENTITY_POOL_SIZE = 1;
+export const MAX_CODEX_SESSION_IDENTITY_POOL_SIZE = 64;
+
 export const normalizeCodexFingerprintMode = (value: unknown): CodexFingerprintDefaultMode => {
   if (typeof value !== 'string') return DEFAULT_CODEX_FINGERPRINT_MODE;
   const normalized = value.trim().toLowerCase();
@@ -157,10 +161,25 @@ export const normalizeCodexFingerprintMode = (value: unknown): CodexFingerprintD
     : DEFAULT_CODEX_FINGERPRINT_MODE;
 };
 
+export const normalizeCodexSessionIdentityPoolSize = (value: unknown): number => {
+  const parsed =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim() !== ''
+        ? Number(value)
+        : Number.NaN;
+  return Number.isSafeInteger(parsed) &&
+    parsed >= MIN_CODEX_SESSION_IDENTITY_POOL_SIZE &&
+    parsed <= MAX_CODEX_SESSION_IDENTITY_POOL_SIZE
+    ? parsed
+    : DEFAULT_CODEX_SESSION_IDENTITY_POOL_SIZE;
+};
+
 export interface CodexFingerprintConfig {
   ja3?: boolean;
   forceHTTP1?: boolean;
   imagesForceHTTP1?: boolean;
+  sessionIdentityPoolSize?: number;
   defaultMode?: CodexFingerprintDefaultMode;
 }
 

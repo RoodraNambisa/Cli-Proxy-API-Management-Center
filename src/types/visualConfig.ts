@@ -3,7 +3,11 @@ import type {
   CodexFingerprintDefaultMode,
   CodexTurnStatePolicy,
 } from './config';
-import { DEFAULT_CODEX_FINGERPRINT_MODE, DEFAULT_CODEX_TURN_STATE_POLICY } from './config';
+import {
+  DEFAULT_CODEX_FINGERPRINT_MODE,
+  DEFAULT_CODEX_SESSION_IDENTITY_POOL_SIZE,
+  DEFAULT_CODEX_TURN_STATE_POLICY,
+} from './config';
 
 export type PayloadParamValueType = 'string' | 'number' | 'boolean' | 'json';
 export type PayloadParamValidationErrorCode =
@@ -22,6 +26,7 @@ export type VisualConfigFieldPath =
   | 'requestRetry'
   | 'maxRetryCredentials'
   | 'maxRetryInterval'
+  | 'codexFingerprintSessionIdentityPoolSize'
   | 'noCooldownStatusCodes'
   | 'chatgptWebAutoDeleteDeadPriorities'
   | 'chatgptWebAutoReloginWorkers'
@@ -96,6 +101,7 @@ export type VisualConfigValidationErrorCode =
   | 'number_range_0_10'
   | 'integer_range_1_3840'
   | 'integer_range_1_256'
+  | 'integer_range_1_64'
   | 'integer_range_1_1000000'
   | 'integer_range_1_10'
   | 'integer_range_0_512'
@@ -305,6 +311,7 @@ export type VisualConfigValues = {
   codexFingerprintJA3: boolean;
   codexFingerprintForceHTTP1: boolean;
   codexFingerprintImagesForceHTTP1: boolean;
+  codexFingerprintSessionIdentityPoolSize: string;
   codexFingerprintDefaultMode: CodexFingerprintDefaultMode;
   codexHeaderDefaultsUserAgent: string;
   codexHeaderDefaultsBetaFeatures: string;
@@ -412,6 +419,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexFingerprintJA3: false,
   codexFingerprintForceHTTP1: false,
   codexFingerprintImagesForceHTTP1: false,
+  codexFingerprintSessionIdentityPoolSize: String(DEFAULT_CODEX_SESSION_IDENTITY_POOL_SIZE),
   codexFingerprintDefaultMode: DEFAULT_CODEX_FINGERPRINT_MODE,
   codexHeaderDefaultsUserAgent: '',
   codexHeaderDefaultsBetaFeatures: '',
