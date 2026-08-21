@@ -3549,10 +3549,15 @@
         "sdk_sha256": "SDK SHA-256",
         "source_cache_entries": "Source cache entries",
         "bytecode_cache_entries": "Bytecode cache entries",
-        "compatibility_fallback_count": "Real compatibility fallbacks",
+        "compatibility_fallback_count": "Total compatibility fallbacks",
+        "turnstile_compatibility_fallback_count": "Turnstile compatibility fallbacks",
+        "observer_compatibility_fallback_count": "Observer compatibility fallbacks",
         "sdk_preferred_hit_count": "SDK priority hits",
         "session_observer_count": "Session Observer starts",
         "fallback_count": "Fallback count",
+        "last_compatibility_program": "Latest compatibility program",
+        "last_compatibility_kind": "Latest compatibility type",
+        "last_compatibility_operation_hash": "Latest operation SHA-256",
         "last_error": "Last error"
       }
     },

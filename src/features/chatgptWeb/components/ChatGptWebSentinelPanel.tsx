@@ -293,6 +293,17 @@ export const ChatGptWebSentinelPanel = forwardRef<
     typeof snapshot.compatibility_fallback_count === 'number' &&
     typeof snapshot.sdk_preferred_hit_count === 'number' &&
     typeof snapshot.session_observer_count === 'number';
+  const hasCompatibilityBreakdown =
+    snapshot !== null &&
+    typeof snapshot.turnstile_compatibility_fallback_count === 'number' &&
+    typeof snapshot.observer_compatibility_fallback_count === 'number';
+  const hasCompatibilityDiagnostic =
+    snapshot !== null &&
+    Boolean(
+      snapshot.last_compatibility_program ||
+      snapshot.last_compatibility_kind ||
+      snapshot.last_compatibility_operation_hash
+    );
 
   const statusItems = snapshot
     ? [
@@ -326,6 +337,18 @@ export const ChatGptWebSentinelPanel = forwardRef<
                 key: 'compatibility_fallback_count',
                 value: snapshot.compatibility_fallback_count as number,
               },
+              ...(hasCompatibilityBreakdown
+                ? [
+                    {
+                      key: 'turnstile_compatibility_fallback_count',
+                      value: snapshot.turnstile_compatibility_fallback_count as number,
+                    },
+                    {
+                      key: 'observer_compatibility_fallback_count',
+                      value: snapshot.observer_compatibility_fallback_count as number,
+                    },
+                  ]
+                : []),
               {
                 key: 'sdk_preferred_hit_count',
                 value: snapshot.sdk_preferred_hit_count as number,
@@ -336,6 +359,22 @@ export const ChatGptWebSentinelPanel = forwardRef<
               },
             ]
           : [{ key: 'fallback_count', value: snapshot.fallback_count }]),
+        ...(hasCompatibilityDiagnostic
+          ? [
+              {
+                key: 'last_compatibility_program',
+                value: snapshot.last_compatibility_program || '-',
+              },
+              {
+                key: 'last_compatibility_kind',
+                value: snapshot.last_compatibility_kind || '-',
+              },
+              {
+                key: 'last_compatibility_operation_hash',
+                value: snapshot.last_compatibility_operation_hash || '-',
+              },
+            ]
+          : []),
         {
           key: 'last_error',
           value:

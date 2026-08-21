@@ -3553,10 +3553,15 @@
         "sdk_sha256": "SDK SHA-256",
         "source_cache_entries": "源码缓存条目",
         "bytecode_cache_entries": "字节码缓存条目",
-        "compatibility_fallback_count": "真实兼容回退",
+        "compatibility_fallback_count": "真实兼容回退总数",
+        "turnstile_compatibility_fallback_count": "Turnstile 兼容回退",
+        "observer_compatibility_fallback_count": "Observer 兼容回退",
         "sdk_preferred_hit_count": "SDK 优先命中",
         "session_observer_count": "Session Observer 启动次数",
         "fallback_count": "回退次数",
+        "last_compatibility_program": "最近兼容程序",
+        "last_compatibility_kind": "最近兼容类型",
+        "last_compatibility_operation_hash": "最近操作 SHA-256",
         "last_error": "最近错误"
       }
     },

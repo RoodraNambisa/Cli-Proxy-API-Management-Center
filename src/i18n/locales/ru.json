@@ -3546,10 +3546,15 @@
         "sdk_sha256": "SHA-256 SDK",
         "source_cache_entries": "Записи кэша исходника",
         "bytecode_cache_entries": "Записи кэша байткода",
-        "compatibility_fallback_count": "Реальные откаты совместимости",
+        "compatibility_fallback_count": "Всего откатов совместимости",
+        "turnstile_compatibility_fallback_count": "Откаты совместимости Turnstile",
+        "observer_compatibility_fallback_count": "Откаты совместимости Observer",
         "sdk_preferred_hit_count": "Попадания приоритета SDK",
         "session_observer_count": "Запуски Session Observer",
         "fallback_count": "Число резервных запусков",
+        "last_compatibility_program": "Последняя программа совместимости",
+        "last_compatibility_kind": "Последний тип совместимости",
+        "last_compatibility_operation_hash": "Последний SHA-256 операции",
         "last_error": "Последняя ошибка"
       }
     },

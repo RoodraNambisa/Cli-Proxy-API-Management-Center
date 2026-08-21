@@ -428,9 +428,14 @@ export interface ChatGptWebSentinelSnapshot extends ChatGptWebSentinelConfig {
   source_cache_entries: number;
   bytecode_cache_entries: number;
   compatibility_fallback_count?: number;
+  turnstile_compatibility_fallback_count?: number;
+  observer_compatibility_fallback_count?: number;
   sdk_preferred_hit_count?: number;
   session_observer_count?: number;
   fallback_count: number;
+  last_compatibility_program?: string;
+  last_compatibility_kind?: string;
+  last_compatibility_operation_hash?: string;
   last_error: string;
 }
 
