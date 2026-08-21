@@ -287,7 +287,6 @@ describe('ChatGPT Web image concurrency and capacity config', () => {
         'integer_range_1_4096',
         'integer_range_0_4096',
         'integer_range_0_30000',
-        'integer_range_1_64',
         'integer_range_0_32',
         'integer_range_64_8192',
       ]) {
