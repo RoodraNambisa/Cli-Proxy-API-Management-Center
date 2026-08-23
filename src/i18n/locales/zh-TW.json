@@ -1450,6 +1450,7 @@
       "http_401": "HTTP 401",
       "http_400": "HTTP 400",
       "http_502": "HTTP 502",
+      "moderation_blocked": "圖片請求遭安全審核拒絕",
       "image_memory_capacity": "圖片記憶體容量不足",
       "chatgpt_web_image_upstream_failed": "Web 圖片上游任務失敗",
       "chatgpt_web_image_no_output": "Web 圖片沒有可交付輸出",

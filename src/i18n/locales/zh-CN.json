@@ -1426,6 +1426,7 @@
       "http_401": "HTTP 401",
       "http_400": "HTTP 400",
       "http_502": "HTTP 502",
+      "moderation_blocked": "图片请求被安全审核拒绝",
       "image_memory_capacity": "图片内存容量不足",
       "chatgpt_web_image_upstream_failed": "Web 图片上游任务失败",
       "chatgpt_web_image_no_output": "Web 图片没有可交付输出",

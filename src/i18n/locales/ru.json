@@ -1423,6 +1423,7 @@
       "http_401": "HTTP 401",
       "http_400": "HTTP 400",
       "http_502": "HTTP 502",
+      "moderation_blocked": "Запрос изображения отклонён системой безопасности",
       "image_memory_capacity": "Недостаточно памяти для изображения",
       "chatgpt_web_image_upstream_failed": "Сбой upstream-задачи Web-изображения",
       "chatgpt_web_image_no_output": "Web-изображение не дало готового результата",

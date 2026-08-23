@@ -120,6 +120,7 @@ describe('lightweight usage management API', () => {
       'chatgpt_web_image_missing_terminal',
       'chatgpt_web_image_poll_not_converged',
       'chatgpt_web_image_poll_failed',
+      'moderation_blocked',
     ] as const;
     render(
       createElement(FailureSummaryCard, {
@@ -151,6 +152,7 @@ describe('lightweight usage management API', () => {
     expect(screen.getByText('Web image terminal state or session is missing')).not.toBeNull();
     expect(screen.getByText('Web image polling did not converge')).not.toBeNull();
     expect(screen.getByText('Web image polling failed')).not.toBeNull();
+    expect(screen.getByText('Image request rejected by safety review')).not.toBeNull();
 
     for (const locale of [enLocale, ruLocale, zhCNLocale, zhTWLocale]) {
       for (const code of codes) {
