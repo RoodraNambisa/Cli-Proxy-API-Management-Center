@@ -460,6 +460,58 @@
   gap: 8px;
 }
 
+.ruleTargetsEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ruleTargetList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ruleTargetItem {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(150px, 190px) 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-secondary);
+
+  strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+
+  label {
+    display: grid;
+    grid-template-columns: auto minmax(72px, 1fr);
+    align-items: center;
+    gap: 7px;
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+
+  input {
+    min-width: 0;
+    height: 32px;
+  }
+}
+
+.ruleTargetAdd {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .toggleField {
   display: grid;
   grid-column: 1 / -1;
@@ -636,6 +688,10 @@
   .editorGrid,
   .entryItem {
     grid-template-columns: 1fr;
+  }
+
+  .ruleTargetItem {
+    grid-template-columns: 1fr minmax(130px, 170px) 34px;
   }
 
   .checkSampleField {

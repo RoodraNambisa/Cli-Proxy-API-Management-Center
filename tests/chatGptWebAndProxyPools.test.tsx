@@ -1333,6 +1333,44 @@ describe('structured proxy management API', () => {
     });
   });
 
+  test('negotiates proxy rule schema v2 and preserves multi-target save payloads', async () => {
+    const rules = [
+      {
+        name: 'codex-route',
+        targets: [{ pool: 'primary', priority: 10 }, { direct: true, priority: 0 }],
+        providers: ['codex'],
+        priorities: [4],
+      },
+    ];
+    vi.spyOn(apiClient, 'get').mockResolvedValue({
+      schema_version: 2,
+      'proxy-rules': rules,
+    });
+    await expect(proxyPoolsApi.getRulesConfig()).resolves.toEqual({
+      rules,
+      schemaVersion: 2,
+      legacyTargetsUnsupported: false,
+    });
+
+    const put = vi.spyOn(apiClient, 'put').mockResolvedValue({
+      schema_version: 2,
+      'proxy-rules': rules,
+    });
+    await expect(proxyPoolsApi.saveRules(rules, 2)).resolves.toEqual(rules);
+    expect(put).toHaveBeenCalledWith('/proxy-rules', { schema_version: 2, value: rules });
+  });
+
+  test('flags unversioned target payloads instead of silently flattening them', async () => {
+    const rules = [{ name: 'route', targets: [{ pool: 'primary' }, { direct: true }] }];
+    vi.spyOn(apiClient, 'get').mockResolvedValue({ 'proxy-rules': rules });
+
+    await expect(proxyPoolsApi.getRulesConfig()).resolves.toEqual({
+      rules,
+      schemaVersion: 1,
+      legacyTargetsUnsupported: true,
+    });
+  });
+
   test('checks all bound nodes with a bounded unbound-node sample', async () => {
     const post = vi.spyOn(apiClient, 'post').mockResolvedValue({ results: [] });
 

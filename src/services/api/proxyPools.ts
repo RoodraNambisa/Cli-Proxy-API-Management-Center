@@ -10,6 +10,7 @@ import type {
   ProxyCheckTask,
   ProxyRebindResult,
   ProxyRule,
+  ProxyRulesConfig,
 } from '@/types';
 import { apiClient } from './client';
 
@@ -101,13 +102,28 @@ export const proxyPoolsApi = {
     return response.task;
   },
 
-  async getRules(): Promise<ProxyRule[]> {
-    const response = await apiClient.get<{ 'proxy-rules'?: ProxyRule[] }>('/proxy-rules');
-    return Array.isArray(response?.['proxy-rules']) ? response['proxy-rules'] : [];
+  async getRulesConfig(): Promise<ProxyRulesConfig> {
+    const response = await apiClient.get<{
+      schema_version?: number;
+      'proxy-rules'?: ProxyRule[];
+    }>('/proxy-rules');
+    const rules = Array.isArray(response?.['proxy-rules']) ? response['proxy-rules'] : [];
+    const schemaVersion = response?.schema_version === 2 ? 2 : 1;
+    return {
+      rules,
+      schemaVersion,
+      legacyTargetsUnsupported:
+        schemaVersion < 2 && rules.some((rule) => Array.isArray(rule.targets) && rule.targets.length > 0),
+    };
   },
 
-  async saveRules(rules: ProxyRule[]): Promise<ProxyRule[]> {
+  async getRules(): Promise<ProxyRule[]> {
+    return (await this.getRulesConfig()).rules;
+  },
+
+  async saveRules(rules: ProxyRule[], schemaVersion?: number): Promise<ProxyRule[]> {
     const response = await apiClient.put<{ 'proxy-rules'?: ProxyRule[] }>('/proxy-rules', {
+      ...(schemaVersion === 2 ? { schema_version: 2 } : {}),
       value: rules,
     });
     return Array.isArray(response?.['proxy-rules']) ? response['proxy-rules'] : rules;

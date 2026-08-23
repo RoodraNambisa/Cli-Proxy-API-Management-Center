@@ -30,6 +30,7 @@ import type {
   ProxyPoolEntry,
   ProxyPoolStatus,
   ProxyRule,
+  ProxyRuleTarget,
 } from '@/types';
 import { formatDateTime } from '@/utils/format';
 import styles from './ProxyPoolsPage.module.scss';
@@ -40,6 +41,14 @@ type PoolEditorState = {
   original: ProxyPool | null;
   draft: ProxyPool;
 };
+
+type ProxyRuleDraft = Omit<ProxyRule, 'targets'> & {
+  clientId: string;
+  targets: ProxyRuleTarget[];
+};
+
+let nextRuleDraftId = 0;
+const createRuleDraftId = (): string => `proxy-rule-${++nextRuleDraftId}`;
 
 const PROVIDER_OPTIONS = [
   'chatgpt-web',
@@ -120,12 +129,59 @@ const formatTime = (value?: string): string => {
   return Number.isNaN(date.getTime()) ? value : formatDateTime(date);
 };
 
-const normalizeRule = (rule: ProxyRule): ProxyRule => ({
-  name: rule.name.trim(),
-  pool: rule.pool.trim(),
-  providers: Array.from(new Set((rule.providers ?? []).map((item) => item.trim()).filter(Boolean))),
-  priorities: Array.from(new Set(rule.priorities ?? [])).sort((left, right) => right - left),
+const DIRECT_TARGET_VALUE = 'target:direct';
+const poolTargetValue = (pool: string): string => `target:pool:${pool}`;
+
+const normalizeRuleTargets = (rule: ProxyRule): ProxyRuleTarget[] => {
+  const source = Array.isArray(rule.targets) && rule.targets.length > 0
+    ? rule.targets
+    : rule.pool?.trim()
+      ? [{ pool: rule.pool.trim(), priority: 0 }]
+      : [];
+  return source.map((target) => ({
+    ...(target.direct ? { direct: true } : { pool: target.pool?.trim() ?? '' }),
+    priority: Number.isSafeInteger(target.priority) ? target.priority : 0,
+  }));
+};
+
+const toRuleDraft = (rule: ProxyRule): ProxyRuleDraft => ({
+  ...rule,
+  clientId: createRuleDraftId(),
+  targets: normalizeRuleTargets(rule),
 });
+
+const normalizeRule = (rule: ProxyRuleDraft, schemaVersion: number): ProxyRule => {
+  const base = {
+    name: rule.name.trim(),
+    providers: Array.from(
+      new Set((rule.providers ?? []).map((item) => item.trim()).filter(Boolean))
+    ),
+    priorities: Array.from(new Set(rule.priorities ?? [])).sort((left, right) => right - left),
+  };
+  if (schemaVersion < 2) {
+    return { ...base, pool: rule.targets[0]?.pool?.trim() ?? '' };
+  }
+  return {
+    ...base,
+    targets: rule.targets.map((target) => ({
+      ...(target.direct ? { direct: true } : { pool: target.pool?.trim() ?? '' }),
+      priority: Number.isSafeInteger(target.priority) ? target.priority : 0,
+    })),
+  };
+};
+
+const ruleTargetsAreValid = (targets: ProxyRuleTarget[]): boolean => {
+  const identities = new Set<string>();
+  for (const target of targets) {
+    const pool = target.pool?.trim() ?? '';
+    if ((pool ? 1 : 0) + (target.direct ? 1 : 0) !== 1) return false;
+    if (target.priority !== undefined && !Number.isSafeInteger(target.priority)) return false;
+    const identity = target.direct ? DIRECT_TARGET_VALUE : `pool:${pool.toLowerCase()}`;
+    if (identities.has(identity)) return false;
+    identities.add(identity);
+  }
+  return true;
+};
 
 function PriorityEditor({
   values,
@@ -190,6 +246,133 @@ function PriorityEditor({
   );
 }
 
+function RuleTargetsEditor({
+  targets,
+  pools,
+  schemaVersion,
+  onChange,
+  disabled,
+}: {
+  targets: ProxyRuleTarget[];
+  pools: ProxyPool[];
+  schemaVersion: number;
+  onChange: (targets: ProxyRuleTarget[]) => void;
+  disabled?: boolean;
+}) {
+  const { t } = useTranslation();
+  const [candidate, setCandidate] = useState('');
+  const selectedPools = new Set(targets.map((target) => target.pool).filter(Boolean));
+  const hasDirect = targets.some((target) => target.direct);
+  const availableOptions = [
+    ...pools
+      .filter((pool) => !selectedPools.has(pool.name))
+      .map((pool) => ({ value: poolTargetValue(pool.name), label: pool.name })),
+    ...(!hasDirect
+      ? [{ value: DIRECT_TARGET_VALUE, label: t('proxy_pools.rule_target_direct') }]
+      : []),
+  ];
+
+  const selectedCandidate = availableOptions.some((option) => option.value === candidate)
+    ? candidate
+    : '';
+
+  if (schemaVersion < 2) {
+    return (
+      <>
+        <Select
+          value={targets[0]?.pool ?? ''}
+          options={pools.map((pool) => ({ value: pool.name, label: pool.name }))}
+          onChange={(pool) => onChange([{ pool, priority: 0 }])}
+          disabled={disabled}
+        />
+        <span className={styles.fieldHint}>{t('proxy_pools.legacy_rule_targets_hint')}</span>
+      </>
+    );
+  }
+
+  const addTarget = () => {
+    if (!selectedCandidate) return;
+    onChange([
+      ...targets,
+      selectedCandidate === DIRECT_TARGET_VALUE
+        ? { direct: true, priority: 0 }
+        : {
+            pool: selectedCandidate.slice('target:pool:'.length),
+            priority: 0,
+          },
+    ]);
+    setCandidate('');
+  };
+
+  return (
+    <div className={styles.ruleTargetsEditor}>
+      <div className={styles.ruleTargetList}>
+        {targets.map((target, targetIndex) => (
+          <div
+            key={target.direct ? DIRECT_TARGET_VALUE : poolTargetValue(target.pool ?? '')}
+            className={styles.ruleTargetItem}
+          >
+            <strong>
+              {target.direct ? t('proxy_pools.rule_target_direct') : target.pool || '-'}
+            </strong>
+            <label>
+              <span>{t('proxy_pools.rule_target_priority')}</span>
+              <input
+                className="input"
+                type="number"
+                step="1"
+                value={target.priority ?? 0}
+                aria-label={t('proxy_pools.rule_target_priority_for', {
+                  target: target.direct ? t('proxy_pools.rule_target_direct') : target.pool,
+                })}
+                onChange={(event) => {
+                  const priority = Number(event.target.value);
+                  if (!Number.isSafeInteger(priority)) return;
+                  onChange(
+                    targets.map((item, itemIndex) =>
+                      itemIndex === targetIndex ? { ...item, priority } : item
+                    )
+                  );
+                }}
+                disabled={disabled}
+              />
+            </label>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onChange(targets.filter((_, index) => index !== targetIndex))}
+              disabled={disabled}
+              title={t('proxy_pools.remove_rule_target')}
+              aria-label={t('proxy_pools.remove_rule_target')}
+            >
+              <IconTrash2 size={14} />
+            </Button>
+          </div>
+        ))}
+      </div>
+      <div className={styles.ruleTargetAdd}>
+        <Select
+          value={selectedCandidate}
+          options={availableOptions}
+          onChange={setCandidate}
+          placeholder={t('proxy_pools.select_rule_target')}
+          disabled={disabled || availableOptions.length === 0}
+        />
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={addTarget}
+          disabled={disabled || !selectedCandidate}
+        >
+          <IconPlus size={14} />
+          {t('common.add')}
+        </Button>
+      </div>
+      <span className={styles.fieldHint}>{t('proxy_pools.rule_targets_hint')}</span>
+    </div>
+  );
+}
+
 export function ProxyPoolsPage() {
   const { t } = useTranslation();
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
@@ -197,8 +380,10 @@ export function ProxyPoolsPage() {
   const [view, setView] = useState<ViewId>('pools');
   const [pools, setPools] = useState<ProxyPool[]>([]);
   const [statuses, setStatuses] = useState<Record<string, ProxyPoolStatus>>({});
-  const [rules, setRules] = useState<ProxyRule[]>([]);
+  const [rules, setRules] = useState<ProxyRuleDraft[]>([]);
   const [baselineRules, setBaselineRules] = useState<ProxyRule[]>([]);
+  const [rulesSchemaVersion, setRulesSchemaVersion] = useState(1);
+  const [rulesEditable, setRulesEditable] = useState(true);
   const [bindings, setBindings] = useState<ProxyBindingStatus[]>([]);
   const [selectedAuthIds, setSelectedAuthIds] = useState<Set<string>>(new Set());
   const [checkResults, setCheckResults] = useState<Record<string, ProxyCheckResult[]>>({});
@@ -298,14 +483,23 @@ export function ProxyPoolsPage() {
     setLoading(true);
     setError('');
     try {
-      const [nextPools, nextRules, nextBindings] = await Promise.all([
+      const [nextPools, nextRulesConfig, nextBindings] = await Promise.all([
         proxyPoolsApi.getPools(),
-        proxyPoolsApi.getRules(),
+        proxyPoolsApi.getRulesConfig(),
         proxyPoolsApi.getBindings(),
       ]);
+      const effectiveSchemaVersion = nextRulesConfig.legacyTargetsUnsupported
+        ? 2
+        : nextRulesConfig.schemaVersion;
+      const nextRules = nextRulesConfig.rules.map(toRuleDraft);
+      const normalizedRules = nextRules.map((rule) =>
+        normalizeRule(rule, effectiveSchemaVersion)
+      );
       setPools(nextPools);
       setRules(nextRules);
-      setBaselineRules(nextRules);
+      setBaselineRules(normalizedRules);
+      setRulesSchemaVersion(effectiveSchemaVersion);
+      setRulesEditable(!nextRulesConfig.legacyTargetsUnsupported);
       setBindings(nextBindings);
       setSelectedAuthIds((current) => {
         const available = new Set(nextBindings.map((binding) => binding.auth_id));
@@ -420,11 +614,11 @@ export function ProxyPoolsPage() {
     };
   }, [activeTaskSignature, applyCheckTask, asyncTasksSupported, showNotification, t]);
 
-  const poolOptions = useMemo(
-    () => pools.map((pool) => ({ value: pool.name, label: pool.name })),
-    [pools]
+  const normalizedRules = useMemo(
+    () => rules.map((rule) => normalizeRule(rule, rulesSchemaVersion)),
+    [rules, rulesSchemaVersion]
   );
-  const rulesDirty = JSON.stringify(rules) !== JSON.stringify(baselineRules);
+  const rulesDirty = JSON.stringify(normalizedRules) !== JSON.stringify(baselineRules);
   const healthDirty = JSON.stringify(healthConfig) !== JSON.stringify(baselineHealthConfig);
 
   const validateHealthConfig = (): string => {
@@ -695,13 +889,19 @@ export function ProxyPoolsPage() {
   const addRule = () => {
     setRules((current) => [
       ...current,
-      { name: '', pool: pools[0]?.name ?? '', providers: [], priorities: [] },
+      {
+        clientId: createRuleDraftId(),
+        name: '',
+        targets: pools[0] ? [{ pool: pools[0].name, priority: 0 }] : [],
+        providers: [],
+        priorities: [],
+      },
     ]);
   };
 
-  const updateRule = (index: number, patch: Partial<ProxyRule>) => {
+  const updateRule = (clientId: string, patch: Partial<ProxyRuleDraft>) => {
     setRules((current) =>
-      current.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule))
+      current.map((rule) => (rule.clientId === clientId ? { ...rule, ...patch } : rule))
     );
   };
 
@@ -716,11 +916,18 @@ export function ProxyPoolsPage() {
   };
 
   const saveRules = async () => {
-    const normalized = rules.map(normalizeRule);
+    const normalized = rules.map((rule) => normalizeRule(rule, rulesSchemaVersion));
     const names = new Set<string>();
     for (const rule of normalized) {
-      if (!rule.name || !rule.pool) {
+      const hasTargets = rulesSchemaVersion >= 2
+        ? Array.isArray(rule.targets) && rule.targets.length > 0
+        : Boolean(rule.pool);
+      if (!rule.name || !hasTargets) {
         showNotification(t('proxy_pools.validation_rule_required'), 'error');
+        return;
+      }
+      if (rulesSchemaVersion >= 2 && !ruleTargetsAreValid(rule.targets ?? [])) {
+        showNotification(t('proxy_pools.validation_rule_targets'), 'error');
         return;
       }
       const key = rule.name.toLowerCase();
@@ -732,8 +939,19 @@ export function ProxyPoolsPage() {
     }
     setSavingRules(true);
     try {
-      await proxyPoolsApi.saveRules(normalized);
-      setRules(normalized);
+      await proxyPoolsApi.saveRules(normalized, rulesSchemaVersion);
+      setRules((current) =>
+        current.map((rule) => {
+          const normalizedRule = normalizeRule(rule, rulesSchemaVersion);
+          return {
+            ...rule,
+            name: normalizedRule.name,
+            providers: normalizedRule.providers,
+            priorities: normalizedRule.priorities,
+            targets: normalizeRuleTargets(normalizedRule),
+          };
+        })
+      );
       setBaselineRules(normalized);
       showNotification(t('proxy_pools.rules_saved'), 'success');
     } catch (saveError) {
@@ -1241,7 +1459,11 @@ export function ProxyPoolsPage() {
               <Button
                 variant="secondary"
                 onClick={addRule}
-                disabled={disabled || pools.length === 0}
+                disabled={
+                  disabled ||
+                  !rulesEditable ||
+                  (rulesSchemaVersion < 2 && pools.length === 0)
+                }
               >
                 <IconPlus size={16} />
                 {t('proxy_pools.add_rule')}
@@ -1249,12 +1471,17 @@ export function ProxyPoolsPage() {
               <Button
                 onClick={() => void saveRules()}
                 loading={savingRules}
-                disabled={disabled || !rulesDirty}
+                disabled={disabled || !rulesEditable || !rulesDirty}
               >
                 {t('common.save')}
               </Button>
             </div>
           </div>
+          {!rulesEditable ? (
+            <div className={styles.compatibilityNotice}>
+              {t('proxy_pools.legacy_rule_targets_blocked')}
+            </div>
+          ) : null}
           <div className={styles.ruleNotice}>{t('proxy_pools.first_match_notice')}</div>
           {rules.length === 0 ? (
             <div className={styles.emptyState}>{t('proxy_pools.rules_empty')}</div>
@@ -1267,13 +1494,13 @@ export function ProxyPoolsPage() {
                     !PROVIDER_OPTIONS.includes(provider as (typeof PROVIDER_OPTIONS)[number])
                 );
                 return (
-                  <article key={`${index}-${rule.name}`} className={styles.ruleItem}>
+                  <article key={rule.clientId} className={styles.ruleItem}>
                     <div className={styles.ruleOrder}>
                       <strong>{index + 1}</strong>
                       <button
                         type="button"
                         onClick={() => moveRule(index, -1)}
-                        disabled={disabled || index === 0}
+                        disabled={disabled || !rulesEditable || index === 0}
                         title={t('proxy_pools.move_up')}
                         aria-label={t('proxy_pools.move_up')}
                       >
@@ -1282,7 +1509,7 @@ export function ProxyPoolsPage() {
                       <button
                         type="button"
                         onClick={() => moveRule(index, 1)}
-                        disabled={disabled || index === rules.length - 1}
+                        disabled={disabled || !rulesEditable || index === rules.length - 1}
                         title={t('proxy_pools.move_down')}
                         aria-label={t('proxy_pools.move_down')}
                       >
@@ -1293,16 +1520,19 @@ export function ProxyPoolsPage() {
                       <Input
                         label={t('proxy_pools.rule_name')}
                         value={rule.name}
-                        onChange={(event) => updateRule(index, { name: event.target.value })}
-                        disabled={disabled}
+                        onChange={(event) =>
+                          updateRule(rule.clientId, { name: event.target.value })
+                        }
+                        disabled={disabled || !rulesEditable}
                       />
                       <div className="form-group">
-                        <label>{t('proxy_pools.rule_pool')}</label>
-                        <Select
-                          value={rule.pool}
-                          options={poolOptions}
-                          onChange={(pool) => updateRule(index, { pool })}
-                          disabled={disabled}
+                        <label>{t('proxy_pools.rule_targets')}</label>
+                        <RuleTargetsEditor
+                          targets={rule.targets}
+                          pools={pools}
+                          schemaVersion={rulesSchemaVersion}
+                          onChange={(targets) => updateRule(rule.clientId, { targets })}
+                          disabled={disabled || !rulesEditable}
                         />
                       </div>
                       <div className={styles.ruleWideField}>
@@ -1314,13 +1544,13 @@ export function ProxyPoolsPage() {
                               checked={providers.includes(provider)}
                               label={provider}
                               onChange={(checked) =>
-                                updateRule(index, {
+                                updateRule(rule.clientId, {
                                   providers: checked
                                     ? [...providers, provider]
                                     : providers.filter((item) => item !== provider),
                                 })
                               }
-                              disabled={disabled}
+                              disabled={disabled || !rulesEditable}
                             />
                           ))}
                         </div>
@@ -1329,11 +1559,11 @@ export function ProxyPoolsPage() {
                         </span>
                       </div>
                       <div className={styles.ruleWideField}>
-                        <label>{t('proxy_pools.rule_priorities')}</label>
+                        <label>{t('proxy_pools.rule_credential_priorities')}</label>
                         <PriorityEditor
                           values={rule.priorities ?? []}
-                          onChange={(priorities) => updateRule(index, { priorities })}
-                          disabled={disabled}
+                          onChange={(priorities) => updateRule(rule.clientId, { priorities })}
+                          disabled={disabled || !rulesEditable}
                         />
                         <span className={styles.fieldHint}>
                           {t('proxy_pools.priorities_empty_hint')}
@@ -1344,9 +1574,11 @@ export function ProxyPoolsPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() =>
-                        setRules((current) => current.filter((_, itemIndex) => itemIndex !== index))
+                        setRules((current) =>
+                          current.filter((item) => item.clientId !== rule.clientId)
+                        )
                       }
-                      disabled={disabled}
+                      disabled={disabled || !rulesEditable}
                       title={t('common.delete')}
                       aria-label={t('common.delete')}
                     >
@@ -1419,8 +1651,9 @@ export function ProxyPoolsPage() {
                         <span>{binding.provider || '-'}</span>
                       </td>
                       <td>
-                        {binding.pool} / {binding.entry}
-                        {binding.port ? `:${binding.port}` : ''}
+                        {binding.direct
+                          ? t('proxy_pools.rule_target_direct')
+                          : `${binding.pool || '-'} / ${binding.entry || '-'}${binding.port ? `:${binding.port}` : ''}`}
                       </td>
                       <td>
                         <span
@@ -1432,16 +1665,22 @@ export function ProxyPoolsPage() {
                                 : styles.healthUnknown
                           }
                         >
-                          {binding.healthy === true
-                            ? t('proxy_pools.health.healthy')
-                            : binding.healthy === false
-                              ? t('proxy_pools.health.unhealthy')
-                              : t('proxy_pools.health.unknown')}
+                          {binding.direct
+                            ? t('proxy_pools.health.not_applicable')
+                            : binding.healthy === true
+                              ? t('proxy_pools.health.healthy')
+                              : binding.healthy === false
+                                ? t('proxy_pools.health.unhealthy')
+                                : t('proxy_pools.health.unknown')}
                         </span>
                       </td>
-                      <td>{[binding.ip, binding.loc].filter(Boolean).join(' / ') || '-'}</td>
-                      <td>{binding.elapsed_ms ?? '-'} ms</td>
-                      <td>{formatTime(binding.last_check_at)}</td>
+                      <td>
+                        {binding.direct
+                          ? '-'
+                          : [binding.ip, binding.loc].filter(Boolean).join(' / ') || '-'}
+                      </td>
+                      <td>{binding.direct ? '-' : `${binding.elapsed_ms ?? '-'} ms`}</td>
+                      <td>{binding.direct ? '-' : formatTime(binding.last_check_at)}</td>
                     </tr>
                   ))}
                 </tbody>

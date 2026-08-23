@@ -25,17 +25,31 @@ export interface ProxyPoolPatch {
 
 export interface ProxyRule {
   name: string;
-  pool: string;
+  pool?: string;
+  targets?: ProxyRuleTarget[];
   providers?: string[];
   priorities?: number[];
+}
+
+export interface ProxyRuleTarget {
+  pool?: string;
+  direct?: boolean;
+  priority?: number;
+}
+
+export interface ProxyRulesConfig {
+  rules: ProxyRule[];
+  schemaVersion: number;
+  legacyTargetsUnsupported?: boolean;
 }
 
 export interface ProxyBindingStatus {
   auth_id: string;
   auth_index?: string;
   provider?: string;
-  pool: string;
-  entry: string;
+  pool?: string;
+  entry?: string;
+  direct?: boolean;
   port?: number;
   binding_id: string;
   bound_at: string;

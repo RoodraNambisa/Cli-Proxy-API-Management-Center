@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { ProxyPoolsPage } from '@/pages/ProxyPoolsPage';
@@ -8,7 +8,13 @@ import zhCNLocale from '@/i18n/locales/zh-CN.json';
 import zhTWLocale from '@/i18n/locales/zh-TW.json';
 import { proxyPoolsApi } from '@/services/api/proxyPools';
 import { useAuthStore, useNotificationStore } from '@/stores';
-import type { ProxyCheckTask, ProxyHealthCheckConfig, ProxyPool, ProxyPoolStatus } from '@/types';
+import type {
+  ProxyCheckTask,
+  ProxyHealthCheckConfig,
+  ProxyPool,
+  ProxyPoolStatus,
+  ProxyRule,
+} from '@/types';
 
 vi.mock('react-i18next', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-i18next')>();
@@ -77,7 +83,7 @@ function renderPage() {
 
 function mockBaseRequests() {
   vi.spyOn(proxyPoolsApi, 'getPools').mockResolvedValue([pool]);
-  vi.spyOn(proxyPoolsApi, 'getRules').mockResolvedValue([]);
+  vi.spyOn(proxyPoolsApi, 'getRulesConfig').mockResolvedValue({ rules: [], schemaVersion: 2 });
   vi.spyOn(proxyPoolsApi, 'getBindings').mockResolvedValue([]);
   vi.spyOn(proxyPoolsApi, 'getPoolStatus').mockResolvedValue(status);
   vi.spyOn(proxyPoolsApi, 'getCheckTasks').mockResolvedValue([]);
@@ -183,6 +189,130 @@ describe('structured proxy health management page', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  test('keeps rule-name focus while entering multiple characters', async () => {
+    vi.mocked(proxyPoolsApi.getRulesConfig).mockResolvedValue({
+      schemaVersion: 2,
+      rules: [
+        {
+          name: '',
+          targets: [{ pool: pool.name, priority: 0 }],
+          providers: ['codex'],
+          priorities: [4],
+        },
+      ],
+    });
+    renderPage();
+
+    await screen.findByText(pool.name);
+    fireEvent.click(screen.getByRole('tab', { name: 'proxy_pools.tabs.rules' }));
+    const nameInput = screen.getByLabelText('proxy_pools.rule_name') as HTMLInputElement;
+    nameInput.focus();
+    for (const value of ['c', 'co', 'cod', 'codex-route']) {
+      fireEvent.change(nameInput, { target: { value } });
+      expect(document.activeElement).toBe(nameInput);
+    }
+    expect(nameInput.value).toBe('codex-route');
+  });
+
+  test('allows a v2 direct-only rule when no physical proxy pools exist', async () => {
+    vi.mocked(proxyPoolsApi.getPools).mockResolvedValue([]);
+    vi.mocked(proxyPoolsApi.getRulesConfig).mockResolvedValue({ schemaVersion: 2, rules: [] });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'proxy_pools.tabs.rules' }));
+    const addRule = screen.getByRole('button', {
+      name: 'proxy_pools.add_rule',
+    }) as HTMLButtonElement;
+    expect(addRule.disabled).toBe(false);
+    fireEvent.click(addRule);
+
+    const targetsGroup = screen.getByText('proxy_pools.rule_targets').closest('.form-group');
+    if (!targetsGroup) throw new Error('proxy target editor is missing');
+    fireEvent.click(within(targetsGroup).getByText('proxy_pools.select_rule_target'));
+    fireEvent.click(await screen.findByRole('option', { name: 'proxy_pools.rule_target_direct' }));
+    fireEvent.click(within(targetsGroup).getByRole('button', { name: 'common.add' }));
+    expect(screen.getByText('proxy_pools.rule_target_direct')).toBeTruthy();
+  });
+
+  test('saves v2 pool and direct targets with independent priorities', async () => {
+    const rules: ProxyRule[] = [
+      {
+        name: 'codex-route',
+        targets: [{ pool: pool.name, priority: 10 }],
+        providers: ['codex'],
+        priorities: [4],
+      },
+    ];
+    vi.mocked(proxyPoolsApi.getRulesConfig).mockResolvedValue({ schemaVersion: 2, rules });
+    const save = vi.spyOn(proxyPoolsApi, 'saveRules').mockResolvedValue(rules);
+    renderPage();
+
+    await screen.findByText(pool.name);
+    fireEvent.click(screen.getByRole('tab', { name: 'proxy_pools.tabs.rules' }));
+    const targetsGroup = screen.getByText('proxy_pools.rule_targets').closest('.form-group');
+    if (!targetsGroup) throw new Error('proxy target editor is missing');
+    fireEvent.click(within(targetsGroup).getByText('proxy_pools.select_rule_target'));
+    fireEvent.click(await screen.findByRole('option', { name: 'proxy_pools.rule_target_direct' }));
+    fireEvent.click(within(targetsGroup).getByRole('button', { name: 'common.add' }));
+    const priorities = screen.getAllByLabelText('proxy_pools.rule_target_priority_for');
+    fireEvent.change(priorities[1], { target: { value: '5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() =>
+      expect(save).toHaveBeenCalledWith(
+        [
+          {
+            name: 'codex-route',
+            targets: [
+              { pool: pool.name, priority: 10 },
+              { direct: true, priority: 5 },
+            ],
+            providers: ['codex'],
+            priorities: [4],
+          },
+        ],
+        2
+      )
+    );
+  });
+
+  test('keeps legacy backends in explicit single-pool compatibility mode', async () => {
+    vi.mocked(proxyPoolsApi.getRulesConfig).mockResolvedValue({
+      schemaVersion: 1,
+      rules: [{ name: 'legacy', pool: pool.name, providers: ['codex'] }],
+    });
+    renderPage();
+
+    await screen.findByText(pool.name);
+    fireEvent.click(screen.getByRole('tab', { name: 'proxy_pools.tabs.rules' }));
+    expect(await screen.findByText('proxy_pools.legacy_rule_targets_hint')).toBeTruthy();
+    expect(screen.queryByText('proxy_pools.rule_target_direct')).toBeNull();
+  });
+
+  test('keeps unversioned multi-target payloads read-only to prevent data loss', async () => {
+    vi.mocked(proxyPoolsApi.getRulesConfig).mockResolvedValue({
+      schemaVersion: 1,
+      legacyTargetsUnsupported: true,
+      rules: [
+        {
+          name: 'unversioned',
+          targets: [{ pool: pool.name }, { direct: true }],
+          providers: ['codex'],
+        },
+      ],
+    });
+    renderPage();
+
+    await screen.findByText(pool.name);
+    fireEvent.click(screen.getByRole('tab', { name: 'proxy_pools.tabs.rules' }));
+    expect(await screen.findByText('proxy_pools.legacy_rule_targets_blocked')).toBeTruthy();
+    expect((screen.getByLabelText('proxy_pools.rule_name') as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'common.save' }) as HTMLButtonElement).disabled).toBe(
+      true
+    );
+    expect(screen.getByText('proxy_pools.rule_target_direct')).toBeTruthy();
+  });
+
   test('provides health settings and asynchronous task labels in every supported locale', () => {
     for (const locale of [enLocale, ruLocale, zhCNLocale, zhTWLocale]) {
       expect(locale.proxy_pools.health_settings.concurrency).toBeTruthy();
@@ -197,6 +327,14 @@ describe('structured proxy health management page', () => {
       expect(locale.proxy_pools.schedule_after_completion).toBeTruthy();
       expect(locale.proxy_pools.legacy_sync_warning).toBeTruthy();
       expect(locale.proxy_pools.results_truncated).toBeTruthy();
+      expect(locale.proxy_pools.rule_targets).toBeTruthy();
+      expect(locale.proxy_pools.rule_target_direct).toBeTruthy();
+      expect(locale.proxy_pools.rule_target_priority).toBeTruthy();
+      expect(locale.proxy_pools.rule_credential_priorities).toBeTruthy();
+      expect(locale.proxy_pools.legacy_rule_targets_hint).toBeTruthy();
+      expect(locale.proxy_pools.legacy_rule_targets_blocked).toBeTruthy();
+      expect(locale.proxy_pools.validation_rule_targets).toBeTruthy();
+      expect(locale.proxy_pools.health.not_applicable).toBeTruthy();
     }
   });
 });
