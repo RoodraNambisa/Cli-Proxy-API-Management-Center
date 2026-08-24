@@ -386,6 +386,32 @@ describe('ChatGPT Web management compatibility', () => {
     );
   });
 
+  test('treats 16 as an SDK worker recommendation instead of a hard maximum', async () => {
+    const getSentinel = vi.mocked(chatGptWebApi.getSentinel);
+    getSentinel
+      .mockResolvedValueOnce(createSentinelSnapshot({ 'sdk-workers': 16 }))
+      .mockResolvedValueOnce(
+        createSentinelSnapshot({ 'sdk-workers': 64, worker_limit: 64, initialized: true })
+      );
+    const patchSentinel = vi
+      .spyOn(chatGptWebApi, 'patchSentinel')
+      .mockResolvedValue({ status: 'ok' });
+
+    render(<ChatGptWebSentinelPanel />);
+
+    const workers = (await waitFor(() => {
+      const input = document.getElementById('chatgpt-web-sentinel-workers') as HTMLInputElement;
+      expect(input?.value).toBe('16');
+      return input;
+    })) as HTMLInputElement;
+    expect(workers.max).toBe('');
+    fireEvent.change(workers, { target: { value: '64' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() => expect(patchSentinel).toHaveBeenCalledWith({ 'sdk-workers': 64 }));
+    await waitFor(() => expect(workers.value).toBe('64'));
+  });
+
   test('does not load or render Sentinel settings on the account-login task page', () => {
     const getSentinel = vi.mocked(chatGptWebApi.getSentinel);
 

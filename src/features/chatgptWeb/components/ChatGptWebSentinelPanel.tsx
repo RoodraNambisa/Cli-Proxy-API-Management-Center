@@ -63,17 +63,19 @@ const toDraft = (snapshot: ChatGptWebSentinelSnapshot): SentinelDraft => ({
   cacheVersions: String(snapshot['sdk-cache-versions']),
 });
 
-const parseInteger = (value: string, min: number, max: number): number | null => {
+const parseInteger = (value: string, min: number, max?: number): number | null => {
   const trimmed = value.trim();
   if (!trimmed) return null;
   const parsed = Number(trimmed);
-  return Number.isInteger(parsed) && parsed >= min && parsed <= max ? parsed : null;
+  return Number.isSafeInteger(parsed) && parsed >= min && (max === undefined || parsed <= max)
+    ? parsed
+    : null;
 };
 
 const readConfig = (
   draft: SentinelDraft
 ): { config: ChatGptWebSentinelConfig | null; errorKey: string | null } => {
-  const workers = parseInteger(draft.workers, 0, 16);
+  const workers = parseInteger(draft.workers, 0);
   if (workers === null) {
     return { config: null, errorKey: 'chatgpt_web.sentinel.validation_workers' };
   }
@@ -412,7 +414,6 @@ export const ChatGptWebSentinelPanel = forwardRef<
             id="chatgpt-web-sentinel-workers"
             type="number"
             min={0}
-            max={16}
             step={1}
             value={draft.workers}
             onChange={(event) =>
