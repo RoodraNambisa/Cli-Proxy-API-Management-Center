@@ -979,6 +979,21 @@ export function VisualConfigEditor({
     ],
     [t]
   );
+  const chatGptWebRemoteImageDownloadModeOptions = useMemo(
+    () => [
+      {
+        value: 'direct',
+        label: t('config_management.settings_center.chatgpt_web.remote_image_url_mode_direct'),
+      },
+      {
+        value: 'credential-proxy',
+        label: t(
+          'config_management.settings_center.chatgpt_web.remote_image_url_mode_credential_proxy'
+        ),
+      },
+    ],
+    [t]
+  );
   const managementDiagnosticsDetailOptions = useMemo(
     () => [
       {
@@ -1216,6 +1231,10 @@ export function VisualConfigEditor({
   const errorResponseRewritesDirty = hasDirtyConfigField(dirtyFields, ['errorResponseRewrites']);
   const fixedErrorCooldownsDirty = hasDirtyConfigField(dirtyFields, ['fixedErrorCooldowns']);
   const noCooldownStatusCodesDirty = hasDirtyConfigField(dirtyFields, ['noCooldownStatusCodes']);
+  const chatGptWebRemoteImageDirty = hasDirtyConfigField(dirtyFields, [
+    'chatgptWebRemoteImageUrlEnabled',
+    'chatgptWebRemoteImageUrlDownloadMode',
+  ]);
   const chatGptWebImageSizeDirty = hasDirtyConfigField(dirtyFields, [
     'chatgptWebAdaptSizeToAspectRatio',
     'chatgptWebStrictSize',
@@ -2302,6 +2321,73 @@ export function VisualConfigEditor({
                   onChange({ chatgptWebIgnoreUnsupportedImageParams })
                 }
               />
+              <SettingsDisclosure
+                id="config-chatgpt-web-remote-image-url"
+                title={t('config_management.settings_center.chatgpt_web.remote_image_url_title')}
+                description={t(
+                  'config_management.settings_center.chatgpt_web.remote_image_url_description'
+                )}
+                summary={t(
+                  values.chatgptWebRemoteImageUrlEnabled
+                    ? values.chatgptWebRemoteImageUrlDownloadMode === 'credential-proxy'
+                      ? 'config_management.settings_center.chatgpt_web.remote_image_url_status_proxy'
+                      : 'config_management.settings_center.chatgpt_web.remote_image_url_status_direct'
+                    : 'config_management.settings_center.status_disabled'
+                )}
+                focusTarget={focusTarget}
+                targetIds={[
+                  'config-chatgpt-web-remote-image-url-enabled',
+                  'config-chatgpt-web-remote-image-url-download-mode',
+                ]}
+                dirty={chatGptWebRemoteImageDirty}
+              >
+                <SectionStack>
+                  <div id="config-chatgpt-web-remote-image-url-enabled">
+                    <ToggleRow
+                      title={t(
+                        'config_management.settings_center.chatgpt_web.remote_image_url_enabled'
+                      )}
+                      description={t(
+                        'config_management.settings_center.chatgpt_web.remote_image_url_enabled_description'
+                      )}
+                      checked={values.chatgptWebRemoteImageUrlEnabled}
+                      disabled={disabled}
+                      onChange={(chatgptWebRemoteImageUrlEnabled) =>
+                        onChange({ chatgptWebRemoteImageUrlEnabled })
+                      }
+                    />
+                  </div>
+                  <FieldShell
+                    label={t(
+                      'config_management.settings_center.chatgpt_web.remote_image_url_download_mode'
+                    )}
+                    htmlFor="config-chatgpt-web-remote-image-url-download-mode"
+                    hint={t(
+                      'config_management.settings_center.chatgpt_web.remote_image_url_download_mode_description'
+                    )}
+                  >
+                    <Select
+                      id="config-chatgpt-web-remote-image-url-download-mode"
+                      value={values.chatgptWebRemoteImageUrlDownloadMode}
+                      options={chatGptWebRemoteImageDownloadModeOptions}
+                      disabled={disabled || !values.chatgptWebRemoteImageUrlEnabled}
+                      onChange={(chatgptWebRemoteImageUrlDownloadMode) =>
+                        onChange({
+                          chatgptWebRemoteImageUrlDownloadMode:
+                            chatgptWebRemoteImageUrlDownloadMode === 'credential-proxy'
+                              ? 'credential-proxy'
+                              : 'direct',
+                        })
+                      }
+                    />
+                  </FieldShell>
+                  <div className={styles.localPreferenceNotice}>
+                    {t(
+                      'config_management.settings_center.chatgpt_web.remote_image_url_security_notice'
+                    )}
+                  </div>
+                </SectionStack>
+              </SettingsDisclosure>
               <SettingsDisclosure
                 id="config-chatgpt-web-image-size"
                 title={t('config_management.settings_center.chatgpt_web.image_size_title')}

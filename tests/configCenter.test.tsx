@@ -82,6 +82,26 @@ const translations: Record<string, string> = {
   'config_management.settings_center.chatgpt_web.aspect_ratio_max_error_percent':
     'Maximum aspect-ratio error (%)',
   'config_management.settings_center.chatgpt_web.max_n': 'Maximum ChatGPT Web image count (n)',
+  'config_management.settings_center.chatgpt_web.remote_image_url_title': 'Remote image URLs',
+  'config_management.settings_center.chatgpt_web.remote_image_url_description':
+    'Protected public image downloads',
+  'config_management.settings_center.chatgpt_web.remote_image_url_enabled':
+    'Allow remote image URLs',
+  'config_management.settings_center.chatgpt_web.remote_image_url_enabled_description':
+    'Enable remote images for new requests',
+  'config_management.settings_center.chatgpt_web.remote_image_url_download_mode':
+    'Download network path',
+  'config_management.settings_center.chatgpt_web.remote_image_url_download_mode_description':
+    'Choose direct or credential proxy mode',
+  'config_management.settings_center.chatgpt_web.remote_image_url_mode_direct': 'Direct (default)',
+  'config_management.settings_center.chatgpt_web.remote_image_url_mode_credential_proxy':
+    'Selected credential proxy',
+  'config_management.settings_center.chatgpt_web.remote_image_url_status_direct':
+    'Enabled · direct',
+  'config_management.settings_center.chatgpt_web.remote_image_url_status_proxy':
+    'Enabled · credential proxy',
+  'config_management.settings_center.chatgpt_web.remote_image_url_security_notice':
+    'Every hop is validated and pinned to a public IP.',
   'config_management.settings_center.frontend_features.title': 'Frontend feature visibility',
   'config_management.settings_center.frontend_features.codex_agent_identity':
     'Show Codex Agent Identity conversion tools',
@@ -608,6 +628,39 @@ describe('configuration settings center', () => {
     });
   });
 
+  test('configures protected remote image downloads and credential proxy mode', () => {
+    const values = cloneValues();
+    const onChange = vi.fn();
+    const disabledView = renderEditor('/config?section=provider-chatgpt-web', {
+      values,
+      onChange,
+    });
+
+    const disclosure = screen.getByRole('button', { name: /Remote image URLs/ });
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(disclosure);
+
+    const enabled = screen.getByRole('checkbox', { name: 'Allow remote image URLs' });
+    fireEvent.click(enabled);
+    expect(onChange).toHaveBeenCalledWith({ chatgptWebRemoteImageUrlEnabled: true });
+    expect(screen.getByText('Direct (default)')).not.toBeNull();
+    expect(screen.getByText(/Every hop is validated/)).not.toBeNull();
+    disabledView.unmount();
+
+    const proxyValues = cloneValues();
+    proxyValues.chatgptWebRemoteImageUrlEnabled = true;
+    const proxyOnChange = vi.fn();
+    renderEditor('/config?section=provider-chatgpt-web', {
+      values: proxyValues,
+      onChange: proxyOnChange,
+    });
+    fireEvent.click(screen.getByText('Direct (default)'));
+    fireEvent.click(screen.getByText('Selected credential proxy'));
+    expect(proxyOnChange).toHaveBeenCalledWith({
+      chatgptWebRemoteImageUrlDownloadMode: 'credential-proxy',
+    });
+  });
+
   test('opens ChatGPT Web image size settings for dirty state and validation errors', () => {
     const dirtyView = renderEditor('/config?section=provider-chatgpt-web', {
       dirtyFields: ['chatgptWebStrictSize'],
@@ -705,6 +758,22 @@ describe('configuration settings center', () => {
       screen
         .getByRole('button', { name: /Image aspect ratio and output size/ })
         .getAttribute('aria-expanded')
+    ).toBe('true');
+  });
+
+  test('searches the remote image download mode and opens its disclosure', () => {
+    renderEditor('/config?section=global-basics');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'images.chatgpt-web.remote-image-url-download-mode' },
+    });
+    fireEvent.click(screen.getAllByText('Remote image URLs')[0]!);
+
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-chatgpt-web-remote-image-url'
+    );
+    expect(
+      screen.getByRole('button', { name: /Remote image URLs/ }).getAttribute('aria-expanded')
     ).toBe('true');
   });
 

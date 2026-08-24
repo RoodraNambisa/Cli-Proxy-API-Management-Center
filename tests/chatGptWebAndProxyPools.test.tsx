@@ -1170,12 +1170,16 @@ describe('ChatGPT Web management compatibility', () => {
 
   test('reads and writes ChatGPT Web image compatibility settings', () => {
     const initialYaml =
-      'images:\n  chatgpt-web:\n    upstream-model: gpt-5-5-custom\n    ignore-unsupported-params: false\n    adapt-size-to-aspect-ratio: true\n    strict-size: true\n    aspect-ratio-max-error-percent: 0.5\n    resize-to-requested-size: true\n    resize-filter: approx-bilinear\n    max-resize-edge-pixels: 2048\n    max-image-response-megabytes: 96\n    max-n: 3\n';
+      'images:\n  chatgpt-web:\n    upstream-model: gpt-5-5-custom\n    ignore-unsupported-params: false\n    remote-image-url-enabled: true\n    remote-image-url-download-mode: credential-proxy\n    adapt-size-to-aspect-ratio: true\n    strict-size: true\n    aspect-ratio-max-error-percent: 0.5\n    resize-to-requested-size: true\n    resize-filter: approx-bilinear\n    max-resize-edge-pixels: 2048\n    max-image-response-megabytes: 96\n    max-n: 3\n';
     const { result } = renderHook(() => useVisualConfig());
 
     act(() => result.current.loadVisualValuesFromYaml(initialYaml));
     expect(result.current.visualValues.chatgptWebImageUpstreamModel).toBe('gpt-5-5-custom');
     expect(result.current.visualValues.chatgptWebIgnoreUnsupportedImageParams).toBe(false);
+    expect(result.current.visualValues.chatgptWebRemoteImageUrlEnabled).toBe(true);
+    expect(result.current.visualValues.chatgptWebRemoteImageUrlDownloadMode).toBe(
+      'credential-proxy'
+    );
     expect(result.current.visualValues.chatgptWebAdaptSizeToAspectRatio).toBe(true);
     expect(result.current.visualValues.chatgptWebStrictSize).toBe(true);
     expect(result.current.visualValues.chatgptWebAspectRatioMaxErrorPercent).toBe('0.5');
@@ -1188,6 +1192,8 @@ describe('ChatGPT Web management compatibility', () => {
       result.current.setVisualValues({
         chatgptWebImageUpstreamModel: 'gpt-5-5',
         chatgptWebIgnoreUnsupportedImageParams: true,
+        chatgptWebRemoteImageUrlEnabled: true,
+        chatgptWebRemoteImageUrlDownloadMode: 'direct',
         chatgptWebAdaptSizeToAspectRatio: true,
         chatgptWebStrictSize: true,
         chatgptWebAspectRatioMaxErrorPercent: '1.25',
@@ -1204,6 +1210,8 @@ describe('ChatGPT Web management compatibility', () => {
         'chatgpt-web': {
           'upstream-model': 'gpt-5-5',
           'ignore-unsupported-params': true,
+          'remote-image-url-enabled': true,
+          'remote-image-url-download-mode': 'direct',
           'adapt-size-to-aspect-ratio': true,
           'strict-size': true,
           'aspect-ratio-max-error-percent': 1.25,
@@ -1223,6 +1231,39 @@ describe('ChatGPT Web management compatibility', () => {
     act(() => result.current.loadVisualValuesFromYaml('images:\n  chatgpt-web: {}\n'));
 
     expect(result.current.visualValues.chatgptWebMaxN).toBe('1');
+    expect(result.current.visualValues.chatgptWebRemoteImageUrlEnabled).toBe(false);
+    expect(result.current.visualValues.chatgptWebRemoteImageUrlDownloadMode).toBe('direct');
+  });
+
+  test('reads legacy remote image camelCase keys and removes every alias on save', () => {
+    const initialYaml =
+      'images:\n  chatgpt-web:\n    remoteImageUrlEnabled: true\n    remoteImageUrlDownloadMode: credential-proxy\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+    expect(result.current.visualValues.chatgptWebRemoteImageUrlEnabled).toBe(true);
+    expect(result.current.visualValues.chatgptWebRemoteImageUrlDownloadMode).toBe(
+      'credential-proxy'
+    );
+
+    const saved = parse(result.current.applyVisualChangesToYaml(initialYaml));
+    expect(saved.images['chatgpt-web']).toMatchObject({
+      'remote-image-url-enabled': true,
+      'remote-image-url-download-mode': 'credential-proxy',
+    });
+    expect(saved.images['chatgpt-web']).not.toHaveProperty('remoteImageUrlEnabled');
+    expect(saved.images['chatgpt-web']).not.toHaveProperty('remoteImageUrlDownloadMode');
+  });
+
+  test('prefers canonical remote image keys over stale camelCase aliases', () => {
+    const initialYaml =
+      'images:\n  chatgpt-web:\n    remote-image-url-enabled: false\n    remoteImageUrlEnabled: true\n    remote-image-url-download-mode: direct\n    remoteImageUrlDownloadMode: credential-proxy\n';
+    const { result } = renderHook(() => useVisualConfig());
+
+    act(() => result.current.loadVisualValuesFromYaml(initialYaml));
+
+    expect(result.current.visualValues.chatgptWebRemoteImageUrlEnabled).toBe(false);
+    expect(result.current.visualValues.chatgptWebRemoteImageUrlDownloadMode).toBe('direct');
   });
 
   test('validates ChatGPT Web image ratio and resize settings', () => {
@@ -1269,6 +1310,17 @@ describe('ChatGPT Web management compatibility', () => {
       expect(labels.max_image_response_megabytes).toBeTruthy();
       expect(labels.max_n).toBeTruthy();
       expect(labels.max_n_description).toBeTruthy();
+      expect(labels.remote_image_url_title).toBeTruthy();
+      expect(labels.remote_image_url_description).toBeTruthy();
+      expect(labels.remote_image_url_enabled).toBeTruthy();
+      expect(labels.remote_image_url_enabled_description).toBeTruthy();
+      expect(labels.remote_image_url_download_mode).toBeTruthy();
+      expect(labels.remote_image_url_download_mode_description).toBeTruthy();
+      expect(labels.remote_image_url_mode_direct).toBeTruthy();
+      expect(labels.remote_image_url_mode_credential_proxy).toBeTruthy();
+      expect(labels.remote_image_url_status_direct).toBeTruthy();
+      expect(labels.remote_image_url_status_proxy).toBeTruthy();
+      expect(labels.remote_image_url_security_notice).toBeTruthy();
     }
   });
 

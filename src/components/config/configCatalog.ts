@@ -153,6 +153,8 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebInvalidPasskeyResponseAsDead',
       'chatgptWebImageUpstreamModel',
       'chatgptWebIgnoreUnsupportedImageParams',
+      'chatgptWebRemoteImageUrlEnabled',
+      'chatgptWebRemoteImageUrlDownloadMode',
       'chatgptWebAdaptSizeToAspectRatio',
       'chatgptWebStrictSize',
       'chatgptWebAspectRatioMaxErrorPercent',
@@ -660,6 +662,24 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.settings_center.chatgpt_web.image_upstream_model',
     yamlKeys: ['images.chatgpt-web.upstream-model', 'images.chatgpt-web.ignore-unsupported-params'],
     aliases: ['picture_v2', 'web image', '图片参数', '忽略参数'],
+  },
+  {
+    id: 'config-chatgpt-web-remote-image-url',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.remote_image_url_title',
+    yamlKeys: [
+      'images.chatgpt-web.remote-image-url-enabled',
+      'images.chatgpt-web.remote-image-url-download-mode',
+    ],
+    aliases: [
+      'image_url',
+      'remote image',
+      'credential proxy',
+      '远程图片',
+      '图片下载代理',
+      '遠端圖片',
+      'удалённое изображение',
+    ],
   },
   {
     id: 'config-chatgpt-web-adapt-size-to-aspect-ratio',
