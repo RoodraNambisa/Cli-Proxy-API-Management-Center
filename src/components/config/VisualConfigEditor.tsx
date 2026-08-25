@@ -1162,6 +1162,10 @@ export function VisualConfigEditor({
     t,
     validationErrors?.chatgptWebImagePollConcurrency
   );
+  const chatGptWebImagePollStallSecondsError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImagePollStallSeconds
+  );
   const chatGptWebImageMemoryFinalizerConcurrencyError = getValidationMessage(
     t,
     validationErrors?.chatgptWebImageMemoryFinalizerConcurrency
@@ -1262,6 +1266,8 @@ export function VisualConfigEditor({
     'chatgptWebImageCompletionReserveMegabytes',
     'chatgptWebImageMemoryCapacityMegabytes',
     'chatgptWebImagePollConcurrency',
+    'chatgptWebImagePollStallBreakerEnabled',
+    'chatgptWebImagePollStallSeconds',
     'chatgptWebImageMemoryFinalizerConcurrency',
   ]);
   const chatGptWebImageCapacityErrorCount = [
@@ -1272,6 +1278,7 @@ export function VisualConfigEditor({
     chatGptWebImageCompletionReserveMegabytesError,
     chatGptWebImageMemoryCapacityMegabytesError,
     chatGptWebImagePollConcurrencyError,
+    chatGptWebImagePollStallSecondsError,
     chatGptWebImageMemoryFinalizerConcurrencyError,
   ].filter(Boolean).length;
   const retrySettingsErrorCount = [
@@ -1771,6 +1778,7 @@ export function VisualConfigEditor({
           'chatgptWebImageCompletionReserveMegabytes',
           'chatgptWebImageMemoryCapacityMegabytes',
           'chatgptWebImagePollConcurrency',
+          'chatgptWebImagePollStallSeconds',
           'chatgptWebImageMemoryFinalizerConcurrency',
         ]),
       'provider-grok': 0,
@@ -2599,6 +2607,8 @@ export function VisualConfigEditor({
                   'config-chatgpt-web-image-completion-reserve-megabytes',
                   'config-chatgpt-web-image-memory-capacity-megabytes',
                   'config-chatgpt-web-image-poll-concurrency',
+                  'config-chatgpt-web-image-poll-stall-breaker-enabled',
+                  'config-chatgpt-web-image-poll-stall-seconds',
                   'config-chatgpt-web-image-memory-finalizer-concurrency',
                 ]}
                 dirty={chatGptWebImageCapacityDirty}
@@ -2658,6 +2668,40 @@ export function VisualConfigEditor({
                       disabled={disabled}
                       onChange={(event) =>
                         onChange({ chatgptWebImagePollConcurrency: event.target.value })
+                      }
+                    />
+                    <div id="config-chatgpt-web-image-poll-stall-breaker-enabled">
+                      <ToggleRow
+                        title={t(
+                          'config_management.settings_center.chatgpt_web.image_poll_stall_breaker_enabled'
+                        )}
+                        description={t(
+                          'config_management.settings_center.chatgpt_web.image_poll_stall_breaker_enabled_description'
+                        )}
+                        checked={values.chatgptWebImagePollStallBreakerEnabled}
+                        disabled={disabled}
+                        onChange={(chatgptWebImagePollStallBreakerEnabled) =>
+                          onChange({ chatgptWebImagePollStallBreakerEnabled })
+                        }
+                      />
+                    </div>
+                    <Input
+                      id="config-chatgpt-web-image-poll-stall-seconds"
+                      type="number"
+                      min={30}
+                      max={3600}
+                      step={1}
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.image_poll_stall_seconds'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_poll_stall_seconds_description'
+                      )}
+                      error={chatGptWebImagePollStallSecondsError}
+                      value={values.chatgptWebImagePollStallSeconds}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({ chatgptWebImagePollStallSeconds: event.target.value })
                       }
                     />
                     <Input

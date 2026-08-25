@@ -19,3 +19,21 @@ describe('Codex session identity pool validation', () => {
     expect(errors.codexFingerprintSessionIdentityPoolSize).toBe('integer_range_1_64');
   });
 });
+
+describe('ChatGPT Web poll stall validation', () => {
+  it.each(['30', '120', '3600'])('accepts %s seconds', (value) => {
+    const errors = getVisualConfigValidationErrors({
+      ...DEFAULT_VISUAL_VALUES,
+      chatgptWebImagePollStallSeconds: value,
+    });
+    expect(errors.chatgptWebImagePollStallSeconds).toBeUndefined();
+  });
+
+  it.each(['', '29', '120.5', '3601'])('rejects %s seconds', (value) => {
+    const errors = getVisualConfigValidationErrors({
+      ...DEFAULT_VISUAL_VALUES,
+      chatgptWebImagePollStallSeconds: value,
+    });
+    expect(errors.chatgptWebImagePollStallSeconds).toBe('integer_range_30_3600');
+  });
+});

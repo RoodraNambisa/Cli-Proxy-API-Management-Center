@@ -9,6 +9,9 @@ import type {
   ChatGptWebImportConfig,
   ChatGptWebImportConfigPatch,
   ChatGptWebImportSnapshot,
+  ChatGptWebImageTask,
+  ChatGptWebImageTaskCancelResult,
+  ChatGptWebImageTaskListSnapshot,
   ChatGptWebLoginTask,
   ChatGptWebLoginProxyConfig,
   ChatGptWebLoginProxyConfigPatch,
@@ -43,6 +46,51 @@ const recordArray = <T>(value: unknown): T[] =>
       ) as T[])
     : [];
 
+const stringValue = (value: unknown): string =>
+  typeof value === 'string' ? value : value === undefined || value === null ? '' : String(value);
+
+const nullableStringValue = (value: unknown): string | null => {
+  const normalized = stringValue(value);
+  return normalized || null;
+};
+
+const normalizeImageTask = (value: unknown): ChatGptWebImageTask | null => {
+  const source = asRecord(value);
+  const id = stringValue(source.id);
+  if (!id) return null;
+  return {
+    id,
+    status: stringValue(source.status),
+    stage: stringValue(source.stage),
+    started_at: stringValue(source.started_at),
+    duration_milliseconds: finiteNumber(source.duration_milliseconds),
+    last_progress_at: stringValue(source.last_progress_at),
+    last_progress_age_milliseconds: finiteNumber(source.last_progress_age_milliseconds),
+    last_poll_completed_at: nullableStringValue(source.last_poll_completed_at),
+    polls_in_flight: finiteNumber(source.polls_in_flight),
+    credential_fingerprint: stringValue(source.credential_fingerprint),
+    canceling: source.canceling === true,
+    cancellation_requested_at: nullableStringValue(source.cancellation_requested_at),
+    over_15_minutes: source.over_15_minutes === true,
+  };
+};
+
+export const normalizeImageTaskListSnapshot = (value: unknown): ChatGptWebImageTaskListSnapshot => {
+  const source = asRecord(value);
+  return {
+    collected_at: stringValue(source.collected_at),
+    active: finiteNumber(source.active),
+    canceling: finiteNumber(source.canceling),
+    active_over_15_minutes: finiteNumber(source.active_over_15_minutes),
+    registry_capacity: finiteNumber(source.registry_capacity),
+    tasks: Array.isArray(source.tasks)
+      ? source.tasks
+          .map(normalizeImageTask)
+          .filter((task): task is ChatGptWebImageTask => task !== null)
+      : [],
+  };
+};
+
 const normalizeAccountInfoDiagnostics = (
   value: unknown
 ): ChatGptWebAccountInfoDiagnosticsSnapshot => {
@@ -70,6 +118,24 @@ const normalizeAccountInfoRawQuota = (value: unknown): ChatGptWebAccountInfoRawQ
 };
 
 export const chatGptWebApi = {
+  async getImageTasks(signal?: AbortSignal): Promise<ChatGptWebImageTaskListSnapshot> {
+    const response = signal
+      ? await apiClient.get('/chatgpt-web/image-tasks', { signal })
+      : await apiClient.get('/chatgpt-web/image-tasks');
+    return normalizeImageTaskListSnapshot(response);
+  },
+
+  async cancelImageTask(id: string): Promise<ChatGptWebImageTaskCancelResult> {
+    const response = await apiClient.delete<unknown>(
+      `/chatgpt-web/image-tasks/${encodeURIComponent(id)}`
+    );
+    const source = asRecord(response);
+    return {
+      id: stringValue(source.id) || id,
+      status: stringValue(source.status),
+    };
+  },
+
   getAutoDeleteDeadStats(signal?: AbortSignal): Promise<ChatGptWebAutoDeleteDeadStats> {
     return signal
       ? apiClient.get('/chatgpt-web/auto-delete-dead/stats', { signal })

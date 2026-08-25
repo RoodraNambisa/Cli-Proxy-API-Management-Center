@@ -563,6 +563,186 @@
   font-size: 12px;
 }
 
+.imageBreakerLead {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: $spacing-md;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--success-color) 45%, var(--border-color));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--success-color) 9%, transparent);
+  color: var(--success-color);
+  font-size: 12px;
+
+  > span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 16%, transparent);
+  }
+
+  &[data-state='open'] {
+    border-color: color-mix(in srgb, var(--error-color) 58%, var(--border-color));
+    background: color-mix(in srgb, var(--error-color) 9%, transparent);
+    color: var(--error-color);
+  }
+}
+
+.imageTaskContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: 0 $spacing-md $spacing-md;
+  border-top: 1px solid var(--border-color);
+}
+
+.imageTaskDescription {
+  margin: $spacing-md 0 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.imageTaskToolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.imageTaskSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(90px, 1fr));
+  flex: 1;
+  gap: 8px;
+  margin: 0;
+
+  > div {
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: $radius-md;
+    background: color-mix(in srgb, var(--bg-primary) 76%, transparent);
+  }
+
+  dt {
+    color: var(--text-tertiary);
+    font-size: 9px;
+  }
+
+  dd {
+    margin: 3px 0 0;
+    color: var(--text-primary);
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+      monospace;
+    font-size: 13px;
+    font-weight: 750;
+  }
+}
+
+.imageTaskControls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex: 0 0 auto;
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  input {
+    accent-color: var(--primary-color);
+  }
+}
+
+.imageTaskList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-sm;
+}
+
+.imageTaskCard {
+  min-width: 0;
+  padding: $spacing-md;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+  background: color-mix(in srgb, var(--bg-primary) 78%, transparent);
+
+  &[data-long-running='true'] {
+    border-color: color-mix(in srgb, var(--warning-color) 60%, var(--border-color));
+    background: color-mix(in srgb, var(--warning-color) 5%, var(--bg-primary));
+  }
+}
+
+.imageTaskHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.imageTaskIdentity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+
+  code {
+    max-width: 100%;
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  > span {
+    padding: 2px 7px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    font-size: 9px;
+  }
+}
+
+.imageTaskIdentity > .imageTaskWarning {
+  border-color: color-mix(in srgb, var(--warning-color) 55%, var(--border-color));
+  color: var(--warning-color);
+}
+
+.imageTaskStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 12px;
+  margin: 0;
+
+  dt {
+    color: var(--text-tertiary);
+    font-size: 9px;
+  }
+
+  dd {
+    margin: 3px 0 0;
+    color: var(--text-primary);
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+      monospace;
+    font-size: 11px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+}
+
 .imagePhaseDetails {
   overflow: hidden;
   border: 1px solid var(--border-color);
@@ -585,6 +765,37 @@
       font-size: 11px;
       font-weight: 500;
     }
+  }
+}
+
+@media (max-width: 900px) {
+  .imageTaskToolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .imageTaskSummary,
+  .imageTaskList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .imageTaskControls {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 560px) {
+  .imageTaskSummary,
+  .imageTaskList,
+  .imageTaskStats {
+    grid-template-columns: 1fr;
+  }
+
+  .imageTaskControls,
+  .imageTaskHeader {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

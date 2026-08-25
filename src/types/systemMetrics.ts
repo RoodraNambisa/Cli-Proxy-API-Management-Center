@@ -98,6 +98,20 @@ export interface SystemImagePollSlotsSnapshot {
   max_wait_nanos: number;
 }
 
+export interface SystemImagePollStallBreakerSnapshot {
+  available: boolean;
+  enabled: boolean;
+  open: boolean;
+  stall_seconds: number;
+  opened_at: string | null;
+  full_since: string | null;
+  last_completion_at: string | null;
+  no_completion_age_nanos: number;
+  rejected: number;
+  transport_completions: number;
+  canceled_completions: number;
+}
+
 export interface SystemImageRequestPhaseMetricSnapshot {
   count: number;
   total_nanos: number;
@@ -175,6 +189,7 @@ export interface SystemMetricsSnapshot {
   chatgpt_web_image_finalizers: SystemImageExecutionAdmissionSnapshot;
   chatgpt_web_image_memory_finalizers: SystemImageExecutionAdmissionSnapshot;
   chatgpt_web_image_poll_slots: SystemImagePollSlotsSnapshot;
+  chatgpt_web_image_poll_breaker: SystemImagePollStallBreakerSnapshot;
   chatgpt_web_image_protocol: SystemChatGptWebImageProtocolSnapshot;
   image_spool: SystemImageSpoolSnapshot;
   image_request_phases: SystemImageRequestPhasesSnapshot;

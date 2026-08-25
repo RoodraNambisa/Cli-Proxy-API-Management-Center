@@ -3,6 +3,7 @@ import type {
   SystemImageExecutionAdmissionSnapshot,
   SystemImageMemorySnapshot,
   SystemImagePollSlotsSnapshot,
+  SystemImagePollStallBreakerSnapshot,
   SystemImageRequestPhaseMetricSnapshot,
   SystemImageRequestPhaseRollingMetricSnapshot,
   SystemImageRequestPhasesSnapshot,
@@ -157,6 +158,28 @@ const normalizeImagePollSlots = (value: unknown): SystemImagePollSlotsSnapshot =
   };
 };
 
+const normalizeImagePollStallBreaker = (value: unknown): SystemImagePollStallBreakerSnapshot => {
+  const available = isRecord(value);
+  const source = available ? value : {};
+  const nullableString = (field: unknown): string | null => {
+    const normalized = toStringValue(field);
+    return normalized || null;
+  };
+  return {
+    available,
+    enabled: source.enabled === true,
+    open: source.open === true,
+    stall_seconds: toNonNegativeNumber(source.stall_seconds),
+    opened_at: nullableString(source.opened_at),
+    full_since: nullableString(source.full_since),
+    last_completion_at: nullableString(source.last_completion_at),
+    no_completion_age_nanos: toNonNegativeNumber(source.no_completion_age_nanos),
+    rejected: toNonNegativeNumber(source.rejected),
+    transport_completions: toNonNegativeNumber(source.transport_completions),
+    canceled_completions: toNonNegativeNumber(source.canceled_completions),
+  };
+};
+
 const normalizeImagePhaseMetric = (value: unknown): SystemImageRequestPhaseMetricSnapshot => {
   const source = isRecord(value) ? value : {};
   return {
@@ -282,6 +305,9 @@ export const normalizeSystemMetricsSnapshot = (value: unknown): SystemMetricsSna
       source.chatgpt_web_image_memory_finalizers
     ),
     chatgpt_web_image_poll_slots: normalizeImagePollSlots(source.chatgpt_web_image_poll_slots),
+    chatgpt_web_image_poll_breaker: normalizeImagePollStallBreaker(
+      source.chatgpt_web_image_poll_breaker
+    ),
     chatgpt_web_image_protocol: normalizeChatGptWebImageProtocol(source.chatgpt_web_image_protocol),
     image_spool: normalizeImageSpool(source.image_spool),
     image_request_phases: normalizeImageRequestPhases(source.image_request_phases),

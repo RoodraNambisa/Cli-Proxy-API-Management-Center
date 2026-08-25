@@ -198,6 +198,19 @@ const createSystemSnapshot = (): SystemMetricsSnapshot => ({
     total_wait_nanos: 5_000_000,
     max_wait_nanos: 2_000_000,
   },
+  chatgpt_web_image_poll_breaker: {
+    available: true,
+    enabled: true,
+    open: true,
+    stall_seconds: 120,
+    opened_at: '2026-07-29T11:58:00Z',
+    full_since: '2026-07-29T11:57:30Z',
+    last_completion_at: '2026-07-29T11:57:00Z',
+    no_completion_age_nanos: 180_000_000_000,
+    rejected: 7,
+    transport_completions: 480,
+    canceled_completions: 20,
+  },
   chatgpt_web_image_protocol: {
     available: true,
     task_ids_observed: 41,
@@ -257,7 +270,18 @@ describe('system metrics and filesystem capacity', () => {
       serverCommit: null,
       serverBuildDate: null,
     });
-    useNotificationStore.setState({ showNotification: vi.fn() });
+    useNotificationStore.setState({
+      showNotification: vi.fn(),
+      confirmation: { isOpen: false, isLoading: false, options: null },
+    });
+    vi.spyOn(chatGptWebApi, 'getImageTasks').mockResolvedValue({
+      collected_at: '2026-07-29T12:00:00Z',
+      active: 0,
+      canceling: 0,
+      active_over_15_minutes: 0,
+      registry_capacity: 64,
+      tasks: [],
+    });
     vi.spyOn(historyStorageApi, 'getStartupStatus').mockRejectedValue(
       Object.assign(new Error('not found'), { status: 404 })
     );
@@ -307,6 +331,7 @@ describe('system metrics and filesystem capacity', () => {
     expect(snapshot.chatgpt_web_image_memory_finalizers.available).toBe(false);
     expect(snapshot.chatgpt_web_image_poll_slots.available).toBe(false);
     expect(snapshot.chatgpt_web_image_poll_slots.capacity_details_available).toBe(false);
+    expect(snapshot.chatgpt_web_image_poll_breaker.available).toBe(false);
     expect(snapshot.chatgpt_web_image_protocol.available).toBe(false);
     expect(snapshot.image_spool.available).toBe(false);
     expect(snapshot.image_request_phases.available).toBe(false);
@@ -801,6 +826,17 @@ describe('system metrics and filesystem capacity', () => {
     expect(spoolPanel).not.toBeNull();
     expect(within(spoolPanel as HTMLElement).getByText('6.0 MiB')).toBeTruthy();
     expect(within(spoolPanel as HTMLElement).getByText('24.0 MiB')).toBeTruthy();
+    const breakerPanel = within(runtime)
+      .getByText('system_info.image_runtime.poll_breaker')
+      .closest('article');
+    expect(breakerPanel).not.toBeNull();
+    expect(
+      within(breakerPanel as HTMLElement).getByText('system_info.image_runtime.breaker_open')
+    ).toBeTruthy();
+    expect(
+      within(breakerPanel as HTMLElement).getByText('system_info.image_runtime.breaker_rejected')
+        .parentElement?.textContent
+    ).toContain('7');
 
     const protocol = within(runtime).getByTestId('image-protocol-convergence');
     expect(
@@ -823,6 +859,58 @@ describe('system metrics and filesystem capacity', () => {
       within(runtime).getByText('system_info.image_runtime.phase_names.route_request_total')
     ).toBeTruthy();
     expect(within(runtime).getByText('system_info.image_runtime.phase_note')).toBeTruthy();
+  });
+
+  test('shows bounded active image tasks and confirms an administrative cancel', async () => {
+    vi.mocked(chatGptWebApi.getImageTasks).mockResolvedValue({
+      collected_at: '2026-07-29T12:00:00Z',
+      active: 1,
+      canceling: 0,
+      active_over_15_minutes: 1,
+      registry_capacity: 64,
+      tasks: [
+        {
+          id: 'task-safe-id',
+          status: 'running',
+          stage: 'polling',
+          started_at: '2026-07-29T11:40:00Z',
+          duration_milliseconds: 1_200_000,
+          last_progress_at: '2026-07-29T11:59:30Z',
+          last_progress_age_milliseconds: 30_000,
+          last_poll_completed_at: '2026-07-29T11:59:30Z',
+          polls_in_flight: 1,
+          credential_fingerprint: 'cred-7ab1',
+          canceling: false,
+          cancellation_requested_at: null,
+          over_15_minutes: true,
+        },
+      ],
+    });
+    const cancelTask = vi
+      .spyOn(chatGptWebApi, 'cancelImageTask')
+      .mockResolvedValue({ id: 'task-safe-id', status: 'canceling' });
+    vi.spyOn(systemMetricsApi, 'get').mockResolvedValue(createSystemSnapshot());
+    vi.spyOn(configApi, 'getControlPanelUpdateStatus').mockResolvedValue({} as never);
+    vi.spyOn(apiKeysApi, 'list').mockResolvedValue([]);
+    vi.spyOn(useConfigStore.getState(), 'fetchConfig').mockResolvedValue({} as never);
+    vi.spyOn(useModelsStore.getState(), 'fetchModels').mockResolvedValue([]);
+
+    render(<SystemPage />);
+    const diagnostics = await screen.findByTestId('image-task-diagnostics');
+    expect(chatGptWebApi.getImageTasks).not.toHaveBeenCalled();
+    fireEvent.click(within(diagnostics).getByText('system_info.image_runtime.tasks_title'));
+    expect(await within(diagnostics).findByText('task-safe-id')).toBeTruthy();
+    expect(chatGptWebApi.getImageTasks).toHaveBeenCalledTimes(1);
+    expect(
+      within(diagnostics).getByText('system_info.image_runtime.task_stages.polling')
+    ).toBeTruthy();
+    expect(within(diagnostics).getByText('cred-7ab1')).toBeTruthy();
+
+    fireEvent.click(within(diagnostics).getByText('system_info.image_runtime.task_cancel'));
+    const confirmation = useNotificationStore.getState().confirmation.options;
+    expect(confirmation?.message).toBe('system_info.image_runtime.task_cancel_confirm_message');
+    await act(async () => confirmation?.onConfirm());
+    expect(cancelTask).toHaveBeenCalledWith('task-safe-id');
   });
 
   test('does not present missing image runtime groups as healthy zero capacity', async () => {

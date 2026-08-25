@@ -80,3 +80,29 @@ describe('normalizeConfigResponse Codex configuration', () => {
     ).toBe(1);
   });
 });
+
+describe('normalizeConfigResponse ChatGPT Web image configuration', () => {
+  it('normalizes poll stall breaker settings from YAML and camel-case keys', () => {
+    expect(
+      normalizeConfigResponse({
+        images: {
+          'chatgpt-web': {
+            'poll-stall-breaker-enabled': false,
+            'poll-stall-seconds': 300,
+          },
+        },
+      }).images?.chatgptWeb
+    ).toEqual({ pollStallBreakerEnabled: false, pollStallSeconds: 300 });
+
+    expect(
+      normalizeConfigResponse({
+        images: {
+          chatgptWeb: {
+            pollStallBreakerEnabled: true,
+            pollStallSeconds: '120',
+          },
+        },
+      }).images?.chatgptWeb
+    ).toEqual({ pollStallBreakerEnabled: true, pollStallSeconds: 120 });
+  });
+});

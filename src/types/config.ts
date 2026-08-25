@@ -131,6 +131,10 @@ export interface ImagesConfig {
   overrideInputFidelity?: boolean;
   streamFlushIntervalMs?: number;
   streamFlushMinBytes?: number;
+  chatgptWeb?: {
+    pollStallBreakerEnabled?: boolean;
+    pollStallSeconds?: number;
+  };
   native?: NativeImagesConfig;
 }
 

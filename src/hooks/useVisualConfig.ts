@@ -1620,6 +1620,12 @@ export function getVisualConfigValidationErrors(
       values.chatgptWebImagePollConcurrency,
       1
     ),
+    chatgptWebImagePollStallSeconds: getIntegerRangeError(
+      values.chatgptWebImagePollStallSeconds,
+      30,
+      3600,
+      'integer_range_30_3600'
+    ),
     chatgptWebImageMemoryFinalizerConcurrency: getCapacityIntegerError(
       values.chatgptWebImageMemoryFinalizerConcurrency,
       1
@@ -2536,6 +2542,19 @@ function getNextDirtyFields(
       nextValues.chatgptWebImagePollConcurrency === baselineValues.chatgptWebImagePollConcurrency
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImagePollStallBreakerEnabled')) {
+    updateDirty(
+      'chatgptWebImagePollStallBreakerEnabled',
+      nextValues.chatgptWebImagePollStallBreakerEnabled ===
+        baselineValues.chatgptWebImagePollStallBreakerEnabled
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImagePollStallSeconds')) {
+    updateDirty(
+      'chatgptWebImagePollStallSeconds',
+      nextValues.chatgptWebImagePollStallSeconds === baselineValues.chatgptWebImagePollStallSeconds
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageMemoryFinalizerConcurrency')) {
     updateDirty(
       'chatgptWebImageMemoryFinalizerConcurrency',
@@ -3325,6 +3344,16 @@ export function useVisualConfig() {
             imagesChatGPTWeb?.pollConcurrency ??
             DEFAULT_VISUAL_VALUES.chatgptWebImagePollConcurrency
         ),
+        chatgptWebImagePollStallBreakerEnabled: parseBooleanValue(
+          imagesChatGPTWeb?.['poll-stall-breaker-enabled'] ??
+            imagesChatGPTWeb?.pollStallBreakerEnabled ??
+            DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallBreakerEnabled
+        ),
+        chatgptWebImagePollStallSeconds: String(
+          imagesChatGPTWeb?.['poll-stall-seconds'] ??
+            imagesChatGPTWeb?.pollStallSeconds ??
+            DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallSeconds
+        ),
         chatgptWebImageMemoryFinalizerConcurrency: String(
           imagesChatGPTWeb?.['memory-finalizer-concurrency'] ??
             imagesChatGPTWeb?.memoryFinalizerConcurrency ??
@@ -4096,6 +4125,10 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryCapacityMegabytes ||
           values.chatgptWebImagePollConcurrency !==
             DEFAULT_VISUAL_VALUES.chatgptWebImagePollConcurrency ||
+          values.chatgptWebImagePollStallBreakerEnabled !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallBreakerEnabled ||
+          values.chatgptWebImagePollStallSeconds !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallSeconds ||
           values.chatgptWebImageMemoryFinalizerConcurrency !==
             DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryFinalizerConcurrency ||
           docHas(doc, ['images', 'chatgpt-web']) ||
@@ -4176,6 +4209,10 @@ export function useVisualConfig() {
               DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryCapacityMegabytes ||
             values.chatgptWebImagePollConcurrency !==
               DEFAULT_VISUAL_VALUES.chatgptWebImagePollConcurrency ||
+            values.chatgptWebImagePollStallBreakerEnabled !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallBreakerEnabled ||
+            values.chatgptWebImagePollStallSeconds !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallSeconds ||
             values.chatgptWebImageMemoryFinalizerConcurrency !==
               DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryFinalizerConcurrency
           ) {
@@ -4263,6 +4300,15 @@ export function useVisualConfig() {
               ['images', 'chatgpt-web', 'poll-concurrency'],
               values.chatgptWebImagePollConcurrency
             );
+            doc.setIn(
+              ['images', 'chatgpt-web', 'poll-stall-breaker-enabled'],
+              values.chatgptWebImagePollStallBreakerEnabled
+            );
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'poll-stall-seconds'],
+              values.chatgptWebImagePollStallSeconds
+            );
             setIntFromStringInDoc(
               doc,
               ['images', 'chatgpt-web', 'memory-finalizer-concurrency'],
@@ -4276,6 +4322,8 @@ export function useVisualConfig() {
               'completionReserveMegabytes',
               'memoryCapacityMegabytes',
               'pollConcurrency',
+              'pollStallBreakerEnabled',
+              'pollStallSeconds',
               'memoryFinalizerConcurrency',
               'remoteImageUrlEnabled',
               'remoteImageUrlDownloadMode',

@@ -12,10 +12,14 @@ import {
   useModelsStore,
   useThemeStore,
 } from '@/stores';
-import { configApi, systemMetricsApi, versionApi } from '@/services/api';
+import { chatGptWebApi, configApi, systemMetricsApi, versionApi } from '@/services/api';
 import type { ControlPanelUpdateStatus } from '@/services/api/config';
 import { apiKeysApi } from '@/services/api/apiKeys';
-import type { SystemFilesystemSnapshot, SystemMetricsSnapshot } from '@/types';
+import type {
+  ChatGptWebImageTaskListSnapshot,
+  SystemFilesystemSnapshot,
+  SystemMetricsSnapshot,
+} from '@/types';
 import { classifyModels } from '@/utils/models';
 import { STORAGE_KEY_AUTH } from '@/utils/constants';
 import { INLINE_LOGO_JPEG } from '@/assets/logoInline';
@@ -91,6 +95,9 @@ const formatDurationNanos = (value: number): string => {
   const minutes = seconds / 60;
   return `${minutes.toFixed(minutes < 10 ? 2 : 1)} min`;
 };
+
+const formatDurationMilliseconds = (value: number): string =>
+  formatDurationNanos(value * 1_000_000);
 
 const formatPercent = (value: number): string =>
   Number.isFinite(value) ? `${value.toFixed(value >= 10 ? 1 : 2)}%` : '-';
@@ -192,7 +199,14 @@ export function SystemPage() {
   const [systemMetricsLoading, setSystemMetricsLoading] = useState(false);
   const [systemMetricsError, setSystemMetricsError] = useState('');
   const [systemMetricsUnsupported, setSystemMetricsUnsupported] = useState(false);
+  const [imageTasks, setImageTasks] = useState<ChatGptWebImageTaskListSnapshot | null>(null);
+  const [imageTasksLoading, setImageTasksLoading] = useState(false);
+  const [imageTasksError, setImageTasksError] = useState('');
+  const [imageTasksUnsupported, setImageTasksUnsupported] = useState(false);
+  const [showLongImageTasksOnly, setShowLongImageTasksOnly] = useState(false);
+  const [cancelingImageTaskIds, setCancelingImageTaskIds] = useState<Set<string>>(() => new Set());
   const [imageRuntimeOpen, setImageRuntimeOpen] = useState(true);
+  const [imageTasksOpen, setImageTasksOpen] = useState(false);
   const [workingDirectoryOpen, setWorkingDirectoryOpen] = useState(true);
 
   const apiKeysCache = useRef<string[]>([]);
@@ -201,6 +215,8 @@ export function SystemPage() {
   const systemMetricsRequestSequence = useRef(0);
   const systemMetricsConnectionKey = useRef('');
   const systemMetricsInFlightConnection = useRef<string | null>(null);
+  const imageTasksRequestSequence = useRef(0);
+  const imageTasksInFlightRequest = useRef<number | null>(null);
   const currentSystemMetricsConnectionKey = `${auth.connectionGeneration}:${auth.apiBase}:${auth.managementAccessPath}`;
 
   const otherLabel = useMemo(
@@ -546,6 +562,99 @@ export function SystemPage() {
     [auth.connectionStatus, currentSystemMetricsConnectionKey, systemMetricsUnsupported, t]
   );
 
+  const loadImageTasks = useCallback(
+    async ({
+      background = false,
+      force = false,
+      signal,
+    }: { background?: boolean; force?: boolean; signal?: AbortSignal } = {}) => {
+      if (
+        auth.connectionStatus !== 'connected' ||
+        !imageRuntimeOpen ||
+        !imageTasksOpen ||
+        (imageTasksUnsupported && !force)
+      ) {
+        return;
+      }
+      if (imageTasksInFlightRequest.current !== null) return;
+
+      const requestSequence = ++imageTasksRequestSequence.current;
+      imageTasksInFlightRequest.current = requestSequence;
+      if (!background) setImageTasksLoading(true);
+      try {
+        const snapshot = await chatGptWebApi.getImageTasks(signal);
+        if (signal?.aborted || requestSequence !== imageTasksRequestSequence.current) return;
+        setImageTasks(snapshot);
+        setImageTasksError('');
+        setImageTasksUnsupported(false);
+      } catch (error: unknown) {
+        if (signal?.aborted || requestSequence !== imageTasksRequestSequence.current) return;
+        const unsupported = getErrorStatus(error) === 404;
+        setImageTasksUnsupported(unsupported);
+        setImageTasksError(
+          unsupported
+            ? ''
+            : error instanceof Error
+              ? error.message
+              : typeof error === 'string'
+                ? error
+                : t('system_info.image_runtime.tasks_load_failed')
+        );
+      } finally {
+        if (imageTasksInFlightRequest.current === requestSequence) {
+          imageTasksInFlightRequest.current = null;
+        }
+        if (requestSequence === imageTasksRequestSequence.current && !background) {
+          setImageTasksLoading(false);
+        }
+      }
+    },
+    [auth.connectionStatus, imageRuntimeOpen, imageTasksOpen, imageTasksUnsupported, t]
+  );
+
+  const handleCancelImageTask = useCallback(
+    (taskID: string) => {
+      showConfirmation({
+        title: t('system_info.image_runtime.task_cancel_confirm_title'),
+        message: t('system_info.image_runtime.task_cancel_confirm_message', { id: taskID }),
+        confirmText: t('common.confirm'),
+        variant: 'danger',
+        onConfirm: async () => {
+          setCancelingImageTaskIds((current) => new Set(current).add(taskID));
+          try {
+            await chatGptWebApi.cancelImageTask(taskID);
+            setImageTasks((current) =>
+              current
+                ? {
+                    ...current,
+                    tasks: current.tasks.map((task) =>
+                      task.id === taskID ? { ...task, canceling: true } : task
+                    ),
+                  }
+                : current
+            );
+            showNotification(t('system_info.image_runtime.task_cancel_success'), 'success');
+            await loadImageTasks({ force: true });
+          } catch (error: unknown) {
+            const message =
+              error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+            showNotification(
+              `${t('system_info.image_runtime.task_cancel_failed')}${message ? `: ${message}` : ''}`,
+              'error'
+            );
+          } finally {
+            setCancelingImageTaskIds((current) => {
+              const next = new Set(current);
+              next.delete(taskID);
+              return next;
+            });
+          }
+        },
+      });
+    },
+    [loadImageTasks, showConfirmation, showNotification, t]
+  );
+
   useEffect(() => {
     fetchConfig().catch(() => {
       // ignore
@@ -565,6 +674,15 @@ export function SystemPage() {
     setSystemMetricsLoading(false);
     setSystemMetricsError('');
     setSystemMetricsUnsupported(false);
+    imageTasksInFlightRequest.current = null;
+    imageTasksRequestSequence.current += 1;
+    setImageTasks(null);
+    setImageTasksLoading(false);
+    setImageTasksError('');
+    setImageTasksUnsupported(false);
+    setShowLongImageTasksOnly(false);
+    setCancelingImageTaskIds(new Set());
+    setImageTasksOpen(false);
   }, [currentSystemMetricsConnectionKey]);
 
   useEffect(() => {
@@ -575,20 +693,48 @@ export function SystemPage() {
       setSystemMetricsLoading(false);
       setSystemMetricsError('');
       setSystemMetricsUnsupported(false);
+      imageTasksInFlightRequest.current = null;
+      imageTasksRequestSequence.current += 1;
+      setImageTasks(null);
+      setImageTasksLoading(false);
+      setImageTasksError('');
+      setImageTasksUnsupported(false);
       return;
     }
+    const imageTasksController = new AbortController();
     void loadSystemMetrics();
-    if (systemMetricsUnsupported) return;
+    if (imageRuntimeOpen && imageTasksOpen) {
+      void loadImageTasks({ signal: imageTasksController.signal });
+    }
+    if (systemMetricsUnsupported && (!imageTasksOpen || imageTasksUnsupported)) {
+      return () => imageTasksController.abort();
+    }
     const timer = window.setInterval(() => {
       if (document.visibilityState !== 'hidden') {
-        void loadSystemMetrics({ background: true });
+        if (!systemMetricsUnsupported) {
+          void loadSystemMetrics({ background: true });
+        }
+        if (imageRuntimeOpen && imageTasksOpen && !imageTasksUnsupported) {
+          void loadImageTasks({ background: true, signal: imageTasksController.signal });
+        }
       }
     }, SYSTEM_METRICS_POLL_INTERVAL_MS);
     return () => {
+      imageTasksController.abort();
       window.clearInterval(timer);
       systemMetricsRequestSequence.current += 1;
+      imageTasksInFlightRequest.current = null;
+      imageTasksRequestSequence.current += 1;
     };
-  }, [auth.connectionStatus, loadSystemMetrics, systemMetricsUnsupported]);
+  }, [
+    auth.connectionStatus,
+    imageRuntimeOpen,
+    imageTasksOpen,
+    imageTasksUnsupported,
+    loadImageTasks,
+    loadSystemMetrics,
+    systemMetricsUnsupported,
+  ]);
 
   useEffect(() => {
     if (requestLogModalOpen && !requestLogTouched) {
@@ -603,6 +749,8 @@ export function SystemPage() {
       }
       systemMetricsInFlightConnection.current = null;
       systemMetricsRequestSequence.current += 1;
+      imageTasksInFlightRequest.current = null;
+      imageTasksRequestSequence.current += 1;
     };
   }, []);
 
@@ -635,8 +783,12 @@ export function SystemPage() {
   const imageFinalizers = systemMetrics?.chatgpt_web_image_finalizers;
   const imageMemoryFinalizers = systemMetrics?.chatgpt_web_image_memory_finalizers;
   const imagePollSlots = systemMetrics?.chatgpt_web_image_poll_slots;
+  const imagePollBreaker = systemMetrics?.chatgpt_web_image_poll_breaker;
   const imageProtocol = systemMetrics?.chatgpt_web_image_protocol;
   const imageSpool = systemMetrics?.image_spool;
+  const visibleImageTasks = imageTasks?.tasks.filter(
+    (task) => !showLongImageTasksOnly || task.over_15_minutes
+  );
   const imageProtocolEntries: Array<[string, number]> = imageProtocol?.available
     ? [
         ['task_ids_observed', imageProtocol.task_ids_observed],
@@ -663,9 +815,11 @@ export function SystemPage() {
     imageFinalizers?.available ||
     imageMemoryFinalizers?.available ||
     imagePollSlots?.available ||
+    imagePollBreaker?.available ||
     imageProtocol?.available ||
     imageSpool?.available ||
-    systemMetrics?.image_request_phases.available
+    systemMetrics?.image_request_phases.available ||
+    (imageTasks?.active ?? 0) > 0
   );
   const imagePressureMetrics = [
     {
@@ -1387,6 +1541,87 @@ export function SystemPage() {
                         )}
                       </article>
 
+                      <article
+                        className={styles.imageMetricPanel}
+                        data-state={
+                          imagePollBreaker?.open
+                            ? 'open'
+                            : imagePollBreaker?.enabled
+                              ? 'closed'
+                              : 'disabled'
+                        }
+                      >
+                        <div className={styles.imageMetricHeader}>
+                          <h4>{t('system_info.image_runtime.poll_breaker')}</h4>
+                          <span>
+                            {t(
+                              imagePollBreaker?.enabled
+                                ? 'system_info.image_runtime.breaker_enabled'
+                                : 'system_info.image_runtime.breaker_disabled'
+                            )}
+                          </span>
+                        </div>
+                        {!imagePollBreaker?.available ? (
+                          <p className={styles.imageMetricUnavailable}>
+                            {t('system_info.image_runtime.group_unavailable')}
+                          </p>
+                        ) : (
+                          <>
+                            <div
+                              className={styles.imageBreakerLead}
+                              data-state={imagePollBreaker.open ? 'open' : 'closed'}
+                            >
+                              <span aria-hidden="true" />
+                              <strong>
+                                {t(
+                                  imagePollBreaker.open
+                                    ? 'system_info.image_runtime.breaker_open'
+                                    : 'system_info.image_runtime.breaker_closed'
+                                )}
+                              </strong>
+                            </div>
+                            <dl className={styles.imageMetricStats}>
+                              <div>
+                                <dt>{t('system_info.image_runtime.breaker_stall_window')}</dt>
+                                <dd>{imagePollBreaker.stall_seconds} s</dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.breaker_no_completion_age')}</dt>
+                                <dd>
+                                  {formatDurationNanos(imagePollBreaker.no_completion_age_nanos)}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.breaker_opened_at')}</dt>
+                                <dd>{formatMetricDate(imagePollBreaker.opened_at)}</dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.breaker_full_since')}</dt>
+                                <dd>{formatMetricDate(imagePollBreaker.full_since)}</dd>
+                              </div>
+                              <div className={styles.imageMetricWide}>
+                                <dt>{t('system_info.image_runtime.breaker_last_completion')}</dt>
+                                <dd>{formatMetricDate(imagePollBreaker.last_completion_at)}</dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.breaker_rejected')}</dt>
+                                <dd>{imagePollBreaker.rejected}</dd>
+                              </div>
+                              <div>
+                                <dt>{t('system_info.image_runtime.breaker_completions')}</dt>
+                                <dd>{imagePollBreaker.transport_completions}</dd>
+                              </div>
+                              <div>
+                                <dt>
+                                  {t('system_info.image_runtime.breaker_canceled_completions')}
+                                </dt>
+                                <dd>{imagePollBreaker.canceled_completions}</dd>
+                              </div>
+                            </dl>
+                          </>
+                        )}
+                      </article>
+
                       <article className={styles.imageMetricPanel}>
                         <div className={styles.imageMetricHeader}>
                           <h4>{t('system_info.image_runtime.spool')}</h4>
@@ -1426,6 +1661,185 @@ export function SystemPage() {
                         )}
                       </article>
                     </div>
+
+                    <details
+                      className={styles.imagePhaseDetails}
+                      data-testid="image-task-diagnostics"
+                      open={imageTasksOpen}
+                      onToggle={(event) => {
+                        const open = event.currentTarget.open;
+                        setImageTasksOpen(open);
+                        if (!open) setImageTasksLoading(false);
+                      }}
+                    >
+                      <summary>
+                        <span>{t('system_info.image_runtime.tasks_title')}</span>
+                        <span>
+                          {imageTasks
+                            ? `${imageTasks.active} / ${imageTasks.registry_capacity || '-'}`
+                            : imageTasksLoading
+                              ? t('system_info.image_runtime.tasks_loading')
+                              : '-'}
+                        </span>
+                      </summary>
+                      {imageTasksOpen ? (
+                        <div className={styles.imageTaskContent}>
+                          <p className={styles.imageTaskDescription}>
+                            {t('system_info.image_runtime.tasks_description')}
+                          </p>
+                          {imageTasksUnsupported ? (
+                            <div className="hint">
+                              {t('system_info.image_runtime.tasks_unavailable')}
+                            </div>
+                          ) : imageTasksError ? (
+                            <div className="error-box">
+                              {t('system_info.image_runtime.tasks_load_failed')}: {imageTasksError}
+                            </div>
+                          ) : imageTasksLoading && !imageTasks ? (
+                            <div className="hint">
+                              {t('system_info.image_runtime.tasks_loading')}
+                            </div>
+                          ) : (
+                            <>
+                              <div className={styles.imageTaskToolbar}>
+                                <dl className={styles.imageTaskSummary}>
+                                  <div>
+                                    <dt>{t('system_info.image_runtime.tasks_active')}</dt>
+                                    <dd>{imageTasks?.active ?? 0}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>{t('system_info.image_runtime.tasks_canceling_count')}</dt>
+                                    <dd>{imageTasks?.canceling ?? 0}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>{t('system_info.image_runtime.tasks_over_15_minutes')}</dt>
+                                    <dd>{imageTasks?.active_over_15_minutes ?? 0}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>{t('system_info.image_runtime.tasks_capacity')}</dt>
+                                    <dd>{imageTasks?.registry_capacity ?? 0}</dd>
+                                  </div>
+                                </dl>
+                                <div className={styles.imageTaskControls}>
+                                  <label>
+                                    <input
+                                      type="checkbox"
+                                      checked={showLongImageTasksOnly}
+                                      onChange={(event) =>
+                                        setShowLongImageTasksOnly(event.currentTarget.checked)
+                                      }
+                                    />
+                                    <span>
+                                      {t('system_info.image_runtime.tasks_show_long_only')}
+                                    </span>
+                                  </label>
+                                  <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    loading={imageTasksLoading}
+                                    onClick={() => void loadImageTasks({ force: true })}
+                                  >
+                                    {t('system_info.image_runtime.tasks_refresh')}
+                                  </Button>
+                                </div>
+                              </div>
+                              {!visibleImageTasks?.length ? (
+                                <div className="hint">
+                                  {t('system_info.image_runtime.tasks_empty')}
+                                </div>
+                              ) : (
+                                <div className={styles.imageTaskList}>
+                                  {visibleImageTasks.map((task) => {
+                                    const canceling =
+                                      task.canceling || cancelingImageTaskIds.has(task.id);
+                                    return (
+                                      <article
+                                        key={task.id}
+                                        className={styles.imageTaskCard}
+                                        data-long-running={task.over_15_minutes ? 'true' : 'false'}
+                                      >
+                                        <div className={styles.imageTaskHeader}>
+                                          <div className={styles.imageTaskIdentity}>
+                                            <code>{task.id}</code>
+                                            <span>
+                                              {canceling
+                                                ? t('system_info.image_runtime.task_canceling')
+                                                : task.status}
+                                            </span>
+                                            {task.over_15_minutes ? (
+                                              <span className={styles.imageTaskWarning}>
+                                                {t('system_info.image_runtime.task_long_warning')}
+                                              </span>
+                                            ) : null}
+                                          </div>
+                                          <Button
+                                            type="button"
+                                            variant="danger"
+                                            size="sm"
+                                            disabled={canceling}
+                                            loading={cancelingImageTaskIds.has(task.id)}
+                                            onClick={() => handleCancelImageTask(task.id)}
+                                          >
+                                            {t('system_info.image_runtime.task_cancel')}
+                                          </Button>
+                                        </div>
+                                        <dl className={styles.imageTaskStats}>
+                                          <div>
+                                            <dt>{t('system_info.image_runtime.task_stage')}</dt>
+                                            <dd>
+                                              {t(
+                                                `system_info.image_runtime.task_stages.${task.stage}`,
+                                                { defaultValue: task.stage || '-' }
+                                              )}
+                                            </dd>
+                                          </div>
+                                          <div>
+                                            <dt>{t('system_info.image_runtime.task_duration')}</dt>
+                                            <dd>
+                                              {formatDurationMilliseconds(
+                                                task.duration_milliseconds
+                                              )}
+                                            </dd>
+                                          </div>
+                                          <div>
+                                            <dt>
+                                              {t('system_info.image_runtime.task_last_progress')}
+                                            </dt>
+                                            <dd>
+                                              {formatMetricDate(task.last_progress_at)} ·{' '}
+                                              {formatDurationMilliseconds(
+                                                task.last_progress_age_milliseconds
+                                              )}
+                                            </dd>
+                                          </div>
+                                          <div>
+                                            <dt>{t('system_info.image_runtime.task_last_poll')}</dt>
+                                            <dd>{formatMetricDate(task.last_poll_completed_at)}</dd>
+                                          </div>
+                                          <div>
+                                            <dt>
+                                              {t('system_info.image_runtime.task_polls_in_flight')}
+                                            </dt>
+                                            <dd>{task.polls_in_flight}</dd>
+                                          </div>
+                                          <div>
+                                            <dt>
+                                              {t('system_info.image_runtime.task_credential')}
+                                            </dt>
+                                            <dd>{task.credential_fingerprint || '-'}</dd>
+                                          </div>
+                                        </dl>
+                                      </article>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      ) : null}
+                    </details>
 
                     {imageProtocol?.available ? (
                       <details

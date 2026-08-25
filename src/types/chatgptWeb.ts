@@ -499,6 +499,36 @@ export interface ChatGptWebUsageSnapshot extends ChatGptWebUsageConfig {
   filesystem?: SystemFilesystemSnapshot;
 }
 
+export interface ChatGptWebImageTask {
+  id: string;
+  status: string;
+  stage: string;
+  started_at: string;
+  duration_milliseconds: number;
+  last_progress_at: string;
+  last_progress_age_milliseconds: number;
+  last_poll_completed_at: string | null;
+  polls_in_flight: number;
+  credential_fingerprint: string;
+  canceling: boolean;
+  cancellation_requested_at: string | null;
+  over_15_minutes: boolean;
+}
+
+export interface ChatGptWebImageTaskListSnapshot {
+  collected_at: string;
+  active: number;
+  canceling: number;
+  active_over_15_minutes: number;
+  registry_capacity: number;
+  tasks: ChatGptWebImageTask[];
+}
+
+export interface ChatGptWebImageTaskCancelResult {
+  id: string;
+  status: string;
+}
+
 export const isChatGptWebLoginTaskTerminal = (state: ChatGptWebLoginTaskState): boolean =>
   state === 'completed' || state === 'completed_with_errors' || state === 'canceled';
 

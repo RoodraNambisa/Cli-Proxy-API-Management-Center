@@ -1001,6 +1001,11 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     const native = isRecord(images.native) ? images.native : undefined;
     const nativeGenerations = normalizeNativeImageEndpoint(native?.generations);
     const nativeEdits = normalizeNativeImageEndpoint(native?.edits);
+    const chatgptWeb = isRecord(images['chatgpt-web'])
+      ? images['chatgpt-web']
+      : isRecord(images.chatgptWeb)
+        ? images.chatgptWeb
+        : undefined;
     config.images = {
       codexModel:
         typeof codexModel === 'string'
@@ -1053,6 +1058,16 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       streamFlushMinBytes: normalizeNumber(
         images['stream-flush-min-bytes'] ?? images.streamFlushMinBytes
       ),
+      chatgptWeb: chatgptWeb
+        ? {
+            pollStallBreakerEnabled: normalizeBoolean(
+              chatgptWeb['poll-stall-breaker-enabled'] ?? chatgptWeb.pollStallBreakerEnabled
+            ),
+            pollStallSeconds: normalizeNumber(
+              chatgptWeb['poll-stall-seconds'] ?? chatgptWeb.pollStallSeconds
+            ),
+          }
+        : undefined,
       native:
         nativeGenerations || nativeEdits
           ? {
