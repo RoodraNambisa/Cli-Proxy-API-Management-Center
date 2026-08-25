@@ -189,31 +189,79 @@
 }
 
 .imageRuntimeSection {
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+  background: color-mix(in srgb, var(--bg-secondary) 70%, transparent);
+}
+
+.imageRuntimeSection[open] {
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
-  padding-top: $spacing-sm;
+  padding-bottom: $spacing-md;
+}
+
+.imageRuntimeSection[open] > :not(.imageRuntimeHeader) {
+  margin-right: $spacing-md;
+  margin-left: $spacing-md;
 }
 
 .imageRuntimeHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: $spacing-md;
+  padding: $spacing-md;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
 
-  h3 {
-    margin: 0;
-    color: var(--text-primary);
-    font-size: 16px;
-    font-weight: 700;
+  &::-webkit-details-marker {
+    display: none;
   }
 
-  p {
-    margin: 4px 0 0;
-    color: var(--text-tertiary);
-    font-size: 12px;
-    line-height: 1.5;
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -3px;
   }
+}
+
+.imageRuntimeHeading {
+  min-width: 0;
+}
+
+.imageRuntimeTitle,
+.imageRuntimeDescription {
+  display: block;
+}
+
+.imageRuntimeTitle {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.imageRuntimeDescription {
+  margin-top: 4px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sectionChevron {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-right: 2px solid var(--text-tertiary);
+  border-bottom: 2px solid var(--text-tertiary);
+  transform: rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+.imageRuntimeSection[open] > .imageRuntimeHeader .sectionChevron,
+.filesystemCollapsible[open] > .filesystemHeader .sectionChevron {
+  transform: rotate(225deg);
 }
 
 .imagePressureOverview {
@@ -604,10 +652,10 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: $spacing-md;
+}
 
-  > div {
-    min-width: 0;
-  }
+.filesystemHeading {
+  min-width: 0;
 
   h3 {
     margin: 0;
@@ -615,7 +663,7 @@
     font-size: 14px;
   }
 
-  span {
+  > span {
     display: block;
     margin-top: 3px;
     color: var(--text-tertiary);
@@ -625,6 +673,33 @@
     font-size: 11px;
     overflow-wrap: anywhere;
   }
+}
+
+.filesystemCollapsible {
+  display: block;
+}
+
+.filesystemCollapsible > .filesystemHeader {
+  align-items: center;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 3px;
+  }
+}
+
+.filesystemCollapsibleContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
 }
 
 .filesystemStatus {
@@ -777,6 +852,10 @@
 
   .filesystemHeader {
     flex-direction: column;
+  }
+
+  summary.filesystemHeader {
+    flex-direction: row;
   }
 
   .imagePressureHeader {

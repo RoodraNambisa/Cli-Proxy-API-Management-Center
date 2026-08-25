@@ -92,6 +92,15 @@ const formatDurationNanos = (value: number): string => {
   return `${minutes.toFixed(minutes < 10 ? 2 : 1)} min`;
 };
 
+const formatPercent = (value: number): string =>
+  Number.isFinite(value) ? `${value.toFixed(value >= 10 ? 1 : 2)}%` : '-';
+
+const formatBytesPerSecond = (value: number): string =>
+  Number.isFinite(value) && value >= 0 ? `${formatBytes(value)}/s` : '-';
+
+const formatCyclesPerSecond = (value: number): string =>
+  Number.isFinite(value) && value >= 0 ? `${value.toFixed(value >= 10 ? 1 : 2)}/s` : '-';
+
 const metricUtilizationPercent = (current: number, limit: number): number | null => {
   if (!Number.isFinite(current) || !Number.isFinite(limit) || current < 0 || limit <= 0) {
     return null;
@@ -183,6 +192,8 @@ export function SystemPage() {
   const [systemMetricsLoading, setSystemMetricsLoading] = useState(false);
   const [systemMetricsError, setSystemMetricsError] = useState('');
   const [systemMetricsUnsupported, setSystemMetricsUnsupported] = useState(false);
+  const [imageRuntimeOpen, setImageRuntimeOpen] = useState(true);
+  const [workingDirectoryOpen, setWorkingDirectoryOpen] = useState(true);
 
   const apiKeysCache = useRef<string[]>([]);
   const versionTapCount = useRef(0);
@@ -645,6 +656,7 @@ export function SystemPage() {
   const imagePhaseEntries = systemMetrics
     ? sortImagePhaseEntries(Object.entries(systemMetrics.image_request_phases.metrics))
     : [];
+  const imagePhaseRolling = systemMetrics?.image_request_phases.rolling;
   const hasImageRuntimeMetrics = Boolean(
     imageMemory?.available ||
     imageInFlight?.available ||
@@ -821,6 +833,7 @@ export function SystemPage() {
 
         <Card
           title={t('system_info.metrics_title')}
+          collapsible
           extra={
             <Button
               type="button"
@@ -858,10 +871,48 @@ export function SystemPage() {
                   ['heap_alloc', formatBytes(systemMetrics.runtime.heap_alloc_bytes)],
                   ['heap_inuse', formatBytes(systemMetrics.runtime.heap_inuse_bytes)],
                   ['runtime_sys', formatBytes(systemMetrics.runtime.runtime_sys_bytes)],
+                  [
+                    'resident_set',
+                    systemMetrics.runtime.resident_set_available
+                      ? formatBytes(systemMetrics.runtime.resident_set_bytes)
+                      : '-',
+                  ],
                   ['total_alloc', formatBytes(systemMetrics.runtime.total_alloc_bytes)],
+                  [
+                    'allocation_rate',
+                    systemMetrics.runtime.rates_available
+                      ? formatBytesPerSecond(systemMetrics.runtime.allocation_bytes_per_second)
+                      : '-',
+                  ],
                   ['stack_inuse', formatBytes(systemMetrics.runtime.stack_inuse_bytes)],
                   ['goroutines', systemMetrics.runtime.goroutines],
                   ['gc_cycles', systemMetrics.runtime.gc_cycles],
+                  [
+                    'gc_rate',
+                    systemMetrics.runtime.rates_available
+                      ? formatCyclesPerSecond(systemMetrics.runtime.gc_cycles_per_second)
+                      : '-',
+                  ],
+                  [
+                    'gc_pause',
+                    systemMetrics.runtime.rates_available
+                      ? formatPercent(systemMetrics.runtime.gc_pause_percent)
+                      : '-',
+                  ],
+                  [
+                    'process_cpu',
+                    systemMetrics.runtime.process_cpu_available &&
+                    systemMetrics.runtime.rates_available
+                      ? formatPercent(systemMetrics.runtime.process_cpu_percent)
+                      : '-',
+                  ],
+                  [
+                    'process_cpu_normalized',
+                    systemMetrics.runtime.process_cpu_available &&
+                    systemMetrics.runtime.rates_available
+                      ? formatPercent(systemMetrics.runtime.process_cpu_normalized_percent)
+                      : '-',
+                  ],
                   [
                     'gomaxprocs',
                     `${systemMetrics.runtime.gomaxprocs} / ${systemMetrics.runtime.logical_cpus}`,
@@ -879,13 +930,23 @@ export function SystemPage() {
                 ))}
               </dl>
 
-              <section className={styles.imageRuntimeSection} data-testid="image-runtime-metrics">
-                <div className={styles.imageRuntimeHeader}>
-                  <div>
-                    <h3>{t('system_info.image_runtime.title')}</h3>
-                    <p>{t('system_info.image_runtime.description')}</p>
-                  </div>
-                </div>
+              <details
+                className={styles.imageRuntimeSection}
+                data-testid="image-runtime-metrics"
+                open={imageRuntimeOpen}
+                onToggle={(event) => setImageRuntimeOpen(event.currentTarget.open)}
+              >
+                <summary className={styles.imageRuntimeHeader}>
+                  <span className={styles.imageRuntimeHeading}>
+                    <span className={styles.imageRuntimeTitle}>
+                      {t('system_info.image_runtime.title')}
+                    </span>
+                    <span className={styles.imageRuntimeDescription}>
+                      {t('system_info.image_runtime.description')}
+                    </span>
+                  </span>
+                  <span className={styles.sectionChevron} aria-hidden="true" />
+                </summary>
                 {!hasImageRuntimeMetrics ? (
                   <div className="hint">{t('system_info.image_runtime.unavailable')}</div>
                 ) : (
@@ -1397,6 +1458,11 @@ export function SystemPage() {
                             {t('system_info.image_runtime.phase_count', {
                               count: imagePhaseEntries.length,
                             })}
+                            {imagePhaseRolling?.available
+                              ? ` · ${t('system_info.image_runtime.rolling_window', {
+                                  seconds: imagePhaseRolling.requested_window_seconds,
+                                })}`
+                              : ''}
                           </span>
                         </summary>
                         {imagePhaseEntries.length === 0 ? (
@@ -1413,26 +1479,44 @@ export function SystemPage() {
                                   <th>{t('system_info.image_runtime.average')}</th>
                                   <th>{t('system_info.image_runtime.maximum')}</th>
                                   <th>{t('system_info.image_runtime.over_10_seconds')}</th>
+                                  <th>{t('system_info.image_runtime.rolling_count')}</th>
+                                  <th>{t('system_info.image_runtime.rolling_average')}</th>
+                                  <th>{t('system_info.image_runtime.rolling_over_10_seconds')}</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {imagePhaseEntries.map(([name, metric]) => (
-                                  <tr key={name}>
-                                    <td>
-                                      {t(`system_info.image_runtime.phase_names.${name}`, {
-                                        defaultValue: name,
-                                      })}
-                                    </td>
-                                    <td>{metric.count}</td>
-                                    <td>
-                                      {formatDurationNanos(
-                                        metric.count > 0 ? metric.total_nanos / metric.count : 0
-                                      )}
-                                    </td>
-                                    <td>{formatDurationNanos(metric.max_nanos)}</td>
-                                    <td>{metric.over_10_seconds}</td>
-                                  </tr>
-                                ))}
+                                {imagePhaseEntries.map(([name, metric]) => {
+                                  const rollingMetric = imagePhaseRolling?.metrics[name];
+                                  const rollingAvailable =
+                                    imagePhaseRolling?.available === true &&
+                                    rollingMetric !== undefined;
+                                  return (
+                                    <tr key={name}>
+                                      <td>
+                                        {t(`system_info.image_runtime.phase_names.${name}`, {
+                                          defaultValue: name,
+                                        })}
+                                      </td>
+                                      <td>{metric.count}</td>
+                                      <td>
+                                        {formatDurationNanos(
+                                          metric.count > 0 ? metric.total_nanos / metric.count : 0
+                                        )}
+                                      </td>
+                                      <td>{formatDurationNanos(metric.max_nanos)}</td>
+                                      <td>{metric.over_10_seconds}</td>
+                                      <td>{rollingAvailable ? rollingMetric.count : '-'}</td>
+                                      <td>
+                                        {rollingAvailable
+                                          ? formatDurationNanos(rollingMetric.average_nanos)
+                                          : '-'}
+                                      </td>
+                                      <td>
+                                        {rollingAvailable ? rollingMetric.over_10_seconds : '-'}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
                               </tbody>
                             </table>
                           </div>
@@ -1444,53 +1528,73 @@ export function SystemPage() {
                     ) : null}
                   </>
                 )}
-              </section>
+              </details>
 
               <div className={styles.filesystemList}>
                 {filesystemEntries.map(({ key, value }) => {
                   const ready = value.status === 'ok' && value.total_bytes > 0;
                   const usedPercent = ready ? Math.min(100, Math.max(0, value.used_percent)) : 0;
+                  const header = (
+                    <>
+                      <span className={styles.filesystemHeading}>
+                        <h3>{t(`system_info.filesystems.${key}`)}</h3>
+                        <span>{value.path || '-'}</span>
+                      </span>
+                      {!ready ? (
+                        <span className={styles.filesystemStatus}>
+                          {t(
+                            value.status === 'unavailable'
+                              ? 'system_info.filesystem_unavailable'
+                              : 'system_info.filesystem_unsupported'
+                          )}
+                        </span>
+                      ) : null}
+                    </>
+                  );
+                  const body = ready ? (
+                    <>
+                      <div
+                        className={styles.filesystemTrack}
+                        aria-label={t(`system_info.filesystems.${key}`)}
+                      >
+                        <span style={{ width: `${usedPercent}%` }} />
+                      </div>
+                      <dl className={styles.filesystemStats}>
+                        <div>
+                          <dt>{t('system_info.filesystem_used')}</dt>
+                          <dd>{formatBytes(value.used_bytes)}</dd>
+                        </div>
+                        <div>
+                          <dt>{t('system_info.filesystem_available')}</dt>
+                          <dd>{formatBytes(value.available_bytes)}</dd>
+                        </div>
+                        <div>
+                          <dt>{t('system_info.filesystem_total')}</dt>
+                          <dd>{formatBytes(value.total_bytes)}</dd>
+                        </div>
+                      </dl>
+                    </>
+                  ) : null;
+                  if (key === 'working_directory') {
+                    return (
+                      <details
+                        key={key}
+                        className={`${styles.filesystemItem} ${styles.filesystemCollapsible}`}
+                        open={workingDirectoryOpen}
+                        onToggle={(event) => setWorkingDirectoryOpen(event.currentTarget.open)}
+                      >
+                        <summary className={styles.filesystemHeader}>
+                          {header}
+                          <span className={styles.sectionChevron} aria-hidden="true" />
+                        </summary>
+                        <div className={styles.filesystemCollapsibleContent}>{body}</div>
+                      </details>
+                    );
+                  }
                   return (
                     <section key={key} className={styles.filesystemItem}>
-                      <div className={styles.filesystemHeader}>
-                        <div>
-                          <h3>{t(`system_info.filesystems.${key}`)}</h3>
-                          <span>{value.path || '-'}</span>
-                        </div>
-                        {!ready ? (
-                          <span className={styles.filesystemStatus}>
-                            {t(
-                              value.status === 'unavailable'
-                                ? 'system_info.filesystem_unavailable'
-                                : 'system_info.filesystem_unsupported'
-                            )}
-                          </span>
-                        ) : null}
-                      </div>
-                      {ready ? (
-                        <>
-                          <div
-                            className={styles.filesystemTrack}
-                            aria-label={t(`system_info.filesystems.${key}`)}
-                          >
-                            <span style={{ width: `${usedPercent}%` }} />
-                          </div>
-                          <dl className={styles.filesystemStats}>
-                            <div>
-                              <dt>{t('system_info.filesystem_used')}</dt>
-                              <dd>{formatBytes(value.used_bytes)}</dd>
-                            </div>
-                            <div>
-                              <dt>{t('system_info.filesystem_available')}</dt>
-                              <dd>{formatBytes(value.available_bytes)}</dd>
-                            </div>
-                            <div>
-                              <dt>{t('system_info.filesystem_total')}</dt>
-                              <dd>{formatBytes(value.total_bytes)}</dd>
-                            </div>
-                          </dl>
-                        </>
-                      ) : null}
+                      <div className={styles.filesystemHeader}>{header}</div>
+                      {body}
                     </section>
                   );
                 })}

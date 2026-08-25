@@ -4,6 +4,7 @@ import type {
   SystemImageMemorySnapshot,
   SystemImagePollSlotsSnapshot,
   SystemImageRequestPhaseMetricSnapshot,
+  SystemImageRequestPhaseRollingMetricSnapshot,
   SystemImageRequestPhasesSnapshot,
   SystemImageSpoolSnapshot,
   SystemFilesystemSnapshot,
@@ -55,8 +56,18 @@ const normalizeRuntime = (value: unknown): SystemRuntimeSnapshot => {
     heap_inuse_bytes: toNonNegativeNumber(source.heap_inuse_bytes),
     stack_inuse_bytes: toNonNegativeNumber(source.stack_inuse_bytes),
     runtime_sys_bytes: toNonNegativeNumber(source.runtime_sys_bytes),
+    resident_set_bytes: toNonNegativeNumber(source.resident_set_bytes),
+    resident_set_available: source.resident_set_available === true,
     total_alloc_bytes: toNonNegativeNumber(source.total_alloc_bytes),
+    allocation_bytes_per_second: toNonNegativeNumber(source.allocation_bytes_per_second),
     gc_cycles: toNonNegativeNumber(source.gc_cycles),
+    gc_cycles_per_second: toNonNegativeNumber(source.gc_cycles_per_second),
+    gc_pause_percent: toNonNegativeNumber(source.gc_pause_percent),
+    process_cpu_percent: toNonNegativeNumber(source.process_cpu_percent),
+    process_cpu_normalized_percent: toNonNegativeNumber(source.process_cpu_normalized_percent),
+    process_cpu_available: source.process_cpu_available === true,
+    rate_sample_seconds: toNonNegativeNumber(source.rate_sample_seconds),
+    rates_available: source.rates_available === true,
     last_gc_at: typeof source.last_gc_at === 'string' ? source.last_gc_at : null,
   };
 };
@@ -163,6 +174,25 @@ const normalizeImagePhaseMetric = (value: unknown): SystemImageRequestPhaseMetri
   };
 };
 
+const normalizeImagePhaseRollingMetric = (
+  value: unknown
+): SystemImageRequestPhaseRollingMetricSnapshot => {
+  const source = isRecord(value) ? value : {};
+  return {
+    count: toNonNegativeNumber(source.count),
+    total_nanos: toNonNegativeNumber(source.total_nanos),
+    average_nanos: toNonNegativeNumber(source.average_nanos),
+    up_to_1_millisecond: toNonNegativeNumber(source.up_to_1_millisecond),
+    over_1_to_10_milliseconds: toNonNegativeNumber(source.over_1_to_10_milliseconds),
+    over_10_to_100_milliseconds: toNonNegativeNumber(source.over_10_to_100_milliseconds),
+    over_100_milliseconds_to_1_second: toNonNegativeNumber(
+      source.over_100_milliseconds_to_1_second
+    ),
+    over_1_to_10_seconds: toNonNegativeNumber(source.over_1_to_10_seconds),
+    over_10_seconds: toNonNegativeNumber(source.over_10_seconds),
+  };
+};
+
 const normalizeImageRequestPhases = (value: unknown): SystemImageRequestPhasesSnapshot => {
   const available = isRecord(value);
   const source = available ? value : {};
@@ -172,12 +202,26 @@ const normalizeImageRequestPhases = (value: unknown): SystemImageRequestPhasesSn
     if (!isRecord(metric)) return;
     metrics[name] = normalizeImagePhaseMetric(metric);
   });
+  const rawRolling = isRecord(source.rolling) ? source.rolling : {};
+  const rawRollingMetrics = isRecord(rawRolling.metrics) ? rawRolling.metrics : {};
+  const rollingMetrics: Record<string, SystemImageRequestPhaseRollingMetricSnapshot> = {};
+  Object.entries(rawRollingMetrics).forEach(([name, metric]) => {
+    if (!isRecord(metric)) return;
+    rollingMetrics[name] = normalizeImagePhaseRollingMetric(metric);
+  });
   return {
     available,
     handler_scope: toStringValue(source.handler_scope),
     chatgpt_web_scope: toStringValue(source.chatgpt_web_scope),
     response_write_count_semantics: toStringValue(source.response_write_count_semantics),
     metrics,
+    rolling: {
+      available: rawRolling.available === true,
+      requested_window_seconds: toNonNegativeNumber(rawRolling.requested_window_seconds),
+      sample_seconds: toNonNegativeNumber(rawRolling.sample_seconds),
+      history_samples: toNonNegativeNumber(rawRolling.history_samples),
+      metrics: rollingMetrics,
+    },
   };
 };
 

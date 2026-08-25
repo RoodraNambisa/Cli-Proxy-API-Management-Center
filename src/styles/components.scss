@@ -147,6 +147,54 @@ textarea {
   }
 }
 
+.card-collapsible {
+  padding: 0;
+}
+
+.card-collapsible-summary {
+  margin: 0;
+  padding: $spacing-lg;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -3px;
+  }
+}
+
+.card-collapsible-extra {
+  display: inline-flex;
+  cursor: default;
+}
+
+.card-collapsible-chevron {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-right: 2px solid var(--text-tertiary);
+  border-bottom: 2px solid var(--text-tertiary);
+  transform: rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+.card-collapsible[open] > .card-collapsible-summary {
+  margin-bottom: 0;
+}
+
+.card-collapsible[open] > .card-collapsible-summary .card-collapsible-chevron {
+  transform: rotate(225deg);
+}
+
+.card-collapsible-content {
+  padding: 0 $spacing-lg $spacing-lg;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;

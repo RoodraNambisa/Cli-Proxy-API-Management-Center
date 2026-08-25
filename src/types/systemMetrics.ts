@@ -21,8 +21,18 @@ export interface SystemRuntimeSnapshot {
   heap_inuse_bytes: number;
   stack_inuse_bytes: number;
   runtime_sys_bytes: number;
+  resident_set_bytes: number;
+  resident_set_available: boolean;
   total_alloc_bytes: number;
+  allocation_bytes_per_second: number;
   gc_cycles: number;
+  gc_cycles_per_second: number;
+  gc_pause_percent: number;
+  process_cpu_percent: number;
+  process_cpu_normalized_percent: number;
+  process_cpu_available: boolean;
+  rate_sample_seconds: number;
+  rates_available: boolean;
   last_gc_at: string | null;
 }
 
@@ -100,12 +110,33 @@ export interface SystemImageRequestPhaseMetricSnapshot {
   over_10_seconds: number;
 }
 
+export interface SystemImageRequestPhaseRollingMetricSnapshot {
+  count: number;
+  total_nanos: number;
+  average_nanos: number;
+  up_to_1_millisecond: number;
+  over_1_to_10_milliseconds: number;
+  over_10_to_100_milliseconds: number;
+  over_100_milliseconds_to_1_second: number;
+  over_1_to_10_seconds: number;
+  over_10_seconds: number;
+}
+
+export interface SystemImageRequestPhaseRollingSnapshot {
+  available: boolean;
+  requested_window_seconds: number;
+  sample_seconds: number;
+  history_samples: number;
+  metrics: Record<string, SystemImageRequestPhaseRollingMetricSnapshot>;
+}
+
 export interface SystemImageRequestPhasesSnapshot {
   available: boolean;
   handler_scope: string;
   chatgpt_web_scope: string;
   response_write_count_semantics: string;
   metrics: Record<string, SystemImageRequestPhaseMetricSnapshot>;
+  rolling: SystemImageRequestPhaseRollingSnapshot;
 }
 
 export interface SystemImageSpoolSnapshot {
