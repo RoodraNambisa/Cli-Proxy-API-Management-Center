@@ -3267,12 +3267,21 @@ export function useVisualConfig() {
           imagesChatGPTWeb?.['ignore-unsupported-params'] ??
           imagesChatGPTWeb?.ignoreUnsupportedParams
         ),
+        chatgptWebNormalizeMismatchedImageMime: parseBooleanValue(
+          imagesChatGPTWeb?.['normalize-mismatched-image-mime'] ??
+            imagesChatGPTWeb?.normalizeMismatchedImageMime
+        ),
         chatgptWebRemoteImageUrlEnabled: parseBooleanValue(
           imagesChatGPTWeb?.['remote-image-url-enabled'] ?? imagesChatGPTWeb?.remoteImageUrlEnabled
         ),
         chatgptWebRemoteImageUrlDownloadMode: parseChatGPTWebRemoteImageDownloadMode(
           imagesChatGPTWeb?.['remote-image-url-download-mode'] ??
             imagesChatGPTWeb?.remoteImageUrlDownloadMode
+        ),
+        chatgptWebNormalizeRemoteImageMime: parseBooleanValue(
+          imagesChatGPTWeb?.['normalize-remote-image-mime'] ??
+            imagesChatGPTWeb?.normalizeRemoteImageMime ??
+            DEFAULT_VISUAL_VALUES.chatgptWebNormalizeRemoteImageMime
         ),
         chatgptWebAdaptSizeToAspectRatio: parseBooleanValue(
           imagesChatGPTWeb?.['adapt-size-to-aspect-ratio'] ??
@@ -4095,10 +4104,14 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel ||
           values.chatgptWebIgnoreUnsupportedImageParams !==
             DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
+          values.chatgptWebNormalizeMismatchedImageMime !==
+            DEFAULT_VISUAL_VALUES.chatgptWebNormalizeMismatchedImageMime ||
           values.chatgptWebRemoteImageUrlEnabled !==
             DEFAULT_VISUAL_VALUES.chatgptWebRemoteImageUrlEnabled ||
           values.chatgptWebRemoteImageUrlDownloadMode !==
             DEFAULT_VISUAL_VALUES.chatgptWebRemoteImageUrlDownloadMode ||
+          values.chatgptWebNormalizeRemoteImageMime !==
+            DEFAULT_VISUAL_VALUES.chatgptWebNormalizeRemoteImageMime ||
           values.chatgptWebAdaptSizeToAspectRatio !==
             DEFAULT_VISUAL_VALUES.chatgptWebAdaptSizeToAspectRatio ||
           values.chatgptWebStrictSize !== DEFAULT_VISUAL_VALUES.chatgptWebStrictSize ||
@@ -4178,10 +4191,14 @@ export function useVisualConfig() {
               DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel ||
             values.chatgptWebIgnoreUnsupportedImageParams !==
               DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
+            values.chatgptWebNormalizeMismatchedImageMime !==
+              DEFAULT_VISUAL_VALUES.chatgptWebNormalizeMismatchedImageMime ||
             values.chatgptWebRemoteImageUrlEnabled !==
               DEFAULT_VISUAL_VALUES.chatgptWebRemoteImageUrlEnabled ||
             values.chatgptWebRemoteImageUrlDownloadMode !==
               DEFAULT_VISUAL_VALUES.chatgptWebRemoteImageUrlDownloadMode ||
+            values.chatgptWebNormalizeRemoteImageMime !==
+              DEFAULT_VISUAL_VALUES.chatgptWebNormalizeRemoteImageMime ||
             values.chatgptWebAdaptSizeToAspectRatio !==
               DEFAULT_VISUAL_VALUES.chatgptWebAdaptSizeToAspectRatio ||
             values.chatgptWebStrictSize !== DEFAULT_VISUAL_VALUES.chatgptWebStrictSize ||
@@ -4227,6 +4244,10 @@ export function useVisualConfig() {
               values.chatgptWebIgnoreUnsupportedImageParams
             );
             doc.setIn(
+              ['images', 'chatgpt-web', 'normalize-mismatched-image-mime'],
+              values.chatgptWebNormalizeMismatchedImageMime
+            );
+            doc.setIn(
               ['images', 'chatgpt-web', 'remote-image-url-enabled'],
               values.chatgptWebRemoteImageUrlEnabled
             );
@@ -4234,6 +4255,10 @@ export function useVisualConfig() {
               doc,
               ['images', 'chatgpt-web', 'remote-image-url-download-mode'],
               values.chatgptWebRemoteImageUrlDownloadMode
+            );
+            doc.setIn(
+              ['images', 'chatgpt-web', 'normalize-remote-image-mime'],
+              values.chatgptWebNormalizeRemoteImageMime
             );
             doc.setIn(
               ['images', 'chatgpt-web', 'adapt-size-to-aspect-ratio'],
@@ -4327,6 +4352,8 @@ export function useVisualConfig() {
               'memoryFinalizerConcurrency',
               'remoteImageUrlEnabled',
               'remoteImageUrlDownloadMode',
+              'normalizeMismatchedImageMime',
+              'normalizeRemoteImageMime',
             ]) {
               if (docHas(doc, ['images', 'chatgpt-web', legacyKey])) {
                 doc.deleteIn(['images', 'chatgpt-web', legacyKey]);

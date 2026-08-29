@@ -666,12 +666,20 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['picture_v2', 'web image', '图片参数', '忽略参数'],
   },
   {
+    id: 'config-chatgpt-web-normalize-image-mime',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.normalize_mismatched_image_mime',
+    yamlKeys: ['images.chatgpt-web.normalize-mismatched-image-mime'],
+    aliases: ['mime', 'content type', '图片格式', '格式纠正', '圖片格式'],
+  },
+  {
     id: 'config-chatgpt-web-remote-image-url',
     pageId: 'provider-chatgpt-web',
     labelKey: 'config_management.settings_center.chatgpt_web.remote_image_url_title',
     yamlKeys: [
       'images.chatgpt-web.remote-image-url-enabled',
       'images.chatgpt-web.remote-image-url-download-mode',
+      'images.chatgpt-web.normalize-remote-image-mime',
     ],
     aliases: [
       'image_url',

@@ -1238,6 +1238,7 @@ export function VisualConfigEditor({
   const chatGptWebRemoteImageDirty = hasDirtyConfigField(dirtyFields, [
     'chatgptWebRemoteImageUrlEnabled',
     'chatgptWebRemoteImageUrlDownloadMode',
+    'chatgptWebNormalizeRemoteImageMime',
   ]);
   const chatGptWebImageSizeDirty = hasDirtyConfigField(dirtyFields, [
     'chatgptWebAdaptSizeToAspectRatio',
@@ -2329,6 +2330,21 @@ export function VisualConfigEditor({
                   onChange({ chatgptWebIgnoreUnsupportedImageParams })
                 }
               />
+              <div id="config-chatgpt-web-normalize-image-mime">
+                <ToggleRow
+                  title={t(
+                    'config_management.settings_center.chatgpt_web.normalize_mismatched_image_mime'
+                  )}
+                  description={t(
+                    'config_management.settings_center.chatgpt_web.normalize_mismatched_image_mime_description'
+                  )}
+                  checked={values.chatgptWebNormalizeMismatchedImageMime}
+                  disabled={disabled}
+                  onChange={(chatgptWebNormalizeMismatchedImageMime) =>
+                    onChange({ chatgptWebNormalizeMismatchedImageMime })
+                  }
+                />
+              </div>
               <SettingsDisclosure
                 id="config-chatgpt-web-remote-image-url"
                 title={t('config_management.settings_center.chatgpt_web.remote_image_url_title')}
@@ -2346,6 +2362,7 @@ export function VisualConfigEditor({
                 targetIds={[
                   'config-chatgpt-web-remote-image-url-enabled',
                   'config-chatgpt-web-remote-image-url-download-mode',
+                  'config-chatgpt-web-normalize-remote-image-mime',
                 ]}
                 dirty={chatGptWebRemoteImageDirty}
               >
@@ -2389,6 +2406,21 @@ export function VisualConfigEditor({
                       }
                     />
                   </FieldShell>
+                  <div id="config-chatgpt-web-normalize-remote-image-mime">
+                    <ToggleRow
+                      title={t(
+                        'config_management.settings_center.chatgpt_web.normalize_remote_image_mime'
+                      )}
+                      description={t(
+                        'config_management.settings_center.chatgpt_web.normalize_remote_image_mime_description'
+                      )}
+                      checked={values.chatgptWebNormalizeRemoteImageMime}
+                      disabled={disabled || !values.chatgptWebNormalizeMismatchedImageMime}
+                      onChange={(chatgptWebNormalizeRemoteImageMime) =>
+                        onChange({ chatgptWebNormalizeRemoteImageMime })
+                      }
+                    />
+                  </div>
                   <div className={styles.localPreferenceNotice}>
                     {t(
                       'config_management.settings_center.chatgpt_web.remote_image_url_security_notice'

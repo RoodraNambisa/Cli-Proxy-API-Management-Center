@@ -1060,6 +1060,13 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       ),
       chatgptWeb: chatgptWeb
         ? {
+            normalizeMismatchedImageMime: normalizeBoolean(
+              chatgptWeb['normalize-mismatched-image-mime'] ??
+                chatgptWeb.normalizeMismatchedImageMime
+            ),
+            normalizeRemoteImageMime: normalizeBoolean(
+              chatgptWeb['normalize-remote-image-mime'] ?? chatgptWeb.normalizeRemoteImageMime
+            ),
             pollStallBreakerEnabled: normalizeBoolean(
               chatgptWeb['poll-stall-breaker-enabled'] ?? chatgptWeb.pollStallBreakerEnabled
             ),

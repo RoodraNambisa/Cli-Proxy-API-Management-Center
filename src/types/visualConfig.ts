@@ -330,8 +330,10 @@ export type VisualConfigValues = {
   chatgptWebAutoDeleteDeadPriorities: string[];
   chatgptWebImageUpstreamModel: string;
   chatgptWebIgnoreUnsupportedImageParams: boolean;
+  chatgptWebNormalizeMismatchedImageMime: boolean;
   chatgptWebRemoteImageUrlEnabled: boolean;
   chatgptWebRemoteImageUrlDownloadMode: 'direct' | 'credential-proxy';
+  chatgptWebNormalizeRemoteImageMime: boolean;
   chatgptWebAdaptSizeToAspectRatio: boolean;
   chatgptWebStrictSize: boolean;
   chatgptWebAspectRatioMaxErrorPercent: string;
@@ -442,8 +444,10 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebAutoDeleteDeadPriorities: [],
   chatgptWebImageUpstreamModel: 'gpt-5-5',
   chatgptWebIgnoreUnsupportedImageParams: false,
+  chatgptWebNormalizeMismatchedImageMime: false,
   chatgptWebRemoteImageUrlEnabled: false,
   chatgptWebRemoteImageUrlDownloadMode: 'direct',
+  chatgptWebNormalizeRemoteImageMime: true,
   chatgptWebAdaptSizeToAspectRatio: false,
   chatgptWebStrictSize: false,
   chatgptWebAspectRatioMaxErrorPercent: '1',

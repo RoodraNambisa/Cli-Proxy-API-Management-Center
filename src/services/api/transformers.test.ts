@@ -87,22 +87,36 @@ describe('normalizeConfigResponse ChatGPT Web image configuration', () => {
       normalizeConfigResponse({
         images: {
           'chatgpt-web': {
+            'normalize-mismatched-image-mime': true,
+            'normalize-remote-image-mime': false,
             'poll-stall-breaker-enabled': false,
             'poll-stall-seconds': 300,
           },
         },
       }).images?.chatgptWeb
-    ).toEqual({ pollStallBreakerEnabled: false, pollStallSeconds: 300 });
+    ).toEqual({
+      normalizeMismatchedImageMime: true,
+      normalizeRemoteImageMime: false,
+      pollStallBreakerEnabled: false,
+      pollStallSeconds: 300,
+    });
 
     expect(
       normalizeConfigResponse({
         images: {
           chatgptWeb: {
+            normalizeMismatchedImageMime: false,
+            normalizeRemoteImageMime: true,
             pollStallBreakerEnabled: true,
             pollStallSeconds: '120',
           },
         },
       }).images?.chatgptWeb
-    ).toEqual({ pollStallBreakerEnabled: true, pollStallSeconds: 120 });
+    ).toEqual({
+      normalizeMismatchedImageMime: false,
+      normalizeRemoteImageMime: true,
+      pollStallBreakerEnabled: true,
+      pollStallSeconds: 120,
+    });
   });
 });
