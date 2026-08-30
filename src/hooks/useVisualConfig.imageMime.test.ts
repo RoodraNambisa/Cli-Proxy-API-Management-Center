@@ -45,4 +45,33 @@ images:
     expect(parsed.images['chatgpt-web']['normalize-mismatched-image-mime']).toBe(true);
     expect(parsed.images['chatgpt-web']['normalize-remote-image-mime']).toBe(false);
   });
+
+  it('marks both MIME settings dirty and clears them when restored', () => {
+    const { result } = renderHook(() => useVisualConfig());
+    act(() => {
+      result.current.loadVisualValuesFromYaml('images: {}\n');
+    });
+
+    act(() => {
+      result.current.setVisualValues({ chatgptWebNormalizeMismatchedImageMime: true });
+    });
+    expect(result.current.visualDirty).toBe(true);
+    expect(result.current.visualDirtyFields).toContain('chatgptWebNormalizeMismatchedImageMime');
+
+    act(() => {
+      result.current.setVisualValues({ chatgptWebNormalizeMismatchedImageMime: false });
+    });
+    expect(result.current.visualDirty).toBe(false);
+
+    act(() => {
+      result.current.setVisualValues({ chatgptWebNormalizeRemoteImageMime: false });
+    });
+    expect(result.current.visualDirty).toBe(true);
+    expect(result.current.visualDirtyFields).toContain('chatgptWebNormalizeRemoteImageMime');
+
+    act(() => {
+      result.current.setVisualValues({ chatgptWebNormalizeRemoteImageMime: true });
+    });
+    expect(result.current.visualDirty).toBe(false);
+  });
 });

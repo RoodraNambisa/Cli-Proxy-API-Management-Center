@@ -2435,6 +2435,13 @@ function getNextDirtyFields(
         baselineValues.chatgptWebIgnoreUnsupportedImageParams
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebNormalizeMismatchedImageMime')) {
+    updateDirty(
+      'chatgptWebNormalizeMismatchedImageMime',
+      nextValues.chatgptWebNormalizeMismatchedImageMime ===
+        baselineValues.chatgptWebNormalizeMismatchedImageMime
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebRemoteImageUrlEnabled')) {
     updateDirty(
       'chatgptWebRemoteImageUrlEnabled',
@@ -2446,6 +2453,13 @@ function getNextDirtyFields(
       'chatgptWebRemoteImageUrlDownloadMode',
       nextValues.chatgptWebRemoteImageUrlDownloadMode ===
         baselineValues.chatgptWebRemoteImageUrlDownloadMode
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebNormalizeRemoteImageMime')) {
+    updateDirty(
+      'chatgptWebNormalizeRemoteImageMime',
+      nextValues.chatgptWebNormalizeRemoteImageMime ===
+        baselineValues.chatgptWebNormalizeRemoteImageMime
     );
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAdaptSizeToAspectRatio')) {
