@@ -217,6 +217,8 @@ export interface NonRetryableErrorVisualEntry {
 
 export interface ErrorResponseRewriteVisualEntry {
   clientId: string;
+  sources: string[];
+  authPriorities: string[];
   statusCode: string;
   messageContains: string;
   responseStatusCode: string;

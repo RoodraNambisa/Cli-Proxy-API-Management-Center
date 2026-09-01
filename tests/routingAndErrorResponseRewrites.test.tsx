@@ -443,6 +443,84 @@ describe('routing request limits and error response rewrites', () => {
     expect(readValues().routingPriorityOverrides[0].subscriptionOverrides).toEqual([]);
   });
 
+  test('selects rewrite sources and signed credential priorities without dropping custom providers', async () => {
+    const initialValues = cloneValues();
+    initialValues.errorResponseRewrites = [
+      {
+        clientId: 'source-filter-rule',
+        sources: [],
+        authPriorities: [],
+        statusCode: '400',
+        messageContains: 'image',
+        responseStatusCode: '429',
+        responseBodyEnabled: false,
+        responseBody: '{}',
+      },
+    ];
+    function Harness() {
+      const [values, setValues] = useState(initialValues);
+      return (
+        <MemoryRouter initialEntries={['/config?section=global-request']}>
+          <>
+            <output data-testid="rewrite-values">{JSON.stringify(values)}</output>
+            <VisualConfigEditor
+              values={values}
+              baselineValues={initialValues}
+              validationErrors={getVisualConfigValidationErrors(values)}
+              onChange={(patch) => setValues((current) => ({ ...current, ...patch }))}
+            />
+          </>
+        </MemoryRouter>
+      );
+    }
+    const readValues = () =>
+      JSON.parse(screen.getByTestId('rewrite-values').textContent ?? '{}') as VisualConfigValues;
+
+    render(<Harness />);
+    fireEvent.click(
+      document.querySelector(
+        '#config-error-response-rewrites button[aria-expanded]'
+      ) as HTMLButtonElement
+    );
+
+    const sourceInput = screen.getByRole('textbox', {
+      name: 'config_management.visual.sections.network.error_response_rewrites_sources',
+    });
+    fireEvent.change(sourceInput, { target: { value: 'custom-provider' } });
+    fireEvent.keyDown(sourceInput, { key: 'Enter', code: 'Enter' });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'config_management.visual.sections.network.error_response_rewrites_sources_choose',
+      })
+    );
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Local (local)' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Codex (codex)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common.confirm' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByText(
+          'config_management.visual.sections.network.error_response_rewrites_sources_choose_title'
+        )
+      ).toBeNull()
+    );
+
+    const priorityInput = screen.getByRole('textbox', {
+      name: 'config_management.visual.sections.network.error_response_rewrites_auth_priorities',
+    });
+    fireEvent.change(priorityInput, { target: { value: '0,-1' } });
+    fireEvent.keyDown(priorityInput, { key: 'Enter', code: 'Enter' });
+
+    expect(readValues().errorResponseRewrites[0]).toMatchObject({
+      sources: ['custom-provider', 'local', 'codex'],
+      authPriorities: ['0', '-1'],
+    });
+    expect(
+      screen.getByText(
+        'config_management.visual.sections.network.error_response_rewrites_local_priority_warning'
+      )
+    ).toBeTruthy();
+  });
+
   test('treats zero status fields as omitted without dropping the rewrite rule', () => {
     const { result } = renderHook(() => useVisualConfig());
     act(() => result.current.loadVisualValuesFromYaml('error-response-rewrites: []\n'));

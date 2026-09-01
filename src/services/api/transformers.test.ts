@@ -124,3 +124,22 @@ describe('normalizeConfigResponse ChatGPT Web image configuration', () => {
     });
   });
 });
+
+describe('normalizeConfigResponse error response rewrites', () => {
+  it('normalizes source and signed credential priority filters', () => {
+    const [rule] =
+      normalizeConfigResponse({
+        'error-response-rewrites': [
+          {
+            sources: ['chatgpt-web', 'custom-provider'],
+            'auth-priorities': [0, -2, '3'],
+            'status-code': 400,
+            'response-status-code': 429,
+          },
+        ],
+      }).errorResponseRewrites ?? [];
+
+    expect(rule.sources).toEqual(['chatgpt-web', 'custom-provider']);
+    expect(rule.authPriorities).toEqual([0, -2, 3]);
+  });
+});

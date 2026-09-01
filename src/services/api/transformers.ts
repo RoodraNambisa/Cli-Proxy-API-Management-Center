@@ -130,6 +130,10 @@ const normalizeErrorResponseRewrites = (
       messageContains: normalizeString(item['message-contains'] ?? item.messageContains),
       responseStatusCode: normalizeNumber(item['response-status-code'] ?? item.responseStatusCode),
     };
+    const sources = normalizeStringArray(item.sources);
+    const authPriorities = normalizeIntegerArray(item['auth-priorities'] ?? item.authPriorities);
+    if (sources !== undefined) entry.sources = sources;
+    if (authPriorities !== undefined) entry.authPriorities = authPriorities;
     if (isRecord(responseBodyRaw)) entry.responseBody = responseBodyRaw;
     result.push(entry);
     return result;

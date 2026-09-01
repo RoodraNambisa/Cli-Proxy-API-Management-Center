@@ -86,6 +86,11 @@ import {
 import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
 import styles from './VisualConfigEditor.module.scss';
 
+const ERROR_RESPONSE_REWRITE_SOURCE_OPTIONS = [
+  { value: 'local', label: 'Local' },
+  ...RUNTIME_PROVIDER_OPTIONS,
+] as const;
+
 type VisualPage = ConfigPageDefinition & {
   title: string;
   description: string;
@@ -1600,6 +1605,8 @@ export function VisualConfigEditor({
       ...values.errorResponseRewrites,
       {
         clientId: makeClientId(),
+        sources: [],
+        authPriorities: [],
         statusCode: '',
         messageContains: '',
         responseStatusCode: '',
@@ -1629,7 +1636,12 @@ export function VisualConfigEditor({
   const getErrorResponseRewriteError = useCallback(
     (
       clientId: string,
-      field: 'statusCode' | 'messageContains' | 'responseStatusCode' | 'responseBody'
+      field:
+        | 'authPriorities'
+        | 'statusCode'
+        | 'messageContains'
+        | 'responseStatusCode'
+        | 'responseBody'
     ) => getValidationMessage(t, validationErrors?.[`errorResponseRewrites.${clientId}.${field}`]),
     [t, validationErrors]
   );
@@ -4624,6 +4636,10 @@ export function VisualConfigEditor({
                             rule.clientId,
                             'statusCode'
                           );
+                          const authPrioritiesError = getErrorResponseRewriteError(
+                            rule.clientId,
+                            'authPriorities'
+                          );
                           const messageContainsError = getErrorResponseRewriteError(
                             rule.clientId,
                             'messageContains'
@@ -4639,6 +4655,16 @@ export function VisualConfigEditor({
                           const responseBodyId = `error-response-rewrite-body-${rule.clientId}`;
                           const responseBodyHintId = `${responseBodyId}-hint`;
                           const responseBodyErrorId = `${responseBodyId}-error`;
+                          const sourcesInputId = `error-response-rewrite-sources-${rule.clientId}`;
+                          const sourcesHintId = `${sourcesInputId}-hint`;
+                          const authPrioritiesInputId = `error-response-rewrite-auth-priorities-${rule.clientId}`;
+                          const authPrioritiesHintId = `${authPrioritiesInputId}-hint`;
+                          const authPrioritiesErrorId = `${authPrioritiesInputId}-error`;
+                          const ruleSources = rule.sources ?? [];
+                          const ruleAuthPriorities = rule.authPriorities ?? [];
+                          const hasLocalPriorityConflict =
+                            ruleSources.some((source) => source.trim().toLowerCase() === 'local') &&
+                            ruleAuthPriorities.some((priority) => priority.trim() !== '');
 
                           return (
                             <div key={rule.clientId} className={styles.ruleCard}>
@@ -4659,6 +4685,96 @@ export function VisualConfigEditor({
                                   {t('config_management.visual.common.delete')}
                                 </Button>
                               </div>
+
+                              <div className={styles.errorResponseRewriteFilterGrid}>
+                                <FieldShell
+                                  label={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_sources'
+                                  )}
+                                  htmlFor={sourcesInputId}
+                                  hint={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_sources_hint'
+                                  )}
+                                  hintId={sourcesHintId}
+                                >
+                                  <TagListEditor
+                                    value={ruleSources}
+                                    disabled={disabled}
+                                    inputId={sourcesInputId}
+                                    inputAriaLabel={t(
+                                      'config_management.visual.sections.network.error_response_rewrites_sources'
+                                    )}
+                                    ariaDescribedBy={sourcesHintId}
+                                    placeholder={t(
+                                      'config_management.visual.sections.network.error_response_rewrites_sources_placeholder'
+                                    )}
+                                    emptyLabel={t(
+                                      'config_management.visual.sections.network.error_response_rewrites_sources_empty'
+                                    )}
+                                    suggestionOptions={ERROR_RESPONSE_REWRITE_SOURCE_OPTIONS}
+                                    suggestionButtonLabel={t(
+                                      'config_management.visual.sections.network.error_response_rewrites_sources_choose'
+                                    )}
+                                    suggestionTitle={t(
+                                      'config_management.visual.sections.network.error_response_rewrites_sources_choose_title'
+                                    )}
+                                    suggestionDescription={t(
+                                      'config_management.visual.sections.network.error_response_rewrites_sources_choose_desc'
+                                    )}
+                                    onChange={(sources) =>
+                                      updateErrorResponseRewrite(rule.clientId, {
+                                        sources: sources.map((source) =>
+                                          source.trim().toLowerCase()
+                                        ),
+                                      })
+                                    }
+                                  />
+                                </FieldShell>
+                                <FieldShell
+                                  label={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_auth_priorities'
+                                  )}
+                                  htmlFor={authPrioritiesInputId}
+                                  hint={t(
+                                    'config_management.visual.sections.network.error_response_rewrites_auth_priorities_hint'
+                                  )}
+                                  hintId={authPrioritiesHintId}
+                                  error={authPrioritiesError}
+                                  errorId={authPrioritiesErrorId}
+                                >
+                                  <TagListEditor
+                                    value={ruleAuthPriorities}
+                                    disabled={disabled}
+                                    inputId={authPrioritiesInputId}
+                                    inputAriaLabel={t(
+                                      'config_management.visual.sections.network.error_response_rewrites_auth_priorities'
+                                    )}
+                                    ariaDescribedBy={`${authPrioritiesHintId}${
+                                      authPrioritiesError ? ` ${authPrioritiesErrorId}` : ''
+                                    }`}
+                                    ariaInvalid={Boolean(authPrioritiesError)}
+                                    placeholder={t(
+                                      'config_management.visual.sections.network.error_response_rewrites_auth_priorities_placeholder'
+                                    )}
+                                    emptyLabel={t(
+                                      'config_management.visual.sections.network.error_response_rewrites_auth_priorities_empty'
+                                    )}
+                                    onChange={(authPriorities) =>
+                                      updateErrorResponseRewrite(rule.clientId, {
+                                        authPriorities,
+                                      })
+                                    }
+                                  />
+                                </FieldShell>
+                              </div>
+
+                              {hasLocalPriorityConflict ? (
+                                <div className={styles.errorRewriteFilterWarning} role="note">
+                                  {t(
+                                    'config_management.visual.sections.network.error_response_rewrites_local_priority_warning'
+                                  )}
+                                </div>
+                              ) : null}
 
                               <div className={styles.errorResponseRewriteGrid}>
                                 <Input

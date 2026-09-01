@@ -26,6 +26,8 @@ export interface NonRetryableErrorConfig {
 }
 
 export interface ErrorResponseRewriteConfig {
+  sources?: string[];
+  authPriorities?: number[];
   statusCode?: number;
   messageContains?: string;
   responseStatusCode?: number;

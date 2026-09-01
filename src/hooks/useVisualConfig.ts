@@ -677,6 +677,12 @@ function parseErrorResponseRewrites(raw: unknown): ErrorResponseRewriteVisualEnt
 
     result.push({
       clientId: makeClientId(),
+      sources: normalizeStringListItems(
+        parseStringList(record.sources).map((source) => source.toLowerCase())
+      ),
+      authPriorities: normalizeStringListItems(
+        parseIntegerStringList(record['auth-priorities'] ?? record.authPriorities)
+      ),
       statusCode: formatOptionalStatusCode(record['status-code'] ?? record.statusCode),
       messageContains: String(record['message-contains'] ?? record.messageContains ?? ''),
       responseStatusCode: formatOptionalStatusCode(
@@ -739,6 +745,14 @@ function serializeErrorResponseRewritesForYaml(
   rules: ErrorResponseRewriteVisualEntry[]
 ): Array<Record<string, unknown>> {
   return rules.reduce<Array<Record<string, unknown>>>((result, rule) => {
+    const sources = normalizeStringListItems(
+      (rule.sources ?? []).map((source) => source.toLowerCase())
+    );
+    const authPriorities = (rule.authPriorities ?? []).reduce<number[]>((list, item) => {
+      const parsed = parseIntegerString(item);
+      if (parsed !== null) list.push(parsed);
+      return list;
+    }, []);
     const statusCode = parseOptionalNonRetryableStatusCode(rule.statusCode);
     const responseStatusCode = parseOptionalResponseStatusCode(rule.responseStatusCode);
     const messageContains = rule.messageContains.trim();
@@ -752,6 +766,10 @@ function serializeErrorResponseRewritesForYaml(
     if (rule.responseBodyEnabled && responseBody === null) return result;
 
     const entry: Record<string, unknown> = {};
+    if (sources.length > 0) entry.sources = sources;
+    if (authPriorities.length > 0) {
+      entry['auth-priorities'] = Array.from(new Set(authPriorities));
+    }
     if (statusCode !== null && statusCode !== 0) entry['status-code'] = statusCode;
     if (messageContains) entry['message-contains'] = messageContains;
     if (responseStatusCode !== null && responseStatusCode !== 0) {
@@ -772,6 +790,8 @@ function areErrorResponseRewritesEqual(
     const other = right[index];
     return (
       Boolean(other) &&
+      areStringArraysEqual(entry.sources ?? [], other.sources ?? []) &&
+      areStringArraysEqual(entry.authPriorities ?? [], other.authPriorities ?? []) &&
       entry.statusCode === other.statusCode &&
       entry.messageContains === other.messageContains &&
       entry.responseStatusCode === other.responseStatusCode &&
@@ -1466,6 +1486,10 @@ export function getVisualConfigValidationErrors(
   );
   const errorResponseRewriteErrors =
     values.errorResponseRewrites.reduce<VisualConfigValidationErrors>((result, rule) => {
+      const authPrioritiesError = getSafeIntegerStringListError(rule.authPriorities ?? []);
+      if (authPrioritiesError) {
+        result[`errorResponseRewrites.${rule.clientId}.authPriorities`] = authPrioritiesError;
+      }
       const statusCodeError = getOptionalNonRetryableStatusCodeError(rule.statusCode);
       if (statusCodeError) {
         result[`errorResponseRewrites.${rule.clientId}.statusCode`] = statusCodeError;
