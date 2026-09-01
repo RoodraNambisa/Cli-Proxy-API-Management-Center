@@ -153,6 +153,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebInvalidPasskeyResponseAsDead',
       'chatgptWebImageUpstreamModel',
       'chatgptWebIgnoreUnsupportedImageParams',
+      'chatgptWebSanitizeErrorResponses',
       'chatgptWebRemoteImageUrlEnabled',
       'chatgptWebRemoteImageUrlDownloadMode',
       'chatgptWebAdaptSizeToAspectRatio',
@@ -664,6 +665,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.settings_center.chatgpt_web.image_upstream_model',
     yamlKeys: ['images.chatgpt-web.upstream-model', 'images.chatgpt-web.ignore-unsupported-params'],
     aliases: ['picture_v2', 'web image', '图片参数', '忽略参数'],
+  },
+  {
+    id: 'config-chatgpt-web-sanitize-image-errors',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.sanitize_error_responses',
+    yamlKeys: ['images.chatgpt-web.sanitize-error-responses'],
+    aliases: ['error privacy', 'sanitize errors', '错误脱敏', '渠道隐藏', '錯誤脫敏'],
   },
   {
     id: 'config-chatgpt-web-normalize-image-mime',

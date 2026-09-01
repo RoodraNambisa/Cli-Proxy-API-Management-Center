@@ -1848,6 +1848,8 @@
         "image_upstream_model_description": "Upstream model used for ChatGPT Web picture_v2 conversations. The backend uses gpt-5-5 when empty.",
         "ignore_unsupported_image_params": "Ignore unsupported Web image parameters",
         "ignore_unsupported_image_params_description": "When enabled, image options that ChatGPT Web cannot handle no longer exclude Web routing. Compatible JPEG and WebP output can be encoded locally. Remote images remain rejected unless remote URLs are enabled; file_id, invalid masks, and resource limits are always rejected.",
+        "sanitize_error_responses": "Sanitize image error responses",
+        "sanitize_error_responses_description": "Hide the ChatGPT Web channel, polling, task stages, and internal error codes without changing final status codes or existing error rewrite rules. Client-fixable size, count, MIME, Base64, format, reference, and mask errors still return safe, actionable requirements. Disabled by default.",
         "normalize_mismatched_image_mime": "Correct image MIME from content",
         "normalize_mismatched_image_mime_description": "When enabled, multipart and Data URL images incorrectly declared as JPEG, PNG, GIF, or WebP are corrected to their decoded format. Only MIME metadata and upload filename extensions change; image bytes are not transcoded. Disabled by default.",
         "remote_image_url_title": "Remote image URLs",

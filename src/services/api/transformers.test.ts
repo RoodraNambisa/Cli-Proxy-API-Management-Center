@@ -87,6 +87,7 @@ describe('normalizeConfigResponse ChatGPT Web image configuration', () => {
       normalizeConfigResponse({
         images: {
           'chatgpt-web': {
+            'sanitize-error-responses': true,
             'normalize-mismatched-image-mime': true,
             'normalize-remote-image-mime': false,
             'poll-stall-breaker-enabled': false,
@@ -95,6 +96,7 @@ describe('normalizeConfigResponse ChatGPT Web image configuration', () => {
         },
       }).images?.chatgptWeb
     ).toEqual({
+      sanitizeErrorResponses: true,
       normalizeMismatchedImageMime: true,
       normalizeRemoteImageMime: false,
       pollStallBreakerEnabled: false,
@@ -105,6 +107,7 @@ describe('normalizeConfigResponse ChatGPT Web image configuration', () => {
       normalizeConfigResponse({
         images: {
           chatgptWeb: {
+            sanitizeErrorResponses: false,
             normalizeMismatchedImageMime: false,
             normalizeRemoteImageMime: true,
             pollStallBreakerEnabled: true,
@@ -113,6 +116,7 @@ describe('normalizeConfigResponse ChatGPT Web image configuration', () => {
         },
       }).images?.chatgptWeb
     ).toEqual({
+      sanitizeErrorResponses: false,
       normalizeMismatchedImageMime: false,
       normalizeRemoteImageMime: true,
       pollStallBreakerEnabled: true,

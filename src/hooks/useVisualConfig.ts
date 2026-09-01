@@ -2435,6 +2435,13 @@ function getNextDirtyFields(
         baselineValues.chatgptWebIgnoreUnsupportedImageParams
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebSanitizeErrorResponses')) {
+    updateDirty(
+      'chatgptWebSanitizeErrorResponses',
+      nextValues.chatgptWebSanitizeErrorResponses ===
+        baselineValues.chatgptWebSanitizeErrorResponses
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebNormalizeMismatchedImageMime')) {
     updateDirty(
       'chatgptWebNormalizeMismatchedImageMime',
@@ -3281,6 +3288,9 @@ export function useVisualConfig() {
           imagesChatGPTWeb?.['ignore-unsupported-params'] ??
           imagesChatGPTWeb?.ignoreUnsupportedParams
         ),
+        chatgptWebSanitizeErrorResponses: parseBooleanValue(
+          imagesChatGPTWeb?.['sanitize-error-responses'] ?? imagesChatGPTWeb?.sanitizeErrorResponses
+        ),
         chatgptWebNormalizeMismatchedImageMime: parseBooleanValue(
           imagesChatGPTWeb?.['normalize-mismatched-image-mime'] ??
             imagesChatGPTWeb?.normalizeMismatchedImageMime
@@ -4118,6 +4128,8 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel ||
           values.chatgptWebIgnoreUnsupportedImageParams !==
             DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
+          values.chatgptWebSanitizeErrorResponses !==
+            DEFAULT_VISUAL_VALUES.chatgptWebSanitizeErrorResponses ||
           values.chatgptWebNormalizeMismatchedImageMime !==
             DEFAULT_VISUAL_VALUES.chatgptWebNormalizeMismatchedImageMime ||
           values.chatgptWebRemoteImageUrlEnabled !==
@@ -4205,6 +4217,8 @@ export function useVisualConfig() {
               DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel ||
             values.chatgptWebIgnoreUnsupportedImageParams !==
               DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
+            values.chatgptWebSanitizeErrorResponses !==
+              DEFAULT_VISUAL_VALUES.chatgptWebSanitizeErrorResponses ||
             values.chatgptWebNormalizeMismatchedImageMime !==
               DEFAULT_VISUAL_VALUES.chatgptWebNormalizeMismatchedImageMime ||
             values.chatgptWebRemoteImageUrlEnabled !==
@@ -4256,6 +4270,10 @@ export function useVisualConfig() {
             doc.setIn(
               ['images', 'chatgpt-web', 'ignore-unsupported-params'],
               values.chatgptWebIgnoreUnsupportedImageParams
+            );
+            doc.setIn(
+              ['images', 'chatgpt-web', 'sanitize-error-responses'],
+              values.chatgptWebSanitizeErrorResponses
             );
             doc.setIn(
               ['images', 'chatgpt-web', 'normalize-mismatched-image-mime'],
@@ -4366,6 +4384,7 @@ export function useVisualConfig() {
               'memoryFinalizerConcurrency',
               'remoteImageUrlEnabled',
               'remoteImageUrlDownloadMode',
+              'sanitizeErrorResponses',
               'normalizeMismatchedImageMime',
               'normalizeRemoteImageMime',
             ]) {

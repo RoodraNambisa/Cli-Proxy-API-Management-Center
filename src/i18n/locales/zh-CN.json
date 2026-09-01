@@ -1852,6 +1852,8 @@
         "image_upstream_model_description": "ChatGPT Web picture_v2 会话使用的上游模型；留空时后端使用 gpt-5-5。",
         "ignore_unsupported_image_params": "忽略 Web 不支持的图片参数",
         "ignore_unsupported_image_params_description": "开启后，ChatGPT Web 无法处理的图片参数不再排除 Web 路由；兼容的 JPEG 和 WebP 输出可在本地编码。未启用远程 URL 时，远程图片仍会拒绝；file_id、非法 mask 和资源限制始终拒绝。",
+        "sanitize_error_responses": "脱敏图片错误响应",
+        "sanitize_error_responses_description": "开启后，隐藏 ChatGPT Web 渠道、轮询、任务阶段和内部错误码，但不改变最终状态码或现有错误改写规则。尺寸、数量、MIME、Base64、格式、引用和 mask 等可修正输入错误仍返回安全、具体的要求；默认关闭。",
         "normalize_mismatched_image_mime": "按真实内容纠正图片 MIME",
         "normalize_mismatched_image_mime_description": "开启后，multipart 与 Data URL 中错误声明为 JPEG、PNG、GIF 或 WebP 的图片会按实际可解码格式纠正。只修改 MIME 和上传文件扩展名，不转码图片；默认关闭。",
         "remote_image_url_title": "远程图片 URL",

@@ -2330,6 +2330,21 @@ export function VisualConfigEditor({
                   onChange({ chatgptWebIgnoreUnsupportedImageParams })
                 }
               />
+              <div id="config-chatgpt-web-sanitize-image-errors">
+                <ToggleRow
+                  title={t(
+                    'config_management.settings_center.chatgpt_web.sanitize_error_responses'
+                  )}
+                  description={t(
+                    'config_management.settings_center.chatgpt_web.sanitize_error_responses_description'
+                  )}
+                  checked={values.chatgptWebSanitizeErrorResponses}
+                  disabled={disabled}
+                  onChange={(chatgptWebSanitizeErrorResponses) =>
+                    onChange({ chatgptWebSanitizeErrorResponses })
+                  }
+                />
+              </div>
               <div id="config-chatgpt-web-normalize-image-mime">
                 <ToggleRow
                   title={t(

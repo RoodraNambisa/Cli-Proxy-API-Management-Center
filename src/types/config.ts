@@ -132,6 +132,7 @@ export interface ImagesConfig {
   streamFlushIntervalMs?: number;
   streamFlushMinBytes?: number;
   chatgptWeb?: {
+    sanitizeErrorResponses?: boolean;
     normalizeMismatchedImageMime?: boolean;
     normalizeRemoteImageMime?: boolean;
     pollStallBreakerEnabled?: boolean;
