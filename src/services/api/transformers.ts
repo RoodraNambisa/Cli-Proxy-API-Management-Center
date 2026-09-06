@@ -876,6 +876,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   const codex = raw.codex;
   if (isRecord(codex)) {
     config.codex = {
+      passthroughPromptCacheKey: normalizeBoolean(
+        codex['passthrough-prompt-cache-key'] ?? codex.passthroughPromptCacheKey
+      ),
       identityConfuse: normalizeBoolean(codex['identity-confuse'] ?? codex.identityConfuse),
       spoofSessionIdentity: normalizeBoolean(
         codex['spoof-session-identity'] ?? codex.spoofSessionIdentity

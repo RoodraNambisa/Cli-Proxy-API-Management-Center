@@ -309,6 +309,7 @@ export type VisualConfigValues = {
   proxyUrl: string;
   forceModelPrefix: boolean;
   codexIdentityConfuse: boolean;
+  codexPassthroughPromptCacheKey: boolean;
   codexSpoofSessionIdentity: boolean;
   codexTurnStatePolicy: CodexTurnStatePolicy;
   codexEnforceSoftwareIdentity: boolean;
@@ -424,6 +425,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   proxyUrl: '',
   forceModelPrefix: false,
   codexIdentityConfuse: false,
+  codexPassthroughPromptCacheKey: false,
   codexSpoofSessionIdentity: false,
   codexTurnStatePolicy: DEFAULT_CODEX_TURN_STATE_POLICY,
   codexEnforceSoftwareIdentity: true,

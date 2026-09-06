@@ -218,6 +218,7 @@ export const normalizeCodexTurnStatePolicy = (value: unknown): CodexTurnStatePol
 };
 
 export interface CodexConfig {
+  passthroughPromptCacheKey?: boolean;
   identityConfuse?: boolean;
   spoofSessionIdentity?: boolean;
   turnStatePolicy?: CodexTurnStatePolicy;

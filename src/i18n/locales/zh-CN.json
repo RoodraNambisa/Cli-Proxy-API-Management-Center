@@ -2240,6 +2240,8 @@
           "ws_auth": "WebSocket 认证",
           "ws_auth_desc": "启用 WebSocket 连接认证 (/v1/ws)",
           "codex_identity_confuse": "Codex 身份混淆",
+          "codex_passthrough_prompt_cache_key": "透传用户缓存键",
+          "codex_passthrough_prompt_cache_key_desc": "默认关闭。开启后保留用户显式提供的非空 prompt_cache_key，不受身份混淆或会话收敛改写；其他身份和隔离规则保持生效。未提供有效键时沿用自动生成，热更新从下个请求或 WebSocket 回合生效。缓存命中仍取决于提示前缀等条件。",
           "codex_identity_confuse_desc": "按账号稳定混淆 Codex session、window 和 turn 身份，上游返回后再恢复原始 ID",
           "codex_spoof_session_identity": "伪装 Codex 会话身份",
           "codex_spoof_session_identity_desc": "为 Codex OAuth 和 Agent Identity 请求补齐缺失的 Session、Thread、Window 与 Turn 身份；客户端显式提供的值保持不变。",

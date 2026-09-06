@@ -639,6 +639,41 @@ describe('ConfigPage save coordination', () => {
     );
   });
 
+  test('keeps a rejected cache-key draft and accepts it only after a successful retry', async () => {
+    harness.visualDirty = true;
+    harness.mergedYaml = 'codex:\n  passthrough-prompt-cache-key: true\n';
+    harness.fetchYaml.mockResolvedValue('codex:\n  passthrough-prompt-cache-key: false\n');
+    harness.saveYaml.mockRejectedValueOnce(new Error('configuration rejected'));
+
+    renderPage();
+    await clickSave();
+    const confirm = await screen.findByRole('button', { name: 'confirm-diff' });
+    const loadedBeforeSave = harness.loadVisualValues.mock.calls.length;
+    fireEvent.click(confirm);
+
+    await waitFor(() =>
+      expect(harness.showNotification).toHaveBeenCalledWith(
+        'notification.save_failed: configuration rejected', 'error'
+      )
+    );
+    expect(harness.saveYaml).toHaveBeenLastCalledWith(harness.mergedYaml);
+    expect(harness.loadVisualValues).toHaveBeenCalledTimes(loadedBeforeSave);
+    expect(harness.showNotification).not.toHaveBeenCalledWith(
+      'config_management.save_success', 'success'
+    );
+    expect(screen.getByRole('button', { name: 'confirm-diff' })).toBeTruthy();
+
+    harness.fetchYaml.mockResolvedValue(harness.mergedYaml);
+    fireEvent.click(screen.getByRole('button', { name: 'confirm-diff' }));
+    await waitFor(() =>
+      expect(harness.showNotification).toHaveBeenCalledWith(
+        'config_management.save_success', 'success'
+      )
+    );
+    expect(harness.saveYaml).toHaveBeenCalledTimes(2);
+    expect(harness.loadVisualValues).toHaveBeenLastCalledWith(harness.mergedYaml);
+  });
+
   test('reloads clean request-body panels after saving YAML', async () => {
     harness.visualDirty = true;
     harness.fetchYaml

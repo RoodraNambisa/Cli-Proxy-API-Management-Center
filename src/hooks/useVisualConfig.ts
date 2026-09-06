@@ -2310,6 +2310,12 @@ function getNextDirtyFields(
       nextValues.codexIdentityConfuse === baselineValues.codexIdentityConfuse
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexPassthroughPromptCacheKey')) {
+    updateDirty(
+      'codexPassthroughPromptCacheKey',
+      nextValues.codexPassthroughPromptCacheKey === baselineValues.codexPassthroughPromptCacheKey
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexSpoofSessionIdentity')) {
     updateDirty(
       'codexSpoofSessionIdentity',
@@ -3063,6 +3069,14 @@ export function useVisualConfig() {
       const tls = asRecord(parsed.tls);
       const remoteManagement = asRecord(parsed['remote-management']);
       const codex = asRecord(parsed.codex);
+      const codexPassthroughPromptCacheKey =
+        codex?.['passthrough-prompt-cache-key'] ?? codex?.passthroughPromptCacheKey;
+      if (
+        codexPassthroughPromptCacheKey != null &&
+        typeof codexPassthroughPromptCacheKey !== 'boolean'
+      ) {
+        throw new Error('codex.passthrough-prompt-cache-key must be a boolean');
+      }
       const codexFingerprint = asRecord(parsed['codex-fingerprint'] ?? parsed.codexFingerprint);
       const codexHeaderDefaults = asRecord(
         parsed['codex-header-defaults'] ?? parsed.codexHeaderDefaults
@@ -3234,6 +3248,7 @@ export function useVisualConfig() {
         proxyUrl: typeof parsed['proxy-url'] === 'string' ? parsed['proxy-url'] : '',
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
+        codexPassthroughPromptCacheKey: codexPassthroughPromptCacheKey ?? false,
         codexSpoofSessionIdentity: Boolean(
           codex?.['spoof-session-identity'] ?? codex?.spoofSessionIdentity
         ),
@@ -3785,12 +3800,15 @@ export function useVisualConfig() {
         if (
           docHas(doc, ['codex']) ||
           values.codexIdentityConfuse ||
+          values.codexPassthroughPromptCacheKey ||
           values.codexSpoofSessionIdentity ||
           values.codexTurnStatePolicy !== DEFAULT_CODEX_TURN_STATE_POLICY ||
           !values.codexEnforceSoftwareIdentity
         ) {
           ensureMapInDoc(doc, ['codex']);
           doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
+          doc.setIn(['codex', 'passthrough-prompt-cache-key'], values.codexPassthroughPromptCacheKey);
+          doc.deleteIn(['codex', 'passthroughPromptCacheKey']);
           doc.setIn(['codex', 'spoof-session-identity'], values.codexSpoofSessionIdentity);
           doc.setIn(['codex', 'turn-state-policy'], values.codexTurnStatePolicy);
           doc.setIn(['codex', 'enforce-software-identity'], values.codexEnforceSoftwareIdentity);

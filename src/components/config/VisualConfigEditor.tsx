@@ -4964,6 +4964,24 @@ export function VisualConfigEditor({
                   </SettingsDisclosure>
                 </PageGroup>
 
+                <PageGroup id="config-codex-prompt-cache" active={activePageId === 'provider-codex'}>
+                  <SectionGrid>
+                    <ToggleRow
+                      title={t(
+                        'config_management.visual.sections.network.codex_passthrough_prompt_cache_key'
+                      )}
+                      description={t(
+                        'config_management.visual.sections.network.codex_passthrough_prompt_cache_key_desc'
+                      )}
+                      checked={values.codexPassthroughPromptCacheKey}
+                      disabled={disabled}
+                      onChange={(codexPassthroughPromptCacheKey) =>
+                        onChange({ codexPassthroughPromptCacheKey })
+                      }
+                    />
+                  </SectionGrid>
+                </PageGroup>
+
                 <PageGroup id="config-codex-fingerprint" active={activePageId === 'provider-codex'}>
                   <SectionGrid>
                     <ToggleRow

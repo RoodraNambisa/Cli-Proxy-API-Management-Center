@@ -122,6 +122,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     dirtyPrefixes: [
       'codexCustomModels',
       'codexIdentityConfuse',
+      'codexPassthroughPromptCacheKey',
       'codexSpoofSessionIdentity',
       'codexTurnStatePolicy',
       'codexFingerprint',
@@ -512,6 +513,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       '会话身份池',
       '指纹',
     ],
+  },
+  {
+    id: 'config-codex-prompt-cache',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.network.codex_passthrough_prompt_cache_key',
+    yamlKeys: ['codex.passthrough-prompt-cache-key', 'prompt_cache_key'],
+    aliases: ['cache key', '缓存键', '緩存鍵', 'ключ кеша'],
   },
   {
     id: 'config-codex-headers',
