@@ -22,6 +22,7 @@ export type KeyTestStatus = {
 
 export type OpenAIEditBaseline = {
   name: string;
+  requestRetry: number | null;
   priority: number | null;
   prefix: string;
   baseUrl: string;

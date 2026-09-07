@@ -221,6 +221,7 @@
     "delete_confirm": "确定要删除这个API密钥吗？"
   },
   "ai_providers": {
+    "provider_request_retry_scope": "此覆盖值对该 OpenAI 兼容提供者的全部凭证生效，也适用于未配置 API Key 的提供者。",
     "request_retry_label": "凭证请求重试次数",
     "request_retry_hint": "可选整数，范围 0–2,147,483,647。留空继承全局重试次数；0 表示该凭证仅参与首轮，首轮仍可切换到其他符合条件的凭证。",
     "request_retry_inherit": "继承全局 request-retry",

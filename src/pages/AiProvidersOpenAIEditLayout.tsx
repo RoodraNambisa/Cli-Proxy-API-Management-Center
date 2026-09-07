@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
+import { isValidCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { isValidCredentialWeight } from '@/utils/credentialWeight';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -108,6 +109,7 @@ const normalizeApiKeyEntries = (entries: ApiKeyEntry[]) =>
 
 const buildOpenAIBaseline = (form: OpenAIFormState, testModel: string): OpenAIEditBaseline => ({
   name: String(form.name ?? '').trim(),
+  requestRetry: form.requestRetry ?? null,
   priority:
     form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
   prefix: String(form.prefix ?? '').trim(),
@@ -303,6 +305,7 @@ export function AiProvidersOpenAIEditLayout() {
       const modelEntries = modelsToEntries(initialData.models);
       const seededForm: OpenAIFormState = {
         name: initialData.name,
+        requestRetry: initialData.requestRetry,
         priority: initialData.priority,
         prefix: initialData.prefix ?? '',
         baseUrl: initialData.baseUrl,
@@ -428,6 +431,7 @@ export function AiProvidersOpenAIEditLayout() {
     baseline !== null &&
     (baseline.name !== form.name.trim() ||
       baseline.priority !== normalizedPriority ||
+      baseline.requestRetry !== (form.requestRetry ?? null) ||
       baseline.prefix !== form.prefix.trim() ||
       baseline.baseUrl !== form.baseUrl.trim() ||
       baseline.testModel !== normalizedTestModel ||
@@ -460,6 +464,10 @@ export function AiProvidersOpenAIEditLayout() {
   });
 
   const handleSave = useCallback(async () => {
+    if (!isValidCredentialRequestRetry(form.requestRetry)) {
+      showNotification(t('ai_providers.request_retry_invalid'), 'error');
+      return;
+    }
     if (form.apiKeyEntries.some((entry) => !isValidCredentialWeight(entry.weight))) {
       showNotification(t('ai_providers.weight_invalid'), 'error');
       return;
@@ -476,6 +484,7 @@ export function AiProvidersOpenAIEditLayout() {
     try {
       const payload: OpenAIProviderConfig = {
         name,
+        requestRetry: form.requestRetry,
         prefix: form.prefix?.trim() || undefined,
         baseUrl,
         headers: buildHeaderObject(form.headers),
@@ -505,7 +514,7 @@ export function AiProvidersOpenAIEditLayout() {
       try {
         syncedProviders = await providersApi.getOpenAIProviders();
       } catch {
-        // 保存成功后刷新失败时，回退到本地计算结果，避免页面数据为空或回退
+        // Keep the saved local result if refreshing the provider list fails.
       }
 
       setProviders(syncedProviders);

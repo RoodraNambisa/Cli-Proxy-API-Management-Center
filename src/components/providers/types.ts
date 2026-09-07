@@ -9,6 +9,7 @@ export interface ModelEntry {
 
 export interface OpenAIFormState {
   name: string;
+  requestRetry?: number;
   priority?: number;
   prefix: string;
   baseUrl: string;
