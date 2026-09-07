@@ -476,6 +476,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     pageId: 'global-streaming',
     labelKey: 'config_management.visual.sections.streaming.title',
     yamlKeys: ['streaming', 'keepalive-seconds', 'bootstrap-retries', 'trust-upstream-sse'],
+    aliases: ['SSE', 'WebSocket', 'Ping', 'heartbeat', '心跳', '保活'],
   },
   {
     id: 'config-codex-custom-models',

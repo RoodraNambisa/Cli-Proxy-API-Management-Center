@@ -107,6 +107,7 @@ export type VisualConfigValidationErrorCode =
   | 'integer_range_1_10'
   | 'integer_range_0_512'
   | 'integer_range_30_3600'
+  | 'integer_range_0_9223372036'
   | 'strict_size_requires_aspect_adaptation'
   | 'resize_requires_aspect_adaptation'
   | 'resize_filter';

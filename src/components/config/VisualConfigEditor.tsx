@@ -5696,6 +5696,9 @@ export function VisualConfigEditor({
                         id={keepaliveInputId}
                         className="input"
                         type="number"
+                        min={0}
+                        max={9223372036}
+                        step={1}
                         placeholder="0"
                         value={values.streaming.keepaliveSeconds}
                         onChange={(e) =>

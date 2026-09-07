@@ -1688,7 +1688,9 @@ export function getVisualConfigValidationErrors(
     'images.native.edits.unsupportedModelStatusCode': getHttpStatusRangeError(
       values.images.native.edits.unsupportedModelStatusCode
     ),
-    'streaming.keepaliveSeconds': getNonNegativeIntegerError(values.streaming.keepaliveSeconds),
+    'streaming.keepaliveSeconds': values.streaming.keepaliveSeconds.trim()
+      ? getIntegerRangeError(values.streaming.keepaliveSeconds, 0, 9223372036, 'integer_range_0_9223372036')
+      : undefined,
     'streaming.bootstrapRetries': getNonNegativeIntegerError(values.streaming.bootstrapRetries),
     'streaming.streamFlushIntervalMs': getNonNegativeIntegerError(
       values.streaming.streamFlushIntervalMs
