@@ -1,3 +1,5 @@
+import { CredentialRequestRetryInput } from '@/components/providers/CredentialRequestRetryInput';
+import { isValidCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
 import { isValidCredentialWeight } from '@/utils/credentialWeight';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -71,6 +73,7 @@ type GeminiFormBaseline = {
   apiKey: string;
   priority: number | null;
   weight: number | null;
+  requestRetry: number | null;
   prefix: string;
   baseUrl: string;
   proxyUrl: string;
@@ -82,6 +85,7 @@ type GeminiFormBaseline = {
 const buildGeminiBaseline = (form: GeminiFormState): GeminiFormBaseline => ({
   apiKey: String(form.apiKey ?? '').trim(),
   weight: form.weight ?? null,
+  requestRetry: form.requestRetry ?? null,
   priority:
     form.priority !== undefined && Number.isFinite(form.priority)
       ? Math.trunc(form.priority)
@@ -438,6 +442,7 @@ export function AiProvidersGeminiEditPage({
     baseline.apiKey !== form.apiKey.trim() ||
     baseline.priority !== normalizedPriority ||
     baseline.weight !== (form.weight ?? null) ||
+    baseline.requestRetry !== (form.requestRetry ?? null) ||
     baseline.prefix !== String(form.prefix ?? '').trim() ||
     baseline.baseUrl !== String(form.baseUrl ?? '').trim() ||
     baseline.proxyUrl !== String(form.proxyUrl ?? '').trim() ||
@@ -460,6 +465,10 @@ export function AiProvidersGeminiEditPage({
   });
 
   const handleSave = useCallback(async () => {
+    if (!isValidCredentialRequestRetry(form.requestRetry)) {
+      showNotification(t('ai_providers.request_retry_invalid'), 'error');
+      return;
+    }
     if (!isValidCredentialWeight(form.weight)) {
       showNotification(t('ai_providers.weight_invalid'), 'error');
       return;
@@ -476,6 +485,7 @@ export function AiProvidersGeminiEditPage({
 
       const payload: GeminiKeyConfig = {
         weight: form.weight,
+        requestRetry: form.requestRetry,
         apiKey: form.apiKey.trim(),
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
         prefix: form.prefix?.trim() || undefined,
@@ -584,6 +594,11 @@ export function AiProvidersGeminiEditPage({
               placeholder={t(`ai_providers.${translationPrefix}_add_modal_key_placeholder`)}
               value={form.apiKey}
               onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
+              disabled={disableControls || saving}
+            />
+            <CredentialRequestRetryInput
+              value={form.requestRetry}
+              onChange={(requestRetry) => setForm((prev) => ({ ...prev, requestRetry }))}
               disabled={disableControls || saving}
             />
             <CredentialWeightInput
