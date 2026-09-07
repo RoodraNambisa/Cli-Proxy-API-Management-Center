@@ -219,6 +219,10 @@
     "delete_confirm": "確定要刪除這個 API 金鑰嗎？"
   },
   "ai_providers": {
+    "request_retry_label": "憑證請求重試次數",
+    "request_retry_hint": "可選整數，範圍 0–2,147,483,647。留空繼承全域重試次數；0 表示該憑證僅參與首輪，首輪仍可切換至其他符合條件的憑證。",
+    "request_retry_inherit": "繼承全域 request-retry",
+    "request_retry_invalid": "請輸入 0–2,147,483,647 的整數。",
     "weight_label": "憑證權重",
     "weight_hint": "可選整數，範圍 0–1,000,000；留空繼承 1。僅加權輪詢使用此值，0 表示在該策略中不參與分配。其他路由策略忽略權重。",
     "weight_inherit": "繼承預設值（1）",

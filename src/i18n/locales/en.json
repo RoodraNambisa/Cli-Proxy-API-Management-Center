@@ -221,6 +221,10 @@
     "delete_confirm": "Are you sure you want to delete this API key?"
   },
   "ai_providers": {
+    "request_retry_label": "Credential request retries",
+    "request_retry_hint": "Optional integer from 0 to 2,147,483,647. Blank inherits the global retry count; 0 limits this credential to the initial round. Other eligible credentials may still be tried in that round.",
+    "request_retry_inherit": "Inherit global request-retry",
+    "request_retry_invalid": "Enter an integer from 0 to 2,147,483,647.",
     "weight_label": "Credential weight",
     "weight_hint": "Optional integer from 0 to 1,000,000. Blank inherits 1. Only weighted round-robin uses this value; 0 excludes this credential in that strategy. Other strategies ignore weights.",
     "weight_inherit": "Inherit default (1)",
