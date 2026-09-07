@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { isValidCredentialWeight, MAX_CREDENTIAL_WEIGHT } from '@/utils/credentialWeight';
+import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -30,6 +31,7 @@ export type AuthFilesBatchSettingsModalProps = {
 
 export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalProps) {
   const { t } = useTranslation();
+  const weightModeId = useId();
   const {
     disableControls,
     state,
@@ -67,6 +69,8 @@ export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalPr
     conversionTask && !isChatGptWebMutationTaskTerminal(conversionTask.state)
   );
   const fieldDisabled = disableControls || state.saving || conversionActive;
+  const invalidWeight = state.weightMode === 'set' &&
+    (!state.weight.trim() || !isValidCredentialWeight(Number(state.weight)));
 
   return (
     <Modal
@@ -83,7 +87,7 @@ export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalPr
           <Button
             onClick={() => void onSave()}
             loading={state.saving}
-            disabled={fieldDisabled || !dirty || Boolean(state.headersError)}
+            disabled={fieldDisabled || !dirty || Boolean(state.headersError) || invalidWeight}
           >
             {t('common.save')}
           </Button>
@@ -121,6 +125,35 @@ export function AuthFilesBatchSettingsModal(props: AuthFilesBatchSettingsModalPr
             disabled={fieldDisabled}
             onChange={(e) => onChange('proxyUrl', e.target.value)}
           />
+          <div className="form-group">
+            <label htmlFor={weightModeId}>{t('ai_providers.weight_label')}</label>
+            <Select
+              id={weightModeId}
+              ariaLabel={t('ai_providers.weight_label')}
+              value={state.weightMode}
+              onChange={(value) => onChange('weightMode', value)}
+              options={[
+                { value: '', label: t('ai_providers.weight_unchanged') },
+                { value: 'set', label: t('ai_providers.weight_set') },
+                { value: 'inherit', label: t('ai_providers.weight_inherit') },
+              ]}
+              disabled={fieldDisabled}
+            />
+          </div>
+          {state.weightMode === 'set' && (
+            <Input
+              label={t('ai_providers.weight_label')}
+              hint={t('ai_providers.weight_invalid')}
+              placeholder="1"
+              type="number"
+              min={0}
+              max={MAX_CREDENTIAL_WEIGHT}
+              step={1}
+              value={state.weight}
+              onChange={(event) => onChange('weight', event.target.value)}
+              disabled={fieldDisabled}
+            />
+          )}
           <Input
             label={t('auth_files.priority_label')}
             value={state.priority}

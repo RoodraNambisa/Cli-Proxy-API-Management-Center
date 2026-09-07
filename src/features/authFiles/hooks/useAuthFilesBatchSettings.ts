@@ -1,3 +1,4 @@
+import { isValidCredentialWeight } from '@/utils/credentialWeight';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { authFilesApi, chatGptWebApi } from '@/services/api';
@@ -26,6 +27,8 @@ export type AuthFilesBatchSettingsField =
   | 'prefix'
   | 'proxyUrl'
   | 'priority'
+  | 'weight'
+  | 'weightMode'
   | 'excludedModelsText'
   | 'headersText'
   | 'disableCooling'
@@ -42,6 +45,8 @@ export type AuthFilesBatchSettingsState = {
   prefix: string;
   proxyUrl: string;
   priority: string;
+  weight: string;
+  weightMode: '' | 'set' | 'inherit';
   excludedModelsText: string;
   headersText: string;
   headersError: string | null;
@@ -88,6 +93,8 @@ const createEmptyBatchSettingsState = (): AuthFilesBatchSettingsState => ({
   prefix: '',
   proxyUrl: '',
   priority: '',
+  weight: '',
+  weightMode: '',
   excludedModelsText: '',
   headersText: '',
   headersError: null,
@@ -128,7 +135,7 @@ const isCodexAuthFile = (file: AuthFileItem): boolean =>
 
 export const buildBatchSettingsPatch = (
   state: AuthFilesBatchSettingsState
-): { patch: BatchSettingsPatch; errorKey: AuthFileHeadersErrorKey | null } => {
+): { patch: BatchSettingsPatch; errorKey: AuthFileHeadersErrorKey | 'ai_providers.weight_invalid' | null } => {
   const patch: BatchSettingsPatch = {};
 
   if (state.prefix.trim()) {
@@ -138,6 +145,14 @@ export const buildBatchSettingsPatch = (
     patch.proxy_url = state.proxyUrl;
   }
 
+  if (state.weightMode === 'inherit') patch.weight = null;
+  if (state.weightMode === 'set') {
+    const weight = Number(state.weight);
+    if (!state.weight.trim() || !isValidCredentialWeight(weight)) {
+      return { patch: {}, errorKey: 'ai_providers.weight_invalid' };
+    }
+    patch.weight = weight;
+  }
   if (state.priority.trim()) {
     if (state.priority.trim().toLowerCase() === 'null') {
       patch.priority = null;
@@ -239,6 +254,7 @@ export function useAuthFilesBatchSettings(
         batchSettings.prefix.trim() ||
         batchSettings.proxyUrl.trim() ||
         batchSettings.priority.trim() ||
+        batchSettings.weightMode ||
         batchSettings.excludedModelsText.trim() ||
         batchSettings.headersText.trim() ||
         batchSettings.disableCooling.trim() ||
@@ -285,6 +301,10 @@ export function useAuthFilesBatchSettings(
 
   const handleBatchSettingsChange = (field: AuthFilesBatchSettingsField, value: string) => {
     setBatchSettings((prev) => {
+      if (field === 'weightMode') {
+        if (value !== '' && value !== 'set' && value !== 'inherit') return prev;
+        return { ...prev, weightMode: value, failures: [] };
+      }
       if (field === 'createChatGptWebCopy') {
         return {
           ...prev,
