@@ -312,6 +312,7 @@ export interface Config {
   routingPerAuthRequestWindowMinutes?: number;
   routingPriorityOverrides?: RoutingPriorityOverrideConfig[];
   routingSessionAffinity?: boolean;
+  routingSessionAffinityAcrossPriorities?: boolean;
   routingSessionAffinityFailover?: boolean;
   routingSessionAffinityTTL?: string;
   apiKeys?: string[];
@@ -364,6 +365,7 @@ export type RawConfigSection =
   | 'routing/per-auth-request-window-minutes'
   | 'routing/priority-overrides'
   | 'routing/session-affinity'
+  | 'routing/session-affinity-across-priorities'
   | 'routing/session-affinity-failover'
   | 'routing/session-affinity-ttl'
   | 'api-keys'

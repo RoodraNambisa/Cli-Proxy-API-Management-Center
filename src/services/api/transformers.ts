@@ -1168,6 +1168,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     config.routingSessionAffinity = normalizeBoolean(
       routing['session-affinity'] ?? routing.sessionAffinity
     );
+    config.routingSessionAffinityAcrossPriorities = normalizeBoolean(
+      routing['session-affinity-across-priorities'] ?? routing.sessionAffinityAcrossPriorities
+    );
     const failoverRaw = routing['session-affinity-failover'] ?? routing.sessionAffinityFailover;
     config.routingSessionAffinityFailover =
       failoverRaw === undefined || failoverRaw === null ? true : normalizeBoolean(failoverRaw);

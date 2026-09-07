@@ -381,6 +381,7 @@ export type VisualConfigValues = {
   routingPerAuthRequestWindowMinutes: string;
   routingPriorityOverrides: RoutingPriorityOverrideVisualEntry[];
   routingSessionAffinity: boolean;
+  routingSessionAffinityAcrossPriorities: boolean;
   routingSessionAffinityFailover: boolean;
   routingSessionAffinityTTL: string;
   wsAuth: boolean;
@@ -558,6 +559,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   routingPerAuthRequestWindowMinutes: '1',
   routingPriorityOverrides: [],
   routingSessionAffinity: false,
+  routingSessionAffinityAcrossPriorities: false,
   routingSessionAffinityFailover: true,
   routingSessionAffinityTTL: '',
   wsAuth: false,

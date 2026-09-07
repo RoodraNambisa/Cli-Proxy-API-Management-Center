@@ -2932,6 +2932,13 @@ function getNextDirtyFields(
       nextValues.routingSessionAffinityFailover === baselineValues.routingSessionAffinityFailover
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinityAcrossPriorities')) {
+    updateDirty(
+      'routingSessionAffinityAcrossPriorities',
+      nextValues.routingSessionAffinityAcrossPriorities ===
+        baselineValues.routingSessionAffinityAcrossPriorities
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinityTTL')) {
     updateDirty(
       'routingSessionAffinityTTL',
@@ -3205,6 +3212,14 @@ export function useVisualConfig() {
         routing?.['session-affinity-failover'] ??
         routing?.sessionAffinityFailover ??
         routing?.['sessionAffinityFailover'];
+      const routingSessionAffinityAcrossPriorities =
+        routing?.['session-affinity-across-priorities'] ?? routing?.sessionAffinityAcrossPriorities;
+      if (
+        routingSessionAffinityAcrossPriorities != null &&
+        typeof routingSessionAffinityAcrossPriorities !== 'boolean'
+      ) {
+        throw new Error('routing.session-affinity-across-priorities must be a boolean');
+      }
       const codexFingerprintJA3 = Boolean(codexFingerprint?.ja3 ?? codexFingerprint?.JA3);
       const codexFingerprintForceHTTP1 = codexFingerprintJA3
         ? false
@@ -3633,6 +3648,7 @@ export function useVisualConfig() {
         routingSessionAffinity: Boolean(
           routing?.['session-affinity'] ?? routing?.sessionAffinity ?? routing?.['sessionAffinity']
         ),
+        routingSessionAffinityAcrossPriorities: routingSessionAffinityAcrossPriorities ?? false,
         routingSessionAffinityFailover:
           routingSessionAffinityFailoverRaw === undefined ||
           routingSessionAffinityFailoverRaw === null
@@ -4535,6 +4551,7 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.routingPerAuthRequestWindowMinutes ||
           values.routingPriorityOverrides.length > 0 ||
           values.routingSessionAffinity ||
+          values.routingSessionAffinityAcrossPriorities ||
           values.routingSessionAffinityFailover !==
             DEFAULT_VISUAL_VALUES.routingSessionAffinityFailover ||
           values.routingSessionAffinityTTL.trim()
@@ -4580,6 +4597,17 @@ export function useVisualConfig() {
             doc.deleteIn(['routing', 'priority-overrides']);
           }
           setBooleanInDoc(doc, ['routing', 'session-affinity'], values.routingSessionAffinity);
+          if (
+            values.routingSessionAffinityAcrossPriorities ||
+            docHas(doc, ['routing', 'session-affinity-across-priorities']) ||
+            docHas(doc, ['routing', 'sessionAffinityAcrossPriorities'])
+          ) {
+            doc.setIn(
+              ['routing', 'session-affinity-across-priorities'],
+              values.routingSessionAffinityAcrossPriorities
+            );
+            doc.deleteIn(['routing', 'sessionAffinityAcrossPriorities']);
+          }
           if (
             docHas(doc, ['routing', 'session-affinity-failover']) ||
             values.routingSessionAffinityFailover !==
