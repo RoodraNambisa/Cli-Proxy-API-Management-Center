@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
+import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -370,7 +371,7 @@ export function AiProvidersOpenAIEditPage() {
   const renderKeyEntries = (entries: ApiKeyEntry[]) => {
     const list = entries.length ? entries : [buildApiKeyEntry()];
 
-    const updateEntry = (idx: number, field: keyof ApiKeyEntry, value: string) => {
+    const updateEntry = (idx: number, field: keyof ApiKeyEntry, value: string | number | undefined) => {
       const next = list.map((entry, i) => (i === idx ? { ...entry, [field]: value } : entry));
       setForm((prev) => ({ ...prev, apiKeyEntries: next }));
       setDraftKeyTestStatus(idx, { status: 'idle', message: '' });
@@ -413,12 +414,14 @@ export function AiProvidersOpenAIEditPage() {
             {t('ai_providers.openai_keys_add_btn')}
           </Button>
         </div>
+        <div className={styles.sectionHint}>{t('ai_providers.weight_hint')}</div>
         <div className={styles.keyTableShell}>
           {/* 表头 */}
           <div className={styles.keyTableHeader}>
             <div className={styles.keyTableColIndex}>#</div>
             <div className={styles.keyTableColStatus}>{t('common.status')}</div>
             <div className={styles.keyTableColKey}>{t('common.api_key')}</div>
+            <div className={styles.keyTableColWeight}>{t('ai_providers.weight_label')}</div>
             <div className={styles.keyTableColProxy}>{t('common.proxy_url')}</div>
             <div className={styles.keyTableColAction}>{t('common.action')}</div>
           </div>
@@ -450,6 +453,16 @@ export function AiProvidersOpenAIEditPage() {
                     disabled={saving || disableControls || isTestingKeys}
                     className={`input ${styles.keyTableInput}`}
                     placeholder={t('ai_providers.openai_key_placeholder')}
+                  />
+                </div>
+
+                <div className={styles.keyTableColWeight}>
+                  <CredentialWeightInput
+                    compact
+                    ariaLabel={`${t('ai_providers.weight_label')} ${index + 1}`}
+                    value={entry.weight}
+                    onChange={(weight) => updateEntry(index, 'weight', weight)}
+                    disabled={saving || disableControls || isTestingKeys}
                   />
                 </div>
 

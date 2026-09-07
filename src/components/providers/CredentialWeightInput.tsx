@@ -6,16 +6,21 @@ export function CredentialWeightInput({
   value,
   onChange,
   disabled,
+  compact = false,
+  ariaLabel,
 }: {
   value?: number;
   onChange: (value: number | undefined) => void;
   disabled?: boolean;
+  compact?: boolean;
+  ariaLabel?: string;
 }) {
   const { t } = useTranslation();
   return (
     <Input
-      label={t('ai_providers.weight_label')}
-      hint={t('ai_providers.weight_hint')}
+      label={compact ? undefined : t('ai_providers.weight_label')}
+      aria-label={ariaLabel ?? (compact ? t('ai_providers.weight_label') : undefined)}
+      hint={compact ? undefined : t('ai_providers.weight_hint')}
       placeholder={t('ai_providers.weight_inherit')}
       type="number"
       min={0}

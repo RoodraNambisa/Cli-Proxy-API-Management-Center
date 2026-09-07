@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
+import { isValidCredentialWeight } from '@/utils/credentialWeight';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -92,6 +93,7 @@ const normalizeApiKeyEntries = (entries: ApiKeyEntry[]) =>
   (entries ?? []).reduce<
     Array<{
       apiKey: string;
+      weight: number | null;
       proxyUrl: string;
       headers: Array<{ key: string; value: string }>;
     }>
@@ -99,8 +101,8 @@ const normalizeApiKeyEntries = (entries: ApiKeyEntry[]) =>
     const apiKey = String(entry?.apiKey ?? '').trim();
     const proxyUrl = String(entry?.proxyUrl ?? '').trim();
     const headers = normalizeKeyHeaders(entry?.headers);
-    if (!apiKey && !proxyUrl && headers.length === 0) return acc;
-    acc.push({ apiKey, proxyUrl, headers });
+    if (!apiKey && !proxyUrl && headers.length === 0 && entry.weight === undefined) return acc;
+    acc.push({ apiKey, proxyUrl, headers, weight: entry.weight ?? null });
     return acc;
   }, []);
 
@@ -126,7 +128,11 @@ const areNormalizedApiKeyEntriesEqual = (
     const left = a[i];
     const right = b[i];
     if (!left || !right) return false;
-    if (left.apiKey !== right.apiKey || left.proxyUrl !== right.proxyUrl) return false;
+    if (
+      left.apiKey !== right.apiKey ||
+      left.proxyUrl !== right.proxyUrl ||
+      left.weight !== right.weight
+    ) return false;
     if (!areKeyValueEntriesEqual(left.headers, right.headers)) return false;
   }
   return true;
@@ -454,6 +460,10 @@ export function AiProvidersOpenAIEditLayout() {
   });
 
   const handleSave = useCallback(async () => {
+    if (form.apiKeyEntries.some((entry) => !isValidCredentialWeight(entry.weight))) {
+      showNotification(t('ai_providers.weight_invalid'), 'error');
+      return;
+    }
     const name = form.name.trim();
     const baseUrl = form.baseUrl.trim();
 
@@ -471,6 +481,7 @@ export function AiProvidersOpenAIEditLayout() {
         headers: buildHeaderObject(form.headers),
         apiKeyEntries: form.apiKeyEntries.map((entry: ApiKeyEntry) => ({
           apiKey: entry.apiKey.trim(),
+          weight: entry.weight,
           proxyUrl: entry.proxyUrl?.trim() || undefined,
           headers: entry.headers,
         })),
