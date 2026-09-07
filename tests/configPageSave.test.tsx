@@ -639,10 +639,10 @@ describe('ConfigPage save coordination', () => {
     );
   });
 
-  test('keeps a rejected cache-key draft and accepts it only after a successful retry', async () => {
+  test.each(['passthrough-prompt-cache-key', 'optimize-multi-agent-v2'])('keeps a rejected %s draft and accepts it only after a successful retry', async (field) => {
     harness.visualDirty = true;
-    harness.mergedYaml = 'codex:\n  passthrough-prompt-cache-key: true\n';
-    harness.fetchYaml.mockResolvedValue('codex:\n  passthrough-prompt-cache-key: false\n');
+    harness.mergedYaml = 'codex:\n  ' + field + ': true\n';
+    harness.fetchYaml.mockResolvedValue('codex:\n  ' + field + ': false\n');
     harness.saveYaml.mockRejectedValueOnce(new Error('configuration rejected'));
 
     renderPage();

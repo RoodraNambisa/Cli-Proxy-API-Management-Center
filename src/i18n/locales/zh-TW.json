@@ -2274,6 +2274,8 @@
           "ws_auth": "WebSocket 驗證",
           "ws_auth_desc": "啟用 WebSocket 連線驗證（/v1/ws）",
           "codex_identity_confuse": "Codex 身份混淆",
+          "codex_optimize_multi_agent_v2": "Multi-agent v2 最佳化",
+          "codex_optimize_multi_agent_v2_desc": "預設關閉。更新官方 Codex 用戶端的子代理模型說明並規範協作工具呼叫。新協作訊息以明文處理；既有密文原樣保留，跨協定無法處理時回傳不支援。熱更新從下個請求或回合生效；與孤立委派相容和工作階段親和性獨立。",
           "codex_orphan_delegation_compatibility": "孤立委派結果相容",
           "codex_orphan_delegation_compatibility_desc": "預設關閉。僅對攜帶 X-Openai-Subagent: collab_spawn 的請求，將缺少配對呼叫的 codex_app.create_thread、send_message_to_thread 結果轉成使用者訊息，保留結果文字；已有配對及其他工具保持原有處理。不依賴 Multi-agent v2 最佳化開關，不改變憑證分配，熱更新從下個請求或回合生效。",
           "codex_stream_bootstrap_buffering": "串流開頭過載切換",

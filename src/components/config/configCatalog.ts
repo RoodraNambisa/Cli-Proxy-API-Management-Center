@@ -125,6 +125,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'codexPassthroughPromptCacheKey',
       'codexStreamBootstrapBuffering',
       'codexOrphanDelegationCompatibility',
+      'codexOptimizeMultiAgentV2',
       'codexSpoofSessionIdentity',
       'codexTurnStatePolicy',
       'codexFingerprint',
@@ -551,6 +552,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.codex_orphan_delegation_compatibility',
     yamlKeys: ['codex.orphan-delegation-compatibility'],
     aliases: ['orphan', 'delegation', '孤立委派', '孤立委託', 'делегирование'],
+  },
+  {
+    id: 'config-codex-multi-agent',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.network.codex_optimize_multi_agent_v2',
+    yamlKeys: ['codex.optimize-multi-agent-v2'],
+    aliases: ['multi-agent', 'subagent', 'collaboration', '子代理', '协作', '協作', 'субагент'],
   },
   {
     id: 'config-codex-headers',

@@ -2250,6 +2250,8 @@
           "ws_auth": "WebSocket Authentication",
           "ws_auth_desc": "Enable WebSocket authentication (/v1/ws)",
           "codex_identity_confuse": "Codex Identity Confuse",
+          "codex_optimize_multi_agent_v2": "Multi-agent v2 optimization",
+          "codex_optimize_multi_agent_v2_desc": "Off by default. Updates the subagent model list for official Codex clients and normalizes collaboration tools. New collaboration messages use plaintext; existing encrypted history is preserved and unsupported conversions to other protocols are rejected. Changes apply to the next request or turn. Independent of orphan delegation compatibility and session affinity.",
           "codex_orphan_delegation_compatibility": "Orphan delegation compatibility",
           "codex_orphan_delegation_compatibility_desc": "Off by default. For X-Openai-Subagent: collab_spawn requests, convert unpaired codex_app.create_thread and send_message_to_thread results to user messages while preserving the output text. Paired calls and other tools keep their existing behavior. Independent of Multi-agent v2 optimization; does not change credential selection. Updates apply to the next request or turn.",
           "codex_stream_bootstrap_buffering": "Switch credentials on early stream overload",

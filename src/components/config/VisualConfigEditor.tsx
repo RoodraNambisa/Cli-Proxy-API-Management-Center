@@ -5026,6 +5026,18 @@ export function VisualConfigEditor({
                   </SectionGrid>
                 </PageGroup>
 
+                <PageGroup id="config-codex-multi-agent" active={activePageId === 'provider-codex'}>
+                  <SectionGrid>
+                    <ToggleRow
+                      title={t('config_management.visual.sections.network.codex_optimize_multi_agent_v2')}
+                      description={t('config_management.visual.sections.network.codex_optimize_multi_agent_v2_desc')}
+                      checked={values.codexOptimizeMultiAgentV2}
+                      disabled={disabled}
+                      onChange={(codexOptimizeMultiAgentV2) => onChange({ codexOptimizeMultiAgentV2 })}
+                    />
+                  </SectionGrid>
+                </PageGroup>
+
                 <PageGroup id="config-codex-fingerprint" active={activePageId === 'provider-codex'}>
                   <SectionGrid>
                     <ToggleRow
