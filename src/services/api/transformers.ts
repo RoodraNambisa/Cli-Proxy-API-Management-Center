@@ -889,6 +889,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   const codex = raw.codex;
   if (isRecord(codex)) {
     config.codex = {
+      optimizeMultiAgentV2: normalizeBoolean(
+        codex['optimize-multi-agent-v2'] ?? codex.optimizeMultiAgentV2
+      ),
       passthroughPromptCacheKey: normalizeBoolean(
         codex['passthrough-prompt-cache-key'] ?? codex.passthroughPromptCacheKey
       ),

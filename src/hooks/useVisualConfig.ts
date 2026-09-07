@@ -2357,6 +2357,12 @@ function getNextDirtyFields(
       nextValues.codexOrphanDelegationCompatibility === baselineValues.codexOrphanDelegationCompatibility
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexOptimizeMultiAgentV2')) {
+    updateDirty(
+      'codexOptimizeMultiAgentV2',
+      nextValues.codexOptimizeMultiAgentV2 === baselineValues.codexOptimizeMultiAgentV2
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexTurnStatePolicy')) {
     updateDirty(
       'codexTurnStatePolicy',
@@ -3132,6 +3138,11 @@ export function useVisualConfig() {
       ) {
         throw new Error('codex.orphan-delegation-compatibility must be a boolean');
       }
+      const codexOptimizeMultiAgentV2 =
+        codex?.['optimize-multi-agent-v2'] ?? codex?.optimizeMultiAgentV2;
+      if (codexOptimizeMultiAgentV2 != null && typeof codexOptimizeMultiAgentV2 !== 'boolean') {
+        throw new Error('codex.optimize-multi-agent-v2 must be a boolean');
+      }
       const chatgptWeb = asRecord(parsed['chatgpt-web'] ?? parsed.chatgptWeb);
       const chatgptWebAutoDeleteDeadPrioritiesRaw =
         chatgptWeb &&
@@ -3302,6 +3313,7 @@ export function useVisualConfig() {
         codexPassthroughPromptCacheKey: codexPassthroughPromptCacheKey ?? false,
         codexStreamBootstrapBuffering: codexStreamBootstrapBuffering ?? false,
         codexOrphanDelegationCompatibility: codexOrphanDelegationCompatibility ?? false,
+        codexOptimizeMultiAgentV2: codexOptimizeMultiAgentV2 ?? false,
         codexSpoofSessionIdentity: Boolean(
           codex?.['spoof-session-identity'] ?? codex?.spoofSessionIdentity
         ),
@@ -3851,6 +3863,7 @@ export function useVisualConfig() {
           values.codexPassthroughPromptCacheKey ||
           values.codexStreamBootstrapBuffering ||
           values.codexOrphanDelegationCompatibility ||
+          values.codexOptimizeMultiAgentV2 ||
           values.codexSpoofSessionIdentity ||
           values.codexTurnStatePolicy !== DEFAULT_CODEX_TURN_STATE_POLICY ||
           !values.codexEnforceSoftwareIdentity
@@ -3863,6 +3876,8 @@ export function useVisualConfig() {
           doc.deleteIn(['codex', 'streamBootstrapBuffering']);
           doc.setIn(['codex', 'orphan-delegation-compatibility'], values.codexOrphanDelegationCompatibility);
           doc.deleteIn(['codex', 'orphanDelegationCompatibility']);
+          doc.setIn(['codex', 'optimize-multi-agent-v2'], values.codexOptimizeMultiAgentV2);
+          doc.deleteIn(['codex', 'optimizeMultiAgentV2']);
           doc.setIn(['codex', 'spoof-session-identity'], values.codexSpoofSessionIdentity);
           doc.setIn(['codex', 'turn-state-policy'], values.codexTurnStatePolicy);
           doc.setIn(['codex', 'enforce-software-identity'], values.codexEnforceSoftwareIdentity);
