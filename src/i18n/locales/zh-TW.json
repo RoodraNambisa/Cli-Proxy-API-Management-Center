@@ -219,6 +219,12 @@
     "delete_confirm": "確定要刪除這個 API 金鑰嗎？"
   },
   "ai_providers": {
+    "weight_label": "憑證權重",
+    "weight_hint": "可選整數，範圍 0–1,000,000；留空繼承 1。僅加權輪詢使用此值，0 表示在該策略中不參與分配。其他路由策略忽略權重。",
+    "weight_inherit": "繼承預設值（1）",
+    "weight_invalid": "請輸入 0–1,000,000 的整數。",
+    "weight_unchanged": "不修改",
+    "weight_set": "設定權重",
     "title": "AI 供應商設定",
     "gemini_title": "Gemini API 金鑰",
     "gemini_add_button": "新增金鑰",
