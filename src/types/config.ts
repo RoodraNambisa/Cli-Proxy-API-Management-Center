@@ -313,6 +313,7 @@ export interface Config {
   routingPriorityOverrides?: RoutingPriorityOverrideConfig[];
   routingSessionAffinity?: boolean;
   routingSessionAffinityAcrossPriorities?: boolean;
+  routingSessionAffinitySubagents?: boolean;
   routingSessionAffinityFailover?: boolean;
   routingSessionAffinityTTL?: string;
   apiKeys?: string[];
@@ -366,6 +367,7 @@ export type RawConfigSection =
   | 'routing/priority-overrides'
   | 'routing/session-affinity'
   | 'routing/session-affinity-across-priorities'
+  | 'routing/session-affinity-subagents'
   | 'routing/session-affinity-failover'
   | 'routing/session-affinity-ttl'
   | 'api-keys'

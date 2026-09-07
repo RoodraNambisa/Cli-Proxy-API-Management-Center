@@ -2939,6 +2939,12 @@ function getNextDirtyFields(
         baselineValues.routingSessionAffinityAcrossPriorities
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinitySubagents')) {
+    updateDirty(
+      'routingSessionAffinitySubagents',
+      nextValues.routingSessionAffinitySubagents === baselineValues.routingSessionAffinitySubagents
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinityTTL')) {
     updateDirty(
       'routingSessionAffinityTTL',
@@ -3221,6 +3227,16 @@ export function useVisualConfig() {
         typeof routingSessionAffinityAcrossPriorities !== 'boolean'
       ) {
         throw new Error('routing.session-affinity-across-priorities must be a boolean');
+      }
+      const routingSessionAffinitySubagents =
+        routing && Object.prototype.hasOwnProperty.call(routing, 'session-affinity-subagents')
+          ? routing['session-affinity-subagents']
+          : routing?.sessionAffinitySubagents;
+      if (
+        routingSessionAffinitySubagents != null &&
+        typeof routingSessionAffinitySubagents !== 'boolean'
+      ) {
+        throw new Error('routing.session-affinity-subagents must be a boolean');
       }
       const codexFingerprintJA3 = Boolean(codexFingerprint?.ja3 ?? codexFingerprint?.JA3);
       const codexFingerprintForceHTTP1 = codexFingerprintJA3
@@ -3651,6 +3667,7 @@ export function useVisualConfig() {
           routing?.['session-affinity'] ?? routing?.sessionAffinity ?? routing?.['sessionAffinity']
         ),
         routingSessionAffinityAcrossPriorities: routingSessionAffinityAcrossPriorities ?? false,
+        routingSessionAffinitySubagents: routingSessionAffinitySubagents ?? false,
         routingSessionAffinityFailover:
           routingSessionAffinityFailoverRaw === undefined ||
           routingSessionAffinityFailoverRaw === null
@@ -4554,6 +4571,7 @@ export function useVisualConfig() {
           values.routingPriorityOverrides.length > 0 ||
           values.routingSessionAffinity ||
           values.routingSessionAffinityAcrossPriorities ||
+          values.routingSessionAffinitySubagents ||
           values.routingSessionAffinityFailover !==
             DEFAULT_VISUAL_VALUES.routingSessionAffinityFailover ||
           values.routingSessionAffinityTTL.trim()
@@ -4609,6 +4627,14 @@ export function useVisualConfig() {
               values.routingSessionAffinityAcrossPriorities
             );
             doc.deleteIn(['routing', 'sessionAffinityAcrossPriorities']);
+          }
+          if (
+            values.routingSessionAffinitySubagents ||
+            docHas(doc, ['routing', 'session-affinity-subagents']) ||
+            docHas(doc, ['routing', 'sessionAffinitySubagents'])
+          ) {
+            doc.setIn(['routing', 'session-affinity-subagents'], values.routingSessionAffinitySubagents);
+            doc.deleteIn(['routing', 'sessionAffinitySubagents']);
           }
           if (
             docHas(doc, ['routing', 'session-affinity-failover']) ||
