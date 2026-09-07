@@ -1,3 +1,4 @@
+import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -308,6 +309,11 @@ export function AiProvidersClaudeEditPage() {
               value={form.apiKey}
               onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
               disabled={saving || disableControls || isTesting}
+            />
+            <CredentialWeightInput
+              value={form.weight}
+              onChange={(weight) => setForm((prev) => ({ ...prev, weight }))}
+              disabled={disableControls || saving || isTesting}
             />
             <Input
               label={t('ai_providers.priority_label')}
