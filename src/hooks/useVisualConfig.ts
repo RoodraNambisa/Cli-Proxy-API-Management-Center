@@ -2324,6 +2324,12 @@ function getNextDirtyFields(
       nextValues.codexSpoofSessionIdentity === baselineValues.codexSpoofSessionIdentity
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexStreamBootstrapBuffering')) {
+    updateDirty(
+      'codexStreamBootstrapBuffering',
+      nextValues.codexStreamBootstrapBuffering === baselineValues.codexStreamBootstrapBuffering
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexTurnStatePolicy')) {
     updateDirty(
       'codexTurnStatePolicy',
@@ -3080,6 +3086,14 @@ export function useVisualConfig() {
         throw new Error('codex.passthrough-prompt-cache-key must be a boolean');
       }
       const codexFingerprint = asRecord(parsed['codex-fingerprint'] ?? parsed.codexFingerprint);
+      const codexStreamBootstrapBuffering =
+        codex?.['stream-bootstrap-buffering'] ?? codex?.streamBootstrapBuffering;
+      if (
+        codexStreamBootstrapBuffering != null &&
+        typeof codexStreamBootstrapBuffering !== 'boolean'
+      ) {
+        throw new Error('codex.stream-bootstrap-buffering must be a boolean');
+      }
       const codexHeaderDefaults = asRecord(
         parsed['codex-header-defaults'] ?? parsed.codexHeaderDefaults
       );
@@ -3251,6 +3265,7 @@ export function useVisualConfig() {
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
         codexPassthroughPromptCacheKey: codexPassthroughPromptCacheKey ?? false,
+        codexStreamBootstrapBuffering: codexStreamBootstrapBuffering ?? false,
         codexSpoofSessionIdentity: Boolean(
           codex?.['spoof-session-identity'] ?? codex?.spoofSessionIdentity
         ),
@@ -3803,6 +3818,7 @@ export function useVisualConfig() {
           docHas(doc, ['codex']) ||
           values.codexIdentityConfuse ||
           values.codexPassthroughPromptCacheKey ||
+          values.codexStreamBootstrapBuffering ||
           values.codexSpoofSessionIdentity ||
           values.codexTurnStatePolicy !== DEFAULT_CODEX_TURN_STATE_POLICY ||
           !values.codexEnforceSoftwareIdentity
@@ -3811,6 +3827,8 @@ export function useVisualConfig() {
           doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
           doc.setIn(['codex', 'passthrough-prompt-cache-key'], values.codexPassthroughPromptCacheKey);
           doc.deleteIn(['codex', 'passthroughPromptCacheKey']);
+          doc.setIn(['codex', 'stream-bootstrap-buffering'], values.codexStreamBootstrapBuffering);
+          doc.deleteIn(['codex', 'streamBootstrapBuffering']);
           doc.setIn(['codex', 'spoof-session-identity'], values.codexSpoofSessionIdentity);
           doc.setIn(['codex', 'turn-state-policy'], values.codexTurnStatePolicy);
           doc.setIn(['codex', 'enforce-software-identity'], values.codexEnforceSoftwareIdentity);

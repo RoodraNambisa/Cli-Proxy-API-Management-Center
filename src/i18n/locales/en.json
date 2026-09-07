@@ -2236,6 +2236,8 @@
           "ws_auth": "WebSocket Authentication",
           "ws_auth_desc": "Enable WebSocket authentication (/v1/ws)",
           "codex_identity_confuse": "Codex Identity Confuse",
+          "codex_stream_bootstrap_buffering": "Switch credentials on early stream overload",
+          "codex_stream_bootstrap_buffering_desc": "Off by default. Hold up to 16 pre-output metadata events / 64 KiB. Overloads or rate limits may use the existing retry budget to switch credentials only while the request remains replayable and no output is committed. Content or unknown events resume normal streaming. Incremental WebSocket context is never replayed across credentials. Updates apply to the next request or turn.",
           "codex_passthrough_prompt_cache_key": "Pass through client cache keys",
           "codex_passthrough_prompt_cache_key_desc": "Off by default. Preserve an explicit non-empty prompt_cache_key through identity remapping and session convergence. Other identity and isolation rules still apply. Requests without a valid key keep automatic generation. Updates apply to the next request or WebSocket turn. Cache hits still depend on the prompt prefix and other conditions.",
           "codex_identity_confuse_desc": "Stably remap Codex session, window, and turn identities per account before upstream requests, then restore original IDs in responses.",

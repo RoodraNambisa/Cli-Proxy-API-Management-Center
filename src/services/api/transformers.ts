@@ -879,6 +879,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       passthroughPromptCacheKey: normalizeBoolean(
         codex['passthrough-prompt-cache-key'] ?? codex.passthroughPromptCacheKey
       ),
+      streamBootstrapBuffering: normalizeBoolean(
+        codex['stream-bootstrap-buffering'] ?? codex.streamBootstrapBuffering
+      ),
       identityConfuse: normalizeBoolean(codex['identity-confuse'] ?? codex.identityConfuse),
       spoofSessionIdentity: normalizeBoolean(
         codex['spoof-session-identity'] ?? codex.spoofSessionIdentity

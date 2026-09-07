@@ -311,6 +311,7 @@ export type VisualConfigValues = {
   forceModelPrefix: boolean;
   codexIdentityConfuse: boolean;
   codexPassthroughPromptCacheKey: boolean;
+  codexStreamBootstrapBuffering: boolean;
   codexSpoofSessionIdentity: boolean;
   codexTurnStatePolicy: CodexTurnStatePolicy;
   codexEnforceSoftwareIdentity: boolean;
@@ -427,6 +428,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   forceModelPrefix: false,
   codexIdentityConfuse: false,
   codexPassthroughPromptCacheKey: false,
+  codexStreamBootstrapBuffering: false,
   codexSpoofSessionIdentity: false,
   codexTurnStatePolicy: DEFAULT_CODEX_TURN_STATE_POLICY,
   codexEnforceSoftwareIdentity: true,

@@ -123,6 +123,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'codexCustomModels',
       'codexIdentityConfuse',
       'codexPassthroughPromptCacheKey',
+      'codexStreamBootstrapBuffering',
       'codexSpoofSessionIdentity',
       'codexTurnStatePolicy',
       'codexFingerprint',
@@ -521,6 +522,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.codex_passthrough_prompt_cache_key',
     yamlKeys: ['codex.passthrough-prompt-cache-key', 'prompt_cache_key'],
     aliases: ['cache key', '缓存键', '緩存鍵', 'ключ кеша'],
+  },
+  {
+    id: 'config-codex-stream-bootstrap',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.network.codex_stream_bootstrap_buffering',
+    yamlKeys: ['codex.stream-bootstrap-buffering'],
+    aliases: ['overload', 'bootstrap', '过载', '過載', 'перегрузка'],
   },
   {
     id: 'config-codex-headers',

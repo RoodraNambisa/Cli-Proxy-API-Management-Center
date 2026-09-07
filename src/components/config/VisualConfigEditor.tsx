@@ -4982,6 +4982,18 @@ export function VisualConfigEditor({
                   </SectionGrid>
                 </PageGroup>
 
+                <PageGroup id="config-codex-stream-bootstrap" active={activePageId === 'provider-codex'}>
+                  <SectionGrid>
+                    <ToggleRow
+                      title={t('config_management.visual.sections.network.codex_stream_bootstrap_buffering')}
+                      description={t('config_management.visual.sections.network.codex_stream_bootstrap_buffering_desc')}
+                      checked={values.codexStreamBootstrapBuffering}
+                      disabled={disabled}
+                      onChange={(codexStreamBootstrapBuffering) => onChange({ codexStreamBootstrapBuffering })}
+                    />
+                  </SectionGrid>
+                </PageGroup>
+
                 <PageGroup id="config-codex-fingerprint" active={activePageId === 'provider-codex'}>
                   <SectionGrid>
                     <ToggleRow
