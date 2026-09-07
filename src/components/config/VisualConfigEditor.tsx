@@ -3778,6 +3778,7 @@ export function VisualConfigEditor({
                     focusTarget={focusTarget}
                     targetIds={[
                       'config-request-retry',
+                      'config-credential-request-retry',
                       'config-max-retry-credentials',
                       'config-max-retry-interval',
                     ]}
@@ -3796,6 +3797,17 @@ export function VisualConfigEditor({
                         hint={t('config_management.visual.sections.network.request_retry_hint')}
                         error={requestRetryError}
                       />
+                      <div id="config-credential-request-retry" className={styles.providerHubActions}>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => navigate('/ai-providers')}
+                        >
+                          {t('ai_providers.request_retry_manage')}
+                          <IconExternalLink size={14} />
+                        </Button>
+                      </div>
                       <Input
                         id="config-max-retry-credentials"
                         label={t('config_management.visual.sections.network.max_retry_credentials')}

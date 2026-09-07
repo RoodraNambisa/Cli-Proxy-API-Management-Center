@@ -285,6 +285,20 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     yamlKeys: ['request-retry'],
   },
   {
+    id: 'config-credential-request-retry',
+    pageId: 'global-network',
+    labelKey: 'ai_providers.request_retry_label',
+    yamlKeys: [
+      'codex-api-key[].request-retry',
+      'claude-api-key[].request-retry',
+      'gemini-api-key[].request-retry',
+      'interactions-api-key[].request-retry',
+      'vertex-api-key[].request-retry',
+      'openai-compatibility[].request-retry',
+    ],
+    aliases: ['credential request retries', '凭证重试', '憑證重試', 'повторы для учётных данных'],
+  },
+  {
     id: 'config-max-retry-credentials',
     pageId: 'global-network',
     labelKey: 'config_management.visual.sections.network.max_retry_credentials',
