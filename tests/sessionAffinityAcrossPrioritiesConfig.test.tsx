@@ -6,6 +6,16 @@ import { normalizeConfigResponse } from '@/services/api/transformers';
 import { useConfigStore } from '@/stores/useConfigStore';
 
 describe('session affinity across priorities configuration data', () => {
+  test('explicit canonical null keeps default off instead of a shadowing alias', () => {
+    const { result } = renderHook(() => useVisualConfig());
+    act(() => result.current.loadVisualValuesFromYaml('routing:\n  session-affinity-across-priorities: null\n  sessionAffinityAcrossPriorities: true\n'));
+    expect(result.current.visualValues.routingSessionAffinityAcrossPriorities).toBe(false);
+    expect(normalizeConfigResponse({ routing: {
+      'session-affinity-across-priorities': null,
+      sessionAffinityAcrossPriorities: true,
+    } }).routingSessionAffinityAcrossPriorities).toBeUndefined();
+  });
+
   test.each(['request-retry: 2\n', 'routing:\n  session-affinity: false\n  future-setting: kept\n'])(
     'keeps default off, saves both values and preserves unrelated YAML',
     (original) => {

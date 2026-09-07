@@ -3213,7 +3213,9 @@ export function useVisualConfig() {
         routing?.sessionAffinityFailover ??
         routing?.['sessionAffinityFailover'];
       const routingSessionAffinityAcrossPriorities =
-        routing?.['session-affinity-across-priorities'] ?? routing?.sessionAffinityAcrossPriorities;
+        routing && Object.prototype.hasOwnProperty.call(routing, 'session-affinity-across-priorities')
+          ? routing['session-affinity-across-priorities']
+          : routing?.sessionAffinityAcrossPriorities;
       if (
         routingSessionAffinityAcrossPriorities != null &&
         typeof routingSessionAffinityAcrossPriorities !== 'boolean'
