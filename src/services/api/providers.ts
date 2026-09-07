@@ -1,3 +1,4 @@
+import { serializeCredentialWeight } from '@/utils/credentialWeight';
 /**
  * AI 提供商相关 API
  */
@@ -57,15 +58,24 @@ const serializeModelAliases = (models?: ModelAlias[]) =>
     : undefined;
 
 const serializeApiKeyEntry = (entry: ApiKeyEntry) => {
-  const payload: Record<string, unknown> = { 'api-key': entry.apiKey };
+  const payload: Record<string, unknown> = {
+    'api-key': entry.apiKey,
+    weight: serializeCredentialWeight(entry.weight),
+  };
   if (entry.proxyUrl) payload['proxy-url'] = entry.proxyUrl;
   const headers = serializeHeaders(entry.headers);
   if (headers) payload.headers = headers;
   return payload;
 };
 
-const serializeProviderKey = (config: ProviderKeyConfig) => {
-  const payload: Record<string, unknown> = { 'api-key': config.apiKey };
+const serializeProviderKey = (config: ProviderKeyConfig, patch = false) => {
+  const payload: Record<string, unknown> = {
+    'api-key': config.apiKey,
+    weight:
+      patch && Object.prototype.hasOwnProperty.call(config, 'weight')
+        ? serializeCredentialWeight(config.weight) ?? null
+        : serializeCredentialWeight(config.weight),
+  };
   if (config.priority !== undefined) payload.priority = config.priority;
   if (config.prefix?.trim()) payload.prefix = config.prefix.trim();
   if (config.baseUrl) payload['base-url'] = config.baseUrl;
@@ -106,8 +116,14 @@ const serializeVertexModelAliases = (models?: ModelAlias[]) =>
         .filter(Boolean)
     : undefined;
 
-const serializeVertexKey = (config: ProviderKeyConfig) => {
-  const payload: Record<string, unknown> = { 'api-key': config.apiKey };
+const serializeVertexKey = (config: ProviderKeyConfig, patch = false) => {
+  const payload: Record<string, unknown> = {
+    'api-key': config.apiKey,
+    weight:
+      patch && Object.prototype.hasOwnProperty.call(config, 'weight')
+        ? serializeCredentialWeight(config.weight) ?? null
+        : serializeCredentialWeight(config.weight),
+  };
   if (config.priority !== undefined) payload.priority = config.priority;
   if (config.prefix?.trim()) payload.prefix = config.prefix.trim();
   if (config.baseUrl) payload['base-url'] = config.baseUrl;
@@ -122,8 +138,14 @@ const serializeVertexKey = (config: ProviderKeyConfig) => {
   return payload;
 };
 
-const serializeGeminiKey = (config: GeminiKeyConfig) => {
-  const payload: Record<string, unknown> = { 'api-key': config.apiKey };
+const serializeGeminiKey = (config: GeminiKeyConfig, patch = false) => {
+  const payload: Record<string, unknown> = {
+    'api-key': config.apiKey,
+    weight:
+      patch && Object.prototype.hasOwnProperty.call(config, 'weight')
+        ? serializeCredentialWeight(config.weight) ?? null
+        : serializeCredentialWeight(config.weight),
+  };
   if (config.priority !== undefined) payload.priority = config.priority;
   if (config.prefix?.trim()) payload.prefix = config.prefix.trim();
   if (config.baseUrl) payload['base-url'] = config.baseUrl;
@@ -170,7 +192,7 @@ export const providersApi = {
     ),
 
   updateGeminiKey: (index: number, value: GeminiKeyConfig) =>
-    apiClient.patch('/gemini-api-key', { index, value: serializeGeminiKey(value) }),
+    apiClient.patch('/gemini-api-key', { index, value: serializeGeminiKey(value, true) }),
 
   deleteGeminiKey: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/gemini-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
@@ -188,7 +210,7 @@ export const providersApi = {
     ),
 
   updateInteractionsKey: (index: number, value: GeminiKeyConfig) =>
-    apiClient.patch('/interactions-api-key', { index, value: serializeGeminiKey(value) }),
+    apiClient.patch('/interactions-api-key', { index, value: serializeGeminiKey(value, true) }),
 
   deleteInteractionsKey: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/interactions-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
@@ -208,7 +230,7 @@ export const providersApi = {
     ),
 
   updateCodexConfig: (index: number, value: ProviderKeyConfig) =>
-    apiClient.patch('/codex-api-key', { index, value: serializeProviderKey(value) }),
+    apiClient.patch('/codex-api-key', { index, value: serializeProviderKey(value, true) }),
 
   deleteCodexConfig: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/codex-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
@@ -228,7 +250,7 @@ export const providersApi = {
     ),
 
   updateClaudeConfig: (index: number, value: ProviderKeyConfig) =>
-    apiClient.patch('/claude-api-key', { index, value: serializeProviderKey(value) }),
+    apiClient.patch('/claude-api-key', { index, value: serializeProviderKey(value, true) }),
 
   deleteClaudeConfig: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/claude-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
@@ -248,7 +270,7 @@ export const providersApi = {
     ),
 
   updateVertexConfig: (index: number, value: ProviderKeyConfig) =>
-    apiClient.patch('/vertex-api-key', { index, value: serializeVertexKey(value) }),
+    apiClient.patch('/vertex-api-key', { index, value: serializeVertexKey(value, true) }),
 
   deleteVertexConfig: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/vertex-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),

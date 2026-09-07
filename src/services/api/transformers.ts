@@ -1,3 +1,4 @@
+import { normalizeCredentialWeight } from '@/utils/credentialWeight';
 import type {
   ApiKeyEntry,
   CloakConfig,
@@ -560,6 +561,7 @@ const normalizeApiKeyEntry = (entry: unknown): ApiKeyEntry | null => {
 
   const result: ApiKeyEntry = {
     apiKey: trimmed,
+    weight: normalizeCredentialWeight(record?.weight),
     proxyUrl: proxyUrl ? String(proxyUrl) : undefined,
     headers,
   };
@@ -574,7 +576,7 @@ const normalizeProviderKeyConfig = (item: unknown): ProviderKeyConfig | null => 
   const trimmed = String(apiKey || '').trim();
   if (!trimmed) return null;
 
-  const config: ProviderKeyConfig = { apiKey: trimmed };
+  const config: ProviderKeyConfig = { apiKey: trimmed, weight: normalizeCredentialWeight(record?.weight) };
   const priority = record?.priority ?? record?.['priority'];
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') {
     const parsed = Number(priority);
@@ -643,7 +645,7 @@ const normalizeGeminiKeyConfig = (item: unknown): GeminiKeyConfig | null => {
   const trimmed = String(apiKey || '').trim();
   if (!trimmed) return null;
 
-  const config: GeminiKeyConfig = { apiKey: trimmed };
+  const config: GeminiKeyConfig = { apiKey: trimmed, weight: normalizeCredentialWeight(record?.weight) };
   const priority = record?.priority ?? record?.['priority'];
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') {
     const parsed = Number(priority);
