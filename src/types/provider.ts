@@ -27,6 +27,7 @@ export interface CloakConfig {
 export interface GeminiKeyConfig {
   apiKey: string;
   weight?: number;
+  requestRetry?: number;
   priority?: number;
   prefix?: string;
   baseUrl?: string;
@@ -40,6 +41,7 @@ export interface GeminiKeyConfig {
 export interface ProviderKeyConfig {
   apiKey: string;
   weight?: number;
+  requestRetry?: number;
   priority?: number;
   prefix?: string;
   baseUrl?: string;
@@ -54,6 +56,7 @@ export interface ProviderKeyConfig {
 
 export interface OpenAIProviderConfig {
   name: string;
+  requestRetry?: number;
   prefix?: string;
   baseUrl: string;
   apiKeyEntries: ApiKeyEntry[];

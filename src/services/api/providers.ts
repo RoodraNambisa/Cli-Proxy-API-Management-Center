@@ -1,4 +1,5 @@
 import { serializeCredentialWeight } from '@/utils/credentialWeight';
+import { serializeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 /**
  * AI 提供商相关 API
  */
@@ -68,9 +69,17 @@ const serializeApiKeyEntry = (entry: ApiKeyEntry) => {
   return payload;
 };
 
+const serializeRequestRetryOverride = (config: { requestRetry?: number }, patch: boolean) => {
+  const value = serializeCredentialRequestRetry(config.requestRetry);
+  return patch && Object.prototype.hasOwnProperty.call(config, 'requestRetry')
+    ? value ?? null
+    : value;
+};
+
 const serializeProviderKey = (config: ProviderKeyConfig, patch = false) => {
   const payload: Record<string, unknown> = {
     'api-key': config.apiKey,
+    'request-retry': serializeRequestRetryOverride(config, patch),
     weight:
       patch && Object.prototype.hasOwnProperty.call(config, 'weight')
         ? serializeCredentialWeight(config.weight) ?? null
@@ -119,6 +128,7 @@ const serializeVertexModelAliases = (models?: ModelAlias[]) =>
 const serializeVertexKey = (config: ProviderKeyConfig, patch = false) => {
   const payload: Record<string, unknown> = {
     'api-key': config.apiKey,
+    'request-retry': serializeRequestRetryOverride(config, patch),
     weight:
       patch && Object.prototype.hasOwnProperty.call(config, 'weight')
         ? serializeCredentialWeight(config.weight) ?? null
@@ -141,6 +151,7 @@ const serializeVertexKey = (config: ProviderKeyConfig, patch = false) => {
 const serializeGeminiKey = (config: GeminiKeyConfig, patch = false) => {
   const payload: Record<string, unknown> = {
     'api-key': config.apiKey,
+    'request-retry': serializeRequestRetryOverride(config, patch),
     weight:
       patch && Object.prototype.hasOwnProperty.call(config, 'weight')
         ? serializeCredentialWeight(config.weight) ?? null
@@ -160,9 +171,10 @@ const serializeGeminiKey = (config: GeminiKeyConfig, patch = false) => {
   return payload;
 };
 
-const serializeOpenAIProvider = (provider: OpenAIProviderConfig) => {
+const serializeOpenAIProvider = (provider: OpenAIProviderConfig, patch = false) => {
   const payload: Record<string, unknown> = {
     name: provider.name,
+    'request-retry': serializeRequestRetryOverride(provider, patch),
     'base-url': provider.baseUrl,
     'api-key-entries': Array.isArray(provider.apiKeyEntries)
       ? provider.apiKeyEntries.map((entry) => serializeApiKeyEntry(entry))
@@ -290,7 +302,7 @@ export const providersApi = {
     ),
 
   updateOpenAIProvider: (index: number, value: OpenAIProviderConfig) =>
-    apiClient.patch('/openai-compatibility', { index, value: serializeOpenAIProvider(value) }),
+    apiClient.patch('/openai-compatibility', { index, value: serializeOpenAIProvider(value, true) }),
 
   deleteOpenAIProvider: (name: string) =>
     apiClient.delete(`/openai-compatibility?name=${encodeURIComponent(name)}`),

@@ -1,4 +1,5 @@
 import { normalizeCredentialWeight } from '@/utils/credentialWeight';
+import { normalizeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import type {
   ApiKeyEntry,
   CloakConfig,
@@ -542,6 +543,13 @@ const normalizeAuthIndex = (value: unknown): string | undefined => {
   return trimmed ? trimmed : undefined;
 };
 
+const normalizeRequestRetryOverride = (record: Record<string, unknown> | null) =>
+  normalizeCredentialRequestRetry(
+    record && Object.prototype.hasOwnProperty.call(record, 'request-retry')
+      ? record['request-retry']
+      : record?.requestRetry
+  );
+
 const normalizeApiKeyEntry = (entry: unknown): ApiKeyEntry | null => {
   if (entry === undefined || entry === null) return null;
   const record = isRecord(entry) ? entry : null;
@@ -577,6 +585,7 @@ const normalizeProviderKeyConfig = (item: unknown): ProviderKeyConfig | null => 
   if (!trimmed) return null;
 
   const config: ProviderKeyConfig = { apiKey: trimmed, weight: normalizeCredentialWeight(record?.weight) };
+  config.requestRetry = normalizeRequestRetryOverride(record);
   const priority = record?.priority ?? record?.['priority'];
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') {
     const parsed = Number(priority);
@@ -646,6 +655,7 @@ const normalizeGeminiKeyConfig = (item: unknown): GeminiKeyConfig | null => {
   if (!trimmed) return null;
 
   const config: GeminiKeyConfig = { apiKey: trimmed, weight: normalizeCredentialWeight(record?.weight) };
+  config.requestRetry = normalizeRequestRetryOverride(record);
   const priority = record?.priority ?? record?.['priority'];
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') {
     const parsed = Number(priority);
@@ -700,6 +710,7 @@ const normalizeOpenAIProvider = (provider: unknown): OpenAIProviderConfig | null
 
   const result: OpenAIProviderConfig = {
     name: String(name),
+    requestRetry: normalizeRequestRetryOverride(provider),
     baseUrl: String(baseUrl),
     apiKeyEntries,
   };
