@@ -1,9 +1,21 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { parse } from 'yaml';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
+import { VisualConfigEditor } from '@/components/config/VisualConfigEditor';
+import { CONFIG_PAGE_DEFINITIONS, CONFIG_SEARCH_DEFINITIONS, configPageHasDirtyFields } from '@/components/config/configCatalog';
+import en from '@/i18n/locales/en.json';
+import ru from '@/i18n/locales/ru.json';
+import zhCN from '@/i18n/locales/zh-CN.json';
+import zhTW from '@/i18n/locales/zh-TW.json';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
 import { normalizeConfigResponse } from '@/services/api/transformers';
 import { useConfigStore } from '@/stores/useConfigStore';
+
+vi.mock('react-i18next', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-i18next')>()),
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
 
 describe('session affinity across priorities configuration data', () => {
   test('explicit canonical null keeps default off instead of a shadowing alias', () => {
@@ -72,4 +84,43 @@ describe('session affinity across priorities configuration data', () => {
     act(() => result.current.loadVisualValuesFromYaml('routing:\n  session-affinity-across-priorities: ' + value + '\n'));
     expect(result.current.visualParseError).toContain('session-affinity-across-priorities');
   });
+});
+
+test('exposes a searchable translated switch and keeps its saved value', () => {
+  const original = 'routing:\n  session-affinity: true\n  future-setting: kept\n';
+  const { result } = renderHook(() => useVisualConfig());
+  act(() => result.current.loadVisualValuesFromYaml(original));
+  render(
+    <MemoryRouter initialEntries={['/config?section=config-session-affinity-across-priorities']}>
+      <VisualConfigEditor
+        values={result.current.visualValues}
+        baselineValues={result.current.baselineValues}
+        onChange={result.current.setVisualValues}
+        renderRequestBodyPanels={() => null}
+      />
+    </MemoryRouter>
+  );
+  const label = 'config_management.visual.sections.network.session_affinity_across_priorities';
+  const toggle = screen.getByRole('checkbox', { name: label });
+  expect((toggle as HTMLInputElement).checked).toBe(false);
+  fireEvent.click(toggle);
+  expect(result.current.visualValues.routingSessionAffinityAcrossPriorities).toBe(true);
+  const page = CONFIG_PAGE_DEFINITIONS.find((entry) => entry.id === 'global-network')!;
+  expect(configPageHasDirtyFields(page, result.current.visualDirtyFields)).toBe(true);
+  const saved = result.current.applyVisualChangesToYaml(original);
+  expect(parse(saved).routing).toMatchObject({
+    'session-affinity': true,
+    'session-affinity-across-priorities': true,
+    'future-setting': 'kept',
+  });
+  act(() => result.current.loadVisualValuesFromYaml(saved));
+  expect(result.current.visualValues.routingSessionAffinityAcrossPriorities).toBe(true);
+  expect(result.current.visualDirty).toBe(false);
+  const entry = CONFIG_SEARCH_DEFINITIONS.find((item) => item.id === 'config-session-affinity-across-priorities');
+  expect(entry?.yamlKeys).toContain('routing.session-affinity-across-priorities');
+  expect(document.getElementById(entry!.id)).not.toBeNull();
+  for (const locale of [en, ru, zhCN, zhTW]) {
+    expect(locale.config_management.visual.sections.network.session_affinity_across_priorities).toBeTruthy();
+    expect(locale.config_management.visual.sections.network.session_affinity_across_priorities_desc).toBeTruthy();
+  }
 });

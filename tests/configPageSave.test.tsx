@@ -639,10 +639,14 @@ describe('ConfigPage save coordination', () => {
     );
   });
 
-  test.each(['passthrough-prompt-cache-key', 'optimize-multi-agent-v2'])('keeps a rejected %s draft and accepts it only after a successful retry', async (field) => {
+  test.each([
+    { section: 'codex', field: 'passthrough-prompt-cache-key' },
+    { section: 'codex', field: 'optimize-multi-agent-v2' },
+    { section: 'routing', field: 'session-affinity-across-priorities' },
+  ])('keeps a rejected $section.$field draft and accepts it only after a successful retry', async ({ section, field }) => {
     harness.visualDirty = true;
-    harness.mergedYaml = 'codex:\n  ' + field + ': true\n';
-    harness.fetchYaml.mockResolvedValue('codex:\n  ' + field + ': false\n');
+    harness.mergedYaml = section + ':\n  ' + field + ': true\n';
+    harness.fetchYaml.mockResolvedValue(section + ':\n  ' + field + ': false\n');
     harness.saveYaml.mockRejectedValueOnce(new Error('configuration rejected'));
 
     renderPage();

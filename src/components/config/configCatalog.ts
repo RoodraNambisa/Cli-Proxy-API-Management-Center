@@ -368,6 +368,12 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     ],
   },
   {
+    id: 'config-session-affinity-across-priorities',
+    pageId: 'global-network',
+    labelKey: 'config_management.visual.sections.network.session_affinity_across_priorities',
+    yamlKeys: ['routing.session-affinity-across-priorities'],
+  },
+  {
     id: 'config-force-model-prefix',
     pageId: 'global-network',
     labelKey: 'config_management.visual.sections.network.force_model_prefix',

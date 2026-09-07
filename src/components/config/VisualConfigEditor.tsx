@@ -1235,6 +1235,7 @@ export function VisualConfigEditor({
   ]);
   const sessionSettingsDirty = hasDirtyConfigField(dirtyFields, [
     'routingSessionAffinity',
+    'routingSessionAffinityAcrossPriorities',
     'routingSessionAffinityFailover',
     'routingSessionAffinityTTL',
     'forceModelPrefix',
@@ -4925,6 +4926,7 @@ export function VisualConfigEditor({
                     targetIds={[
                       'config-force-model-prefix',
                       'config-session-affinity',
+                      'config-session-affinity-across-priorities',
                       'config-ws-auth',
                     ]}
                     dirty={sessionSettingsDirty}
@@ -4961,6 +4963,17 @@ export function VisualConfigEditor({
                           disabled={disabled}
                           onChange={(routingSessionAffinityFailover) =>
                             onChange({ routingSessionAffinityFailover })
+                          }
+                        />
+                      </div>
+                      <div id="config-session-affinity-across-priorities" className={styles.pageGroup}>
+                        <ToggleRow
+                          title={t('config_management.visual.sections.network.session_affinity_across_priorities')}
+                          description={t('config_management.visual.sections.network.session_affinity_across_priorities_desc')}
+                          checked={values.routingSessionAffinityAcrossPriorities}
+                          disabled={disabled}
+                          onChange={(routingSessionAffinityAcrossPriorities) =>
+                            onChange({ routingSessionAffinityAcrossPriorities })
                           }
                         />
                       </div>
