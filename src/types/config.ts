@@ -58,7 +58,7 @@ export interface RequestBodyReleaseConfig {
   minBodyBytes: number;
 }
 
-export type RoutingStrategy = 'round-robin' | 'fill-first' | 'random';
+export type RoutingStrategy = 'round-robin' | 'fill-first' | 'random' | 'weighted-round-robin';
 
 export interface RoutingSubscriptionOverrideConfig {
   providers?: string[];

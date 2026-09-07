@@ -45,7 +45,7 @@ export type ControlPanelUpdateStatus = {
   error: string;
 };
 
-const ROUTING_PRIORITY_OVERRIDE_STRATEGIES = new Set(['round-robin', 'fill-first', 'random']);
+const ROUTING_PRIORITY_OVERRIDE_STRATEGIES = new Set(['round-robin', 'fill-first', 'random', 'weighted-round-robin']);
 
 const readNumericConfigValue = (data: Record<string, unknown>, key: NumericConfigKey): number => {
   const camelKey = key.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());

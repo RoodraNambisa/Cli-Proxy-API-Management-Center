@@ -948,6 +948,10 @@ export function VisualConfigEditor({
         label: t('config_management.visual.sections.network.strategy_round_robin'),
       },
       {
+        value: 'weighted-round-robin',
+        label: t('config_management.visual.sections.network.strategy_weighted_round_robin'),
+      },
+      {
         value: 'fill-first',
         label: t('config_management.visual.sections.network.strategy_fill_first'),
       },
@@ -3848,6 +3852,10 @@ export function VisualConfigEditor({
                           <Select
                             value={values.routingStrategy}
                             options={[
+                              {
+                                value: 'weighted-round-robin',
+                                label: t('config_management.visual.sections.network.strategy_weighted_round_robin'),
+                              },
                               {
                                 value: 'round-robin',
                                 label: t(

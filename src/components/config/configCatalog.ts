@@ -306,7 +306,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'routing.fill-first-range',
       'routing.fill-first-per-auth-rpm',
     ],
-    aliases: ['route', '路由', '填充范围', 'fill first'],
+    aliases: ['route', '路由', '填充范围', 'fill first', 'weighted-round-robin', 'weight', '加权', '權重', 'вес'],
   },
   {
     id: 'config-routing-per-auth-request-limit',

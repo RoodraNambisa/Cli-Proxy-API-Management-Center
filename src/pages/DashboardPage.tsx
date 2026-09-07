@@ -243,6 +243,8 @@ export function DashboardPage() {
   const routingStrategyRaw = config?.routingStrategy?.trim() || '';
   const routingStrategyDisplay = !routingStrategyRaw
     ? '-'
+    : routingStrategyRaw === 'weighted-round-robin'
+      ? t('basic_settings.routing_strategy_weighted_round_robin')
     : routingStrategyRaw === 'round-robin'
       ? t('basic_settings.routing_strategy_round_robin')
       : routingStrategyRaw === 'fill-first'
@@ -252,7 +254,7 @@ export function DashboardPage() {
           : routingStrategyRaw;
   const routingStrategyBadgeClass = !routingStrategyRaw
     ? styles.configBadgeUnknown
-    : routingStrategyRaw === 'round-robin'
+    : routingStrategyRaw === 'round-robin' || routingStrategyRaw === 'weighted-round-robin'
       ? styles.configBadgeRoundRobin
       : routingStrategyRaw === 'fill-first'
         ? styles.configBadgeFillFirst

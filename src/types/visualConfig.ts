@@ -245,7 +245,7 @@ export interface DisabledImageGenerationToolErrorVisualConfig {
   code: string;
 }
 
-export type RoutingPriorityOverrideStrategy = '' | 'round-robin' | 'fill-first' | 'random';
+export type RoutingPriorityOverrideStrategy = '' | 'round-robin' | 'fill-first' | 'random' | 'weighted-round-robin';
 
 export interface RoutingSubscriptionOverrideVisualEntry {
   clientId: string;
@@ -373,7 +373,7 @@ export type VisualConfigValues = {
   quotaAntigravityCredits: boolean;
   authMaintenance: AuthMaintenanceVisualConfig;
   images: ImagesVisualConfig;
-  routingStrategy: 'round-robin' | 'fill-first' | 'random';
+  routingStrategy: 'round-robin' | 'fill-first' | 'random' | 'weighted-round-robin';
   routingFillFirstRange: string;
   routingFillFirstPerAuthRpm: string;
   routingPerAuthRequestLimit: string;

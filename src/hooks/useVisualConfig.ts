@@ -802,7 +802,27 @@ function areErrorResponseRewritesEqual(
 }
 
 function normalizeRoutingPriorityOverrideStrategy(value: unknown): RoutingPriorityOverrideStrategy {
-  return value === 'round-robin' || value === 'fill-first' || value === 'random' ? value : '';
+  const normalized = String(value ?? '').trim().toLowerCase();
+  switch (normalized) {
+    case 'weighted-round-robin':
+    case 'weightedroundrobin':
+    case 'wrr':
+      return 'weighted-round-robin';
+    case 'round-robin':
+    case 'roundrobin':
+    case 'rr':
+      return 'round-robin';
+    case 'fill-first':
+    case 'fillfirst':
+    case 'ff':
+      return 'fill-first';
+    case 'random':
+    case 'rand':
+    case 'r':
+      return 'random';
+    default:
+      return '';
+  }
 }
 
 function normalizeRoutingPlanType(value: string): string {
@@ -3573,12 +3593,7 @@ export function useVisualConfig() {
           native: parseNativeImagesConfig(images?.native),
         },
 
-        routingStrategy:
-          routing?.strategy === 'fill-first'
-            ? 'fill-first'
-            : routing?.strategy === 'random'
-              ? 'random'
-              : 'round-robin',
+        routingStrategy: normalizeRoutingPriorityOverrideStrategy(routing?.strategy) || 'round-robin',
         routingFillFirstRange: String(
           routing?.['fill-first-range'] ??
             routing?.fillFirstRange ??
