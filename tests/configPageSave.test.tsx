@@ -643,6 +643,7 @@ describe('ConfigPage save coordination', () => {
     { section: 'codex', field: 'passthrough-prompt-cache-key' },
     { section: 'codex', field: 'optimize-multi-agent-v2' },
     { section: 'routing', field: 'session-affinity-across-priorities' },
+    { section: 'routing', field: 'session-affinity-subagents' },
   ])('keeps a rejected $section.$field draft and accepts it only after a successful retry', async ({ section, field }) => {
     harness.visualDirty = true;
     harness.mergedYaml = section + ':\n  ' + field + ': true\n';

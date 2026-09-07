@@ -1236,6 +1236,7 @@ export function VisualConfigEditor({
   const sessionSettingsDirty = hasDirtyConfigField(dirtyFields, [
     'routingSessionAffinity',
     'routingSessionAffinityAcrossPriorities',
+    'routingSessionAffinitySubagents',
     'routingSessionAffinityFailover',
     'routingSessionAffinityTTL',
     'forceModelPrefix',
@@ -4927,6 +4928,7 @@ export function VisualConfigEditor({
                       'config-force-model-prefix',
                       'config-session-affinity',
                       'config-session-affinity-across-priorities',
+                      'config-session-affinity-subagents',
                       'config-ws-auth',
                     ]}
                     dirty={sessionSettingsDirty}
@@ -4974,6 +4976,17 @@ export function VisualConfigEditor({
                           disabled={disabled}
                           onChange={(routingSessionAffinityAcrossPriorities) =>
                             onChange({ routingSessionAffinityAcrossPriorities })
+                          }
+                        />
+                      </div>
+                      <div id="config-session-affinity-subagents" className={styles.pageGroup}>
+                        <ToggleRow
+                          title={t('config_management.visual.sections.network.session_affinity_subagents')}
+                          description={t('config_management.visual.sections.network.session_affinity_subagents_desc')}
+                          checked={values.routingSessionAffinitySubagents}
+                          disabled={disabled}
+                          onChange={(routingSessionAffinitySubagents) =>
+                            onChange({ routingSessionAffinitySubagents })
                           }
                         />
                       </div>

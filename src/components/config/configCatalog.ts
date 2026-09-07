@@ -374,6 +374,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     yamlKeys: ['routing.session-affinity-across-priorities'],
   },
   {
+    id: 'config-session-affinity-subagents',
+    pageId: 'global-network',
+    labelKey: 'config_management.visual.sections.network.session_affinity_subagents',
+    yamlKeys: ['routing.session-affinity-subagents'],
+    aliases: ['subagent', 'fork', '子代理', '分叉', 'подагент'],
+  },
+  {
     id: 'config-force-model-prefix',
     pageId: 'global-network',
     labelKey: 'config_management.visual.sections.network.force_model_prefix',

@@ -2272,6 +2272,8 @@
           "session_affinity_failover": "會話黏性故障轉移",
           "session_affinity_failover_desc": "綁定憑證不可用或請求失敗時允許切換到其它憑證；關閉後為嚴格黏性會話",
           "session_affinity_across_priorities": "跨優先級保留會話綁定",
+          "session_affinity_subagents": "子代理與分叉繼承父憑證",
+          "session_affinity_subagents_desc": "預設關閉，需同時開啟通用會話親和。對攜帶明確父任務識別碼的子代理或分叉對話，在自身尚未綁定時優先嘗試父任務憑證。僅在相同已驗證呼叫方與授權範圍內繼承，模型、優先級、權重、輪換及限速規則仍然生效。熱更新從下一個請求起生效。",
           "session_affinity_across_priorities_desc": "預設關閉，需要啟用會話親和。已有綁定仍可用時，即使較高優先級憑證恢復，也繼續使用原憑證；綁定失效時仍遵循原優先級、嚴格綁定和故障轉移規則。模型、權限、權重及限速限制仍生效。熱更新從下一個請求起生效。",
           "ws_auth": "WebSocket 驗證",
           "ws_auth_desc": "啟用 WebSocket 連線驗證（/v1/ws）",

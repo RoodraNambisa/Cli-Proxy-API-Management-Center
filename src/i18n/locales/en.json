@@ -2248,6 +2248,8 @@
           "session_affinity_failover": "Session Affinity Failover",
           "session_affinity_failover_desc": "Allow a bound session to move to another credential when the bound credential is unavailable or a request fails. Disable for strict sticky sessions.",
           "session_affinity_across_priorities": "Keep session bindings across priorities",
+          "session_affinity_subagents": "Use parent credentials for subagents and forks",
+          "session_affinity_subagents_desc": "Off by default; requires universal session affinity. For subagents or forks with an explicit parent ID, prefer the parent's eligible credential until the child has its own binding. Inheritance stays within the same authenticated caller and access scope. Existing model, priority, weight, rotation and rate limits apply. Changes apply to new requests.",
           "session_affinity_across_priorities_desc": "Off by default; requires session affinity. Keep a valid existing binding when credentials of a higher priority recover. If it becomes unavailable, preserve the priority, strict binding and failover rules. Model, access, weight and rate limits still apply. Changes apply to new requests.",
           "ws_auth": "WebSocket Authentication",
           "ws_auth_desc": "Enable WebSocket authentication (/v1/ws)",
