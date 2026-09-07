@@ -1,3 +1,5 @@
+import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
+import { isValidCredentialWeight } from '@/utils/credentialWeight';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -51,6 +53,7 @@ const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) 
 type VertexFormBaseline = {
   apiKey: string;
   priority: number | null;
+  weight: number | null;
   prefix: string;
   baseUrl: string;
   proxyUrl: string;
@@ -61,6 +64,7 @@ type VertexFormBaseline = {
 
 const buildVertexBaseline = (form: VertexFormState): VertexFormBaseline => ({
   apiKey: String(form.apiKey ?? '').trim(),
+  weight: form.weight ?? null,
   priority:
     form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
   prefix: String(form.prefix ?? '').trim(),
@@ -210,6 +214,7 @@ export function AiProvidersVertexEditPage() {
   const isDirty =
     baseline.apiKey !== form.apiKey.trim() ||
     baseline.priority !== normalizedPriority ||
+    baseline.weight !== (form.weight ?? null) ||
     baseline.prefix !== String(form.prefix ?? '').trim() ||
     baseline.baseUrl !== String(form.baseUrl ?? '').trim() ||
     baseline.proxyUrl !== String(form.proxyUrl ?? '').trim() ||
@@ -232,6 +237,10 @@ export function AiProvidersVertexEditPage() {
   });
 
   const handleSave = useCallback(async () => {
+    if (!isValidCredentialWeight(form.weight)) {
+      showNotification(t('ai_providers.weight_invalid'), 'error');
+      return;
+    }
     if (!canSave) return;
 
     const trimmedBaseUrl = (form.baseUrl ?? '').trim();
@@ -241,6 +250,7 @@ export function AiProvidersVertexEditPage() {
     setError('');
     try {
       const payload: ProviderKeyConfig = {
+        weight: form.weight,
         apiKey: form.apiKey.trim(),
         priority:
           form.priority !== undefined && Number.isFinite(form.priority)
@@ -349,6 +359,11 @@ export function AiProvidersVertexEditPage() {
               value={form.prefix ?? ''}
               onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
               hint={t('ai_providers.prefix_hint')}
+              disabled={disableControls || saving}
+            />
+            <CredentialWeightInput
+              value={form.weight}
+              onChange={(weight) => setForm((prev) => ({ ...prev, weight }))}
               disabled={disableControls || saving}
             />
             <Input

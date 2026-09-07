@@ -1,3 +1,5 @@
+import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
+import { isValidCredentialWeight } from '@/utils/credentialWeight';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -68,6 +70,7 @@ const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) 
 type GeminiFormBaseline = {
   apiKey: string;
   priority: number | null;
+  weight: number | null;
   prefix: string;
   baseUrl: string;
   proxyUrl: string;
@@ -78,6 +81,7 @@ type GeminiFormBaseline = {
 
 const buildGeminiBaseline = (form: GeminiFormState): GeminiFormBaseline => ({
   apiKey: String(form.apiKey ?? '').trim(),
+  weight: form.weight ?? null,
   priority:
     form.priority !== undefined && Number.isFinite(form.priority)
       ? Math.trunc(form.priority)
@@ -433,6 +437,7 @@ export function AiProvidersGeminiEditPage({
   const isDirty =
     baseline.apiKey !== form.apiKey.trim() ||
     baseline.priority !== normalizedPriority ||
+    baseline.weight !== (form.weight ?? null) ||
     baseline.prefix !== String(form.prefix ?? '').trim() ||
     baseline.baseUrl !== String(form.baseUrl ?? '').trim() ||
     baseline.proxyUrl !== String(form.proxyUrl ?? '').trim() ||
@@ -455,6 +460,10 @@ export function AiProvidersGeminiEditPage({
   });
 
   const handleSave = useCallback(async () => {
+    if (!isValidCredentialWeight(form.weight)) {
+      showNotification(t('ai_providers.weight_invalid'), 'error');
+      return;
+    }
     if (!canSave) return;
 
     setSaving(true);
@@ -466,6 +475,7 @@ export function AiProvidersGeminiEditPage({
       }));
 
       const payload: GeminiKeyConfig = {
+        weight: form.weight,
         apiKey: form.apiKey.trim(),
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
         prefix: form.prefix?.trim() || undefined,
@@ -574,6 +584,11 @@ export function AiProvidersGeminiEditPage({
               placeholder={t(`ai_providers.${translationPrefix}_add_modal_key_placeholder`)}
               value={form.apiKey}
               onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
+              disabled={disableControls || saving}
+            />
+            <CredentialWeightInput
+              value={form.weight}
+              onChange={(weight) => setForm((prev) => ({ ...prev, weight }))}
               disabled={disableControls || saving}
             />
             <Input
