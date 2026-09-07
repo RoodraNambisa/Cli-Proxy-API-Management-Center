@@ -95,6 +95,7 @@ export interface AuthErrorSummary {
 }
 
 export interface AuthFileItem {
+  weight?: number;
   name: string;
   email?: string;
   type?: AuthFileType | string;

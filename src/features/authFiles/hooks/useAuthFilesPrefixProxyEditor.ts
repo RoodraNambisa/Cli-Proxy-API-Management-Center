@@ -1,3 +1,8 @@
+import {
+  isValidCredentialWeight,
+  normalizeCredentialWeight,
+  serializeCredentialWeight,
+} from '@/utils/credentialWeight';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
@@ -27,6 +32,7 @@ export type PrefixProxyEditorField =
   | 'prefix'
   | 'proxyUrl'
   | 'priority'
+  | 'weight'
   | 'excludedModelsText'
   | 'disableCooling'
   | 'websockets'
@@ -53,6 +59,8 @@ export type PrefixProxyEditorState = {
   prefix: string;
   proxyUrl: string;
   priority: string;
+  weight: string;
+  weightTouched: boolean;
   excludedModelsText: string;
   disableCooling: string;
   websockets: boolean;
@@ -116,6 +124,9 @@ export const buildAuthFileFieldsPatch = (
   }
   if (!jsonValuesEqual(previous.proxy_url, next.proxy_url)) {
     patch.proxy_url = typeof next.proxy_url === 'string' ? next.proxy_url : '';
+  }
+  if (!jsonValuesEqual(previous.weight, next.weight)) {
+    patch.weight = serializeCredentialWeight(normalizeCredentialWeight(next.weight)) ?? null;
   }
   if (!jsonValuesEqual(previous.priority, next.priority)) {
     patch.priority = Object.prototype.hasOwnProperty.call(next, 'priority')
@@ -190,6 +201,10 @@ const buildPrefixProxyUpdatedText = (
     next.proxy_url = editor.proxyUrl;
   }
 
+  if (editor.weightTouched) {
+    if (editor.weight.trim()) next.weight = Number(editor.weight);
+    else delete next.weight;
+  }
   const parsedPriority = parsePriorityValue(editor.priority);
   if (parsedPriority !== undefined) {
     next.priority = parsedPriority;
@@ -261,7 +276,14 @@ export function useAuthFilesPrefixProxyEditor(
 
   const [prefixProxyEditor, setPrefixProxyEditor] = useState<PrefixProxyEditorState | null>(null);
 
+  const hasBlockingWeightError = Boolean(
+    prefixProxyEditor?.weightTouched &&
+      !isValidCredentialWeight(
+        prefixProxyEditor.weight.trim() === '' ? undefined : Number(prefixProxyEditor.weight)
+      )
+  );
   const hasBlockingValidationError = Boolean(
+    hasBlockingWeightError ||
     (prefixProxyEditor?.headersTouched && prefixProxyEditor.headersError) ||
     (prefixProxyEditor?.isChatGptWebFile &&
       prefixProxyEditor.loginMethod === 'api798' &&
@@ -317,6 +339,8 @@ export function useAuthFilesPrefixProxyEditor(
       prefix: '',
       proxyUrl: '',
       priority: '',
+      weight: '',
+      weightTouched: false,
       excludedModelsText: '',
       disableCooling: '',
       websockets: false,
@@ -403,6 +427,8 @@ export function useAuthFilesPrefixProxyEditor(
           prefix,
           proxyUrl,
           priority: priority !== undefined ? String(priority) : '',
+          weight: json.weight === undefined ? '' : String(normalizeCredentialWeight(json.weight) ?? ''),
+          weightTouched: false,
           excludedModelsText: excludedModels.join('\n'),
           disableCooling:
             disableCoolingValue === undefined ? '' : disableCoolingValue ? 'true' : 'false',
@@ -437,6 +463,7 @@ export function useAuthFilesPrefixProxyEditor(
       if (!prev) return prev;
       if (field === 'prefix') return { ...prev, prefix: String(value) };
       if (field === 'proxyUrl') return { ...prev, proxyUrl: String(value) };
+      if (field === 'weight') return { ...prev, weight: String(value), weightTouched: true };
       if (field === 'priority') return { ...prev, priority: String(value) };
       if (field === 'excludedModelsText') return { ...prev, excludedModelsText: String(value) };
       if (field === 'disableCooling') return { ...prev, disableCooling: String(value) };
@@ -467,6 +494,10 @@ export function useAuthFilesPrefixProxyEditor(
   };
 
   const handlePrefixProxySave = async () => {
+    if (hasBlockingWeightError) {
+      showNotification(t('ai_providers.weight_invalid'), 'error');
+      return;
+    }
     if (!prefixProxyEditor?.json) return;
     if (!prefixProxyDirty) return;
 

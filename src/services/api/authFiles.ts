@@ -27,6 +27,7 @@ export type AuthFileFieldsPatch = {
   proxy_url?: string;
   headers?: Record<string, string>;
   priority?: number | null;
+  weight?: number | null;
   note?: string;
   using_api?: boolean;
   websockets?: boolean;

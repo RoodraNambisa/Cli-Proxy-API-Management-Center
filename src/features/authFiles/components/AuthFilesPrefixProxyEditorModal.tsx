@@ -1,3 +1,4 @@
+import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -70,6 +71,7 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                 disableControls ||
                 editor?.saving === true ||
                 !dirty ||
+                !updatedText ||
                 !editor?.json ||
                 Boolean(editor?.headersTouched && editor.headersError) ||
                 Boolean(
@@ -176,6 +178,11 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                     placeholder={t('auth_files.proxy_url_placeholder')}
                     disabled={disableControls || editor.saving || !editor.json}
                     onChange={(e) => onChange('proxyUrl', e.target.value)}
+                  />
+                  <CredentialWeightInput
+                    value={editor.weight.trim() === '' ? undefined : Number(editor.weight)}
+                    onChange={(weight) => onChange('weight', weight === undefined ? '' : String(weight))}
+                    disabled={disableControls || editor.saving || !editor.json}
                   />
                   <Input
                     label={t('auth_files.priority_label')}
