@@ -1,3 +1,4 @@
+import { isValidCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { isValidCredentialWeight } from '@/utils/credentialWeight';
 import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -95,6 +96,7 @@ const normalizeCloakConfig = (cloak: ProviderFormState['cloak']) => {
 const buildClaudeBaseline = (form: ProviderFormState): ClaudeEditBaseline => ({
   apiKey: String(form.apiKey ?? '').trim(),
   weight: form.weight ?? null,
+  requestRetry: form.requestRetry ?? null,
   priority:
     form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
   prefix: String(form.prefix ?? '').trim(),
@@ -314,6 +316,7 @@ export function AiProvidersClaudeEditLayout() {
     (baseline.apiKey !== form.apiKey.trim() ||
       baseline.priority !== normalizedPriority ||
       baseline.weight !== (form.weight ?? null) ||
+      baseline.requestRetry !== (form.requestRetry ?? null) ||
       baseline.prefix !== String(form.prefix ?? '').trim() ||
       baseline.baseUrl !== String(form.baseUrl ?? '').trim() ||
       baseline.proxyUrl !== String(form.proxyUrl ?? '').trim() ||
@@ -400,6 +403,10 @@ export function AiProvidersClaudeEditLayout() {
   );
 
   const handleSave = useCallback(async () => {
+    if (!isValidCredentialRequestRetry(form.requestRetry)) {
+      showNotification(t('ai_providers.request_retry_invalid'), 'error');
+      return;
+    }
     if (!isValidCredentialWeight(form.weight)) {
       showNotification(t('ai_providers.weight_invalid'), 'error');
       return;
@@ -412,6 +419,7 @@ export function AiProvidersClaudeEditLayout() {
     try {
       const payload: ProviderKeyConfig = {
         weight: form.weight,
+        requestRetry: form.requestRetry,
         apiKey: form.apiKey.trim(),
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
         prefix: form.prefix?.trim() || undefined,

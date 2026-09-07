@@ -24,6 +24,7 @@ export type ClaudeEditBaseline = {
   apiKey: string;
   priority: number | null;
   weight: number | null;
+  requestRetry: number | null;
   prefix: string;
   baseUrl: string;
   proxyUrl: string;
