@@ -4994,6 +4994,18 @@ export function VisualConfigEditor({
                   </SectionGrid>
                 </PageGroup>
 
+                <PageGroup id="config-codex-orphan-delegation" active={activePageId === 'provider-codex'}>
+                  <SectionGrid>
+                    <ToggleRow
+                      title={t('config_management.visual.sections.network.codex_orphan_delegation_compatibility')}
+                      description={t('config_management.visual.sections.network.codex_orphan_delegation_compatibility_desc')}
+                      checked={values.codexOrphanDelegationCompatibility}
+                      disabled={disabled}
+                      onChange={(codexOrphanDelegationCompatibility) => onChange({ codexOrphanDelegationCompatibility })}
+                    />
+                  </SectionGrid>
+                </PageGroup>
+
                 <PageGroup id="config-codex-fingerprint" active={activePageId === 'provider-codex'}>
                   <SectionGrid>
                     <ToggleRow

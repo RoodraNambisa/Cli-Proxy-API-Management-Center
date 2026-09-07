@@ -2260,6 +2260,8 @@
           "ws_auth": "WebSocket 驗證",
           "ws_auth_desc": "啟用 WebSocket 連線驗證（/v1/ws）",
           "codex_identity_confuse": "Codex 身份混淆",
+          "codex_orphan_delegation_compatibility": "孤立委派結果相容",
+          "codex_orphan_delegation_compatibility_desc": "預設關閉。僅對攜帶 X-Openai-Subagent: collab_spawn 的請求，將缺少配對呼叫的 codex_app.create_thread、send_message_to_thread 結果轉成使用者訊息，保留結果文字；已有配對及其他工具保持原有處理。不依賴 Multi-agent v2 最佳化開關，不改變憑證分配，熱更新從下個請求或回合生效。",
           "codex_stream_bootstrap_buffering": "串流開頭過載切換",
           "codex_stream_bootstrap_buffering_desc": "預設關閉。開啟後暫存最多 16 個前導中繼資料事件、64 KiB，發現過載或限流時，在請求仍可重放且尚未提交輸出的情況下使用既有重試預算切換憑證；不會增加重試次數。實際內容或未知事件出現後恢復原有處理。增量 WebSocket 上下文不跨憑證重放，熱更新從下個請求或回合生效。",
           "codex_passthrough_prompt_cache_key": "透傳使用者快取鍵",

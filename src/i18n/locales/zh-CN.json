@@ -2240,6 +2240,8 @@
           "ws_auth": "WebSocket 认证",
           "ws_auth_desc": "启用 WebSocket 连接认证 (/v1/ws)",
           "codex_identity_confuse": "Codex 身份混淆",
+          "codex_orphan_delegation_compatibility": "孤立委派结果兼容",
+          "codex_orphan_delegation_compatibility_desc": "默认关闭。仅对携带 X-Openai-Subagent: collab_spawn 的请求，将缺少配对调用的 codex_app.create_thread、send_message_to_thread 结果转成用户消息，保留结果文字；已有配对及其他工具保持原处理。不依赖 Multi-agent v2 优化开关，不改变凭证分配，热更新从下个请求或回合生效。",
           "codex_stream_bootstrap_buffering": "流开头过载切换",
           "codex_stream_bootstrap_buffering_desc": "默认关闭。开启后暂存最多 16 个前导元数据事件、64 KiB，发现过载或限流时，在请求仍可重放且尚未提交输出的情况下使用现有重试预算切换凭证；不会增加重试次数。实际内容或未知事件出现后恢复原有处理。增量 WebSocket 上下文不跨凭证重放，热更新从下个请求或回合生效。",
           "codex_passthrough_prompt_cache_key": "透传用户缓存键",

@@ -124,6 +124,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'codexIdentityConfuse',
       'codexPassthroughPromptCacheKey',
       'codexStreamBootstrapBuffering',
+      'codexOrphanDelegationCompatibility',
       'codexSpoofSessionIdentity',
       'codexTurnStatePolicy',
       'codexFingerprint',
@@ -529,6 +530,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.codex_stream_bootstrap_buffering',
     yamlKeys: ['codex.stream-bootstrap-buffering'],
     aliases: ['overload', 'bootstrap', '过载', '過載', 'перегрузка'],
+  },
+  {
+    id: 'config-codex-orphan-delegation',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.network.codex_orphan_delegation_compatibility',
+    yamlKeys: ['codex.orphan-delegation-compatibility'],
+    aliases: ['orphan', 'delegation', '孤立委派', '孤立委託', 'делегирование'],
   },
   {
     id: 'config-codex-headers',

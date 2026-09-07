@@ -312,6 +312,7 @@ export type VisualConfigValues = {
   codexIdentityConfuse: boolean;
   codexPassthroughPromptCacheKey: boolean;
   codexStreamBootstrapBuffering: boolean;
+  codexOrphanDelegationCompatibility: boolean;
   codexSpoofSessionIdentity: boolean;
   codexTurnStatePolicy: CodexTurnStatePolicy;
   codexEnforceSoftwareIdentity: boolean;
@@ -429,6 +430,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexIdentityConfuse: false,
   codexPassthroughPromptCacheKey: false,
   codexStreamBootstrapBuffering: false,
+  codexOrphanDelegationCompatibility: false,
   codexSpoofSessionIdentity: false,
   codexTurnStatePolicy: DEFAULT_CODEX_TURN_STATE_POLICY,
   codexEnforceSoftwareIdentity: true,

@@ -882,6 +882,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       streamBootstrapBuffering: normalizeBoolean(
         codex['stream-bootstrap-buffering'] ?? codex.streamBootstrapBuffering
       ),
+      orphanDelegationCompatibility: normalizeBoolean(
+        codex['orphan-delegation-compatibility'] ?? codex.orphanDelegationCompatibility
+      ),
       identityConfuse: normalizeBoolean(codex['identity-confuse'] ?? codex.identityConfuse),
       spoofSessionIdentity: normalizeBoolean(
         codex['spoof-session-identity'] ?? codex.spoofSessionIdentity

@@ -220,6 +220,7 @@ export const normalizeCodexTurnStatePolicy = (value: unknown): CodexTurnStatePol
 export interface CodexConfig {
   passthroughPromptCacheKey?: boolean;
   streamBootstrapBuffering?: boolean;
+  orphanDelegationCompatibility?: boolean;
   identityConfuse?: boolean;
   spoofSessionIdentity?: boolean;
   turnStatePolicy?: CodexTurnStatePolicy;

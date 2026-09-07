@@ -2330,6 +2330,12 @@ function getNextDirtyFields(
       nextValues.codexStreamBootstrapBuffering === baselineValues.codexStreamBootstrapBuffering
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexOrphanDelegationCompatibility')) {
+    updateDirty(
+      'codexOrphanDelegationCompatibility',
+      nextValues.codexOrphanDelegationCompatibility === baselineValues.codexOrphanDelegationCompatibility
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexTurnStatePolicy')) {
     updateDirty(
       'codexTurnStatePolicy',
@@ -3097,6 +3103,14 @@ export function useVisualConfig() {
       const codexHeaderDefaults = asRecord(
         parsed['codex-header-defaults'] ?? parsed.codexHeaderDefaults
       );
+      const codexOrphanDelegationCompatibility =
+        codex?.['orphan-delegation-compatibility'] ?? codex?.orphanDelegationCompatibility;
+      if (
+        codexOrphanDelegationCompatibility != null &&
+        typeof codexOrphanDelegationCompatibility !== 'boolean'
+      ) {
+        throw new Error('codex.orphan-delegation-compatibility must be a boolean');
+      }
       const chatgptWeb = asRecord(parsed['chatgpt-web'] ?? parsed.chatgptWeb);
       const chatgptWebAutoDeleteDeadPrioritiesRaw =
         chatgptWeb &&
@@ -3266,6 +3280,7 @@ export function useVisualConfig() {
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
         codexPassthroughPromptCacheKey: codexPassthroughPromptCacheKey ?? false,
         codexStreamBootstrapBuffering: codexStreamBootstrapBuffering ?? false,
+        codexOrphanDelegationCompatibility: codexOrphanDelegationCompatibility ?? false,
         codexSpoofSessionIdentity: Boolean(
           codex?.['spoof-session-identity'] ?? codex?.spoofSessionIdentity
         ),
@@ -3819,6 +3834,7 @@ export function useVisualConfig() {
           values.codexIdentityConfuse ||
           values.codexPassthroughPromptCacheKey ||
           values.codexStreamBootstrapBuffering ||
+          values.codexOrphanDelegationCompatibility ||
           values.codexSpoofSessionIdentity ||
           values.codexTurnStatePolicy !== DEFAULT_CODEX_TURN_STATE_POLICY ||
           !values.codexEnforceSoftwareIdentity
@@ -3829,6 +3845,8 @@ export function useVisualConfig() {
           doc.deleteIn(['codex', 'passthroughPromptCacheKey']);
           doc.setIn(['codex', 'stream-bootstrap-buffering'], values.codexStreamBootstrapBuffering);
           doc.deleteIn(['codex', 'streamBootstrapBuffering']);
+          doc.setIn(['codex', 'orphan-delegation-compatibility'], values.codexOrphanDelegationCompatibility);
+          doc.deleteIn(['codex', 'orphanDelegationCompatibility']);
           doc.setIn(['codex', 'spoof-session-identity'], values.codexSpoofSessionIdentity);
           doc.setIn(['codex', 'turn-state-policy'], values.codexTurnStatePolicy);
           doc.setIn(['codex', 'enforce-software-identity'], values.codexEnforceSoftwareIdentity);
