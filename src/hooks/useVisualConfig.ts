@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useReducer } from 'react';
+import { preserveRoutingOverrideNodes } from '@/utils/routingYaml';
 import { isMap, parse as parseYaml, parseDocument } from 'yaml';
 import type {
   CodexCustomModelValidationErrors,
@@ -3685,7 +3686,7 @@ export function useVisualConfig() {
   const applyVisualChangesToYaml = useCallback(
     (currentYaml: string): string => {
       try {
-        const doc = parseDocument(currentYaml);
+        const doc = parseDocument(currentYaml, { intAsBigInt: true });
         if (doc.errors.length > 0) return currentYaml;
         if (!isMap(doc.contents)) {
           doc.contents = doc.createNode({}) as unknown as typeof doc.contents;
@@ -4548,7 +4549,17 @@ export function useVisualConfig() {
           if (values.routingPriorityOverrides.length > 0) {
             doc.setIn(
               ['routing', 'priority-overrides'],
-              serializeRoutingPriorityOverridesForYaml(values.routingPriorityOverrides)
+              preserveRoutingOverrideNodes(
+                doc,
+                values.routingPriorityOverrides,
+                baselineValues.routingPriorityOverrides,
+                serializeRoutingPriorityOverridesForYaml(values.routingPriorityOverrides),
+                serializeRoutingPriorityOverridesForYaml(baselineValues.routingPriorityOverrides),
+                (raw) => {
+                  const [entry] = parseRoutingSubscriptionOverrides([raw]);
+                  return entry ? JSON.stringify([entry.providers.slice().sort(), entry.planTypes.slice().sort()]) : '';
+                }
+              )
             );
           } else if (docHas(doc, ['routing', 'priority-overrides'])) {
             doc.deleteIn(['routing', 'priority-overrides']);
@@ -4684,7 +4695,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [baselineValues.apiKeysText, baselineValues.errorResponseRewrites, visualValues]
+    [baselineValues.apiKeysText, baselineValues.errorResponseRewrites, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {
