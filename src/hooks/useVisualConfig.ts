@@ -1,5 +1,11 @@
 import { useCallback, useMemo, useReducer } from 'react';
 import { preserveRoutingOverrideNodes } from '@/utils/routingYaml';
+import { detachErrorRuleAliases, readOAuthErrorRulesYaml } from '@/utils/requestScopedErrorsYaml';
+import {
+  normalizeOAuthRequestScopedErrors,
+  serializeOAuthRequestScopedErrors,
+  validateRequestScopedErrorRule,
+} from '@/utils/requestScopedErrors';
 import { isMap, parse as parseYaml, parseDocument } from 'yaml';
 import type {
   CodexCustomModelValidationErrors,
@@ -1505,6 +1511,17 @@ export function getVisualConfigValidationErrors(
     },
     {}
   );
+  const oauthRequestScopedErrorErrors: VisualConfigValidationErrors = {};
+  Object.entries(values.oauthRequestScopedErrors).forEach(([provider, rules]) => {
+    rules.forEach((rule, index) => {
+      const issue = validateRequestScopedErrorRule(rule);
+      if (issue) {
+        oauthRequestScopedErrorErrors[`oauthRequestScopedErrors.${provider}.${index}.${issue}`] =
+          issue === 'status' ? 'http_status_range' : issue === 'action'
+            ? 'request_scoped_error_action' : 'request_scoped_error_match_required';
+      }
+    });
+  });
   const errorResponseRewriteErrors =
     values.errorResponseRewrites.reduce<VisualConfigValidationErrors>((result, rule) => {
       const authPrioritiesError = getSafeIntegerStringListError(rule.authPriorities ?? []);
@@ -1683,6 +1700,7 @@ export function getVisualConfigValidationErrors(
     ...fixedErrorCooldownErrors,
     ...errorResponseRewriteErrors,
     ...nonRetryableErrorErrors,
+    ...oauthRequestScopedErrorErrors,
     ...authModelExclusionErrors,
     'disabledImageGenerationToolError.statusCode': disabledImageGenerationToolStatusCodeError,
     'authMaintenance.scanIntervalSeconds': getNonNegativeIntegerError(
@@ -2699,6 +2717,12 @@ function getNextDirtyFields(
       areNonRetryableErrorsEqual(nextValues.nonRetryableErrors, baselineValues.nonRetryableErrors)
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'oauthRequestScopedErrors')) {
+    updateDirty(
+      'oauthRequestScopedErrors',
+      JSON.stringify(nextValues.oauthRequestScopedErrors) === JSON.stringify(baselineValues.oauthRequestScopedErrors)
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'authModelExclusions')) {
     updateDirty(
       'authModelExclusions',
@@ -3126,6 +3150,10 @@ export function useVisualConfig() {
       const preciseParsedRaw: unknown = parseYaml(yamlContent, { intAsBigInt: true }) || {};
       const parsed = asRecord(parsedRaw) ?? {};
       const preciseParsed = asRecord(preciseParsedRaw) ?? parsed;
+      // Resolve aliases/merges for this map without changing legacy field readers.
+      const oauthRequestScopedErrors = normalizeOAuthRequestScopedErrors(
+        readOAuthErrorRulesYaml(document)
+      ) ?? {};
       const tls = asRecord(parsed.tls);
       const remoteManagement = asRecord(parsed['remote-management']);
       const codex = asRecord(parsed.codex);
@@ -3560,6 +3588,7 @@ export function useVisualConfig() {
           : Object.prototype.hasOwnProperty.call(parsed, 'nonRetryableErrors')
             ? parseNonRetryableErrors(parsed.nonRetryableErrors)
             : DEFAULT_VISUAL_VALUES.nonRetryableErrors.map((rule) => ({ ...rule })),
+        oauthRequestScopedErrors,
         authModelExclusions: parseAuthModelExclusions(
           parsed['auth-model-exclusions'] ?? parsed.authModelExclusions
         ),
@@ -4148,6 +4177,13 @@ export function useVisualConfig() {
             ['auth-model-exclusions'],
             serializeAuthModelExclusionsForYaml(values.authModelExclusions)
           );
+        }
+        if (JSON.stringify(values.oauthRequestScopedErrors) !== JSON.stringify(baselineValues.oauthRequestScopedErrors)) {
+          // An explicit empty map also shadows rules inherited through a YAML merge.
+          detachErrorRuleAliases(doc, doc.getIn(['oauth-request-scoped-errors'], true));
+          detachErrorRuleAliases(doc, doc.getIn(['oauthRequestScopedErrors'], true));
+          doc.setIn(['oauth-request-scoped-errors'], serializeOAuthRequestScopedErrors(values.oauthRequestScopedErrors) ?? {});
+          doc.deleteIn(['oauthRequestScopedErrors']);
         }
         const disabledImageGenerationToolDefaults = DEFAULT_VISUAL_VALUES;
         if (
@@ -4789,7 +4825,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [baselineValues.apiKeysText, baselineValues.errorResponseRewrites, baselineValues.routingPriorityOverrides, visualValues]
+    [baselineValues.apiKeysText, baselineValues.errorResponseRewrites, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {

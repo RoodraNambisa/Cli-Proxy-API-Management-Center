@@ -3,6 +3,7 @@ import type {
   CodexFingerprintDefaultMode,
   CodexTurnStatePolicy,
 } from './config';
+import type { OAuthRequestScopedErrors } from './requestScopedErrors';
 import {
   DEFAULT_CODEX_FINGERPRINT_MODE,
   DEFAULT_CODEX_SESSION_IDENTITY_POOL_SIZE,
@@ -55,6 +56,7 @@ export type VisualConfigFieldPath =
   | 'fixedErrorCooldowns'
   | 'errorResponseRewrites'
   | 'nonRetryableErrors'
+  | 'oauthRequestScopedErrors'
   | 'authModelExclusions'
   | 'disabledImageGenerationToolError.statusCode'
   | 'routingPriorityOverrides'
@@ -89,6 +91,8 @@ export type VisualConfigValidationErrorCode =
   | 'fill_first_controls_conflict'
   | 'fixed_error_cooldown_match_required'
   | 'non_retryable_error_match_required'
+  | 'request_scoped_error_action'
+  | 'request_scoped_error_match_required'
   | 'error_response_rewrite_match_required'
   | 'error_response_rewrite_result_required'
   | 'json_object'
@@ -367,6 +371,7 @@ export type VisualConfigValues = {
   fixedErrorCooldowns: FixedErrorCooldownVisualEntry[];
   errorResponseRewrites: ErrorResponseRewriteVisualEntry[];
   nonRetryableErrors: NonRetryableErrorVisualEntry[];
+  oauthRequestScopedErrors: OAuthRequestScopedErrors;
   authModelExclusions: AuthModelExclusionVisualEntry[];
   disabledImageGenerationToolFallback: boolean;
   disabledImageGenerationToolAction: DisabledImageGenerationToolAction;
@@ -488,6 +493,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   noCooldownStatusCodes: '',
   fixedErrorCooldowns: [],
   errorResponseRewrites: [],
+  oauthRequestScopedErrors: {},
   nonRetryableErrors: [
     {
       clientId: 'default-non-retryable-invalid-value',
