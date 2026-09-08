@@ -1,4 +1,5 @@
 import { serializeCredentialWeight } from '@/utils/credentialWeight';
+import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
 import { serializeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { serializeRequestScopedErrors } from '@/utils/requestScopedErrors';
 import type { RequestScopedErrorRule } from '@/types/requestScopedErrors';
@@ -46,6 +47,8 @@ const serializeModelAliases = (models?: ModelAlias[]) =>
         .map((model) => {
           if (!model?.name) return null;
           const payload: Record<string, unknown> = { name: model.name };
+          const displayName = normalizeModelDisplayName(model.displayName);
+          if (displayName !== undefined) payload['display-name'] = displayName;
           if (model.alias && model.alias !== model.name) {
             payload.alias = model.alias;
           }
@@ -133,7 +136,8 @@ const serializeVertexModelAliases = (models?: ModelAlias[]) =>
           const name = typeof model?.name === 'string' ? model.name.trim() : '';
           const alias = typeof model?.alias === 'string' ? model.alias.trim() : '';
           if (!name || !alias) return null;
-          return { name, alias };
+          const displayName = normalizeModelDisplayName(model.displayName);
+          return { name, alias, ...(displayName !== undefined ? { 'display-name': displayName } : {}) };
         })
         .filter(Boolean)
     : undefined;

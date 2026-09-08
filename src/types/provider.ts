@@ -5,6 +5,7 @@ import type { RequestScopedErrorRule } from './requestScopedErrors';
 export interface ModelAlias {
   name: string;
   alias?: string;
+  displayName?: string;
   priority?: number;
   testModel?: string;
 }

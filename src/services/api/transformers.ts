@@ -1,4 +1,5 @@
 import { normalizeCredentialWeight } from '@/utils/credentialWeight';
+import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
 import { normalizeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { normalizeOAuthRequestScopedErrors, normalizeRequestScopedErrors } from '@/utils/requestScopedErrors';
 import type {
@@ -480,10 +481,16 @@ const normalizeModelAliases = (models: unknown): ModelAlias[] => {
 
       const name = item.name || item.id || item.model;
       if (!name) return null;
-      const alias = item.alias || item.display_name || item.displayName;
+      const alias = item.alias || item.display_name;
+      const displayName = normalizeModelDisplayName(
+        Object.prototype.hasOwnProperty.call(item, 'display-name')
+          ? item['display-name']
+          : item.displayName
+      );
       const priority = item.priority ?? item['priority'];
       const testModel = item['test-model'] ?? item.testModel;
       const entry: ModelAlias = { name: String(name) };
+      if (displayName !== undefined) entry.displayName = displayName;
       if (alias && alias !== name) {
         entry.alias = String(alias);
       }
