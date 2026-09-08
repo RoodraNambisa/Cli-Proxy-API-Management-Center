@@ -1,6 +1,8 @@
 import { Fragment, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
+import { Input } from './Input';
+import { isValidModelContextLength, MAX_MODEL_CONTEXT_LENGTH } from '@/utils/modelContextLength';
 import { IconX } from './icons';
 import type { ModelEntry } from './modelInputListUtils';
 
@@ -12,6 +14,7 @@ interface ModelInputListProps {
   namePlaceholder?: string;
   aliasPlaceholder?: string;
   showDisplayName?: boolean;
+  showContextLength?: boolean;
   hideAddButton?: boolean;
   onAdd?: () => void;
   className?: string;
@@ -30,6 +33,7 @@ export function ModelInputList({
   namePlaceholder = 'model-name',
   aliasPlaceholder = 'alias (optional)',
   showDisplayName = false,
+  showContextLength = false,
   hideAddButton = false,
   onAdd,
   className = '',
@@ -111,6 +115,25 @@ export function ModelInputList({
                 disabled={disabled}
               />
             </div>
+          )}
+          {showContextLength && (
+            <Input
+              label={`${t('common.model_context_length_label')} ${index + 1}`}
+              hint={t('common.model_context_length_hint')}
+              placeholder={t('common.model_context_length_inherit')}
+              type="number"
+              min={0}
+              max={MAX_MODEL_CONTEXT_LENGTH}
+              step={1}
+              value={entry.maxContextLength !== undefined && Number.isFinite(entry.maxContextLength) ? entry.maxContextLength : ''}
+              error={isValidModelContextLength(entry.maxContextLength) ? undefined : t('common.model_context_length_invalid')}
+              disabled={disabled}
+              onChange={(event) => {
+                const value = event.currentTarget.validity.badInput ? NaN
+                  : event.currentTarget.value.trim() === '' ? undefined : Number(event.currentTarget.value);
+                onChange(currentEntries.map((current, idx) => idx === index ? { ...current, maxContextLength: value } : current));
+              }}
+            />
           )}
         </Fragment>
       ))}

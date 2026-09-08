@@ -42,4 +42,6 @@ test.each([en, ru, zhCN, zhTW])('display-name controls include translated labels
   expect(locale.common.model_display_name_label.length).toBeGreaterThan(0);
   expect(locale.common.model_display_name_placeholder.length).toBeGreaterThan(0);
   expect(locale.common.model_display_name_hint).toContain('display-name');
+  expect(locale.common.model_context_length_hint).toContain('max-context-length');
+  expect(locale.common.model_context_length_invalid).toContain('2147483647');
 });
