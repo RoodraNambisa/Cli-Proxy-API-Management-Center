@@ -34,7 +34,7 @@ export type OpenAIEditBaseline = {
     proxyUrl: string;
     headers: Array<{ key: string; value: string }>;
   }>;
-  models: Array<{ name: string; alias: string; displayName?: string }>;
+  models: Array<{ name: string; alias: string; displayName?: string; maxContextLength?: number }>;
   testModel: string;
 };
 

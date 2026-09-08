@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { isValidCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { validateRequestScopedErrorRule } from '@/utils/requestScopedErrors';
 import { isValidCredentialWeight } from '@/utils/credentialWeight';
+import { isValidModelContextLength } from '@/utils/modelContextLength';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -75,7 +76,7 @@ const normalizeModelEntries = (entries: ModelEntry[]) =>
       alias = '';
     }
     if (!name && !alias) return acc;
-    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined });
+    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined, maxContextLength: entry.maxContextLength });
     return acc;
   }, []);
 
@@ -468,6 +469,10 @@ export function AiProvidersOpenAIEditLayout() {
   });
 
   const handleSave = useCallback(async () => {
+    if (form.modelEntries.some((entry) => !isValidModelContextLength(entry.maxContextLength))) {
+      showNotification(t('common.model_context_length_invalid'), 'error');
+      return;
+    }
     const ruleIssue = form.requestScopedErrors?.map(validateRequestScopedErrorRule).find(Boolean);
     if (ruleIssue) {
       showNotification(t(`request_scoped_errors.invalid_${ruleIssue}`), 'error');

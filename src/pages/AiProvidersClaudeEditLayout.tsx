@@ -1,6 +1,7 @@
 import { isValidCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { validateRequestScopedErrorRule } from '@/utils/requestScopedErrors';
 import { isValidCredentialWeight } from '@/utils/credentialWeight';
+import { isValidModelContextLength } from '@/utils/modelContextLength';
 import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -76,7 +77,7 @@ const normalizeClaudeModelEntries = (entries: ModelEntry[]) =>
       alias = alias || name;
     }
     if (!name && !alias) return acc;
-    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined });
+    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined, maxContextLength: entry.maxContextLength });
     return acc;
   }, []);
 
@@ -406,6 +407,10 @@ export function AiProvidersClaudeEditLayout() {
   );
 
   const handleSave = useCallback(async () => {
+    if (form.modelEntries.some((entry) => !isValidModelContextLength(entry.maxContextLength))) {
+      showNotification(t('common.model_context_length_invalid'), 'error');
+      return;
+    }
     const ruleIssue = form.requestScopedErrors?.map(validateRequestScopedErrorRule).find(Boolean);
     if (ruleIssue) {
       showNotification(t(`request_scoped_errors.invalid_${ruleIssue}`), 'error');
