@@ -48,7 +48,8 @@ test('OAuth display-name edits preserve mapping metadata, failed drafts and relo
   await screen.findByText('saved');
   expect(saved).toEqual([model]);
   second.unmount(); mount();
-  const empty = await screen.findByRole('textbox', { name: 'common.model_display_name_label 1' });
+  await screen.findByDisplayValue('gpt-5.5');
+  const empty = screen.getByRole('textbox', { name: 'common.model_display_name_label 1' });
   expect((empty as HTMLInputElement).value).toBe('');
   expect(dirty()).toBe(false);
 });

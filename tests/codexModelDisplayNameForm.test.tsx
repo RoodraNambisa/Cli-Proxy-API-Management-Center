@@ -41,8 +41,8 @@ test('Codex label edits save, reload and clear without changing aliases or hidde
   expect(saved[1]).toEqual(untouched);
   first.unmount();
   const second = mount();
-  const reloaded = await screen.findByRole('textbox', { name: 'common.model_display_name_label 1' });
-  expect((reloaded as HTMLInputElement).value).toBe('After');
+  await waitFor(() => expect((screen.getByRole('textbox', { name: 'common.model_display_name_label 1' }) as HTMLInputElement).value).toBe('After'));
+  const reloaded = screen.getByRole('textbox', { name: 'common.model_display_name_label 1' });
   expect(dirty()).toBe(false);
   fireEvent.change(reloaded, { target: { value: ' ' } });
   expect(dirty()).toBe(true);
@@ -50,7 +50,8 @@ test('Codex label edits save, reload and clear without changing aliases or hidde
   await screen.findByText('saved');
   expect(saved[0].models).toEqual([{ name: 'gpt-5.5', alias: 'local-model', 'force-mapping': true, future: { keep: true } }]);
   second.unmount(); mount();
-  const empty = await screen.findByRole('textbox', { name: 'common.model_display_name_label 1' });
+  await screen.findByDisplayValue('gpt-5.5');
+  const empty = screen.getByRole('textbox', { name: 'common.model_display_name_label 1' });
   expect((empty as HTMLInputElement).value).toBe('');
   expect(dirty()).toBe(false);
 });

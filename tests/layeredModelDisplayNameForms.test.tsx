@@ -66,8 +66,8 @@ test.each(forms)('$key retains display name drafts across layers, rejection, sav
   await screen.findByText('saved');
   expect(saved[0]).toMatchObject({ ...credential, models: [{ ...model, 'display-name': 'After' }] });
   first.unmount(); const second = mount();
-  const reloaded = await screen.findByRole('textbox', { name: 'common.model_display_name_label 1' });
-  expect((reloaded as HTMLInputElement).value).toBe('After');
+  await waitFor(() => expect((screen.getByRole('textbox', { name: 'common.model_display_name_label 1' }) as HTMLInputElement).value).toBe('After'));
+  const reloaded = screen.getByRole('textbox', { name: 'common.model_display_name_label 1' });
   expect(dirty()).toBe(false);
   fireEvent.change(reloaded, { target: { value: '' } });
   expect(dirty()).toBe(true);
@@ -75,7 +75,8 @@ test.each(forms)('$key retains display name drafts across layers, rejection, sav
   await screen.findByText('saved');
   expect(saved[0].models).toEqual([model]);
   second.unmount(); mount();
-  const empty = await screen.findByRole('textbox', { name: 'common.model_display_name_label 1' });
+  await screen.findByDisplayValue('upstream');
+  const empty = screen.getByRole('textbox', { name: 'common.model_display_name_label 1' });
   expect((empty as HTMLInputElement).value).toBe('');
   expect(dirty()).toBe(false);
 });
