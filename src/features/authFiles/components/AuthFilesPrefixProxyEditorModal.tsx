@@ -1,4 +1,5 @@
 import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
+import { CredentialRequestScopedErrorsEditor } from '@/components/providers/RequestScopedErrorsEditor';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -226,6 +227,9 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                     disabled={disableControls || editor.saving || !editor.json}
                     onChange={(e) => onChange('disableCooling', e.target.value)}
                   />
+                  <CredentialRequestScopedErrorsEditor value={editor.requestScopedErrors}
+                    onChange={(rules) => onChange('requestScopedErrors', rules)}
+                    disabled={disableControls || editor.saving || !editor.json} />
                   <Input
                     label={t('auth_files.note_label')}
                     value={editor.note}

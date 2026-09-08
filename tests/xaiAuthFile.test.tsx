@@ -366,6 +366,8 @@ describe('xAI auth file compatibility', () => {
       priority: '',
       weight: '',
       weightTouched: false,
+      requestScopedErrors: [],
+      requestScopedErrorsTouched: false,
       excludedModelsText: '',
       disableCooling: '',
       websockets: false,
