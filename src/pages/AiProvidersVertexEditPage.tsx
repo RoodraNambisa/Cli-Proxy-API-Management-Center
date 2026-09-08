@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { HeaderInputList } from '@/components/ui/HeaderInputList';
 import { ModelInputList } from '@/components/ui/ModelInputList';
-import { modelsToEntries } from '@/components/ui/modelInputListUtils';
+import { modelsToEntries, type ModelEntry } from '@/components/ui/modelInputListUtils';
 import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
@@ -45,12 +45,12 @@ const parseIndexParam = (value: string | undefined) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) =>
-  (entries ?? []).reduce<Array<{ name: string; alias: string }>>((acc, entry) => {
+const normalizeModelEntries = (entries: ModelEntry[]) =>
+  (entries ?? []).reduce<ModelEntry[]>((acc, entry) => {
     const name = String(entry?.name ?? '').trim();
     const alias = String(entry?.alias ?? '').trim();
     if (!name && !alias) return acc;
-    acc.push({ name, alias });
+    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined });
     return acc;
   }, []);
 
@@ -286,7 +286,7 @@ export function AiProvidersVertexEditPage() {
             const name = entry.name.trim();
             const alias = entry.alias.trim();
             if (!name || !alias) return null;
-            return { name, alias };
+            return { ...entry, name, alias };
           })
           .filter(Boolean) as ProviderKeyConfig['models'],
         excludedModels: parseExcludedModels(form.excludedText),
@@ -422,6 +422,7 @@ export function AiProvidersVertexEditPage() {
             <div className="form-group">
               <label>{t('ai_providers.vertex_models_label')}</label>
               <ModelInputList
+                showDisplayName
                 entries={form.modelEntries}
                 onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
                 addLabel={t('ai_providers.vertex_models_add_btn')}

@@ -27,7 +27,7 @@ import {
   areStringArraysEqual,
 } from '@/utils/compare';
 import type { ModelInfo } from '@/utils/models';
-import { entriesToModels, modelsToEntries } from '@/components/ui/modelInputListUtils';
+import { entriesToModels, modelsToEntries, type ModelEntry } from '@/components/ui/modelInputListUtils';
 import { excludedModelsToText, parseExcludedModels } from '@/components/providers/utils';
 import type { GeminiFormState } from '@/components/providers';
 import layoutStyles from './AiProvidersEditLayout.module.scss';
@@ -59,15 +59,15 @@ const stripGeminiModelResourceName = (value: string) => {
     .replace(/^\/?models\//i, '');
 };
 
-const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) =>
-  (entries ?? []).reduce<Array<{ name: string; alias: string }>>((acc, entry) => {
+const normalizeModelEntries = (entries: ModelEntry[]) =>
+  (entries ?? []).reduce<ModelEntry[]>((acc, entry) => {
     const name = stripGeminiModelResourceName(entry?.name ?? '').trim();
     let alias = String(entry?.alias ?? '').trim();
     if (name && alias === name) {
       alias = '';
     }
     if (!name && !alias) return acc;
-    acc.push({ name, alias });
+    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined });
     return acc;
   }, []);
 
@@ -260,11 +260,11 @@ export function AiProvidersGeminiEditPage({
 
       let addedCount = 0;
       setForm((prev) => {
-        const mergedMap = new Map<string, { name: string; alias: string }>();
+        const mergedMap = new Map<string, ModelEntry>();
         prev.modelEntries.forEach((entry) => {
           const name = stripGeminiModelResourceName(entry.name);
           if (!name) return;
-          mergedMap.set(name, { name, alias: entry.alias?.trim() || '' });
+          mergedMap.set(name, { ...entry, name, alias: entry.alias?.trim() || '' });
         });
 
         selectedModels.forEach((model) => {
@@ -701,6 +701,7 @@ export function AiProvidersGeminiEditPage({
               <div className={styles.sectionHint}>{t('ai_providers.gemini_models_hint')}</div>
 
               <ModelInputList
+                showDisplayName
                 entries={form.modelEntries}
                 onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
                 namePlaceholder={t('common.model_name_placeholder')}
