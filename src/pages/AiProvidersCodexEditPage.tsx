@@ -39,6 +39,7 @@ const buildEmptyForm = (): ProviderFormState => ({
   prefix: '',
   baseUrl: '',
   websockets: false,
+  alphaSearch: false,
   proxyUrl: '',
   headers: [],
   models: [],
@@ -80,6 +81,7 @@ type CodexFormBaseline = {
   prefix: string;
   baseUrl: string;
   websockets: boolean;
+  alphaSearch: boolean;
   proxyUrl: string;
   headers: ReturnType<typeof normalizeHeaderEntries>;
   models: ReturnType<typeof normalizeModelEntries>;
@@ -96,6 +98,7 @@ const buildCodexBaseline = (form: ProviderFormState): CodexFormBaseline => ({
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
   websockets: Boolean(form.websockets),
+  alphaSearch: Boolean(form.alphaSearch),
   proxyUrl: String(form.proxyUrl ?? '').trim(),
   headers: normalizeHeaderEntries(form.headers),
   models: normalizeModelEntries(form.modelEntries),
@@ -202,6 +205,7 @@ export function AiProvidersCodexEditPage() {
       const nextForm: ProviderFormState = {
         ...initialData,
         websockets: Boolean(initialData.websockets),
+        alphaSearch: Boolean(initialData.alphaSearch),
         headers: headersToEntries(initialData.headers),
         modelEntries: modelsToEntries(initialData.models),
         excludedText: excludedModelsToText(initialData.excludedModels),
@@ -250,6 +254,7 @@ export function AiProvidersCodexEditPage() {
     baseline.prefix !== String(form.prefix ?? '').trim() ||
     baseline.baseUrl !== String(form.baseUrl ?? '').trim() ||
     baseline.websockets !== Boolean(form.websockets) ||
+    baseline.alphaSearch !== Boolean(form.alphaSearch) ||
     baseline.proxyUrl !== String(form.proxyUrl ?? '').trim() ||
     isHeadersDirty ||
     isModelsDirty ||
@@ -487,6 +492,7 @@ export function AiProvidersCodexEditPage() {
         prefix: form.prefix?.trim() || undefined,
         baseUrl,
         websockets: Boolean(form.websockets),
+        alphaSearch: Boolean(form.alphaSearch),
         proxyUrl: form.proxyUrl?.trim() || undefined,
         headers: buildHeaderObject(form.headers),
         models: entriesToModels(form.modelEntries),
@@ -638,6 +644,16 @@ export function AiProvidersCodexEditPage() {
                 ariaLabel={t('ai_providers.codex_websockets_label')}
               />
               <div className="hint">{t('ai_providers.codex_websockets_hint')}</div>
+            </div>
+            <div className="form-group">
+              <label>{t('ai_providers.codex_alpha_search_label')}</label>
+              <ToggleSwitch
+                checked={Boolean(form.alphaSearch)}
+                onChange={(value) => setForm((prev) => ({ ...prev, alphaSearch: value }))}
+                disabled={disableControls || saving}
+                ariaLabel={t('ai_providers.codex_alpha_search_label')}
+              />
+              <div className="hint">{t('ai_providers.codex_alpha_search_hint')}</div>
             </div>
             <Input
               label={t('ai_providers.codex_add_modal_proxy_label')}
