@@ -3,10 +3,13 @@ import { MemoryRouter, Route, Routes, useOutletContext } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest';
 import { AiProvidersClaudeEditLayout } from '@/pages/AiProvidersClaudeEditLayout';
 import { AiProvidersClaudeEditPage } from '@/pages/AiProvidersClaudeEditPage';
+import { AiProvidersOpenAIEditLayout } from '@/pages/AiProvidersOpenAIEditLayout';
+import { AiProvidersOpenAIEditPage } from '@/pages/AiProvidersOpenAIEditPage';
 import { apiClient } from '@/services/api/client';
 import { normalizeConfigResponse } from '@/services/api/transformers';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import { useClaudeEditDraftStore } from '@/stores/useClaudeEditDraftStore';
+import { useOpenAIEditDraftStore } from '@/stores/useOpenAIEditDraftStore';
 import type { ModelEntry } from '@/components/providers/types';
 
 const mocks = vi.hoisted(() => ({ t: (key: string) => key, guard: vi.fn(() => ({ allowNextNavigation: vi.fn() })) }));
@@ -16,6 +19,7 @@ beforeEach(() => {
   vi.restoreAllMocks(); mocks.guard.mockClear(); localStorage.clear(); sessionStorage.clear();
   useAuthStore.setState({ connectionStatus: 'connected' });
   useClaudeEditDraftStore.setState({ drafts: {}, refCounts: {} });
+  useOpenAIEditDraftStore.setState({ drafts: {}, refCounts: {} });
 });
 function DraftViewer() {
   const { form } = useOutletContext<{ form: { modelEntries: ModelEntry[] } }>();
@@ -24,6 +28,9 @@ function DraftViewer() {
 const forms = [{
   key: 'claude', section: 'claude-api-key', layout: <AiProvidersClaudeEditLayout />, page: <AiProvidersClaudeEditPage />,
   credential: { 'api-key': 'fixture', weight: 7 },
+}, {
+  key: 'openai', section: 'openai-compatibility', layout: <AiProvidersOpenAIEditLayout />, page: <AiProvidersOpenAIEditPage />,
+  credential: { name: 'compat', 'api-key-entries': [{ 'api-key': 'fixture', weight: 7 }, { 'api-key': 'other', weight: 4 }] },
 }];
 const dirty = () => (mocks.guard.mock.lastCall?.[0] as unknown as { shouldBlock: (value: unknown) => boolean }).shouldBlock({ nextLocation: { pathname: '/ai-providers' } });
 
@@ -32,7 +39,10 @@ test.each(forms)('$key retains display name drafts across layers, rejection, sav
   let saved: Array<Record<string, unknown>> = [{ ...credential, 'base-url': 'https://example.invalid', models: [{ ...model, 'display-name': 'Before' }] }];
   vi.spyOn(apiClient, 'get').mockImplementation(async () => ({ [section]: saved }));
   vi.spyOn(useConfigStore.getState(), 'isCacheValid').mockReturnValue(false);
-  vi.spyOn(useConfigStore.getState(), 'fetchConfig').mockImplementation(async () => normalizeConfigResponse({ [section]: saved }).claudeApiKeys);
+  vi.spyOn(useConfigStore.getState(), 'fetchConfig').mockImplementation(async () => {
+    const config = normalizeConfigResponse({ [section]: saved });
+    return key === 'openai' ? config.openaiCompatibility : config.claudeApiKeys;
+  });
   const notify = vi.spyOn(useNotificationStore.getState(), 'showNotification');
   const put = vi.spyOn(apiClient, 'put').mockImplementation(async (_url, body) => { saved = JSON.parse(JSON.stringify(body)); return {}; });
   const mount = (viewer = false) => render(<MemoryRouter initialEntries={[`/ai-providers/${key}/0`]}><Routes>
