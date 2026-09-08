@@ -8,6 +8,7 @@ export interface ModelAlias {
   displayName?: string;
   priority?: number;
   testModel?: string;
+  [key: string]: unknown;
 }
 
 export interface ApiKeyEntry {

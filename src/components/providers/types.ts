@@ -1,10 +1,9 @@
-import type { ApiKeyEntry, GeminiKeyConfig, ProviderKeyConfig } from '@/types';
+import type { ApiKeyEntry, GeminiKeyConfig, ProviderKeyConfig, ModelAlias } from '@/types';
 import type { RequestScopedErrorRule } from '@/types/requestScopedErrors';
 import type { HeaderEntry } from '@/utils/headers';
 import type { KeyStats, UsageDetail } from '@/utils/usage';
 
-export interface ModelEntry {
-  name: string;
+export interface ModelEntry extends ModelAlias {
   alias: string;
 }
 

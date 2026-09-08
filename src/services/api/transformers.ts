@@ -489,7 +489,10 @@ const normalizeModelAliases = (models: unknown): ModelAlias[] => {
       );
       const priority = item.priority ?? item['priority'];
       const testModel = item['test-model'] ?? item.testModel;
-      const entry: ModelAlias = { name: String(name) };
+      const entry: ModelAlias = { ...item, name: String(name) };
+      for (const key of ['id', 'model', 'alias', 'display_name', 'display-name', 'displayName', 'priority', 'test-model', 'testModel']) {
+        delete entry[key];
+      }
       if (displayName !== undefined) entry.displayName = displayName;
       if (alias && alias !== name) {
         entry.alias = String(alias);

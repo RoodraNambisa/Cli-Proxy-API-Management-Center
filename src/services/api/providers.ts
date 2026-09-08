@@ -46,7 +46,10 @@ const serializeModelAliases = (models?: ModelAlias[]) =>
     ? models
         .map((model) => {
           if (!model?.name) return null;
-          const payload: Record<string, unknown> = { name: model.name };
+          const payload: Record<string, unknown> = { ...model, name: model.name };
+          for (const key of ['alias', 'displayName', 'display-name', 'testModel', 'test-model']) {
+            delete payload[key];
+          }
           const displayName = normalizeModelDisplayName(model.displayName);
           if (displayName !== undefined) payload['display-name'] = displayName;
           if (model.alias && model.alias !== model.name) {
@@ -136,8 +139,8 @@ const serializeVertexModelAliases = (models?: ModelAlias[]) =>
           const name = typeof model?.name === 'string' ? model.name.trim() : '';
           const alias = typeof model?.alias === 'string' ? model.alias.trim() : '';
           if (!name || !alias) return null;
-          const displayName = normalizeModelDisplayName(model.displayName);
-          return { name, alias, ...(displayName !== undefined ? { 'display-name': displayName } : {}) };
+          const payload = serializeModelAliases([{ ...model, name, alias }])?.[0];
+          return { ...payload, name, alias };
         })
         .filter(Boolean)
     : undefined;
