@@ -83,3 +83,12 @@ export function RequestScopedErrorsEditor({ value = [], onChange, disabled = fal
     </div>
   );
 }
+
+export function CredentialRequestScopedErrorsEditor(props: Parameters<typeof RequestScopedErrorsEditor>[0]) {
+  const { t } = useTranslation();
+  return <section className="form-group" aria-label={t('request_scoped_errors.title')}>
+    <h3>{t('request_scoped_errors.title')}</h3>
+    <div className="hint">{t('request_scoped_errors.credential_hint')}</div>
+    <RequestScopedErrorsEditor {...props} />
+  </section>;
+}

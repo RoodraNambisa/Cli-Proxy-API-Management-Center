@@ -1,4 +1,6 @@
 import { CredentialRequestRetryInput } from '@/components/providers/CredentialRequestRetryInput';
+import { CredentialRequestScopedErrorsEditor } from '@/components/providers/RequestScopedErrorsEditor';
+import { validateRequestScopedErrorRule } from '@/utils/requestScopedErrors';
 import { isValidCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
 import { isValidCredentialWeight } from '@/utils/credentialWeight';
@@ -73,6 +75,7 @@ type CodexFormBaseline = {
   priority: number | null;
   weight: number | null;
   requestRetry: number | null;
+  requestScopedErrors: string;
   prefix: string;
   baseUrl: string;
   websockets: boolean;
@@ -86,6 +89,7 @@ const buildCodexBaseline = (form: ProviderFormState): CodexFormBaseline => ({
   apiKey: String(form.apiKey ?? '').trim(),
   weight: form.weight ?? null,
   requestRetry: form.requestRetry ?? null,
+  requestScopedErrors: JSON.stringify(form.requestScopedErrors ?? []),
   priority:
     form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
   prefix: String(form.prefix ?? '').trim(),
@@ -241,6 +245,7 @@ export function AiProvidersCodexEditPage() {
     baseline.priority !== normalizedPriority ||
     baseline.weight !== (form.weight ?? null) ||
     baseline.requestRetry !== (form.requestRetry ?? null) ||
+    baseline.requestScopedErrors !== JSON.stringify(form.requestScopedErrors ?? []) ||
     baseline.prefix !== String(form.prefix ?? '').trim() ||
     baseline.baseUrl !== String(form.baseUrl ?? '').trim() ||
     baseline.websockets !== Boolean(form.websockets) ||
@@ -443,6 +448,11 @@ export function AiProvidersCodexEditPage() {
   };
 
   const handleSave = useCallback(async () => {
+    const ruleIssue = form.requestScopedErrors?.map(validateRequestScopedErrorRule).find(Boolean);
+    if (ruleIssue) {
+      showNotification(t(`request_scoped_errors.invalid_${ruleIssue}`), 'error');
+      return;
+    }
     if (!isValidCredentialRequestRetry(form.requestRetry)) {
       showNotification(t('ai_providers.request_retry_invalid'), 'error');
       return;
@@ -466,6 +476,7 @@ export function AiProvidersCodexEditPage() {
       const payload: ProviderKeyConfig = {
         weight: form.weight,
         requestRetry: form.requestRetry,
+        requestScopedErrors: form.requestScopedErrors,
         apiKey: form.apiKey.trim(),
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
         prefix: form.prefix?.trim() || undefined,
@@ -575,6 +586,9 @@ export function AiProvidersCodexEditPage() {
               onChange={(requestRetry) => setForm((prev) => ({ ...prev, requestRetry }))}
               disabled={disableControls || saving}
             />
+            <CredentialRequestScopedErrorsEditor value={form.requestScopedErrors}
+              onChange={(requestScopedErrors) => setForm((prev) => ({ ...prev, requestScopedErrors }))}
+              disabled={disableControls || saving} />
             <CredentialWeightInput
               value={form.weight}
               onChange={(weight) => setForm((prev) => ({ ...prev, weight }))}
