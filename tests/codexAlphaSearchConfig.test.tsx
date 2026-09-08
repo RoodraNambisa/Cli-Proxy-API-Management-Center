@@ -38,6 +38,7 @@ test.each(['alpha-search', 'codex-api-key[0].alpha-search'])('search %s reaches 
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: query } });
   fireEvent.click(screen.getByRole('button', { name: /ai_providers.codex_alpha_search_label/ }));
   expect(document.getElementById('config-codex-alpha-search')?.closest('[hidden]')).toBeNull();
+  expect(document.getElementById('config-codex-alpha-search')?.closest('section')?.id).toBe('auth');
   expect(screen.queryByRole('checkbox', { name: 'ai_providers.codex_alpha_search_label' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'ai_providers.codex_alpha_search_manage' }));
   expect(screen.getByText('provider editor')).toBeTruthy();
