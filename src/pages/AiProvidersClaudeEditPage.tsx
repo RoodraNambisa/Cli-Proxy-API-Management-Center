@@ -403,6 +403,7 @@ export function AiProvidersClaudeEditPage() {
               <div className={styles.sectionHint}>{t('ai_providers.claude_models_hint')}</div>
 
               <ModelInputList
+                showDisplayName
                 entries={form.modelEntries}
                 onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
                 namePlaceholder={t('common.model_name_placeholder')}

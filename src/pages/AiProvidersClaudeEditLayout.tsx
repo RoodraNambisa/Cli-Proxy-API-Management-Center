@@ -68,15 +68,15 @@ const getErrorMessage = (err: unknown) => {
   return '';
 };
 
-const normalizeClaudeModelEntries = (entries: Array<{ name: string; alias: string }>) =>
-  (entries ?? []).reduce<Array<{ name: string; alias: string }>>((acc, entry) => {
+const normalizeClaudeModelEntries = (entries: ModelEntry[]) =>
+  (entries ?? []).reduce<ModelEntry[]>((acc, entry) => {
     const name = String(entry?.name ?? '').trim();
     let alias = String(entry?.alias ?? '').trim();
     if (name) {
       alias = alias || name;
     }
     if (!name && !alias) return acc;
-    acc.push({ name, alias });
+    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined });
     return acc;
   }, []);
 
@@ -381,7 +381,7 @@ export function AiProvidersClaudeEditLayout() {
         prev.modelEntries.forEach((entry) => {
           const name = entry.name.trim();
           if (!name) return;
-          mergedMap.set(name, { name, alias: entry.alias?.trim() || '' });
+          mergedMap.set(name, { ...entry, name, alias: entry.alias?.trim() || '' });
         });
 
         selectedModels.forEach((model) => {
@@ -440,7 +440,7 @@ export function AiProvidersClaudeEditLayout() {
             const name = entry.name.trim();
             if (!name) return null;
             const alias = entry.alias.trim();
-            return { name, alias: alias || name };
+            return { ...entry, name, alias: alias || name };
           })
           .filter(Boolean) as ProviderKeyConfig['models'],
         excludedModels: parseExcludedModels(form.excludedText),
