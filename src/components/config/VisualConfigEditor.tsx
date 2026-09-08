@@ -31,6 +31,7 @@ import {
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { OAuthRequestScopedErrorsEditor } from '@/components/config/OAuthRequestScopedErrorsEditor';
+import { CodexLiveMediaEditor } from '@/components/config/CodexLiveMediaEditor';
 import {
   CONFIG_PAGE_DEFINITIONS,
   CONFIG_SEARCH_DEFINITIONS,
@@ -5333,6 +5334,15 @@ export function VisualConfigEditor({
                     onChange={(codexLiveEnabled) => onChange({ codexLiveEnabled })}
                   />
                 </SectionGrid>
+              </PageGroup>
+              <PageGroup id="config-codex-live-media" active={activePageId === 'provider-codex'}>
+                <SectionSubsection
+                  title={t('config_management.visual.sections.codex_media.title')}
+                  description={t('config_management.visual.sections.codex_media.description')}
+                >
+                  <CodexLiveMediaEditor value={values.codexLiveMediaRelay} disabled={disabled}
+                    onChange={(codexLiveMediaRelay) => onChange({ codexLiveMediaRelay })} />
+                </SectionSubsection>
               </PageGroup>
             </ConfigSection>
 

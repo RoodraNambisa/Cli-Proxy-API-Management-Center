@@ -661,6 +661,9 @@ describe('ConfigPage save coordination', () => {
   }, { section: 'codex-api-key', field: 'alpha-search',
     before: 'codex-api-key: [{api-key: fixture, base-url: "https://example.invalid"}]\n',
     after: 'codex-api-key: [{api-key: fixture, base-url: "https://example.invalid", alpha-search: true}]\n',
+  }, { section: 'codex', field: 'live-media-relay',
+    before: 'codex: {live-media-relay: {enabled: false}}\n',
+    after: 'codex: {live-media-relay: {enabled: true, max-sessions: 32}}\n',
   }]))('keeps a rejected $section.$field draft and accepts it only after a successful retry', async ({ before, after }) => {
     harness.visualDirty = true;
     harness.mergedYaml = after;

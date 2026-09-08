@@ -588,6 +588,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['realtime', 'WebRTC', 'Live', '实时会话', '即時會話', 'реального времени'],
   },
   {
+    id: 'config-codex-live-media',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.codex_media.title',
+    yamlKeys: ['codex.live-media-relay.enabled', 'codex.live-media-relay.max-sessions', 'codex.live-media-relay.disable-private-remote-ips', 'codex.live-media-relay.public-ip', 'codex.live-media-relay.udp-port-min', 'codex.live-media-relay.udp-port-max', 'codex.live-media-relay.ice-servers'],
+    aliases: ['WebRTC', 'STUN', 'TURN', 'ICE', 'media relay', '媒体中继', '媒體中繼', 'медиаретранслятор'],
+  },
+  {
     id: 'config-codex-prompt-cache',
     pageId: 'provider-codex',
     labelKey: 'config_management.visual.sections.network.codex_passthrough_prompt_cache_key',

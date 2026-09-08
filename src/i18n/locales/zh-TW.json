@@ -2382,6 +2382,29 @@
           "no_cooldown_status_codes": "略過冷卻狀態碼",
           "no_cooldown_status_codes_desc": "這些 HTTP 狀態碼只記錄失敗，不安排帳號/模型冷卻；支援逗號或換行分隔，範圍 100-599"
         },
+        "codex_media": {
+          "title": "WebRTC 媒體中繼",
+          "description": "媒體中繼和 Live 總開關都開啟後，才能建立新的中繼工作階段。儲存後的修改用於新工作階段，已建立的保留原設定。Realtime WebSocket 音訊獨立透過 WebSocket 代理傳輸。",
+          "enabled": "中繼 WebRTC 媒體",
+          "enabled_desc": "預設關閉。透過本伺服器轉送 WebRTC 音訊和事件資料通道。",
+          "max_sessions": "媒體工作階段容量",
+          "max_sessions_hint": "0 繼承預設值 32。有效範圍：0–2147483647。降低容量不會終止已建立的工作階段。",
+          "public_ip": "對外宣告的 IP 位址",
+          "public_ip_hint": "可選 IPv4 或 IPv6 位址。留空使用收集到的位址，不自動填入公網位址。",
+          "udp_min": "UDP 起始連接埠",
+          "udp_max": "UDP 結束連接埠",
+          "ports_hint": "同時為 0 時由系統分配；否則使用 1–65535，起始不大於結束，且每個工作階段至少預留兩個連接埠。",
+          "disable_private": "拒絕下游私網候選 IP",
+          "disable_private_desc": "預設關閉，允許區域網路用戶端連線。開啟後可能阻止使用私網位址的用戶端連線。",
+          "ice_hint": "可選 STUN/TURN 服務。每行填寫一個 URL；TURN 需要使用者名稱和憑證。",
+          "ice_server": "ICE 服務",
+          "ice_urls": "STUN/TURN 位址",
+          "ice_username": "TURN 使用者名稱",
+          "ice_credential": "TURN 憑證",
+          "secret_hint": "從 YAML 讀取，未編輯時保留原值。設定 JSON 會隱藏這些憑證。",
+          "add_ice": "新增 ICE 服務",
+          "remove_ice": "刪除 ICE 服務"
+        },
         "codex_live": {
           "title": "Codex Live / Realtime",
           "description": "控制新即時會話的准入；WebRTC 媒體中繼單獨設定。",
@@ -2571,6 +2594,11 @@
         "boolean_false": "false"
       },
       "validation": {
+        "codex_media_capacity": "請輸入 0–2147483647 的整數；0 表示預設 32 個工作階段。",
+        "codex_media_ports": "兩個連接埠同時為 0，或填寫 1–65535 的有序範圍，且每個工作階段至少兩個連接埠。",
+        "codex_media_ip": "請輸入 IPv4/IPv6 位址，或留空。",
+        "codex_media_ice_url": "每行填寫一個有效的 STUN/TURN 位址。",
+        "codex_media_ice_credentials": "TURN 必須同時提供使用者名稱和憑證。",
         "request_scoped_error_action": "請選擇四種錯誤動作之一。",
         "request_scoped_error_match_required": "至少新增一個非空文字或 Go 正則條件。",
         "validation_blocked": "請先修復表單驗證錯誤再儲存",

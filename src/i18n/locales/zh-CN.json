@@ -2340,6 +2340,29 @@
           "codex_header_defaults_beta_features": "Codex Beta-Features 默认值",
           "codex_header_defaults_originator": "Codex Originator 默认值"
         },
+        "codex_media": {
+          "title": "WebRTC 媒体中继",
+          "description": "媒体中继和 Live 总开关都开启后，才能新建中继会话。保存后的修改用于新会话，已建立会话保留原设置。Realtime WebSocket 音频独立通过 WebSocket 代理传输。",
+          "enabled": "中继 WebRTC 媒体",
+          "enabled_desc": "默认关闭。通过本服务器转发 WebRTC 音频和事件数据通道。",
+          "max_sessions": "媒体会话容量",
+          "max_sessions_hint": "0 继承默认值 32。合法范围：0–2147483647。降低容量不会终止已建立的会话。",
+          "public_ip": "对外声明的 IP 地址",
+          "public_ip_hint": "可选 IPv4 或 IPv6 地址。留空使用收集到的地址，不自动填入公网地址。",
+          "udp_min": "UDP 起始端口",
+          "udp_max": "UDP 结束端口",
+          "ports_hint": "同时为 0 时由系统分配；否则使用 1–65535，起始不大于结束，且每个会话至少预留两个端口。",
+          "disable_private": "拒绝下游私网候选 IP",
+          "disable_private_desc": "默认关闭，允许局域网客户端连接。开启后可能阻止使用私网地址的客户端连接。",
+          "ice_hint": "可选 STUN/TURN 服务。每行填写一个 URL；TURN 需要用户名和凭据。",
+          "ice_server": "ICE 服务",
+          "ice_urls": "STUN/TURN 地址",
+          "ice_username": "TURN 用户名",
+          "ice_credential": "TURN 凭据",
+          "secret_hint": "从 YAML 读取，未编辑时保持原值。配置 JSON 会隐藏这些凭据。",
+          "add_ice": "添加 ICE 服务",
+          "remove_ice": "删除 ICE 服务"
+        },
         "codex_live": {
           "title": "Codex Live / Realtime",
           "description": "控制新实时会话的准入；WebRTC 媒体中继单独配置。",
@@ -2551,6 +2574,11 @@
         "boolean_false": "false"
       },
       "validation": {
+        "codex_media_capacity": "请输入 0–2147483647 的整数；0 表示默认 32 个会话。",
+        "codex_media_ports": "两个端口同时为 0，或填写 1–65535 的有序范围，且每个会话至少两个端口。",
+        "codex_media_ip": "请输入 IPv4/IPv6 地址，或留空。",
+        "codex_media_ice_url": "每行填写一个有效的 STUN/TURN 地址。",
+        "codex_media_ice_credentials": "TURN 必须同时提供用户名和凭据。",
         "request_scoped_error_action": "请选择四种错误动作之一。",
         "request_scoped_error_match_required": "至少添加一个非空文本或 Go 正则条件。",
         "validation_blocked": "请先修复表单校验错误再保存",

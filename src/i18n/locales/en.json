@@ -2336,6 +2336,29 @@
           "codex_header_defaults_beta_features": "Codex Beta-Features Default",
           "codex_header_defaults_originator": "Codex Originator Default"
         },
+        "codex_media": {
+          "title": "WebRTC media relay",
+          "description": "Both relay and Live admission must be enabled to start relayed WebRTC sessions. Saved changes apply to new sessions; established sessions keep their settings. Realtime WebSocket audio uses the WebSocket proxy independently.",
+          "enabled": "Relay WebRTC media",
+          "enabled_desc": "Off by default. Forward WebRTC audio and its event data channel through this server.",
+          "max_sessions": "Media session capacity",
+          "max_sessions_hint": "0 inherits 32. Valid range: 0–2147483647. Reducing capacity does not terminate established sessions.",
+          "public_ip": "Advertised IP address",
+          "public_ip_hint": "Optional IPv4 or IPv6 address. Leave empty to use gathered addresses; no public address is filled in automatically.",
+          "udp_min": "UDP port minimum",
+          "udp_max": "UDP port maximum",
+          "ports_hint": "Both 0 use OS allocation. Otherwise use 1–65535, minimum ≤ maximum, with at least two ports per session.",
+          "disable_private": "Reject private downstream candidate IPs",
+          "disable_private_desc": "Off by default to allow LAN clients. Enabling this may prevent clients behind private networks from connecting.",
+          "ice_hint": "Optional STUN/TURN servers. Enter one URL per line; TURN requires a username and credential.",
+          "ice_server": "ICE server",
+          "ice_urls": "STUN/TURN URLs",
+          "ice_username": "TURN username",
+          "ice_credential": "TURN credential",
+          "secret_hint": "Loaded from YAML and retained unchanged unless edited. Configuration JSON hides these credentials.",
+          "add_ice": "Add ICE server",
+          "remove_ice": "Remove ICE server"
+        },
         "codex_live": {
           "title": "Codex Live / Realtime",
           "description": "Control admission for new realtime sessions. WebRTC media relay has a separate setting.",
@@ -2547,6 +2570,11 @@
         "boolean_false": "false"
       },
       "validation": {
+        "codex_media_capacity": "Enter an integer from 0 to 2147483647; 0 uses 32 sessions.",
+        "codex_media_ports": "Set both ports to 0, or a valid ordered range of 1–65535 with at least two ports per session.",
+        "codex_media_ip": "Enter an IPv4/IPv6 address or leave empty.",
+        "codex_media_ice_url": "Enter one valid STUN/TURN URL per line.",
+        "codex_media_ice_credentials": "TURN requires both a username and credential.",
         "request_scoped_error_action": "Choose one of the four error actions.",
         "request_scoped_error_match_required": "Add at least one nonempty text or Go regex condition.",
         "validation_blocked": "Fix validation errors before saving",
