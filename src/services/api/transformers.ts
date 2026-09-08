@@ -1178,6 +1178,11 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
         ? routing['session-affinity-subagents']
         : routing.sessionAffinitySubagents
     );
+    config.routingSessionAffinityLCP = normalizeBoolean(
+      Object.prototype.hasOwnProperty.call(routing, 'session-affinity-lcp')
+        ? routing['session-affinity-lcp']
+        : routing.sessionAffinityLCP
+    );
     const failoverRaw = routing['session-affinity-failover'] ?? routing.sessionAffinityFailover;
     config.routingSessionAffinityFailover =
       failoverRaw === undefined || failoverRaw === null ? true : normalizeBoolean(failoverRaw);

@@ -72,6 +72,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'routing/session-affinity',
   'routing/session-affinity-across-priorities',
   'routing/session-affinity-subagents',
+  'routing/session-affinity-lcp',
   'routing/session-affinity-failover',
   'routing/session-affinity-ttl',
   'api-keys',
@@ -164,6 +165,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.routingSessionAffinityAcrossPriorities;
     case 'routing/session-affinity-subagents':
       return config.routingSessionAffinitySubagents;
+    case 'routing/session-affinity-lcp':
+      return config.routingSessionAffinityLCP;
     case 'routing/session-affinity-failover':
       return config.routingSessionAffinityFailover;
     case 'routing/session-affinity-ttl':
@@ -404,6 +407,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         case 'routing/session-affinity-subagents':
           nextConfig.routingSessionAffinitySubagents =
             value as Config['routingSessionAffinitySubagents'];
+          break;
+        case 'routing/session-affinity-lcp':
+          nextConfig.routingSessionAffinityLCP = value as Config['routingSessionAffinityLCP'];
           break;
         case 'routing/session-affinity-failover':
           nextConfig.routingSessionAffinityFailover =

@@ -314,6 +314,7 @@ export interface Config {
   routingSessionAffinity?: boolean;
   routingSessionAffinityAcrossPriorities?: boolean;
   routingSessionAffinitySubagents?: boolean;
+  routingSessionAffinityLCP?: boolean;
   routingSessionAffinityFailover?: boolean;
   routingSessionAffinityTTL?: string;
   apiKeys?: string[];
@@ -368,6 +369,7 @@ export type RawConfigSection =
   | 'routing/session-affinity'
   | 'routing/session-affinity-across-priorities'
   | 'routing/session-affinity-subagents'
+  | 'routing/session-affinity-lcp'
   | 'routing/session-affinity-failover'
   | 'routing/session-affinity-ttl'
   | 'api-keys'

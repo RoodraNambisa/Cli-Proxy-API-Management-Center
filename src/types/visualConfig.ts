@@ -383,6 +383,7 @@ export type VisualConfigValues = {
   routingSessionAffinity: boolean;
   routingSessionAffinityAcrossPriorities: boolean;
   routingSessionAffinitySubagents: boolean;
+  routingSessionAffinityLCP: boolean;
   routingSessionAffinityFailover: boolean;
   routingSessionAffinityTTL: string;
   wsAuth: boolean;
@@ -562,6 +563,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   routingSessionAffinity: false,
   routingSessionAffinityAcrossPriorities: false,
   routingSessionAffinitySubagents: false,
+  routingSessionAffinityLCP: false,
   routingSessionAffinityFailover: true,
   routingSessionAffinityTTL: '',
   wsAuth: false,

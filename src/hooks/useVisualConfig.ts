@@ -2945,6 +2945,12 @@ function getNextDirtyFields(
       nextValues.routingSessionAffinitySubagents === baselineValues.routingSessionAffinitySubagents
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinityLCP')) {
+    updateDirty(
+      'routingSessionAffinityLCP',
+      nextValues.routingSessionAffinityLCP === baselineValues.routingSessionAffinityLCP
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinityTTL')) {
     updateDirty(
       'routingSessionAffinityTTL',
@@ -3237,6 +3243,13 @@ export function useVisualConfig() {
         typeof routingSessionAffinitySubagents !== 'boolean'
       ) {
         throw new Error('routing.session-affinity-subagents must be a boolean');
+      }
+      const routingSessionAffinityLCP =
+        routing && Object.prototype.hasOwnProperty.call(routing, 'session-affinity-lcp')
+          ? routing['session-affinity-lcp']
+          : routing?.sessionAffinityLCP;
+      if (routingSessionAffinityLCP != null && typeof routingSessionAffinityLCP !== 'boolean') {
+        throw new Error('routing.session-affinity-lcp must be a boolean');
       }
       const codexFingerprintJA3 = Boolean(codexFingerprint?.ja3 ?? codexFingerprint?.JA3);
       const codexFingerprintForceHTTP1 = codexFingerprintJA3
@@ -3668,6 +3681,7 @@ export function useVisualConfig() {
         ),
         routingSessionAffinityAcrossPriorities: routingSessionAffinityAcrossPriorities ?? false,
         routingSessionAffinitySubagents: routingSessionAffinitySubagents ?? false,
+        routingSessionAffinityLCP: routingSessionAffinityLCP ?? false,
         routingSessionAffinityFailover:
           routingSessionAffinityFailoverRaw === undefined ||
           routingSessionAffinityFailoverRaw === null
@@ -4572,6 +4586,7 @@ export function useVisualConfig() {
           values.routingSessionAffinity ||
           values.routingSessionAffinityAcrossPriorities ||
           values.routingSessionAffinitySubagents ||
+          values.routingSessionAffinityLCP ||
           values.routingSessionAffinityFailover !==
             DEFAULT_VISUAL_VALUES.routingSessionAffinityFailover ||
           values.routingSessionAffinityTTL.trim()
@@ -4635,6 +4650,14 @@ export function useVisualConfig() {
           ) {
             doc.setIn(['routing', 'session-affinity-subagents'], values.routingSessionAffinitySubagents);
             doc.deleteIn(['routing', 'sessionAffinitySubagents']);
+          }
+          if (
+            values.routingSessionAffinityLCP ||
+            docHas(doc, ['routing', 'session-affinity-lcp']) ||
+            docHas(doc, ['routing', 'sessionAffinityLCP'])
+          ) {
+            doc.setIn(['routing', 'session-affinity-lcp'], values.routingSessionAffinityLCP);
+            doc.deleteIn(['routing', 'sessionAffinityLCP']);
           }
           if (
             docHas(doc, ['routing', 'session-affinity-failover']) ||
