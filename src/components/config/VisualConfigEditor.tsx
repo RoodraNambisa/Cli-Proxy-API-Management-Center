@@ -3169,6 +3169,7 @@ export function VisualConfigEditor({
                     <h3>{t('common.model_catalog_label')}</h3>
                     <p>{t('common.model_display_name_hint')}</p>
                     <p>{t('common.model_context_length_hint')}</p>
+                    <p>{t('model_thinking.hint')}</p>
                   </div>
                   <div className={styles.providerHubActions}>
                     <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/ai-providers')}>

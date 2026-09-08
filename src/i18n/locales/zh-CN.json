@@ -110,7 +110,7 @@
     "model_name_placeholder": "模型名称，例如 claude-3-5-sonnet-20241022",
     "model_alias_placeholder": "模型别名 (可选)",
     "model_display_name_label": "显示名称",
-    "model_catalog_label": "模型显示名称与容量",
+    "model_catalog_label": "模型显示名称、容量与推理能力",
     "model_catalog_manage": "编辑 API Key 模型设置",
     "oauth_model_display_name_manage": "编辑 OAuth 别名显示名称",
     "model_context_length_label": "上下文窗口覆盖",

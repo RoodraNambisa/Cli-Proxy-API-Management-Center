@@ -530,11 +530,12 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     pageId: 'provider-codex',
     labelKey: 'common.model_catalog_label',
     yamlKeys: [
-      'display-name', 'max-context-length', 'oauth-model-alias',
+      'display-name', 'max-context-length', 'oauth-model-alias', 'thinking',
+      'thinking.levels', 'thinking.min', 'thinking.max', 'thinking.zero-allowed', 'thinking.dynamic-allowed',
       ...['codex-api-key', 'claude-api-key', 'gemini-api-key', 'interactions-api-key', 'vertex-api-key', 'openai-compatibility']
-        .flatMap((family) => ['display-name', 'max-context-length'].map((field) => `${family}[].models[].${field}`)),
+        .flatMap((family) => ['display-name', 'max-context-length', 'thinking', 'thinking.levels', 'thinking.min', 'thinking.max', 'thinking.zero-allowed', 'thinking.dynamic-allowed'].map((field) => `${family}[].models[].${field}`)),
     ],
-    aliases: ['model display name', 'context window override', '显示名称', '上下文容量', '顯示名稱', 'объём контекста'],
+    aliases: ['model display name', 'context window override', 'reasoning capabilities', 'thinking budget', 'zero_allowed', 'dynamic_allowed', '显示名称', '上下文容量', '推理能力', '推理预算', '顯示名稱', '推理預算', 'объём контекста', 'возможности рассуждения'],
   },
   {
     id: 'config-codex-alpha-search',
