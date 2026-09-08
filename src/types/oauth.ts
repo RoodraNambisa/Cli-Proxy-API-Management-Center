@@ -33,7 +33,9 @@ export interface OAuthExcludedModels {
 export interface OAuthModelAliasEntry {
   name: string;
   alias: string;
+  displayName?: string;
   fork?: boolean;
+  [key: string]: unknown;
 }
 
 export type OAuthModelAlias = Record<string, OAuthModelAliasEntry[]>;

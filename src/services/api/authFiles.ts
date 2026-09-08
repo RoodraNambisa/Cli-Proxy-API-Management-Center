@@ -13,6 +13,7 @@ import type {
   CodexPlanTypeRefreshTask,
 } from '@/types/authFile';
 import type { OAuthModelAliasEntry } from '@/types';
+import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
 import { parseTimestampMs } from '@/utils/timestamp';
 import { AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS, AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
 import { mapWithConcurrency } from '@/utils/concurrency';
@@ -796,7 +797,14 @@ const normalizeOauthModelAlias = (payload: unknown): Record<string, OAuthModelAl
         const alias = String(entry.alias ?? '').trim();
         if (!name || !alias) return null;
         const fork = entry.fork === true;
-        return fork ? { name, alias, fork } : { name, alias };
+        const normalized: OAuthModelAliasEntry = { ...entry, name, alias };
+        for (const field of ['id', 'model', 'fork', 'display-name', 'displayName']) delete normalized[field];
+        if (fork) normalized.fork = true;
+        const displayName = normalizeModelDisplayName(
+          Object.prototype.hasOwnProperty.call(entry, 'display-name') ? entry['display-name'] : entry.displayName
+        );
+        if (displayName !== undefined) normalized.displayName = displayName;
+        return normalized;
       })
       .filter(Boolean)
       .filter((entry) => {
@@ -1209,7 +1217,12 @@ export const authFilesApi = {
       normalizeOauthModelAlias({ [normalizedChannel]: aliases })[normalizedChannel] ?? [];
     await apiClient.patch(OAUTH_MODEL_ALIAS_ENDPOINT, {
       channel: normalizedChannel,
-      aliases: normalizedAliases,
+      aliases: normalizedAliases.map((entry) => {
+        const wire: Record<string, unknown> = { ...entry };
+        delete wire.displayName;
+        if (entry.displayName !== undefined) wire['display-name'] = entry.displayName;
+        return wire;
+      }),
     });
   },
 
