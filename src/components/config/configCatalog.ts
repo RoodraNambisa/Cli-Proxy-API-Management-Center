@@ -524,6 +524,17 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['SSE', 'WebSocket', 'Ping', 'heartbeat', '心跳', '保活'],
   },
   {
+    id: 'config-model-catalog-fields',
+    pageId: 'provider-codex',
+    labelKey: 'common.model_catalog_label',
+    yamlKeys: [
+      'display-name', 'max-context-length', 'oauth-model-alias',
+      ...['codex-api-key', 'claude-api-key', 'gemini-api-key', 'interactions-api-key', 'vertex-api-key', 'openai-compatibility']
+        .flatMap((family) => ['display-name', 'max-context-length'].map((field) => `${family}[].models[].${field}`)),
+    ],
+    aliases: ['model display name', 'context window override', '显示名称', '上下文容量', '顯示名稱', 'объём контекста'],
+  },
+  {
     id: 'config-codex-alpha-search',
     pageId: 'provider-codex',
     labelKey: 'ai_providers.codex_alpha_search_label',

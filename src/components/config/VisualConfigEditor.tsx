@@ -5042,6 +5042,22 @@ export function VisualConfigEditor({
                   </SettingsDisclosure>
                 </PageGroup>
 
+                <PageGroup id="config-model-catalog-fields" active={activePageId === 'provider-codex'}>
+                  <div className={styles.providerHubHeader}>
+                    <h3>{t('common.model_catalog_label')}</h3>
+                    <p>{t('common.model_display_name_hint')}</p>
+                    <p>{t('common.model_context_length_hint')}</p>
+                  </div>
+                  <div className={styles.providerHubActions}>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/ai-providers')}>
+                      {t('common.model_catalog_manage')}<IconExternalLink size={14} />
+                    </Button>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/auth-files/oauth-model-alias')}>
+                      {t('common.oauth_model_display_name_manage')}<IconExternalLink size={14} />
+                    </Button>
+                  </div>
+                </PageGroup>
+
                 <PageGroup id="config-codex-alpha-search" active={activePageId === 'provider-codex'}>
                   <div className={styles.providerHubHeader}>
                     <h3>{t('ai_providers.codex_alpha_search_label')}</h3>
