@@ -25,6 +25,7 @@ export type ClaudeEditBaseline = {
   priority: number | null;
   weight: number | null;
   requestRetry: number | null;
+  requestScopedErrors: string;
   prefix: string;
   baseUrl: string;
   proxyUrl: string;

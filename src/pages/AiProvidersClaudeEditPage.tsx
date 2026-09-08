@@ -1,4 +1,5 @@
 import { CredentialRequestRetryInput } from '@/components/providers/CredentialRequestRetryInput';
+import { CredentialRequestScopedErrorsEditor } from '@/components/providers/RequestScopedErrorsEditor';
 import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
@@ -316,6 +317,9 @@ export function AiProvidersClaudeEditPage() {
               onChange={(requestRetry) => setForm((prev) => ({ ...prev, requestRetry }))}
               disabled={disableControls || saving || isTesting}
             />
+            <CredentialRequestScopedErrorsEditor value={form.requestScopedErrors}
+              onChange={(requestScopedErrors) => setForm((prev) => ({ ...prev, requestScopedErrors }))}
+              disabled={disableControls || saving || isTesting} />
             <CredentialWeightInput
               value={form.weight}
               onChange={(weight) => setForm((prev) => ({ ...prev, weight }))}
