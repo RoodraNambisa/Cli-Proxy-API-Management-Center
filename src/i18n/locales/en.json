@@ -1,4 +1,34 @@
 {
+  "request_scoped_errors": {
+    "title": "Request error actions",
+    "rules_hint": "Rules run in list order; the first rule with the exact status and any matching text or Go regular expression wins. Text is case-sensitive and spaces are preserved. Continue uses the existing retry budget; cooldown respects existing exclusions. Policy refusals, cancellation, retired credentials, unreplayable requests and committed output remain protected.",
+    "empty": "No active rules. Existing error handling applies.",
+    "rule": "Rule {{index}}",
+    "status": "Upstream status",
+    "action": "Action",
+    "choose_action": "Choose an action",
+    "match": "Literal text contains",
+    "matchRegexr": "Go regular expressions",
+    "add_match": "Add text condition",
+    "add_matchRegexr": "Add regex condition",
+    "add_rule": "Add rule",
+    "remove_rule": "Delete rule",
+    "remove_pattern": "Delete condition {{index}}",
+    "invalid_status": "Enter an integer from 100 to 599.",
+    "invalid_action": "Choose one of the four actions.",
+    "invalid_match": "Add at least one nonempty text or regex condition.",
+    "provider_hint": "Applies to OAuth credentials for this provider. A nonempty credential rule list takes precedence over the entire provider list. API keys use their own rules.",
+    "credential_hint": "Optional credential rules. An empty list inherits this OAuth provider’s rules, or the existing behavior for API keys. Rules for an OpenAI-compatible provider apply to all of its keys.",
+    "provider": "OAuth provider",
+    "add_provider": "Add provider",
+    "remove_provider": "Remove provider rules",
+    "actions": {
+      "stop": "Stop",
+      "stop-and-cooldown": "Stop and cool down",
+      "continue": "Continue",
+      "continue-and-cooldown": "Continue and cool down"
+    }
+  },
   "common": {
     "login": "Login",
     "logout": "Logout",

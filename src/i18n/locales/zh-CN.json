@@ -1,4 +1,34 @@
 {
+  "request_scoped_errors": {
+    "title": "请求错误动作",
+    "rules_hint": "按列表顺序匹配：状态码相同，且任一文本或 Go 正则匹配时，执行第一条命中规则。文本区分大小写并保留空格。“继续”沿用原重试预算，“冷却”遵守现有排除规则。审核拒绝、取消、凭证退役、请求不可重放和已提交输出的限制仍然有效。",
+    "empty": "没有有效规则，沿用现有错误处理。",
+    "rule": "规则 {{index}}",
+    "status": "上游状态码",
+    "action": "动作",
+    "choose_action": "选择动作",
+    "match": "包含的原文",
+    "matchRegexr": "Go 正则表达式",
+    "add_match": "添加文本条件",
+    "add_matchRegexr": "添加正则条件",
+    "add_rule": "添加规则",
+    "remove_rule": "删除规则",
+    "remove_pattern": "删除条件 {{index}}",
+    "invalid_status": "请输入 100 到 599 的整数。",
+    "invalid_action": "请选择四种动作之一。",
+    "invalid_match": "至少添加一个非空文本或正则条件。",
+    "provider_hint": "作用于该提供者的 OAuth 凭证。凭证有非空规则时，优先使用整份凭证规则，不再匹配提供者规则。API Key 使用自身规则。",
+    "credential_hint": "可选凭证规则。空列表继承所属 OAuth 提供者规则；API Key 的空列表沿用原有行为。OpenAI 兼容渠道的规则作用于其所有密钥。",
+    "provider": "OAuth 提供者",
+    "add_provider": "添加提供者",
+    "remove_provider": "删除该提供者规则",
+    "actions": {
+      "stop": "停止",
+      "stop-and-cooldown": "停止并冷却",
+      "continue": "继续",
+      "continue-and-cooldown": "继续并冷却"
+    }
+  },
   "common": {
     "login": "登录",
     "logout": "登出",

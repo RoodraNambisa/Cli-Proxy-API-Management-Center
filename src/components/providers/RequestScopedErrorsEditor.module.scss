@@ -1,0 +1,32 @@
+.editor {
+  display: grid;
+  gap: 12px;
+}
+
+.rule {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+
+  legend { padding: 0 6px; font-weight: 600; }
+}
+
+.actions, .patternHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.actions { justify-content: flex-end; margin-bottom: 12px; }
+.patternHeader { justify-content: space-between; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.patterns { display: grid; gap: 8px; margin-top: 12px; }
+.patternRow { display: flex; align-items: flex-start; gap: 8px; }
+.patternRow textarea { flex: 1; min-width: 0; resize: vertical; }
+
+@media (max-width: 600px) {
+  .fields { grid-template-columns: 1fr; }
+}
