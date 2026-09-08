@@ -8,8 +8,8 @@ import ru from '@/i18n/locales/ru.json';
 import zhCN from '@/i18n/locales/zh-CN.json';
 import zhTW from '@/i18n/locales/zh-TW.json';
 
-test.each(['gemini-api-key', 'interactions-api-key', 'codex-api-key', 'claude-api-key', 'vertex-api-key', 'openai-compatibility', 'oauth-model-alias'])('%s model labels survive unrelated visual YAML saves and reloads', (family) => {
-  const alias = 'name: upstream, alias: local, display-name: "Readable label", force-mapping: true, future: { keep: yes }';
+test.each(['gemini-api-key', 'interactions-api-key', 'codex-api-key', 'claude-api-key', 'vertex-api-key', 'openai-compatibility', 'oauth-model-alias'])('%s model declarations survive unrelated visual YAML saves and reloads', (family) => {
+  const alias = 'name: upstream, alias: local, display-name: "Readable label", force-mapping: true, future: { keep: yes }' + (family === 'oauth-model-alias' ? '' : ', max-context-length: 131072');
   const models = family === 'oauth-model-alias'
     ? `${family}:\n  codex: [*model]\n`
     : `${family}:\n  - api-key: fixture\n    name: compat\n    base-url: https://example.invalid\n    models: [*model]\n`;
@@ -27,7 +27,11 @@ test.each(['gemini-api-key', 'interactions-api-key', 'codex-api-key', 'claude-ap
   expect(parse(saved)['request-retry']).toBe(3);
   act(() => result.current.loadVisualValuesFromYaml(saved));
   expect(result.current.visualDirty).toBe(false);
-  if (family === 'codex-api-key') expect(normalizeConfigResponse(parse(saved)).codexApiKeys?.[0].models?.[0].displayName).toBe('Readable label');
+  if (family === 'codex-api-key') {
+    const model = normalizeConfigResponse(parse(saved)).codexApiKeys?.[0].models?.[0];
+    expect(model?.displayName).toBe('Readable label');
+    expect(model?.maxContextLength).toBe(131072);
+  }
 });
 
 test('old YAML does not acquire model labels or a display-name enable flag', () => {
@@ -36,6 +40,7 @@ test('old YAML does not acquire model labels or a display-name enable flag', () 
   act(() => result.current.loadVisualValuesFromYaml(yaml));
   act(() => result.current.setVisualValues({ requestRetry: '3' }));
   expect(result.current.applyVisualChangesToYaml(yaml)).not.toContain('display-name');
+  expect(result.current.applyVisualChangesToYaml(yaml)).not.toContain('max-context-length');
 });
 
 test.each([en, ru, zhCN, zhTW])('display-name controls include translated labels and searchable field documentation', (locale) => {
