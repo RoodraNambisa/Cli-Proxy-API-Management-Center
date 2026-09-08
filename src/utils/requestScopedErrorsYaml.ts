@@ -1,6 +1,10 @@
 import { isAlias, isMap, isNode, isSeq, visit, type Document, type Node } from 'yaml';
 
 export function readOAuthErrorRulesYaml(document: Document): unknown {
+  return readMergedYamlField(document, ['oauth-request-scoped-errors', 'oauthRequestScopedErrors']);
+}
+
+export function readMergedYamlField(document: Document, fields: string[]): unknown {
   const doc = document.clone();
   doc.setSchema('1.2', { merge: true });
   const find = (
@@ -10,7 +14,7 @@ export function readOAuthErrorRulesYaml(document: Document): unknown {
   ): { value: unknown } | undefined => {
     if (!isNode(value)) return undefined;
     if (ancestors.has(value) || ancestors.size > 100)
-      throw new Error('Recursive error rule YAML merge');
+      throw new Error('Recursive configuration YAML merge');
     const path = new Set(ancestors).add(value);
     if (isAlias(value)) return find(value.resolve(doc), field, path);
     if (!isMap(value)) return undefined;
@@ -23,8 +27,11 @@ export function readOAuthErrorRulesYaml(document: Document): unknown {
     }
     return undefined;
   };
-  const result = find(doc.contents, 'oauth-request-scoped-errors') ??
-    find(doc.contents, 'oauthRequestScopedErrors');
+  let result: ReturnType<typeof find>;
+  for (const field of fields) {
+    result = find(doc.contents, field);
+    if (result) break;
+  }
   return result && isNode(result.value) ? result.value.toJS(doc) : result?.value;
 }
 

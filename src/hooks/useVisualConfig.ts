@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useReducer } from 'react';
 import { preserveRoutingOverrideNodes } from '@/utils/routingYaml';
-import { detachErrorRuleAliases, readOAuthErrorRulesYaml } from '@/utils/requestScopedErrorsYaml';
+import { detachErrorRuleAliases, readMergedYamlField, readOAuthErrorRulesYaml } from '@/utils/requestScopedErrorsYaml';
 import {
   normalizeOAuthRequestScopedErrors,
   serializeOAuthRequestScopedErrors,
@@ -3156,7 +3156,7 @@ export function useVisualConfig() {
       ) ?? {};
       const tls = asRecord(parsed.tls);
       const remoteManagement = asRecord(parsed['remote-management']);
-      const codex = asRecord(parsed.codex);
+      const codex = asRecord(readMergedYamlField(document, ['codex']));
       const codexPassthroughPromptCacheKey =
         codex?.['passthrough-prompt-cache-key'] ?? codex?.passthroughPromptCacheKey;
       if (
@@ -3935,8 +3935,10 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['request-retry'], values.requestRetry);
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
+        const inheritedCodex = asRecord(readMergedYamlField(doc, ['codex']));
         if (
           docHas(doc, ['codex']) ||
+          inheritedCodex ||
           values.codexIdentityConfuse ||
           values.codexPassthroughPromptCacheKey ||
           values.codexStreamBootstrapBuffering ||
@@ -3946,6 +3948,11 @@ export function useVisualConfig() {
           values.codexTurnStatePolicy !== DEFAULT_CODEX_TURN_STATE_POLICY ||
           !values.codexEnforceSoftwareIdentity
         ) {
+          const codexNode = doc.getIn(['codex'], true);
+          detachErrorRuleAliases(doc, codexNode);
+          if (inheritedCodex && (!isMap(codexNode) || codexNode.has('<<'))) {
+            doc.setIn(['codex'], doc.createNode(inheritedCodex));
+          }
           ensureMapInDoc(doc, ['codex']);
           doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
           doc.setIn(['codex', 'passthrough-prompt-cache-key'], values.codexPassthroughPromptCacheKey);
