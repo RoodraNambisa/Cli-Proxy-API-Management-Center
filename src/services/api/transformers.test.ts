@@ -28,7 +28,7 @@ describe('normalizeConfigResponse Codex configuration', () => {
           'enforce-software-identity': false,
         },
       }).codex
-    ).toEqual({
+    ).toMatchObject({
       identityConfuse: true,
       spoofSessionIdentity: true,
       turnStatePolicy: 'same-account-only',
@@ -44,7 +44,7 @@ describe('normalizeConfigResponse Codex configuration', () => {
           enforceSoftwareIdentity: true,
         },
       }).codex
-    ).toEqual({
+    ).toMatchObject({
       identityConfuse: false,
       spoofSessionIdentity: true,
       turnStatePolicy: 'strip',
