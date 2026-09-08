@@ -16,6 +16,7 @@ import type { OAuthModelAliasEntry } from '@/types';
 import { parseTimestampMs } from '@/utils/timestamp';
 import { AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS, AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
 import { mapWithConcurrency } from '@/utils/concurrency';
+import { normalizeRequestScopedErrors, serializeRequestScopedErrors } from '@/utils/requestScopedErrors';
 
 type StatusError = { status?: number };
 type RawHeaders = Record<string, unknown> | undefined;
@@ -28,6 +29,7 @@ export type AuthFileFieldsPatch = {
   headers?: Record<string, string>;
   priority?: number | null;
   weight?: number | null;
+  request_scoped_errors?: Record<string, unknown>[] | null;
   note?: string;
   using_api?: boolean;
   websockets?: boolean;
@@ -38,6 +40,11 @@ export type AuthFileFieldsPatch = {
   codex_fingerprint_mode?: CodexFingerprintMode;
 };
 export type XaiAuthFileFieldsPatch = Partial<Pick<AuthFileFieldsPatch, XaiAuthFileField>>;
+
+const serializeAuthFileFields = (fields: AuthFileFieldsPatch): AuthFileFieldsPatch =>
+  Object.prototype.hasOwnProperty.call(fields, 'request_scoped_errors')
+    ? { ...fields, request_scoped_errors: serializeRequestScopedErrors(normalizeRequestScopedErrors(fields.request_scoped_errors)) ?? null }
+    : fields;
 export type AuthFileFieldsPatchResponse = { status: string };
 export type AuthFileBatchFailure = { name: string; status?: number; error: string };
 export type AuthFileFieldsBatchResult = {
@@ -970,7 +977,7 @@ export const authFilesApi = {
   patchFields: (name: string, fields: AuthFileFieldsPatch) =>
     apiClient.patch<AuthFileFieldsPatchResponse>('/auth-files/fields', {
       name,
-      ...fields,
+      ...serializeAuthFileFields(fields),
     }),
 
   patchFieldsBatch: async (
@@ -981,7 +988,7 @@ export const authFilesApi = {
     const response = await apiClient.requestRaw({
       url: '/auth-files/fields',
       method: 'PATCH',
-      data: { names: requestedNames, fields },
+      data: { names: requestedNames, fields: serializeAuthFileFields(fields) },
       timeout: AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS,
       validateStatus: (status) => status === 200 || status === 207,
     });

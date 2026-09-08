@@ -4,6 +4,8 @@ import {
   serializeCredentialWeight,
 } from '@/utils/credentialWeight';
 import { useState } from 'react';
+import type { RequestScopedErrorRule } from '@/types/requestScopedErrors';
+import { normalizeRequestScopedErrors, serializeRequestScopedErrors, validateRequestScopedErrorRule } from '@/utils/requestScopedErrors';
 import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
 import type { AuthFileItem, CodexFingerprintMode } from '@/types';
@@ -33,6 +35,7 @@ export type PrefixProxyEditorField =
   | 'proxyUrl'
   | 'priority'
   | 'weight'
+  | 'requestScopedErrors'
   | 'excludedModelsText'
   | 'disableCooling'
   | 'websockets'
@@ -42,7 +45,7 @@ export type PrefixProxyEditorField =
   | 'loginMethod'
   | 'api798Url';
 
-export type PrefixProxyEditorFieldValue = string | boolean;
+export type PrefixProxyEditorFieldValue = string | boolean | RequestScopedErrorRule[];
 
 export type PrefixProxyEditorState = {
   fileName: string;
@@ -61,6 +64,8 @@ export type PrefixProxyEditorState = {
   priority: string;
   weight: string;
   weightTouched: boolean;
+  requestScopedErrors: RequestScopedErrorRule[];
+  requestScopedErrorsTouched: boolean;
   excludedModelsText: string;
   disableCooling: string;
   websockets: boolean;
@@ -127,6 +132,12 @@ export const buildAuthFileFieldsPatch = (
   }
   if (!jsonValuesEqual(previous.weight, next.weight)) {
     patch.weight = serializeCredentialWeight(normalizeCredentialWeight(next.weight)) ?? null;
+  }
+  if (!jsonValuesEqual(previous.request_scoped_errors, next.request_scoped_errors) ||
+    !jsonValuesEqual(previous['request-scoped-errors'], next['request-scoped-errors'])) {
+    const value = Object.prototype.hasOwnProperty.call(next, 'request_scoped_errors')
+      ? next.request_scoped_errors : next['request-scoped-errors'];
+    patch.request_scoped_errors = serializeRequestScopedErrors(normalizeRequestScopedErrors(value)) ?? null;
   }
   if (!jsonValuesEqual(previous.priority, next.priority)) {
     patch.priority = Object.prototype.hasOwnProperty.call(next, 'priority')
@@ -204,6 +215,10 @@ const buildPrefixProxyUpdatedText = (
   if (editor.weightTouched) {
     if (editor.weight.trim()) next.weight = Number(editor.weight);
     else delete next.weight;
+  }
+  if (editor.requestScopedErrorsTouched) {
+    next.request_scoped_errors = serializeRequestScopedErrors(editor.requestScopedErrors) ?? [];
+    delete next['request-scoped-errors'];
   }
   const parsedPriority = parsePriorityValue(editor.priority);
   if (parsedPriority !== undefined) {
@@ -284,6 +299,7 @@ export function useAuthFilesPrefixProxyEditor(
   );
   const hasBlockingValidationError = Boolean(
     hasBlockingWeightError ||
+    prefixProxyEditor?.requestScopedErrors.some((rule) => validateRequestScopedErrorRule(rule)) ||
     (prefixProxyEditor?.headersTouched && prefixProxyEditor.headersError) ||
     (prefixProxyEditor?.isChatGptWebFile &&
       prefixProxyEditor.loginMethod === 'api798' &&
@@ -341,6 +357,8 @@ export function useAuthFilesPrefixProxyEditor(
       priority: '',
       weight: '',
       weightTouched: false,
+      requestScopedErrors: [],
+      requestScopedErrorsTouched: false,
       excludedModelsText: '',
       disableCooling: '',
       websockets: false,
@@ -397,6 +415,10 @@ export function useAuthFilesPrefixProxyEditor(
         json.websockets = normalizedWebsockets;
       }
       const originalText = JSON.stringify(json);
+      const requestScopedErrors = normalizeRequestScopedErrors(
+        Object.prototype.hasOwnProperty.call(json, 'request_scoped_errors')
+          ? json.request_scoped_errors : json['request-scoped-errors']
+      ) ?? [];
       const prefix = typeof json.prefix === 'string' ? json.prefix : '';
       const proxyUrl = typeof json.proxy_url === 'string' ? json.proxy_url : '';
       const priority = parsePriorityValue(json.priority);
@@ -429,6 +451,8 @@ export function useAuthFilesPrefixProxyEditor(
           priority: priority !== undefined ? String(priority) : '',
           weight: json.weight === undefined ? '' : String(normalizeCredentialWeight(json.weight) ?? ''),
           weightTouched: false,
+          requestScopedErrors,
+          requestScopedErrorsTouched: false,
           excludedModelsText: excludedModels.join('\n'),
           disableCooling:
             disableCoolingValue === undefined ? '' : disableCoolingValue ? 'true' : 'false',
@@ -462,6 +486,8 @@ export function useAuthFilesPrefixProxyEditor(
     setPrefixProxyEditor((prev) => {
       if (!prev) return prev;
       if (field === 'prefix') return { ...prev, prefix: String(value) };
+      if (field === 'requestScopedErrors') return Array.isArray(value)
+        ? { ...prev, requestScopedErrors: value, requestScopedErrorsTouched: true } : prev;
       if (field === 'proxyUrl') return { ...prev, proxyUrl: String(value) };
       if (field === 'weight') return { ...prev, weight: String(value), weightTouched: true };
       if (field === 'priority') return { ...prev, priority: String(value) };
@@ -494,6 +520,11 @@ export function useAuthFilesPrefixProxyEditor(
   };
 
   const handlePrefixProxySave = async () => {
+    const ruleIssue = prefixProxyEditor?.requestScopedErrors.map(validateRequestScopedErrorRule).find(Boolean);
+    if (ruleIssue) {
+      showNotification(t(`request_scoped_errors.invalid_${ruleIssue}`), 'error');
+      return;
+    }
     if (hasBlockingWeightError) {
       showNotification(t('ai_providers.weight_invalid'), 'error');
       return;
