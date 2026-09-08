@@ -381,6 +381,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['subagent', 'fork', '子代理', '分叉', 'подагент'],
   },
   {
+    id: 'config-session-affinity-lcp',
+    pageId: 'global-network',
+    labelKey: 'config_management.visual.sections.network.session_affinity_lcp',
+    yamlKeys: ['routing.session-affinity-lcp'],
+    aliases: ['LCP', 'common prefix', '历史公共前缀', 'общий префикс'],
+  },
+  {
     id: 'config-force-model-prefix',
     pageId: 'global-network',
     labelKey: 'config_management.visual.sections.network.force_model_prefix',

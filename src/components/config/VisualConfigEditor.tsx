@@ -1237,6 +1237,7 @@ export function VisualConfigEditor({
     'routingSessionAffinity',
     'routingSessionAffinityAcrossPriorities',
     'routingSessionAffinitySubagents',
+    'routingSessionAffinityLCP',
     'routingSessionAffinityFailover',
     'routingSessionAffinityTTL',
     'forceModelPrefix',
@@ -4929,6 +4930,7 @@ export function VisualConfigEditor({
                       'config-session-affinity',
                       'config-session-affinity-across-priorities',
                       'config-session-affinity-subagents',
+                      'config-session-affinity-lcp',
                       'config-ws-auth',
                     ]}
                     dirty={sessionSettingsDirty}
@@ -4988,6 +4990,15 @@ export function VisualConfigEditor({
                           onChange={(routingSessionAffinitySubagents) =>
                             onChange({ routingSessionAffinitySubagents })
                           }
+                        />
+                      </div>
+                      <div id="config-session-affinity-lcp" className={styles.pageGroup}>
+                        <ToggleRow
+                          title={t('config_management.visual.sections.network.session_affinity_lcp')}
+                          description={t('config_management.visual.sections.network.session_affinity_lcp_desc')}
+                          checked={values.routingSessionAffinityLCP}
+                          disabled={disabled}
+                          onChange={(routingSessionAffinityLCP) => onChange({ routingSessionAffinityLCP })}
                         />
                       </div>
                       <Input
