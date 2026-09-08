@@ -1,4 +1,5 @@
 import { normalizeCredentialWeight } from '@/utils/credentialWeight';
+import { codexMediaField, normalizeCodexLiveMedia } from '@/utils/codexLiveMedia';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
 import { normalizeModelContextLength } from '@/utils/modelContextLength';
 import { normalizeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
@@ -945,6 +946,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     }
     config.codex = {
       liveEnabled: liveEnabled ?? false,
+      liveMediaRelay: normalizeCodexLiveMedia(codexMediaField(codex, 'live-media-relay', 'liveMediaRelay')),
       optimizeMultiAgentV2: normalizeBoolean(
         codex['optimize-multi-agent-v2'] ?? codex.optimizeMultiAgentV2
       ),

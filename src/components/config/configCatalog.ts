@@ -123,6 +123,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     dirtyPrefixes: [
       'codexCustomModels',
       'codexLiveEnabled',
+      'codexLiveMediaRelay',
       'codexIdentityConfuse',
       'codexPassthroughPromptCacheKey',
       'codexStreamBootstrapBuffering',

@@ -4,6 +4,7 @@ import type {
   CodexTurnStatePolicy,
 } from './config';
 import type { OAuthRequestScopedErrors } from './requestScopedErrors';
+import { DEFAULT_CODEX_LIVE_MEDIA, type CodexLiveMediaVisualConfig, type CodexLiveMediaValidationCode } from './codexLiveMedia';
 import {
   DEFAULT_CODEX_FINGERPRINT_MODE,
   DEFAULT_CODEX_SESSION_IDENTITY_POOL_SIZE,
@@ -77,6 +78,7 @@ export type VisualConfigFieldPath =
   | 'streaming.nonstreamKeepaliveInterval';
 
 export type VisualConfigValidationErrorCode =
+  | CodexLiveMediaValidationCode
   | 'port_range'
   | 'management_access_path'
   | 'http_status_range'
@@ -315,6 +317,7 @@ export type VisualConfigValues = {
   forceModelPrefix: boolean;
   codexIdentityConfuse: boolean;
   codexLiveEnabled: boolean;
+  codexLiveMediaRelay: CodexLiveMediaVisualConfig;
   codexPassthroughPromptCacheKey: boolean;
   codexStreamBootstrapBuffering: boolean;
   codexOrphanDelegationCompatibility: boolean;
@@ -439,6 +442,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   forceModelPrefix: false,
   codexIdentityConfuse: false,
   codexLiveEnabled: false,
+  codexLiveMediaRelay: DEFAULT_CODEX_LIVE_MEDIA,
   codexPassthroughPromptCacheKey: false,
   codexStreamBootstrapBuffering: false,
   codexOrphanDelegationCompatibility: false,

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useReducer } from 'react';
+import { readCodexLiveMediaYaml, codexLiveMediaErrors, codexLiveMediaEqual, writeCodexLiveMediaYaml } from '@/utils/codexLiveMedia';
 import { preserveRoutingOverrideNodes } from '@/utils/routingYaml';
 import { detachErrorRuleAliases, readMergedYamlField, readOAuthErrorRulesYaml } from '@/utils/requestScopedErrorsYaml';
 import {
@@ -1699,6 +1700,7 @@ export function getVisualConfigValidationErrors(
     ...routingPriorityOverrideErrors,
     ...fixedErrorCooldownErrors,
     ...errorResponseRewriteErrors,
+    ...codexLiveMediaErrors(values.codexLiveMediaRelay),
     ...nonRetryableErrorErrors,
     ...oauthRequestScopedErrorErrors,
     ...authModelExclusionErrors,
@@ -2377,6 +2379,9 @@ function getNextDirtyFields(
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexLiveEnabled')) {
     updateDirty('codexLiveEnabled', nextValues.codexLiveEnabled === baselineValues.codexLiveEnabled);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexLiveMediaRelay')) {
+    updateDirty('codexLiveMediaRelay', codexLiveMediaEqual(nextValues.codexLiveMediaRelay, baselineValues.codexLiveMediaRelay));
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexOptimizeMultiAgentV2')) {
     updateDirty(
@@ -3393,6 +3398,7 @@ export function useVisualConfig() {
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
         codexLiveEnabled: codexLiveEnabled ?? false,
+        codexLiveMediaRelay: readCodexLiveMediaYaml(yamlContent),
         codexPassthroughPromptCacheKey: codexPassthroughPromptCacheKey ?? false,
         codexStreamBootstrapBuffering: codexStreamBootstrapBuffering ?? false,
         codexOrphanDelegationCompatibility: codexOrphanDelegationCompatibility ?? false,
@@ -3945,10 +3951,12 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
         const inheritedCodex = asRecord(readMergedYamlField(doc, ['codex']));
+        const mediaChanged = !codexLiveMediaEqual(values.codexLiveMediaRelay, baselineValues.codexLiveMediaRelay);
         if (
           docHas(doc, ['codex']) ||
           inheritedCodex ||
           values.codexLiveEnabled ||
+          mediaChanged ||
           values.codexIdentityConfuse ||
           values.codexPassthroughPromptCacheKey ||
           values.codexStreamBootstrapBuffering ||
@@ -3966,6 +3974,7 @@ export function useVisualConfig() {
           ensureMapInDoc(doc, ['codex']);
           doc.setIn(['codex', 'live-enabled'], values.codexLiveEnabled);
           doc.deleteIn(['codex', 'liveEnabled']);
+          if (mediaChanged) writeCodexLiveMediaYaml(doc, values.codexLiveMediaRelay);
           doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
           doc.setIn(['codex', 'passthrough-prompt-cache-key'], values.codexPassthroughPromptCacheKey);
           doc.deleteIn(['codex', 'passthroughPromptCacheKey']);
@@ -4844,7 +4853,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [baselineValues.apiKeysText, baselineValues.errorResponseRewrites, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [baselineValues.apiKeysText, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {

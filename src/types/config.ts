@@ -5,6 +5,7 @@
 
 import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from './provider';
 import type { OAuthRequestScopedErrors } from './requestScopedErrors';
+import type { CodexLiveMediaConfig } from './codexLiveMedia';
 
 export interface QuotaExceededConfig {
   antigravityCredits?: boolean;
@@ -220,6 +221,7 @@ export const normalizeCodexTurnStatePolicy = (value: unknown): CodexTurnStatePol
 
 export interface CodexConfig {
   liveEnabled?: boolean;
+  liveMediaRelay?: CodexLiveMediaConfig;
   optimizeMultiAgentV2?: boolean;
   passthroughPromptCacheKey?: boolean;
   streamBootstrapBuffering?: boolean;
