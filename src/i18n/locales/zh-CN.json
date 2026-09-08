@@ -29,6 +29,29 @@
       "continue-and-cooldown": "继续并冷却"
     }
   },
+  "model_thinking": {
+    "title": "推理能力",
+    "inherit": "继承现有默认",
+    "custom": "自定义声明",
+    "hint": "未设置时使用模型目录或兼容提供者的原有默认。只声明上游已经支持的能力；此处设置不会增加模型的实际能力。",
+    "levels": "支持的推理档位",
+    "min": "最低推理预算",
+    "max": "最高推理预算",
+    "budget_hint": "预算使用提供者原生 Token 单位；0/0 表示不声明预算范围。",
+    "zero": "允许关闭推理",
+    "dynamic": "允许动态推理",
+    "derived_hint": "选择 none 或 auto 档位时，会自动声明关闭或动态推理支持。",
+    "reset": "恢复继承",
+    "invalid": "预算须满足 0 ≤ 最低值 ≤ 最高值 ≤ 2147483647；档位请选择列表中的值。",
+    "level_none": "关闭",
+    "level_minimal": "最低",
+    "level_low": "低",
+    "level_medium": "中",
+    "level_high": "高",
+    "level_xhigh": "超高",
+    "level_max": "最高",
+    "level_auto": "自动"
+  },
   "common": {
     "login": "登录",
     "logout": "登出",

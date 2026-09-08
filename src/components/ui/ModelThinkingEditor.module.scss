@@ -1,0 +1,24 @@
+.editor {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+
+  summary { cursor: pointer; overflow-wrap: anywhere; }
+}
+
+.status { margin-left: 8px; font-size: 12px; opacity: 0.7; }
+.content { display: grid; gap: 12px; padding-top: 12px; }
+.content p { margin: 0; }
+.levels { min-width: 0; margin: 0; padding: 0; border: 0; }
+.levels legend { margin-bottom: 8px; padding: 0; font-weight: 600; }
+.choices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.choices code { font-size: 12px; opacity: 0.7; }
+.budgets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.flags { display: flex; flex-wrap: wrap; gap: 12px; }
+.error { color: var(--error-color, #c65746); font-size: 13px; }
+
+@media (max-width: 600px) {
+  .choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .budgets { grid-template-columns: 1fr; }
+}

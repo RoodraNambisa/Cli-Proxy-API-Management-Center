@@ -29,6 +29,29 @@
       "continue-and-cooldown": "繼續並冷卻"
     }
   },
+  "model_thinking": {
+    "title": "推理能力",
+    "inherit": "繼承現有預設",
+    "custom": "自訂宣告",
+    "hint": "未設定時使用模型目錄或相容提供者的原有預設。只宣告上游已支援的能力；此處設定不會增加模型的實際能力。",
+    "levels": "支援的推理等級",
+    "min": "最低推理預算",
+    "max": "最高推理預算",
+    "budget_hint": "預算使用提供者原生 Token 單位；0/0 表示不宣告預算範圍。",
+    "zero": "允許關閉推理",
+    "dynamic": "允許動態推理",
+    "derived_hint": "選擇 none 或 auto 等級時，會自動宣告關閉或動態推理支援。",
+    "reset": "恢復繼承",
+    "invalid": "預算須符合 0 ≤ 最低值 ≤ 最高值 ≤ 2147483647；等級請選擇清單中的值。",
+    "level_none": "關閉",
+    "level_minimal": "最低",
+    "level_low": "低",
+    "level_medium": "中",
+    "level_high": "高",
+    "level_xhigh": "超高",
+    "level_max": "最高",
+    "level_auto": "自動"
+  },
   "common": {
     "login": "登入",
     "logout": "登出",

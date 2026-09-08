@@ -29,6 +29,29 @@
       "continue-and-cooldown": "Continue and cool down"
     }
   },
+  "model_thinking": {
+    "title": "Reasoning capability",
+    "inherit": "Inherited defaults",
+    "custom": "Custom declaration",
+    "hint": "Omitting this override uses the model catalog or existing compatibility provider defaults. Declare only capabilities the upstream already supports.",
+    "levels": "Supported reasoning levels",
+    "min": "Minimum reasoning budget",
+    "max": "Maximum reasoning budget",
+    "budget_hint": "Budgets use native provider token units; 0/0 declares no budget range.",
+    "zero": "Allow disabling reasoning",
+    "dynamic": "Allow dynamic reasoning",
+    "derived_hint": "Selecting none or auto also declares support for disabling or dynamic reasoning.",
+    "reset": "Restore inheritance",
+    "invalid": "Budgets must satisfy 0 ≤ minimum ≤ maximum ≤ 2147483647; select levels from the list.",
+    "level_none": "Disabled",
+    "level_minimal": "Minimal",
+    "level_low": "Low",
+    "level_medium": "Medium",
+    "level_high": "High",
+    "level_xhigh": "Extra high",
+    "level_max": "Maximum",
+    "level_auto": "Automatic"
+  },
   "common": {
     "login": "Login",
     "logout": "Logout",
