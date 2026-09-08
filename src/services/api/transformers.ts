@@ -1,6 +1,6 @@
 import { normalizeCredentialWeight } from '@/utils/credentialWeight';
 import { normalizeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
-import { normalizeRequestScopedErrors } from '@/utils/requestScopedErrors';
+import { normalizeOAuthRequestScopedErrors, normalizeRequestScopedErrors } from '@/utils/requestScopedErrors';
 import type {
   ApiKeyEntry,
   CloakConfig,
@@ -828,6 +828,11 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   );
   config.nonRetryableErrors = normalizeNonRetryableErrors(
     raw['non-retryable-errors'] ?? raw.nonRetryableErrors
+  );
+  config.oauthRequestScopedErrors = normalizeOAuthRequestScopedErrors(
+    Object.prototype.hasOwnProperty.call(raw, 'oauth-request-scoped-errors')
+      ? raw['oauth-request-scoped-errors']
+      : raw.oauthRequestScopedErrors
   );
   config.authModelExclusions = normalizeAuthModelExclusions(
     raw['auth-model-exclusions'] ?? raw.authModelExclusions

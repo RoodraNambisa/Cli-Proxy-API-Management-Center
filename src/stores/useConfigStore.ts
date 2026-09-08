@@ -42,6 +42,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'no-cooldown-status-codes',
   'fixed-error-cooldowns',
   'error-response-rewrites',
+  'oauth-request-scoped-errors',
   'quota-exceeded',
   'usage-statistics-enabled',
   'usage-statistics-persistence-enabled',
@@ -105,6 +106,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.fixedErrorCooldowns;
     case 'error-response-rewrites':
       return config.errorResponseRewrites;
+    case 'oauth-request-scoped-errors':
+      return config.oauthRequestScopedErrors;
     case 'quota-exceeded':
       return config.quotaExceeded;
     case 'usage-statistics-enabled':
@@ -310,6 +313,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'error-response-rewrites':
           nextConfig.errorResponseRewrites = value as Config['errorResponseRewrites'];
+          break;
+        case 'oauth-request-scoped-errors':
+          nextConfig.oauthRequestScopedErrors = value as Config['oauthRequestScopedErrors'];
           break;
         case 'quota-exceeded':
           nextConfig.quotaExceeded = value as Config['quotaExceeded'];

@@ -4,6 +4,7 @@
  */
 
 import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from './provider';
+import type { OAuthRequestScopedErrors } from './requestScopedErrors';
 
 export interface QuotaExceededConfig {
   antigravityCredits?: boolean;
@@ -279,6 +280,7 @@ export interface Config {
   fixedErrorCooldowns?: FixedErrorCooldownConfig[];
   errorResponseRewrites?: ErrorResponseRewriteConfig[];
   nonRetryableErrors?: NonRetryableErrorConfig[];
+  oauthRequestScopedErrors?: OAuthRequestScopedErrors;
   authModelExclusions?: AuthModelExclusionConfig[];
   disabledImageGenerationToolFallback?: boolean;
   disabledImageGenerationToolAction?: DisabledImageGenerationToolAction | string;
@@ -338,6 +340,7 @@ export type RawConfigSection =
   | 'no-cooldown-status-codes'
   | 'fixed-error-cooldowns'
   | 'error-response-rewrites'
+  | 'oauth-request-scoped-errors'
   | 'quota-exceeded'
   | 'usage-statistics-enabled'
   | 'usage-statistics-persistence-enabled'
