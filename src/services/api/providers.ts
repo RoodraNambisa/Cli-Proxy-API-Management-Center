@@ -1,5 +1,6 @@
 import { serializeCredentialWeight } from '@/utils/credentialWeight';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
+import { serializeModelContextLength } from '@/utils/modelContextLength';
 import { serializeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { serializeRequestScopedErrors } from '@/utils/requestScopedErrors';
 import type { RequestScopedErrorRule } from '@/types/requestScopedErrors';
@@ -47,11 +48,13 @@ const serializeModelAliases = (models?: ModelAlias[]) =>
         .map((model) => {
           if (!model?.name) return null;
           const payload: Record<string, unknown> = { ...model, name: model.name };
-          for (const key of ['alias', 'displayName', 'display-name', 'testModel', 'test-model']) {
+          for (const key of ['alias', 'displayName', 'display-name', 'maxContextLength', 'max-context-length', 'testModel', 'test-model']) {
             delete payload[key];
           }
           const displayName = normalizeModelDisplayName(model.displayName);
           if (displayName !== undefined) payload['display-name'] = displayName;
+          const maxContextLength = serializeModelContextLength(model.maxContextLength);
+          if (maxContextLength !== undefined) payload['max-context-length'] = maxContextLength;
           if (model.alias && model.alias !== model.name) {
             payload.alias = model.alias;
           }

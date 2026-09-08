@@ -1,5 +1,6 @@
 import { normalizeCredentialWeight } from '@/utils/credentialWeight';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
+import { normalizeModelContextLength } from '@/utils/modelContextLength';
 import { normalizeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { normalizeOAuthRequestScopedErrors, normalizeRequestScopedErrors } from '@/utils/requestScopedErrors';
 import type {
@@ -488,12 +489,18 @@ const normalizeModelAliases = (models: unknown): ModelAlias[] => {
           : item.displayName
       );
       const priority = item.priority ?? item['priority'];
+      const maxContextLength = normalizeModelContextLength(
+        Object.prototype.hasOwnProperty.call(item, 'max-context-length')
+          ? item['max-context-length']
+          : item.maxContextLength
+      );
       const testModel = item['test-model'] ?? item.testModel;
       const entry: ModelAlias = { ...item, name: String(name) };
-      for (const key of ['id', 'model', 'alias', 'display_name', 'display-name', 'displayName', 'priority', 'test-model', 'testModel']) {
+      for (const key of ['id', 'model', 'alias', 'display_name', 'display-name', 'displayName', 'max-context-length', 'maxContextLength', 'priority', 'test-model', 'testModel']) {
         delete entry[key];
       }
       if (displayName !== undefined) entry.displayName = displayName;
+      if (maxContextLength !== undefined) entry.maxContextLength = maxContextLength;
       if (alias && alias !== name) {
         entry.alias = String(alias);
       }

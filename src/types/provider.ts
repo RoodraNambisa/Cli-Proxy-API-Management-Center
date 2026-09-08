@@ -6,6 +6,7 @@ export interface ModelAlias {
   name: string;
   alias?: string;
   displayName?: string;
+  maxContextLength?: number;
   priority?: number;
   testModel?: string;
   [key: string]: unknown;
