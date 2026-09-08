@@ -86,6 +86,9 @@
     "custom_headers_value_placeholder": "Header value",
     "model_name_placeholder": "Model name, e.g. claude-3-5-sonnet-20241022",
     "model_alias_placeholder": "Model alias (optional)",
+    "model_display_name_label": "Display name",
+    "model_display_name_placeholder": "Optional client-facing label",
+    "model_display_name_hint": "display-name changes the label shown to clients. It does not change the upstream model or routing alias. Leave blank to inherit the catalog name; updates apply to later catalog queries.",
     "invalid_provider_index": "Invalid provider index.",
     "unsaved_changes_title": "Unsaved changes",
     "unsaved_changes_message": "You have unsaved changes. Leaving now will discard them. Do you want to leave?"

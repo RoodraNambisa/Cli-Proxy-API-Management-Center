@@ -86,6 +86,9 @@
     "custom_headers_value_placeholder": "Header 值",
     "model_name_placeholder": "模型名稱，例如 claude-3-5-sonnet-20241022",
     "model_alias_placeholder": "模型別名（選填）",
+    "model_display_name_label": "顯示名稱",
+    "model_display_name_placeholder": "選填，用戶端顯示的名稱",
+    "model_display_name_hint": "display-name 只修改用戶端看到的名稱，不改變上游模型或路由別名。留空繼承目錄名稱；儲存後對後續目錄查詢生效。",
     "invalid_provider_index": "無效的供應商索引。",
     "unsaved_changes_title": "未儲存的變更",
     "unsaved_changes_message": "你有未儲存的變更，離開後將遺失這些變更。確定要離開嗎？"

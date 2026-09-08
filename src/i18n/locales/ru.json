@@ -86,6 +86,9 @@
     "custom_headers_value_placeholder": "Значение заголовка",
     "model_name_placeholder": "Имя модели, напр. claude-3-5-sonnet-20241022",
     "model_alias_placeholder": "Псевдоним модели (необязательно)",
+    "model_display_name_label": "Отображаемое имя",
+    "model_display_name_placeholder": "Необязательное имя для клиента",
+    "model_display_name_hint": "display-name меняет имя, которое видит клиент, сохраняя исходную модель и псевдоним маршрутизации. Пустое поле наследует имя каталога; изменения действуют для последующих запросов каталога.",
     "invalid_provider_index": "Неверный индекс провайдера.",
     "unsaved_changes_title": "Несохранённые изменения",
     "unsaved_changes_message": "У вас есть несохранённые изменения. Если вы уйдёте, они будут потеряны. Выйти?"

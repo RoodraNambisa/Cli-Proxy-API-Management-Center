@@ -1,4 +1,5 @@
-import { Fragment } from 'react';
+import { Fragment, useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { IconX } from './icons';
 import type { ModelEntry } from './modelInputListUtils';
@@ -10,6 +11,7 @@ interface ModelInputListProps {
   disabled?: boolean;
   namePlaceholder?: string;
   aliasPlaceholder?: string;
+  showDisplayName?: boolean;
   hideAddButton?: boolean;
   onAdd?: () => void;
   className?: string;
@@ -27,6 +29,7 @@ export function ModelInputList({
   disabled = false,
   namePlaceholder = 'model-name',
   aliasPlaceholder = 'alias (optional)',
+  showDisplayName = false,
   hideAddButton = false,
   onAdd,
   className = '',
@@ -36,12 +39,14 @@ export function ModelInputList({
   removeButtonTitle = 'Remove',
   removeButtonAriaLabel = 'Remove',
 }: ModelInputListProps) {
+  const { t } = useTranslation();
+  const displayNameId = useId();
   const currentEntries = entries.length ? entries : [{ name: '', alias: '' }];
   const containerClassName = ['header-input-list', className].filter(Boolean).join(' ');
   const inputClassNames = ['input', inputClassName].filter(Boolean).join(' ');
   const rowClassNames = ['header-input-row', rowClassName].filter(Boolean).join(' ');
 
-  const updateEntry = (index: number, field: 'name' | 'alias', value: string) => {
+  const updateEntry = (index: number, field: 'name' | 'alias' | 'displayName', value: string) => {
     const next = currentEntries.map((entry, idx) => (idx === index ? { ...entry, [field]: value } : entry));
     onChange(next);
   };
@@ -91,8 +96,25 @@ export function ModelInputList({
               <IconX size={14} />
             </Button>
           </div>
+          {showDisplayName && (
+            <div className="form-group">
+              <label htmlFor={`${displayNameId}-${index}`}>
+                {t('common.model_display_name_label')} {index + 1}
+              </label>
+              <input
+                id={`${displayNameId}-${index}`}
+                className={inputClassNames}
+                placeholder={t('common.model_display_name_placeholder')}
+                aria-describedby={`${displayNameId}-hint`}
+                value={entry.displayName ?? ''}
+                onChange={(e) => updateEntry(index, 'displayName', e.target.value)}
+                disabled={disabled}
+              />
+            </div>
+          )}
         </Fragment>
       ))}
+      {showDisplayName && <div id={`${displayNameId}-hint`} className="hint">{t('common.model_display_name_hint')}</div>}
       {!hideAddButton && addLabel && (
         <Button variant="secondary" size="sm" onClick={addEntry} disabled={disabled} className="align-start">
           {addLabel}

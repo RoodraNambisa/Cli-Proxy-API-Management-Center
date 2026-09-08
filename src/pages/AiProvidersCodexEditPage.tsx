@@ -23,7 +23,7 @@ import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import type { ProviderKeyConfig } from '@/types';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
 import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
-import { entriesToModels, modelsToEntries } from '@/components/ui/modelInputListUtils';
+import { entriesToModels, modelsToEntries, type ModelEntry } from '@/components/ui/modelInputListUtils';
 import { excludedModelsToText, parseExcludedModels } from '@/components/providers/utils';
 import type { ProviderFormState } from '@/components/providers';
 import type { ModelInfo } from '@/utils/models';
@@ -58,15 +58,15 @@ const getErrorMessage = (err: unknown) => {
   return '';
 };
 
-const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) =>
-  (entries ?? []).reduce<Array<{ name: string; alias: string }>>((acc, entry) => {
+const normalizeModelEntries = (entries: ModelEntry[]) =>
+  (entries ?? []).reduce<ModelEntry[]>((acc, entry) => {
     const name = String(entry?.name ?? '').trim();
     let alias = String(entry?.alias ?? '').trim();
     if (name && alias === name) {
       alias = '';
     }
     if (!name && !alias) return acc;
-    acc.push({ name, alias });
+    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined });
     return acc;
   }, []);
 
@@ -297,11 +297,11 @@ export function AiProvidersCodexEditPage() {
 
       let addedCount = 0;
       setForm((prev) => {
-        const mergedMap = new Map<string, { name: string; alias: string }>();
+        const mergedMap = new Map<string, ModelEntry>();
         prev.modelEntries.forEach((entry) => {
           const name = entry.name.trim();
           if (!name) return;
-          mergedMap.set(name.toLowerCase(), { name, alias: entry.alias?.trim() || '' });
+          mergedMap.set(name.toLowerCase(), { ...entry, name, alias: entry.alias?.trim() || '' });
         });
 
         selectedModels.forEach((model) => {
@@ -683,6 +683,7 @@ export function AiProvidersCodexEditPage() {
               <div className={styles.sectionHint}>{t('ai_providers.codex_models_hint')}</div>
 
               <ModelInputList
+                showDisplayName
                 entries={form.modelEntries}
                 onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
                 namePlaceholder={t('common.model_name_placeholder')}
