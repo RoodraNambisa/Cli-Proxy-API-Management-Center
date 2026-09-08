@@ -1,6 +1,7 @@
 import { serializeCredentialWeight } from '@/utils/credentialWeight';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
 import { serializeModelContextLength } from '@/utils/modelContextLength';
+import { serializeModelThinking } from '@/utils/modelThinking';
 import { serializeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { serializeRequestScopedErrors } from '@/utils/requestScopedErrors';
 import type { RequestScopedErrorRule } from '@/types/requestScopedErrors';
@@ -57,6 +58,9 @@ const serializeModelAliases = (models?: ModelAlias[]) =>
           if (displayName !== undefined) payload['display-name'] = displayName;
           const maxContextLength = serializeModelContextLength(model.maxContextLength);
           if (maxContextLength !== undefined) payload['max-context-length'] = maxContextLength;
+          const thinking = serializeModelThinking(model.thinking);
+          delete payload.thinking;
+          if (thinking !== undefined) payload.thinking = thinking;
           if (model.alias && model.alias !== model.name) {
             payload.alias = model.alias;
           }

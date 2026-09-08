@@ -1,12 +1,14 @@
 /** AI provider configuration types. */
 
 import type { RequestScopedErrorRule } from './requestScopedErrors';
+import type { ModelThinking } from './modelThinking';
 
 export interface ModelAlias {
   name: string;
   alias?: string;
   displayName?: string;
   maxContextLength?: number;
+  thinking?: ModelThinking;
   priority?: number;
   testModel?: string;
   [key: string]: unknown;

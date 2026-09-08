@@ -1,5 +1,6 @@
 import type { ModelAlias } from '@/types';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
+import { normalizeModelThinking } from '@/utils/modelThinking';
 
 export interface ModelEntry extends ModelAlias {
   alias: string;
@@ -9,11 +10,13 @@ export const modelsToEntries = (models?: ModelAlias[]): ModelEntry[] => {
   if (!Array.isArray(models) || models.length === 0) {
     return [{ name: '', alias: '' }];
   }
-  return models.map((model) => ({
-    ...model,
-    name: model.name || '',
-    alias: model.alias || ''
-  }));
+  return models.map((model) => {
+    const entry = { ...model, name: model.name || '', alias: model.alias || '' };
+    delete entry.thinking;
+    const thinking = normalizeModelThinking(model.thinking);
+    if (thinking !== undefined) entry.thinking = thinking;
+    return entry;
+  });
 };
 
 export const entriesToModels = (entries: ModelEntry[]): ModelAlias[] => {

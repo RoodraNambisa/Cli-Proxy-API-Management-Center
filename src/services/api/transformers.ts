@@ -2,6 +2,7 @@ import { normalizeCredentialWeight } from '@/utils/credentialWeight';
 import { codexMediaField, normalizeCodexLiveMedia } from '@/utils/codexLiveMedia';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
 import { normalizeModelContextLength } from '@/utils/modelContextLength';
+import { normalizeModelThinking } from '@/utils/modelThinking';
 import { normalizeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { normalizeOAuthRequestScopedErrors, normalizeRequestScopedErrors } from '@/utils/requestScopedErrors';
 import type {
@@ -502,6 +503,9 @@ const normalizeModelAliases = (models: unknown): ModelAlias[] => {
       }
       if (displayName !== undefined) entry.displayName = displayName;
       if (maxContextLength !== undefined) entry.maxContextLength = maxContextLength;
+      const thinking = normalizeModelThinking(item.thinking);
+      delete entry.thinking;
+      if (thinking !== undefined) entry.thinking = thinking;
       if (alias && alias !== name) {
         entry.alias = String(alias);
       }
