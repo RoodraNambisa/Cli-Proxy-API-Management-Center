@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { CredentialRequestRetryInput } from '@/components/providers/CredentialRequestRetryInput';
+import { CredentialRequestScopedErrorsEditor } from '@/components/providers/RequestScopedErrorsEditor';
 import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -558,6 +559,9 @@ export function AiProvidersOpenAIEditPage() {
               disabled={saving || disableControls || isTestingKeys}
             />
             <div className={styles.sectionHint}>{t('ai_providers.provider_request_retry_scope')}</div>
+            <CredentialRequestScopedErrorsEditor value={form.requestScopedErrors}
+              onChange={(requestScopedErrors) => setForm((prev) => ({ ...prev, requestScopedErrors }))}
+              disabled={saving || disableControls || isTestingKeys} />
             <Input
               label={t('ai_providers.priority_label')}
               hint={t('ai_providers.priority_hint')}

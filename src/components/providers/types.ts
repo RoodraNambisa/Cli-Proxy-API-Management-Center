@@ -1,4 +1,5 @@
 import type { ApiKeyEntry, GeminiKeyConfig, ProviderKeyConfig } from '@/types';
+import type { RequestScopedErrorRule } from '@/types/requestScopedErrors';
 import type { HeaderEntry } from '@/utils/headers';
 import type { KeyStats, UsageDetail } from '@/utils/usage';
 
@@ -10,6 +11,7 @@ export interface ModelEntry {
 export interface OpenAIFormState {
   name: string;
   requestRetry?: number;
+  requestScopedErrors?: RequestScopedErrorRule[];
   priority?: number;
   prefix: string;
   baseUrl: string;

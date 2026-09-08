@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { isValidCredentialRequestRetry } from '@/utils/credentialRequestRetry';
+import { validateRequestScopedErrorRule } from '@/utils/requestScopedErrors';
 import { isValidCredentialWeight } from '@/utils/credentialWeight';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -110,6 +111,7 @@ const normalizeApiKeyEntries = (entries: ApiKeyEntry[]) =>
 const buildOpenAIBaseline = (form: OpenAIFormState, testModel: string): OpenAIEditBaseline => ({
   name: String(form.name ?? '').trim(),
   requestRetry: form.requestRetry ?? null,
+  requestScopedErrors: JSON.stringify(form.requestScopedErrors ?? []),
   priority:
     form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
   prefix: String(form.prefix ?? '').trim(),
@@ -306,6 +308,7 @@ export function AiProvidersOpenAIEditLayout() {
       const seededForm: OpenAIFormState = {
         name: initialData.name,
         requestRetry: initialData.requestRetry,
+        requestScopedErrors: initialData.requestScopedErrors,
         priority: initialData.priority,
         prefix: initialData.prefix ?? '',
         baseUrl: initialData.baseUrl,
@@ -432,6 +435,7 @@ export function AiProvidersOpenAIEditLayout() {
     (baseline.name !== form.name.trim() ||
       baseline.priority !== normalizedPriority ||
       baseline.requestRetry !== (form.requestRetry ?? null) ||
+      baseline.requestScopedErrors !== JSON.stringify(form.requestScopedErrors ?? []) ||
       baseline.prefix !== form.prefix.trim() ||
       baseline.baseUrl !== form.baseUrl.trim() ||
       baseline.testModel !== normalizedTestModel ||
@@ -464,6 +468,11 @@ export function AiProvidersOpenAIEditLayout() {
   });
 
   const handleSave = useCallback(async () => {
+    const ruleIssue = form.requestScopedErrors?.map(validateRequestScopedErrorRule).find(Boolean);
+    if (ruleIssue) {
+      showNotification(t(`request_scoped_errors.invalid_${ruleIssue}`), 'error');
+      return;
+    }
     if (!isValidCredentialRequestRetry(form.requestRetry)) {
       showNotification(t('ai_providers.request_retry_invalid'), 'error');
       return;
@@ -485,6 +494,7 @@ export function AiProvidersOpenAIEditLayout() {
       const payload: OpenAIProviderConfig = {
         name,
         requestRetry: form.requestRetry,
+        requestScopedErrors: form.requestScopedErrors,
         prefix: form.prefix?.trim() || undefined,
         baseUrl,
         headers: buildHeaderObject(form.headers),
