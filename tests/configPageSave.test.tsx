@@ -651,6 +651,9 @@ describe('ConfigPage save coordination', () => {
   })).concat([{ section: 'oauth-request-scoped-errors', field: 'codex',
     before: 'oauth-request-scoped-errors: {}\n',
     after: 'oauth-request-scoped-errors:\n  codex: [{status: 500, match-regexr: ["(?i)busy"], action: stop}]\n',
+  }, { section: 'codex-api-key', field: 'models.display-name',
+    before: 'codex-api-key: [{api-key: fixture, models: [{name: upstream}]}]\n',
+    after: 'codex-api-key: [{api-key: fixture, models: [{name: upstream, display-name: "Readable label"}]}]\n',
   }]))('keeps a rejected $section.$field draft and accepts it only after a successful retry', async ({ before, after }) => {
     harness.visualDirty = true;
     harness.mergedYaml = after;
