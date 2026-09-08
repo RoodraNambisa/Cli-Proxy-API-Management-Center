@@ -2528,6 +2528,8 @@
         "boolean_false": "false"
       },
       "validation": {
+        "request_scoped_error_action": "Choose one of the four error actions.",
+        "request_scoped_error_match_required": "Add at least one nonempty text or Go regex condition.",
         "validation_blocked": "Fix validation errors before saving",
         "port_range": "Enter a valid port between 1 and 65535",
         "management_access_path": "Enter a valid single path segment: at most 128 characters, letters, digits, dot, underscore, and hyphen only, and not . or ..",

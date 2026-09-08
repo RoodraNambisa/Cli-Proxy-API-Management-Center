@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/icons';
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
+import { OAuthRequestScopedErrorsEditor } from '@/components/config/OAuthRequestScopedErrorsEditor';
 import {
   CONFIG_PAGE_DEFINITIONS,
   CONFIG_SEARCH_DEFINITIONS,
@@ -1197,6 +1198,10 @@ export function VisualConfigEditor({
         .length,
     [validationErrors]
   );
+  const oauthRequestScopedErrorsErrorCount = useMemo(
+    () => Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('oauthRequestScopedErrors.')).length,
+    [validationErrors]
+  );
   const authModelExclusionsErrorCount = useMemo(
     () =>
       Object.keys(validationErrors ?? {}).filter((key) => key.startsWith('authModelExclusions.'))
@@ -1745,6 +1750,7 @@ export function VisualConfigEditor({
         ]) + routingPriorityOverridesErrorCount,
       'global-request':
         nonRetryableErrorsErrorCount +
+        oauthRequestScopedErrorsErrorCount +
         errorResponseRewritesErrorCount +
         fixedErrorCooldownsErrorCount +
         countErrors(['noCooldownStatusCodes']) +
@@ -1812,6 +1818,7 @@ export function VisualConfigEditor({
       fixedErrorCooldownsErrorCount,
       hasPayloadValidationErrors,
       nonRetryableErrorsErrorCount,
+      oauthRequestScopedErrorsErrorCount,
       routingPriorityOverridesErrorCount,
       requestBodyErrorCount,
       chatGptWebSentinelErrorCount,
@@ -4471,6 +4478,20 @@ export function VisualConfigEditor({
                 </PageGroup>
 
                 <PageGroup active={activePageId === 'global-request'}>
+                  <SettingsDisclosure
+                    id="config-oauth-request-scoped-errors"
+                    title={t('request_scoped_errors.title')}
+                    description={t('request_scoped_errors.provider_hint')}
+                    summary={t('config_management.settings_center.rules_summary', {
+                      count: Object.values(values.oauthRequestScopedErrors).reduce((count, rules) => count + rules.length, 0),
+                    })}
+                    focusTarget={focusTarget}
+                    dirty={hasDirtyConfigField(dirtyFields, ['oauthRequestScopedErrors'])}
+                    errorCount={oauthRequestScopedErrorsErrorCount}
+                  >
+                    <OAuthRequestScopedErrorsEditor value={values.oauthRequestScopedErrors} disabled={disabled}
+                      onChange={(oauthRequestScopedErrors) => onChange({ oauthRequestScopedErrors })} />
+                  </SettingsDisclosure>
                   <SettingsDisclosure
                     id="config-non-retryable-errors"
                     title={t('config_management.visual.sections.network.non_retryable_errors')}

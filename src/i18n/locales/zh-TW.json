@@ -2552,6 +2552,8 @@
         "boolean_false": "false"
       },
       "validation": {
+        "request_scoped_error_action": "請選擇四種錯誤動作之一。",
+        "request_scoped_error_match_required": "至少新增一個非空文字或 Go 正則條件。",
         "validation_blocked": "請先修復表單驗證錯誤再儲存",
         "port_range": "請輸入 1 到 65535 之間的有效連接埠",
         "management_access_path": "請輸入合法的單一路徑段：最多 128 個字元，僅支援字母、數字、點、底線和連字符，不能是 . 或 ..",

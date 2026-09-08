@@ -645,10 +645,16 @@ describe('ConfigPage save coordination', () => {
     { section: 'routing', field: 'session-affinity-across-priorities' },
     { section: 'routing', field: 'session-affinity-subagents' },
     { section: 'routing', field: 'session-affinity-lcp' },
-  ])('keeps a rejected $section.$field draft and accepts it only after a successful retry', async ({ section, field }) => {
+  ].map(({ section, field }) => ({ section, field,
+    before: section + ':\n  ' + field + ': false\n',
+    after: section + ':\n  ' + field + ': true\n',
+  })).concat([{ section: 'oauth-request-scoped-errors', field: 'codex',
+    before: 'oauth-request-scoped-errors: {}\n',
+    after: 'oauth-request-scoped-errors:\n  codex: [{status: 500, match-regexr: ["(?i)busy"], action: stop}]\n',
+  }]))('keeps a rejected $section.$field draft and accepts it only after a successful retry', async ({ before, after }) => {
     harness.visualDirty = true;
-    harness.mergedYaml = section + ':\n  ' + field + ': true\n';
-    harness.fetchYaml.mockResolvedValue(section + ':\n  ' + field + ': false\n');
+    harness.mergedYaml = after;
+    harness.fetchYaml.mockResolvedValue(before);
     harness.saveYaml.mockRejectedValueOnce(new Error('configuration rejected'));
 
     renderPage();

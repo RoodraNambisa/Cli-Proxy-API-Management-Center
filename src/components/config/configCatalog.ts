@@ -86,6 +86,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     descriptionKey: 'config_management.settings_center.pages.global_request.description',
     dirtyPrefixes: [
       'nonRetryableErrors',
+      'oauthRequestScopedErrors',
       'errorResponseRewrites',
       'fixedErrorCooldowns',
       'noCooldownStatusCodes',
@@ -432,6 +433,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     pageId: 'global-request',
     labelKey: 'config_management.visual.sections.network.non_retryable_errors',
     yamlKeys: ['non-retryable-errors'],
+  },
+  {
+    id: 'config-oauth-request-scoped-errors',
+    pageId: 'global-request',
+    labelKey: 'request_scoped_errors.title',
+    yamlKeys: ['oauth-request-scoped-errors', 'request-scoped-errors', 'match-regexr', 'action'],
+    aliases: ['错误动作', '停止并冷却', 'continue-and-cooldown', 'stop-and-cooldown', 'OAuth error rules'],
   },
   {
     id: 'config-error-response-rewrites',

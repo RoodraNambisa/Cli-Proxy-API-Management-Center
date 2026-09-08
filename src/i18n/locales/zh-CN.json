@@ -2532,6 +2532,8 @@
         "boolean_false": "false"
       },
       "validation": {
+        "request_scoped_error_action": "请选择四种错误动作之一。",
+        "request_scoped_error_match_required": "至少添加一个非空文本或 Go 正则条件。",
         "validation_blocked": "请先修复表单校验错误再保存",
         "port_range": "请输入 1 到 65535 之间的有效端口",
         "management_access_path": "请输入合法的单一路径段：最多 128 个字符，仅支持字母、数字、点、下划线和连字符，不能是 . 或 ..",
