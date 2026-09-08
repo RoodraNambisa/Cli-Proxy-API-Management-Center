@@ -2,6 +2,7 @@ import { Fragment, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { Input } from './Input';
+import { ModelThinkingEditor } from './ModelThinkingEditor';
 import { isValidModelContextLength, MAX_MODEL_CONTEXT_LENGTH } from '@/utils/modelContextLength';
 import { IconX } from './icons';
 import type { ModelEntry } from './modelInputListUtils';
@@ -15,6 +16,7 @@ interface ModelInputListProps {
   aliasPlaceholder?: string;
   showDisplayName?: boolean;
   showContextLength?: boolean;
+  showThinking?: boolean;
   hideAddButton?: boolean;
   onAdd?: () => void;
   className?: string;
@@ -34,6 +36,7 @@ export function ModelInputList({
   aliasPlaceholder = 'alias (optional)',
   showDisplayName = false,
   showContextLength = false,
+  showThinking = false,
   hideAddButton = false,
   onAdd,
   className = '',
@@ -134,6 +137,14 @@ export function ModelInputList({
                   : event.currentTarget.value.trim() === '' ? undefined : Number(event.currentTarget.value);
                 onChange(currentEntries.map((current, idx) => idx === index ? { ...current, maxContextLength: value } : current));
               }}
+            />
+          )}
+          {showThinking && (
+            <ModelThinkingEditor
+              index={index}
+              value={entry.thinking}
+              disabled={disabled}
+              onChange={(thinking) => onChange(currentEntries.map((current, idx) => idx === index ? { ...current, thinking } : current))}
             />
           )}
         </Fragment>

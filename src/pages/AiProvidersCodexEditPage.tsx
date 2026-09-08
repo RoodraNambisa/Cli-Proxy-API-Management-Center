@@ -5,6 +5,7 @@ import { isValidCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
 import { isValidCredentialWeight } from '@/utils/credentialWeight';
 import { isValidModelContextLength } from '@/utils/modelContextLength';
+import { copyModelThinking, isValidModelThinking } from '@/utils/modelThinking';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -68,7 +69,7 @@ const normalizeModelEntries = (entries: ModelEntry[]) =>
       alias = '';
     }
     if (!name && !alias) return acc;
-    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined, maxContextLength: entry.maxContextLength });
+    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined, maxContextLength: entry.maxContextLength, thinking: copyModelThinking(entry.thinking) });
     return acc;
   }, []);
 
@@ -454,6 +455,10 @@ export function AiProvidersCodexEditPage() {
   };
 
   const handleSave = useCallback(async () => {
+    if (form.modelEntries.some((entry) => !isValidModelThinking(entry.thinking))) {
+      showNotification(t('model_thinking.invalid'), 'error');
+      return;
+    }
     if (form.modelEntries.some((entry) => !isValidModelContextLength(entry.maxContextLength))) {
       showNotification(t('common.model_context_length_invalid'), 'error');
       return;
@@ -706,6 +711,7 @@ export function AiProvidersCodexEditPage() {
               <ModelInputList
                 showDisplayName
                 showContextLength
+                showThinking
                 entries={form.modelEntries}
                 onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
                 namePlaceholder={t('common.model_name_placeholder')}

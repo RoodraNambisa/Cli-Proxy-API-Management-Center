@@ -1,3 +1,6 @@
+import type { ModelThinking } from '@/types/modelThinking';
+import { areModelThinkingEqual } from '@/utils/modelThinking';
+
 export function areStringArraysEqual(a: readonly string[], b: readonly string[]): boolean {
   if (a === b) return true;
   if (a.length !== b.length) return false;
@@ -23,8 +26,8 @@ export function areKeyValueEntriesEqual(
 }
 
 export function areModelEntriesEqual(
-  a: readonly { name: string; alias: string; displayName?: string; maxContextLength?: number }[],
-  b: readonly { name: string; alias: string; displayName?: string; maxContextLength?: number }[]
+  a: readonly { name: string; alias: string; displayName?: string; maxContextLength?: number; thinking?: ModelThinking }[],
+  b: readonly { name: string; alias: string; displayName?: string; maxContextLength?: number; thinking?: ModelThinking }[]
 ): boolean {
   if (a === b) return true;
   if (a.length !== b.length) return false;
@@ -34,6 +37,7 @@ export function areModelEntriesEqual(
     if (!left || !right) return false;
     if (left.name !== right.name || left.alias !== right.alias || (left.displayName ?? '') !== (right.displayName ?? '')) return false;
     if ((left.maxContextLength ?? 0) !== (right.maxContextLength ?? 0)) return false;
+    if (!areModelThinkingEqual(left.thinking, right.thinking)) return false;
   }
   return true;
 }

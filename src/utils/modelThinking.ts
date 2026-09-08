@@ -7,6 +7,19 @@ export const MODEL_THINKING_LEVELS = [
 const levels = new Set<string>(MODEL_THINKING_LEVELS);
 const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 
+/** Draft snapshots must also accept temporarily invalid numeric input. */
+export const copyModelThinking = (value?: ModelThinking): ModelThinking | undefined =>
+  value === undefined ? undefined : { ...value, ...(value.levels ? { levels: [...value.levels] } : {}) };
+
+export const areModelThinkingEqual = (left?: ModelThinking, right?: ModelThinking): boolean => {
+  if (left === undefined || right === undefined) return left === right;
+  if (!Object.is(left.min ?? 0, right.min ?? 0) || !Object.is(left.max ?? 0, right.max ?? 0)) return false;
+  if (Boolean(left.zeroAllowed) !== Boolean(right.zeroAllowed) || Boolean(left.dynamicAllowed) !== Boolean(right.dynamicAllowed)) return false;
+  const a = left.levels ?? [];
+  const b = right.levels ?? [];
+  return a.length === b.length && a.every((level, index) => level === b[index]);
+};
+
 const firstField = (value: Record<string, unknown>, keys: string[]) => {
   const key = keys.find((candidate) => own(value, candidate));
   return key === undefined ? undefined : value[key];
