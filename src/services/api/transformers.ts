@@ -1,5 +1,6 @@
 import { normalizeCredentialWeight } from '@/utils/credentialWeight';
 import { normalizeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
+import { normalizeRequestScopedErrors } from '@/utils/requestScopedErrors';
 import type {
   ApiKeyEntry,
   CloakConfig,
@@ -550,6 +551,13 @@ const normalizeRequestRetryOverride = (record: Record<string, unknown> | null) =
       : record?.requestRetry
   );
 
+const normalizeErrorRulesOverride = (record: Record<string, unknown> | null) =>
+  normalizeRequestScopedErrors(
+    record && Object.prototype.hasOwnProperty.call(record, 'request-scoped-errors')
+      ? record['request-scoped-errors']
+      : record?.requestScopedErrors
+  );
+
 const normalizeApiKeyEntry = (entry: unknown): ApiKeyEntry | null => {
   if (entry === undefined || entry === null) return null;
   const record = isRecord(entry) ? entry : null;
@@ -586,6 +594,7 @@ const normalizeProviderKeyConfig = (item: unknown): ProviderKeyConfig | null => 
 
   const config: ProviderKeyConfig = { apiKey: trimmed, weight: normalizeCredentialWeight(record?.weight) };
   config.requestRetry = normalizeRequestRetryOverride(record);
+  config.requestScopedErrors = normalizeErrorRulesOverride(record);
   const priority = record?.priority ?? record?.['priority'];
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') {
     const parsed = Number(priority);
@@ -656,6 +665,7 @@ const normalizeGeminiKeyConfig = (item: unknown): GeminiKeyConfig | null => {
 
   const config: GeminiKeyConfig = { apiKey: trimmed, weight: normalizeCredentialWeight(record?.weight) };
   config.requestRetry = normalizeRequestRetryOverride(record);
+  config.requestScopedErrors = normalizeErrorRulesOverride(record);
   const priority = record?.priority ?? record?.['priority'];
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') {
     const parsed = Number(priority);
@@ -711,6 +721,7 @@ const normalizeOpenAIProvider = (provider: unknown): OpenAIProviderConfig | null
   const result: OpenAIProviderConfig = {
     name: String(name),
     requestRetry: normalizeRequestRetryOverride(provider),
+    requestScopedErrors: normalizeErrorRulesOverride(provider),
     baseUrl: String(baseUrl),
     apiKeyEntries,
   };

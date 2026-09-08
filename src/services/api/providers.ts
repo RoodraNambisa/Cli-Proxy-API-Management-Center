@@ -1,5 +1,7 @@
 import { serializeCredentialWeight } from '@/utils/credentialWeight';
 import { serializeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
+import { serializeRequestScopedErrors } from '@/utils/requestScopedErrors';
+import type { RequestScopedErrorRule } from '@/types/requestScopedErrors';
 /**
  * AI 提供商相关 API
  */
@@ -76,10 +78,21 @@ const serializeRequestRetryOverride = (config: { requestRetry?: number }, patch:
     : value;
 };
 
+const serializeErrorRulesOverride = (
+  config: { requestScopedErrors?: RequestScopedErrorRule[] },
+  patch: boolean
+) => {
+  const value = serializeRequestScopedErrors(config.requestScopedErrors);
+  return patch && Object.prototype.hasOwnProperty.call(config, 'requestScopedErrors')
+    ? value ?? null
+    : value;
+};
+
 const serializeProviderKey = (config: ProviderKeyConfig, patch = false) => {
   const payload: Record<string, unknown> = {
     'api-key': config.apiKey,
     'request-retry': serializeRequestRetryOverride(config, patch),
+    'request-scoped-errors': serializeErrorRulesOverride(config, patch),
     weight:
       patch && Object.prototype.hasOwnProperty.call(config, 'weight')
         ? serializeCredentialWeight(config.weight) ?? null
@@ -129,6 +142,7 @@ const serializeVertexKey = (config: ProviderKeyConfig, patch = false) => {
   const payload: Record<string, unknown> = {
     'api-key': config.apiKey,
     'request-retry': serializeRequestRetryOverride(config, patch),
+    'request-scoped-errors': serializeErrorRulesOverride(config, patch),
     weight:
       patch && Object.prototype.hasOwnProperty.call(config, 'weight')
         ? serializeCredentialWeight(config.weight) ?? null
@@ -152,6 +166,7 @@ const serializeGeminiKey = (config: GeminiKeyConfig, patch = false) => {
   const payload: Record<string, unknown> = {
     'api-key': config.apiKey,
     'request-retry': serializeRequestRetryOverride(config, patch),
+    'request-scoped-errors': serializeErrorRulesOverride(config, patch),
     weight:
       patch && Object.prototype.hasOwnProperty.call(config, 'weight')
         ? serializeCredentialWeight(config.weight) ?? null
@@ -175,6 +190,7 @@ const serializeOpenAIProvider = (provider: OpenAIProviderConfig, patch = false) 
   const payload: Record<string, unknown> = {
     name: provider.name,
     'request-retry': serializeRequestRetryOverride(provider, patch),
+    'request-scoped-errors': serializeErrorRulesOverride(provider, patch),
     'base-url': provider.baseUrl,
     'api-key-entries': Array.isArray(provider.apiKeyEntries)
       ? provider.apiKeyEntries.map((entry) => serializeApiKeyEntry(entry))

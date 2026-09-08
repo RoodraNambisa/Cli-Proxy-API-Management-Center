@@ -1,7 +1,6 @@
-/**
- * AI 提供商相关类型
- * 基于原项目 src/modules/ai-providers.js
- */
+/** AI provider configuration types. */
+
+import type { RequestScopedErrorRule } from './requestScopedErrors';
 
 export interface ModelAlias {
   name: string;
@@ -28,6 +27,7 @@ export interface GeminiKeyConfig {
   apiKey: string;
   weight?: number;
   requestRetry?: number;
+  requestScopedErrors?: RequestScopedErrorRule[];
   priority?: number;
   prefix?: string;
   baseUrl?: string;
@@ -42,6 +42,7 @@ export interface ProviderKeyConfig {
   apiKey: string;
   weight?: number;
   requestRetry?: number;
+  requestScopedErrors?: RequestScopedErrorRule[];
   priority?: number;
   prefix?: string;
   baseUrl?: string;
@@ -57,6 +58,7 @@ export interface ProviderKeyConfig {
 export interface OpenAIProviderConfig {
   name: string;
   requestRetry?: number;
+  requestScopedErrors?: RequestScopedErrorRule[];
   prefix?: string;
   baseUrl: string;
   apiKeyEntries: ApiKeyEntry[];
