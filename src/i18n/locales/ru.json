@@ -347,6 +347,7 @@
     "codex_add_modal_proxy_placeholder": "например: socks5://proxy.example.com:1080",
     "codex_websockets_label": "Websockets",
     "codex_alpha_search_label": "Поддержка Alpha Search",
+    "codex_alpha_search_manage": "Настроить поиск для API-ключей Codex",
     "codex_alpha_search_hint": "По умолчанию выключено. Включайте только если Base URL этого API-ключа поддерживает отдельный эндпоинт /alpha/search. Сохранённые изменения действуют при выборе учётных данных для последующих запросов; OAuth-поиск не требует этой настройки.",
     "codex_websockets_hint": "Включает websocket-транспорт Responses API для этого ключа.",
     "codex_models_label": "Пользовательские модели (необязательно):",

@@ -657,6 +657,9 @@ describe('ConfigPage save coordination', () => {
   }, { section: 'codex-api-key', field: 'models.max-context-length',
     before: 'codex-api-key: [{api-key: fixture, models: [{name: upstream}]}]\n',
     after: 'codex-api-key: [{api-key: fixture, models: [{name: upstream, max-context-length: 131072}]}]\n',
+  }, { section: 'codex-api-key', field: 'alpha-search',
+    before: 'codex-api-key: [{api-key: fixture, base-url: "https://example.invalid"}]\n',
+    after: 'codex-api-key: [{api-key: fixture, base-url: "https://example.invalid", alpha-search: true}]\n',
   }]))('keeps a rejected $section.$field draft and accepts it only after a successful retry', async ({ before, after }) => {
     harness.visualDirty = true;
     harness.mergedYaml = after;

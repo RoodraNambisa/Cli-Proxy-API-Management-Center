@@ -1900,7 +1900,7 @@ export function VisualConfigEditor({
     }
   }, [activePageId, handlePageChange, pageErrorCounts, pages]);
 
-  const normalizedConfigSearchQuery = configSearchQuery.trim().toLocaleLowerCase();
+  const normalizedConfigSearchQuery = configSearchQuery.trim().toLocaleLowerCase().replace(/\[\d+\]/g, '[]');
   const configSearchResults = useMemo(() => {
     if (!normalizedConfigSearchQuery) return [];
     const pageMap = new Map(pages.map((page) => [page.id, page]));
@@ -5040,6 +5040,19 @@ export function VisualConfigEditor({
                       </div>
                     </SectionGrid>
                   </SettingsDisclosure>
+                </PageGroup>
+
+                <PageGroup id="config-codex-alpha-search" active={activePageId === 'provider-codex'}>
+                  <div className={styles.providerHubHeader}>
+                    <h3>{t('ai_providers.codex_alpha_search_label')}</h3>
+                    <p>{t('ai_providers.codex_alpha_search_hint')}</p>
+                  </div>
+                  <div className={styles.providerHubActions}>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/ai-providers')}>
+                      {t('ai_providers.codex_alpha_search_manage')}
+                      <IconExternalLink size={14} />
+                    </Button>
+                  </div>
                 </PageGroup>
 
                 <PageGroup id="config-codex-prompt-cache" active={activePageId === 'provider-codex'}>

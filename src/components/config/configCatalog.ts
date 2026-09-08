@@ -524,6 +524,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['SSE', 'WebSocket', 'Ping', 'heartbeat', '心跳', '保活'],
   },
   {
+    id: 'config-codex-alpha-search',
+    pageId: 'provider-codex',
+    labelKey: 'ai_providers.codex_alpha_search_label',
+    yamlKeys: ['codex-api-key[].alpha-search', 'alpha-search'],
+    aliases: ['Alpha Search', '独立搜索', '搜尋能力', 'поиск'],
+  },
+  {
     id: 'config-codex-custom-models',
     pageId: 'provider-codex',
     labelKey: 'config_management.visual.codex_custom_models.title',

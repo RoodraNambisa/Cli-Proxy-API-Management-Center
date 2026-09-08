@@ -345,6 +345,7 @@
     "codex_add_modal_proxy_placeholder": "例如: socks5://proxy.example.com:1080",
     "codex_websockets_label": "Websockets",
     "codex_alpha_search_label": "Alpha Search 搜尋能力",
+    "codex_alpha_search_manage": "管理 Codex API Key 搜尋能力",
     "codex_alpha_search_hint": "預設關閉。僅在此 API Key 的 Base URL 支援獨立的 /alpha/search 介面時開啟；儲存後用於後續請求的憑證篩選。OAuth 搜尋無需此聲明。",
     "codex_websockets_hint": "開啟 Responses API 的 websocket 傳輸。",
     "codex_models_label": "自訂模型（選填）:",
