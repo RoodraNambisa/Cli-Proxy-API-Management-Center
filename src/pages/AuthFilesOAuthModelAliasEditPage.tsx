@@ -3,12 +3,14 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { IconInfo, IconX } from '@/components/ui/icons';
 import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
 import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useAuthStore, useNotificationStore } from '@/stores';
 import { authFilesApi } from '@/services/api';
 import type { AuthFileItem, OAuthModelAliasEntry } from '@/types';
@@ -50,12 +52,18 @@ const normalizeMappingEntries = (
     return [buildEmptyMappingEntry()];
   }
   return entries.map((entry) => ({
+    ...entry,
     id: generateId(),
     name: entry.name ?? '',
     alias: entry.alias ?? '',
     fork: Boolean(entry.fork),
   }));
 };
+
+const mappingSignature = (entries: OAuthModelAliasEntry[]) => JSON.stringify(entries.map((entry) => ({
+  name: entry.name.trim(), alias: entry.alias.trim(), fork: Boolean(entry.fork),
+  displayName: entry.displayName?.trim() || '',
+})).filter((entry) => entry.name || entry.alias || entry.displayName));
 
 export function AuthFilesOAuthModelAliasEditPage() {
   const { t } = useTranslation();
@@ -124,6 +132,15 @@ export function AuthFilesOAuthModelAliasEditPage() {
   );
 
   const resolvedProviderKey = useMemo(() => normalizeProviderKey(provider), [provider]);
+  const hasUnsavedChanges = !initialLoading && !modelAliasUnsupported &&
+    mappingSignature(mappings) !== mappingSignature(modelAlias[resolvedProviderKey] ?? []);
+  const { allowNextNavigation } = useUnsavedChangesGuard({
+    shouldBlock: hasUnsavedChanges,
+    dialog: {
+      title: t('common.unsaved_changes_title'), message: t('common.unsaved_changes_message'),
+      confirmText: t('common.confirm'), cancelText: t('common.cancel'),
+    },
+  });
   const title = useMemo(() => t('oauth_model_alias.add_title'), [t]);
   const headerHint = useMemo(() => {
     if (!provider.trim()) {
@@ -270,7 +287,6 @@ export function AuthFilesOAuthModelAliasEditPage() {
 
   const updateProvider = useCallback(
     (value: string) => {
-      setProvider(value);
       const next = new URLSearchParams(searchParams);
       const trimmed = value.trim();
       if (trimmed) {
@@ -319,7 +335,9 @@ export function AuthFilesOAuthModelAliasEditPage() {
         const key = `${name.toLowerCase()}::${alias.toLowerCase()}::${entry.fork ? '1' : '0'}`;
         if (seen.has(key)) return null;
         seen.add(key);
-        return entry.fork ? { name, alias, fork: true } : { name, alias };
+        const normalized: OAuthModelAliasEntry = { ...entry, name, alias };
+        delete normalized.id;
+        return normalized;
       })
       .filter(Boolean) as OAuthModelAliasEntry[];
 
@@ -331,6 +349,7 @@ export function AuthFilesOAuthModelAliasEditPage() {
         await authFilesApi.deleteOauthModelAlias(channel);
       }
       showNotification(t('oauth_model_alias.save_success'), 'success');
+      allowNextNavigation();
       handleBack();
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '';
@@ -338,7 +357,7 @@ export function AuthFilesOAuthModelAliasEditPage() {
     } finally {
       setSaving(false);
     }
-  }, [handleBack, mappings, provider, showNotification, t]);
+  }, [allowNextNavigation, handleBack, mappings, provider, showNotification, t]);
 
   const canSave = !disableControls && !saving && !modelAliasUnsupported;
 
@@ -475,6 +494,16 @@ export function AuthFilesOAuthModelAliasEditPage() {
                   >
                     <IconX size={14} />
                   </Button>
+                  <div className={styles.mappingDisplayName}>
+                    <Input
+                      label={`${t('common.model_display_name_label')} ${index + 1}`}
+                      placeholder={t('common.model_display_name_placeholder')}
+                      hint={t('common.model_display_name_hint')}
+                      value={entry.displayName ?? ''}
+                      onChange={(event) => updateMappingEntry(index, 'displayName', event.target.value)}
+                      disabled={disableControls || saving}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
