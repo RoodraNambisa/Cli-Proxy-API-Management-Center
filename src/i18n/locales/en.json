@@ -351,7 +351,7 @@
     "codex_websockets_label": "Websockets",
     "codex_alpha_search_label": "Supports Alpha Search",
     "codex_alpha_search_manage": "Manage Codex API key search capabilities",
-    "codex_alpha_search_hint": "Off by default. Enable only if this API key's Base URL supports the separate /alpha/search endpoint. Saved changes apply to credential selection for later requests; OAuth search does not require this setting.",
+    "codex_alpha_search_hint": "Off by default. Enable only if this API key's Base URL supports the separate /alpha/search endpoint. Saved changes apply to later credential selection and may cancel attempts using the old credential; existing retry rules still apply. OAuth search does not require this setting.",
     "codex_websockets_hint": "Enable Responses API websocket transport for this key.",
     "codex_models_label": "Custom Models (Optional):",
     "codex_models_hint": "Leave empty to allow all models, or add name[, alias] entries to limit/alias them.",
