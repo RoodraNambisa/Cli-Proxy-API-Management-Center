@@ -471,7 +471,10 @@ const normalizeCodexCustomModels = (value: unknown): CodexCustomModelConfig[] | 
   return models;
 };
 
-const normalizeModelAliases = (models: unknown): ModelAlias[] => {
+const normalizeModelAliases = (
+  models: unknown,
+  options: { preserveMatchingAliases?: boolean } = {}
+): ModelAlias[] => {
   if (!Array.isArray(models)) return [];
   return models
     .map((item) => {
@@ -506,7 +509,7 @@ const normalizeModelAliases = (models: unknown): ModelAlias[] => {
       const thinking = normalizeModelThinking(item.thinking);
       delete entry.thinking;
       if (thinking !== undefined) entry.thinking = thinking;
-      if (alias && alias !== name) {
+      if (alias && (options.preserveMatchingAliases || alias !== name)) {
         entry.alias = String(alias);
       }
       if (priority !== undefined) {
@@ -607,7 +610,10 @@ const normalizeApiKeyEntry = (entry: unknown): ApiKeyEntry | null => {
   return result;
 };
 
-const normalizeProviderKeyConfig = (item: unknown): ProviderKeyConfig | null => {
+const normalizeProviderKeyConfig = (
+  item: unknown,
+  modelOptions: { preserveMatchingAliases?: boolean } = {}
+): ProviderKeyConfig | null => {
   if (item === undefined || item === null) return null;
   const record = isRecord(item) ? item : null;
   const apiKey = record?.['api-key'] ?? record?.apiKey ?? (typeof item === 'string' ? item : '');
@@ -634,7 +640,7 @@ const normalizeProviderKeyConfig = (item: unknown): ProviderKeyConfig | null => 
   if (proxyUrl) config.proxyUrl = String(proxyUrl);
   const headers = normalizeHeaders(record?.headers);
   if (headers) config.headers = headers;
-  const models = normalizeModelAliases(record?.models);
+  const models = normalizeModelAliases(record?.models, modelOptions);
   if (models.length) config.models = models;
   const excludedModels = normalizeExcludedModels(
     record?.['excluded-models'] ??
@@ -1289,7 +1295,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   const vertexList = raw['vertex-api-key'] ?? raw.vertexApiKey ?? raw.vertexApiKeys;
   if (Array.isArray(vertexList)) {
     config.vertexApiKeys = vertexList
-      .map((item) => normalizeProviderKeyConfig(item))
+      .map((item) => normalizeProviderKeyConfig(item, { preserveMatchingAliases: true }))
       .filter(Boolean) as ProviderKeyConfig[];
   }
 

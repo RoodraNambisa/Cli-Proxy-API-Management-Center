@@ -310,7 +310,7 @@ export const providersApi = {
     const data = await apiClient.get('/vertex-api-key');
     const list = extractArrayPayload(data, 'vertex-api-key');
     return list
-      .map((item) => normalizeProviderKeyConfig(item))
+      .map((item) => normalizeProviderKeyConfig(item, { preserveMatchingAliases: true }))
       .filter(Boolean) as ProviderKeyConfig[];
   },
 

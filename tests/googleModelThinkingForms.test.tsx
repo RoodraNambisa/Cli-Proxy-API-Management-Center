@@ -20,8 +20,8 @@ const dirty = () => (mocks.guard.mock.lastCall?.[0] as unknown as { shouldBlock:
 
 test.each(forms)('$section preserves thinking drafts on failure and round-trips overrides and inheritance', async ({ section, element }) => {
   const copy = (value: unknown) => JSON.parse(JSON.stringify(value));
-  const model = { name: 'gemini-test', alias: 'local', 'display-name': 'Label', 'max-context-length': 131072, 'force-mapping': true, future: { keep: true } };
-  let saved: Array<Record<string, unknown>> = [{ 'api-key': 'fixture', 'base-url': 'https://example.invalid', weight: 7, models: [model] }, { 'api-key': 'untouched', models: [{ name: 'other', alias: 'other-local' }] }];
+  const model = { name: 'gemini-test', alias: section === 'vertex-api-key' ? 'gemini-test' : 'local', 'display-name': 'Label', 'max-context-length': 131072, 'force-mapping': true, future: { keep: true } };
+  let saved: Array<Record<string, unknown>> = [{ 'api-key': 'fixture', 'base-url': 'https://example.invalid', weight: 7, models: [model] }, { 'api-key': 'untouched', models: [{ name: 'other', alias: section === 'vertex-api-key' ? 'other' : 'other-local' }] }];
   const untouched = copy(saved[1]);
   vi.spyOn(apiClient, 'get').mockImplementation(async () => ({ [section]: copy(saved) }));
   vi.spyOn(useConfigStore.getState(), 'fetchConfig').mockImplementation(async () => {
@@ -36,7 +36,7 @@ test.each(forms)('$section preserves thinking drafts on failure and round-trips 
   const writer = section === 'interactions-api-key' ? patch : put;
   const mount = () => render(<MemoryRouter initialEntries={['/edit/0']}><Routes><Route path="/edit/:index" element={element} /><Route path="/ai-providers" element={<div>saved</div>} /></Routes></MemoryRouter>);
   const first = mount();
-  await screen.findByDisplayValue('gemini-test');
+  await screen.findAllByDisplayValue('gemini-test');
   expect(dirty()).toBe(false);
   fireEvent.click(screen.getByText('model_thinking.title 1'));
   fireEvent.click(screen.getByRole('checkbox', { name: 'model_thinking.levels 1: high' }));
@@ -63,7 +63,7 @@ test.each(forms)('$section preserves thinking drafts on failure and round-trips 
   await screen.findByText('saved');
   expect(saved[0].models).toEqual([model]); expect(saved[1]).toEqual(untouched);
   second.unmount(); mount();
-  await screen.findByDisplayValue('gemini-test');
+  await screen.findAllByDisplayValue('gemini-test');
   expect(screen.getByText('model_thinking.inherit')).toBeTruthy();
   expect(dirty()).toBe(false);
 });
