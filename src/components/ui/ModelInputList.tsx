@@ -109,11 +109,12 @@ export function ModelInputList({
                 id={`${displayNameId}-${index}`}
                 className={inputClassNames}
                 placeholder={t('common.model_display_name_placeholder')}
-                aria-describedby={`${displayNameId}-hint`}
+                aria-describedby={`${displayNameId}-${index}-hint`}
                 value={entry.displayName ?? ''}
                 onChange={(e) => updateEntry(index, 'displayName', e.target.value)}
                 disabled={disabled}
               />
+              <div id={`${displayNameId}-${index}-hint`} className="hint">{t('common.model_display_name_hint')}</div>
             </div>
           )}
           {showContextLength && (
@@ -137,7 +138,6 @@ export function ModelInputList({
           )}
         </Fragment>
       ))}
-      {showDisplayName && <div id={`${displayNameId}-hint`} className="hint">{t('common.model_display_name_hint')}</div>}
       {!hideAddButton && addLabel && (
         <Button variant="secondary" size="sm" onClick={addEntry} disabled={disabled} className="align-start">
           {addLabel}

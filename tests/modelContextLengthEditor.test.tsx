@@ -37,3 +37,18 @@ test('the control is shown only by integrated forms and follows their disabled s
   view.rerender(<ModelInputList {...props} showContextLength disabled />);
   expect((screen.getByRole('spinbutton') as HTMLInputElement).disabled).toBe(true);
 });
+
+test('each display name keeps its description beside the field when context controls are also visible', () => {
+  render(<ModelInputList showDisplayName showContextLength entries={[
+    { name: 'first', alias: 'first-alias' },
+    { name: 'second', alias: 'second-alias' },
+  ]} onChange={vi.fn()} />);
+  const fields = screen.getAllByRole('textbox', { name: /common.model_display_name_label/ });
+  const descriptions = fields.map((field) => {
+    const description = document.getElementById(field.getAttribute('aria-describedby') ?? '');
+    expect(description?.textContent).toBe('common.model_display_name_hint');
+    expect(field.closest('.form-group')?.contains(description)).toBe(true);
+    return description;
+  });
+  expect(descriptions[0]).not.toBe(descriptions[1]);
+});
