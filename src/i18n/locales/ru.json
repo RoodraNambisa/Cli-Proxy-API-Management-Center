@@ -2333,6 +2333,12 @@
           "codex_header_defaults_beta_features": "Codex Beta-Features по умолчанию",
           "codex_header_defaults_originator": "Codex Originator по умолчанию"
         },
+        "codex_live": {
+          "title": "Codex Live / Realtime",
+          "description": "Управление доступом к новым сеансам реального времени. Ретрансляция медиа WebRTC настраивается отдельно.",
+          "enabled": "Разрешить новые сеансы Live / Realtime",
+          "enabled_desc": "По умолчанию выключено. При выключении запрещаются новые сеансы, временные учётные данные и соединения WebSocket, включая боковые каналы и соединения с ранее выданными данными. Незавершённое подключение отменяется. Установленные сеансы могут работать до завершения; авторизованные завершение сеанса и очистка остаются доступны. Изменение действует после сохранения."
+        },
         "images": {
           "title": "Совместимость OpenAI Images",
           "description": "Проксирование OpenAI Images API через Codex Responses image_generation tool",

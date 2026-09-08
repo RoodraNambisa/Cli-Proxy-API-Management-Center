@@ -122,6 +122,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     descriptionKey: 'config_management.settings_center.pages.provider_codex.description',
     dirtyPrefixes: [
       'codexCustomModels',
+      'codexLiveEnabled',
       'codexIdentityConfuse',
       'codexPassthroughPromptCacheKey',
       'codexStreamBootstrapBuffering',
@@ -577,6 +578,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       '会话身份池',
       '指纹',
     ],
+  },
+  {
+    id: 'config-codex-live',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.codex_live.enabled',
+    yamlKeys: ['codex.live-enabled'],
+    aliases: ['realtime', 'WebRTC', 'Live', '实时会话', '即時會話', 'реального времени'],
   },
   {
     id: 'config-codex-prompt-cache',

@@ -2340,6 +2340,12 @@
           "codex_header_defaults_beta_features": "Codex Beta-Features 默认值",
           "codex_header_defaults_originator": "Codex Originator 默认值"
         },
+        "codex_live": {
+          "title": "Codex Live / Realtime",
+          "description": "控制新实时会话的准入；WebRTC 媒体中继单独配置。",
+          "enabled": "允许新建 Live / Realtime 会话",
+          "enabled_desc": "默认关闭。关闭后拒绝新会话、临时凭据和 WebSocket 连接，包括旁路连接及使用此前签发凭据的连接；尚在建立的操作会取消。已建立会话仍可继续到正常结束，鉴权后的挂断和清理仍可使用。保存后生效。"
+        },
         "images": {
           "title": "OpenAI Images 兼容",
           "description": "通过 Codex Responses 的 image_generation tool 代理 OpenAI Images API",

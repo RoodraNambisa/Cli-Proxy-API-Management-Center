@@ -938,7 +938,13 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   }
   const codex = raw.codex;
   if (isRecord(codex)) {
+    const liveEnabled = Object.prototype.hasOwnProperty.call(codex, 'live-enabled')
+      ? codex['live-enabled'] : codex.liveEnabled;
+    if (liveEnabled != null && typeof liveEnabled !== 'boolean') {
+      throw new Error('codex.live-enabled must be a boolean');
+    }
     config.codex = {
+      liveEnabled: liveEnabled ?? false,
       optimizeMultiAgentV2: normalizeBoolean(
         codex['optimize-multi-agent-v2'] ?? codex.optimizeMultiAgentV2
       ),

@@ -314,6 +314,7 @@ export type VisualConfigValues = {
   proxyUrl: string;
   forceModelPrefix: boolean;
   codexIdentityConfuse: boolean;
+  codexLiveEnabled: boolean;
   codexPassthroughPromptCacheKey: boolean;
   codexStreamBootstrapBuffering: boolean;
   codexOrphanDelegationCompatibility: boolean;
@@ -437,6 +438,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   proxyUrl: '',
   forceModelPrefix: false,
   codexIdentityConfuse: false,
+  codexLiveEnabled: false,
   codexPassthroughPromptCacheKey: false,
   codexStreamBootstrapBuffering: false,
   codexOrphanDelegationCompatibility: false,

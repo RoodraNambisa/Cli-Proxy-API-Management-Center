@@ -5317,6 +5317,26 @@ export function VisualConfigEditor({
             </ConfigSection>
 
             <ConfigSection
+              id="codex-live"
+              hidden={activePageId !== 'provider-codex'}
+              icon={<IconCode size={16} />}
+              title={t('config_management.visual.sections.codex_live.title')}
+              description={t('config_management.visual.sections.codex_live.description')}
+            >
+              <PageGroup id="config-codex-live" active={activePageId === 'provider-codex'}>
+                <SectionGrid>
+                  <ToggleRow
+                    title={t('config_management.visual.sections.codex_live.enabled')}
+                    description={t('config_management.visual.sections.codex_live.enabled_desc')}
+                    checked={values.codexLiveEnabled}
+                    disabled={disabled}
+                    onChange={(codexLiveEnabled) => onChange({ codexLiveEnabled })}
+                  />
+                </SectionGrid>
+              </PageGroup>
+            </ConfigSection>
+
+            <ConfigSection
               id="images"
               hidden={activePageId !== 'provider-codex'}
               icon={<IconDiamond size={16} />}

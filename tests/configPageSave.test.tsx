@@ -642,6 +642,7 @@ describe('ConfigPage save coordination', () => {
   test.each([
     { section: 'codex', field: 'passthrough-prompt-cache-key' },
     { section: 'codex', field: 'optimize-multi-agent-v2' },
+    { section: 'codex', field: 'live-enabled' },
     { section: 'routing', field: 'session-affinity-across-priorities' },
     { section: 'routing', field: 'session-affinity-subagents' },
     { section: 'routing', field: 'session-affinity-lcp' },

@@ -2382,6 +2382,12 @@
           "no_cooldown_status_codes": "略過冷卻狀態碼",
           "no_cooldown_status_codes_desc": "這些 HTTP 狀態碼只記錄失敗，不安排帳號/模型冷卻；支援逗號或換行分隔，範圍 100-599"
         },
+        "codex_live": {
+          "title": "Codex Live / Realtime",
+          "description": "控制新即時會話的准入；WebRTC 媒體中繼單獨設定。",
+          "enabled": "允許建立新的 Live / Realtime 會話",
+          "enabled_desc": "預設關閉。關閉後拒絕新會話、臨時憑證及 WebSocket 連線，包括旁路連線及使用先前簽發憑證的連線；尚在建立的操作會取消。已建立的會話仍可繼續到正常結束，驗證身分後的掛斷及清理仍可使用。儲存後生效。"
+        },
         "images": {
           "title": "OpenAI Images 相容",
           "description": "透過 Codex Responses 的 image_generation tool 代理 OpenAI Images API",

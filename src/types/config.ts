@@ -219,6 +219,7 @@ export const normalizeCodexTurnStatePolicy = (value: unknown): CodexTurnStatePol
 };
 
 export interface CodexConfig {
+  liveEnabled?: boolean;
   optimizeMultiAgentV2?: boolean;
   passthroughPromptCacheKey?: boolean;
   streamBootstrapBuffering?: boolean;

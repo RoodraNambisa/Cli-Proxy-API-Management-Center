@@ -2336,6 +2336,12 @@
           "codex_header_defaults_beta_features": "Codex Beta-Features Default",
           "codex_header_defaults_originator": "Codex Originator Default"
         },
+        "codex_live": {
+          "title": "Codex Live / Realtime",
+          "description": "Control admission for new realtime sessions. WebRTC media relay has a separate setting.",
+          "enabled": "Allow new Live / Realtime sessions",
+          "enabled_desc": "Off by default. Turning this off rejects new sessions, temporary credentials, and WebSocket connections, including sideband connections and connections using previously issued credentials. Setup in progress is cancelled. Established sessions may continue until they end; authenticated hangup and cleanup remain available. The setting takes effect after saving."
+        },
         "images": {
           "title": "OpenAI Images Compatibility",
           "description": "Proxy OpenAI Images API through the Codex Responses image_generation tool",

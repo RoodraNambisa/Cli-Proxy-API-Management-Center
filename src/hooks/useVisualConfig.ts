@@ -2375,6 +2375,9 @@ function getNextDirtyFields(
       nextValues.codexOrphanDelegationCompatibility === baselineValues.codexOrphanDelegationCompatibility
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexLiveEnabled')) {
+    updateDirty('codexLiveEnabled', nextValues.codexLiveEnabled === baselineValues.codexLiveEnabled);
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexOptimizeMultiAgentV2')) {
     updateDirty(
       'codexOptimizeMultiAgentV2',
@@ -3157,6 +3160,11 @@ export function useVisualConfig() {
       const tls = asRecord(parsed.tls);
       const remoteManagement = asRecord(parsed['remote-management']);
       const codex = asRecord(readMergedYamlField(document, ['codex']));
+      const codexLiveEnabled = codex && Object.prototype.hasOwnProperty.call(codex, 'live-enabled')
+        ? codex['live-enabled'] : codex?.liveEnabled;
+      if (codexLiveEnabled != null && typeof codexLiveEnabled !== 'boolean') {
+        throw new Error('codex.live-enabled must be a boolean');
+      }
       const codexPassthroughPromptCacheKey =
         codex?.['passthrough-prompt-cache-key'] ?? codex?.passthroughPromptCacheKey;
       if (
@@ -3384,6 +3392,7 @@ export function useVisualConfig() {
         proxyUrl: typeof parsed['proxy-url'] === 'string' ? parsed['proxy-url'] : '',
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
+        codexLiveEnabled: codexLiveEnabled ?? false,
         codexPassthroughPromptCacheKey: codexPassthroughPromptCacheKey ?? false,
         codexStreamBootstrapBuffering: codexStreamBootstrapBuffering ?? false,
         codexOrphanDelegationCompatibility: codexOrphanDelegationCompatibility ?? false,
@@ -3939,6 +3948,7 @@ export function useVisualConfig() {
         if (
           docHas(doc, ['codex']) ||
           inheritedCodex ||
+          values.codexLiveEnabled ||
           values.codexIdentityConfuse ||
           values.codexPassthroughPromptCacheKey ||
           values.codexStreamBootstrapBuffering ||
@@ -3954,6 +3964,8 @@ export function useVisualConfig() {
             doc.setIn(['codex'], doc.createNode(inheritedCodex));
           }
           ensureMapInDoc(doc, ['codex']);
+          doc.setIn(['codex', 'live-enabled'], values.codexLiveEnabled);
+          doc.deleteIn(['codex', 'liveEnabled']);
           doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
           doc.setIn(['codex', 'passthrough-prompt-cache-key'], values.codexPassthroughPromptCacheKey);
           doc.deleteIn(['codex', 'passthroughPromptCacheKey']);
