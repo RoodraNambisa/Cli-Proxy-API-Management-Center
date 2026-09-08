@@ -5,11 +5,13 @@ import { serializeCredentialRequestRetry } from '@/utils/credentialRequestRetry'
 import { serializeRequestScopedErrors } from '@/utils/requestScopedErrors';
 import type { RequestScopedErrorRule } from '@/types/requestScopedErrors';
 /**
- * AI 提供商相关 API
+ * AI provider management APIs.
  */
 
 import { apiClient } from './client';
 import {
+  normalizeCodexAlphaSearch,
+  normalizeCodexKeyConfig,
   normalizeGeminiKeyConfig,
   normalizeOpenAIProvider,
   normalizeProviderKeyConfig,
@@ -135,6 +137,13 @@ const serializeProviderKey = (config: ProviderKeyConfig, patch = false) => {
   return payload;
 };
 
+const serializeCodexKey = (config: ProviderKeyConfig, patch = false) => {
+  const payload = serializeProviderKey(config, patch);
+  const alphaSearch = normalizeCodexAlphaSearch(config.alphaSearch);
+  if (alphaSearch !== undefined) payload['alpha-search'] = alphaSearch;
+  return payload;
+};
+
 const serializeVertexModelAliases = (models?: ModelAlias[]) =>
   Array.isArray(models)
     ? models
@@ -257,18 +266,18 @@ export const providersApi = {
     const data = await apiClient.get('/codex-api-key');
     const list = extractArrayPayload(data, 'codex-api-key');
     return list
-      .map((item) => normalizeProviderKeyConfig(item))
+      .map((item) => normalizeCodexKeyConfig(item))
       .filter(Boolean) as ProviderKeyConfig[];
   },
 
   saveCodexConfigs: (configs: ProviderKeyConfig[]) =>
     apiClient.put(
       '/codex-api-key',
-      configs.map((item) => serializeProviderKey(item))
+      configs.map((item) => serializeCodexKey(item))
     ),
 
   updateCodexConfig: (index: number, value: ProviderKeyConfig) =>
-    apiClient.patch('/codex-api-key', { index, value: serializeProviderKey(value, true) }),
+    apiClient.patch('/codex-api-key', { index, value: serializeCodexKey(value, true) }),
 
   deleteCodexConfig: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/codex-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),

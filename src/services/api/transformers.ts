@@ -713,6 +713,23 @@ const normalizeGeminiKeyConfig = (item: unknown): GeminiKeyConfig | null => {
   return config;
 };
 
+const normalizeCodexAlphaSearch = (value: unknown): boolean | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'boolean') throw new Error('alpha-search must be a boolean');
+  return value;
+};
+
+const normalizeCodexKeyConfig = (item: unknown): ProviderKeyConfig | null => {
+  const config = normalizeProviderKeyConfig(item);
+  if (!config) return null;
+  const raw = isRecord(item)
+    ? Object.prototype.hasOwnProperty.call(item, 'alpha-search') ? item['alpha-search'] : item.alphaSearch
+    : undefined;
+  const alphaSearch = normalizeCodexAlphaSearch(raw);
+  if (alphaSearch !== undefined) config.alphaSearch = alphaSearch;
+  return config;
+};
+
 const normalizeOpenAIProvider = (provider: unknown): OpenAIProviderConfig | null => {
   if (!isRecord(provider)) return null;
   const name = provider.name || provider.id;
@@ -771,7 +788,7 @@ const normalizeOauthExcluded = (payload: unknown): Record<string, string[]> | un
 };
 
 /**
- * 规范化 /config 返回值
+ * Normalize the /config response.
  */
 export const normalizeConfigResponse = (raw: unknown): Config => {
   const config: Config = { raw: isRecord(raw) ? raw : {} };
@@ -1246,7 +1263,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   const codexList = raw['codex-api-key'] ?? raw.codexApiKey ?? raw.codexApiKeys;
   if (Array.isArray(codexList)) {
     config.codexApiKeys = codexList
-      .map((item) => normalizeProviderKeyConfig(item))
+      .map((item) => normalizeCodexKeyConfig(item))
       .filter(Boolean) as ProviderKeyConfig[];
   }
 
@@ -1290,6 +1307,8 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
 };
 
 export {
+  normalizeCodexAlphaSearch,
+  normalizeCodexKeyConfig,
   normalizeApiKeyEntry,
   normalizeGeminiKeyConfig,
   normalizeModelAliases,
