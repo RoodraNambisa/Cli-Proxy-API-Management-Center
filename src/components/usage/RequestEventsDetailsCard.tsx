@@ -53,6 +53,7 @@ type RequestEventRow = {
   failed: boolean;
   latencyMs: number | null;
   stream: boolean | undefined;
+  generate: boolean | undefined;
   ttftMs: number | null;
   firstPacketMs: number | null;
   inputTokens: number;
@@ -212,6 +213,7 @@ export function RequestEventsDetailsCard({
         failed: detail.failed === true,
         latencyMs,
         stream: detail.stream,
+        generate: detail.generate,
         ttftMs: detail.ttft_ms ?? null,
         firstPacketMs: detail.first_packet_ms ?? null,
         inputTokens,
@@ -246,6 +248,7 @@ export function RequestEventsDetailsCard({
 
   const hasLatencyData = useMemo(() => rows.some((row) => row.latencyMs !== null), [rows]);
   const hasStreamData = rows.some((row) => row.stream !== undefined);
+  const hasGenerateData = rows.some((row) => row.generate !== undefined);
   const hasTTFTData = rows.some((row) => row.ttftMs !== null);
   const hasFirstPacketData = rows.some((row) => row.firstPacketMs !== null);
   const hasServiceTierData = useMemo(
@@ -478,6 +481,7 @@ export function RequestEventsDetailsCard({
       'auth_index',
       'result',
       ...(hasStreamData ? ['stream'] : []),
+      ...(hasGenerateData ? ['generate'] : []),
       ...(hasLatencyData ? ['latency_ms'] : []),
       ...(hasTTFTData ? ['ttft_ms'] : []),
       ...(hasFirstPacketData ? ['first_packet_ms'] : []),
@@ -499,6 +503,7 @@ export function RequestEventsDetailsCard({
         row.authIndex,
         row.failed ? 'failed' : 'success',
         ...(hasStreamData ? [row.stream === undefined ? '' : String(row.stream)] : []),
+        ...(hasGenerateData ? [row.generate === undefined ? '' : String(row.generate)] : []),
         ...(hasLatencyData ? [row.latencyMs ?? ''] : []),
         ...(hasTTFTData ? [row.ttftMs ?? ''] : []),
         ...(hasFirstPacketData ? [row.firstPacketMs ?? ''] : []),
@@ -533,6 +538,7 @@ export function RequestEventsDetailsCard({
       auth_index: row.authIndex,
       failed: row.failed,
       ...(row.stream !== undefined ? { stream: row.stream } : {}),
+      ...(row.generate !== undefined ? { generate: row.generate } : {}),
       ...(hasLatencyData && row.latencyMs !== null ? { latency_ms: row.latencyMs } : {}),
       ...(row.ttftMs !== null ? { ttft_ms: row.ttftMs } : {}),
       ...(row.firstPacketMs !== null ? { first_packet_ms: row.firstPacketMs } : {}),
@@ -742,6 +748,11 @@ export function RequestEventsDetailsCard({
                           {t('usage_stats.response_mode')}
                         </th>
                       )}
+                      {hasGenerateData && (
+                        <th title={t('usage_stats.generate_hint')}>
+                          {t('usage_stats.generate')}
+                        </th>
+                      )}
                       {hasLatencyData && <th title={latencyHint}>{t('usage_stats.time')}</th>}
                       {hasTTFTData && <th>{t('usage_stats.first_content_latency')}</th>}
                       {hasFirstPacketData && <th>{t('usage_stats.first_packet_latency')}</th>}
@@ -790,6 +801,17 @@ export function RequestEventsDetailsCard({
                                   row.stream
                                     ? 'usage_stats.response_streaming'
                                     : 'usage_stats.response_non_streaming'
+                                )}
+                          </td>
+                        )}
+                        {hasGenerateData && (
+                          <td>
+                            {row.generate === undefined
+                              ? '--'
+                              : t(
+                                  row.generate
+                                    ? 'usage_stats.generation_requested'
+                                    : 'usage_stats.generation_not_requested'
                                 )}
                           </td>
                         )}

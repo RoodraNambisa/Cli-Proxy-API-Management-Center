@@ -56,8 +56,8 @@ beforeEach(() => { vi.clearAllMocks(); });
 describe('usage response metrics display and export', () => {
   test('shows independent metrics, preserves false, and exports unavailable fields accurately', async () => {
     const table = await showDetails([
-      detail('content-model', { stream: true, ttft_ms: 900, first_packet_ms: 125 }),
-      detail('failed-model', { stream: false, failed: true, first_packet_ms: 30 }),
+      detail('content-model', { stream: true, generate: true, ttft_ms: 900, first_packet_ms: 125 }),
+      detail('failed-model', { stream: false, generate: false, failed: true, first_packet_ms: 30 }),
       detail('old-model'),
     ]);
     expect(within(table).getByRole('columnheader', { name: 'usage_stats.first_content_latency' })).toBeTruthy();
@@ -70,36 +70,38 @@ describe('usage response metrics display and export', () => {
     expect(within(contentRow).getByText(formatDurationMs(900))).toBeTruthy();
     expect(within(contentRow).getByText(formatDurationMs(125))).toBeTruthy();
     expect(within(contentRow).getByText('usage_stats.response_streaming')).toBeTruthy();
+    expect(within(contentRow).getByText('usage_stats.generation_requested')).toBeTruthy();
     const failedRow = within(table).getByText('failed-model').closest('tr')!;
     expect(within(failedRow).getByText('usage_stats.response_non_streaming')).toBeTruthy();
+    expect(within(failedRow).getByText('usage_stats.generation_not_requested')).toBeTruthy();
     expect(within(failedRow).getByText('--')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'usage_stats.export_json' }));
     const exported: Record<string, unknown>[] = JSON.parse(await readBlob(vi.mocked(downloadBlob).mock.calls.at(-1)![0].blob));
-    expect(exported.find((row) => row.model === 'content-model')).toMatchObject({ stream: true, ttft_ms: 900, first_packet_ms: 125, latency_ms: 2000 });
+    expect(exported.find((row) => row.model === 'content-model')).toMatchObject({ stream: true, generate: true, ttft_ms: 900, first_packet_ms: 125, latency_ms: 2000 });
     const failed = exported.find((row) => row.model === 'failed-model')!;
-    expect(failed).toMatchObject({ stream: false, failed: true, first_packet_ms: 30 });
+    expect(failed).toMatchObject({ stream: false, generate: false, failed: true, first_packet_ms: 30 });
     expect(failed).not.toHaveProperty('ttft_ms');
     const old = exported.find((row) => row.model === 'old-model')!;
-    for (const field of ['stream', 'ttft_ms', 'first_packet_ms']) expect(old).not.toHaveProperty(field);
+    for (const field of ['stream', 'generate', 'ttft_ms', 'first_packet_ms']) expect(old).not.toHaveProperty(field);
 
     fireEvent.click(screen.getByRole('button', { name: 'usage_stats.export_csv' }));
     const csv = await readBlob(vi.mocked(downloadBlob).mock.calls.at(-1)![0].blob);
-    expect(csv.split('\n')[0]).toContain('stream,latency_ms,ttft_ms,first_packet_ms');
-    expect(csv).toContain('"true","2000","900","125"');
-    expect(csv).toContain('"false","2000","","30"');
+    expect(csv.split('\n')[0]).toContain('stream,generate,latency_ms,ttft_ms,first_packet_ms');
+    expect(csv).toContain('"true","true","2000","900","125"');
+    expect(csv).toContain('"false","false","2000","","30"');
   });
 
   test('keeps the old table shape when metrics were not recorded', async () => {
     const table = await showDetails([detail('old-model')]);
-    for (const key of ['response_mode', 'first_content_latency', 'first_packet_latency']) {
+    for (const key of ['response_mode', 'generate', 'first_content_latency', 'first_packet_latency']) {
       expect(within(table).queryByRole('columnheader', { name: `usage_stats.${key}` })).toBeNull();
     }
   });
 
   test('provides labels and explanations in all supported locales', () => {
     for (const locale of [en, ru, zhCN, zhTW]) {
-      for (const key of ['response_mode', 'response_streaming', 'response_non_streaming', 'response_mode_hint', 'first_content_latency', 'first_packet_latency', 'response_timing_hint'] as const) {
+      for (const key of ['response_mode', 'generate', 'generate_hint', 'generation_requested', 'generation_not_requested', 'response_streaming', 'response_non_streaming', 'response_mode_hint', 'first_content_latency', 'first_packet_latency', 'response_timing_hint'] as const) {
         expect(locale.usage_stats[key]).toBeTruthy();
       }
     }

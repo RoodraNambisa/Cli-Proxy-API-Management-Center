@@ -17,12 +17,14 @@ describe.each(Object.entries(paths))('usage response metrics: %s', (_, normalize
     const detail = normalize({
       timestamp: '2026-09-09T00:00:00Z',
       stream,
+      generate: !stream,
       ttft_ms: 900,
       first_packet_ms: 125,
       latency_ms: 2000,
       tokens: { input_tokens: 2, output_tokens: 1, total_tokens: 3 },
     });
     expect(detail.stream).toBe(stream);
+    expect(detail.generate).toBe(!stream);
     expect(detail.ttft_ms).toBe(900);
     expect(detail.first_packet_ms).toBe(125);
     expect(detail.latency_ms).toBe(2000);
@@ -32,6 +34,7 @@ describe.each(Object.entries(paths))('usage response metrics: %s', (_, normalize
   test('does not infer old metrics or first content from a packet or total latency', () => {
     const old = normalize({ timestamp: '2026-09-09T00:00:00Z', latency_ms: 2000 });
     expect(old.stream).toBeUndefined();
+    expect(old.generate).toBeUndefined();
     expect(old.ttft_ms).toBeUndefined();
     expect(old.first_packet_ms).toBeUndefined();
     const failed = normalize({
@@ -50,10 +53,12 @@ describe.each(Object.entries(paths))('usage response metrics: %s', (_, normalize
       const detail = normalize({
         timestamp: '2026-09-09T00:00:00Z',
         stream: 'false',
+        generate: 'false',
         ttft_ms: value,
         first_packet_ms: value,
       });
       expect(detail.stream).toBeUndefined();
+      expect(detail.generate).toBeUndefined();
       expect(detail.ttft_ms).toBeUndefined();
       expect(detail.first_packet_ms).toBeUndefined();
     }

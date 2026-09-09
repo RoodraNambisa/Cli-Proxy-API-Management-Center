@@ -1,5 +1,6 @@
 export interface UsageResponseMetrics {
   stream?: boolean;
+  generate?: boolean;
   ttft_ms?: number;
   first_packet_ms?: number;
 }
@@ -12,6 +13,7 @@ export function normalizeUsageResponseMetrics(
 ): UsageResponseMetrics {
   return {
     stream: typeof record.stream === 'boolean' ? record.stream : undefined,
+    generate: typeof record.generate === 'boolean' ? record.generate : undefined,
     ttft_ms: positiveMilliseconds(record.ttft_ms),
     first_packet_ms: positiveMilliseconds(record.first_packet_ms),
   };
