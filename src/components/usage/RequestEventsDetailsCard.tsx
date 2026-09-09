@@ -52,6 +52,9 @@ type RequestEventRow = {
   authIndex: string;
   failed: boolean;
   latencyMs: number | null;
+  stream: boolean | undefined;
+  ttftMs: number | null;
+  firstPacketMs: number | null;
   inputTokens: number;
   outputTokens: number;
   reasoningTokens: number;
@@ -208,6 +211,9 @@ export function RequestEventsDetailsCard({
         authIndex,
         failed: detail.failed === true,
         latencyMs,
+        stream: detail.stream,
+        ttftMs: detail.ttft_ms ?? null,
+        firstPacketMs: detail.first_packet_ms ?? null,
         inputTokens,
         outputTokens,
         reasoningTokens,
@@ -239,6 +245,9 @@ export function RequestEventsDetailsCard({
   }, [authFileMap, details, i18n.language, sourceInfoMap]);
 
   const hasLatencyData = useMemo(() => rows.some((row) => row.latencyMs !== null), [rows]);
+  const hasStreamData = rows.some((row) => row.stream !== undefined);
+  const hasTTFTData = rows.some((row) => row.ttftMs !== null);
+  const hasFirstPacketData = rows.some((row) => row.firstPacketMs !== null);
   const hasServiceTierData = useMemo(
     () => rows.some((row) => row.requestServiceTier || row.responseServiceTier),
     [rows]
@@ -468,7 +477,10 @@ export function RequestEventsDetailsCard({
       'source_raw',
       'auth_index',
       'result',
+      ...(hasStreamData ? ['stream'] : []),
       ...(hasLatencyData ? ['latency_ms'] : []),
+      ...(hasTTFTData ? ['ttft_ms'] : []),
+      ...(hasFirstPacketData ? ['first_packet_ms'] : []),
       ...(hasServiceTierData ? ['request_service_tier', 'response_service_tier'] : []),
       'input_tokens',
       'output_tokens',
@@ -486,7 +498,10 @@ export function RequestEventsDetailsCard({
         row.sourceRaw,
         row.authIndex,
         row.failed ? 'failed' : 'success',
+        ...(hasStreamData ? [row.stream === undefined ? '' : String(row.stream)] : []),
         ...(hasLatencyData ? [row.latencyMs ?? ''] : []),
+        ...(hasTTFTData ? [row.ttftMs ?? ''] : []),
+        ...(hasFirstPacketData ? [row.firstPacketMs ?? ''] : []),
         ...(hasServiceTierData ? [row.requestServiceTier, row.responseServiceTier] : []),
         row.inputTokens,
         row.outputTokens,
@@ -517,7 +532,10 @@ export function RequestEventsDetailsCard({
       source_raw: row.sourceRaw,
       auth_index: row.authIndex,
       failed: row.failed,
+      ...(row.stream !== undefined ? { stream: row.stream } : {}),
       ...(hasLatencyData && row.latencyMs !== null ? { latency_ms: row.latencyMs } : {}),
+      ...(row.ttftMs !== null ? { ttft_ms: row.ttftMs } : {}),
+      ...(row.firstPacketMs !== null ? { first_packet_ms: row.firstPacketMs } : {}),
       ...(row.requestServiceTier ? { request_service_tier: row.requestServiceTier } : {}),
       ...(row.responseServiceTier ? { response_service_tier: row.responseServiceTier } : {}),
       tokens: {
@@ -695,6 +713,11 @@ export function RequestEventsDetailsCard({
                 {hasLatencyData && (
                   <span className={styles.requestEventsLimitHint}>{latencyHint}</span>
                 )}
+                {(hasTTFTData || hasFirstPacketData) && (
+                  <span className={styles.requestEventsLimitHint}>
+                    {t('usage_stats.response_timing_hint')}
+                  </span>
+                )}
                 {rows.length > MAX_RENDERED_EVENTS && (
                   <span className={styles.requestEventsLimitHint}>
                     {t('usage_stats.request_events_limit_hint', {
@@ -714,7 +737,14 @@ export function RequestEventsDetailsCard({
                       <th>{t('usage_stats.request_events_source')}</th>
                       <th>{t('usage_stats.request_events_auth_index')}</th>
                       <th>{t('usage_stats.request_events_result')}</th>
+                      {hasStreamData && (
+                        <th title={t('usage_stats.response_mode_hint')}>
+                          {t('usage_stats.response_mode')}
+                        </th>
+                      )}
                       {hasLatencyData && <th title={latencyHint}>{t('usage_stats.time')}</th>}
+                      {hasTTFTData && <th>{t('usage_stats.first_content_latency')}</th>}
+                      {hasFirstPacketData && <th>{t('usage_stats.first_packet_latency')}</th>}
                       {hasServiceTierData && <th>{t('usage_stats.request_service_tier')}</th>}
                       {hasServiceTierData && <th>{t('usage_stats.response_service_tier')}</th>}
                       <th>{t('usage_stats.input_tokens')}</th>
@@ -752,8 +782,25 @@ export function RequestEventsDetailsCard({
                             {row.failed ? t('stats.failure') : t('stats.success')}
                           </span>
                         </td>
+                        {hasStreamData && (
+                          <td>
+                            {row.stream === undefined
+                              ? '--'
+                              : t(
+                                  row.stream
+                                    ? 'usage_stats.response_streaming'
+                                    : 'usage_stats.response_non_streaming'
+                                )}
+                          </td>
+                        )}
                         {hasLatencyData && (
                           <td className={styles.durationCell}>{formatDurationMs(row.latencyMs)}</td>
+                        )}
+                        {hasTTFTData && (
+                          <td className={styles.durationCell}>{formatDurationMs(row.ttftMs)}</td>
+                        )}
+                        {hasFirstPacketData && (
+                          <td className={styles.durationCell}>{formatDurationMs(row.firstPacketMs)}</td>
                         )}
                         {hasServiceTierData && <td>{row.requestServiceTier || '-'}</td>}
                         {hasServiceTierData && <td>{row.responseServiceTier || '-'}</td>}
