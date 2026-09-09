@@ -114,7 +114,7 @@
     "model_name_placeholder": "模型名稱，例如 claude-3-5-sonnet-20241022",
     "model_alias_placeholder": "模型別名（選填）",
     "model_display_name_label": "顯示名稱",
-    "model_catalog_label": "模型顯示名稱、容量與推理能力",
+    "model_catalog_label": "模型宣告與相容設定",
     "model_catalog_manage": "編輯 API Key 模型設定",
     "oauth_model_display_name_manage": "編輯 OAuth 別名顯示名稱",
     "model_context_length_label": "上下文視窗覆寫",

@@ -12,6 +12,8 @@ vi.mock('react-i18next', async (original) => ({ ...(await original<typeof import
 
 test.each([
   'display-name', 'max-context-length',
+  'is-compat', '思考历史兼容', '思考歷史相容', 'reasoning history compatibility', 'совместимость истории рассуждений',
+  ...['codex-api-key', 'claude-api-key', 'gemini-api-key', 'interactions-api-key', 'vertex-api-key'].map((family) => `${family}[0].models[1].is-compat`),
   'thinking.levels', 'thinking.min', 'thinking.max', 'thinking.zero-allowed', 'thinking.dynamic-allowed',
   '推理能力', '推理預算', 'reasoning capabilities', 'возможности рассуждения',
   ...['codex-api-key', 'claude-api-key', 'gemini-api-key', 'interactions-api-key', 'vertex-api-key', 'openai-compatibility'].map((family) => `${family}[0].models[1].thinking.levels`),

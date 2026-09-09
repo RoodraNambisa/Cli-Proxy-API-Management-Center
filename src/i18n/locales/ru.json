@@ -114,7 +114,7 @@
     "model_name_placeholder": "Имя модели, напр. claude-3-5-sonnet-20241022",
     "model_alias_placeholder": "Псевдоним модели (необязательно)",
     "model_display_name_label": "Отображаемое имя",
-    "model_catalog_label": "Названия моделей, объём контекста и возможности рассуждения",
+    "model_catalog_label": "Объявления моделей и совместимость",
     "model_catalog_manage": "Изменить настройки моделей API-ключей",
     "oauth_model_display_name_manage": "Изменить имена псевдонимов OAuth",
     "model_context_length_label": "Переопределение окна контекста",
