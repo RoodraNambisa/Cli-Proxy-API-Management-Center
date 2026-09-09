@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { Input } from './Input';
 import { ModelThinkingEditor } from './ModelThinkingEditor';
+import { ToggleSwitch } from './ToggleSwitch';
 import { isValidModelContextLength, MAX_MODEL_CONTEXT_LENGTH } from '@/utils/modelContextLength';
 import { IconX } from './icons';
 import type { ModelEntry } from './modelInputListUtils';
@@ -17,6 +18,7 @@ interface ModelInputListProps {
   showDisplayName?: boolean;
   showContextLength?: boolean;
   showThinking?: boolean;
+  showCompatibility?: boolean;
   hideAddButton?: boolean;
   onAdd?: () => void;
   className?: string;
@@ -37,6 +39,7 @@ export function ModelInputList({
   showDisplayName = false,
   showContextLength = false,
   showThinking = false,
+  showCompatibility = false,
   hideAddButton = false,
   onAdd,
   className = '',
@@ -138,6 +141,18 @@ export function ModelInputList({
                 onChange(currentEntries.map((current, idx) => idx === index ? { ...current, maxContextLength: value } : current));
               }}
             />
+          )}
+          {showCompatibility && (
+            <div className="form-group">
+              <ToggleSwitch
+                checked={entry.isCompat === true}
+                label={`${t('model_compatibility.label')} ${index + 1}`}
+                ariaLabel={`${t('model_compatibility.label')} ${index + 1}`}
+                disabled={disabled}
+                onChange={(isCompat) => onChange(currentEntries.map((current, idx) => idx === index ? { ...current, isCompat } : current))}
+              />
+              <p className="hint">{t('model_compatibility.hint')}</p>
+            </div>
           )}
           {showThinking && (
             <ModelThinkingEditor

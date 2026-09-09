@@ -29,6 +29,10 @@
       "continue-and-cooldown": "继续并冷却"
     }
   },
+  "model_compatibility": {
+    "label": "思考历史兼容模式",
+    "hint": "is-compat 在协议转换时保留兼容上游需要的思考块或空签名，默认关闭。不会解密历史内容，也不改变声明的推理能力。保存后，新请求尝试选用该模型时生效；已经开始的尝试保持原配置。"
+  },
   "model_thinking": {
     "title": "推理能力",
     "inherit": "继承现有默认",

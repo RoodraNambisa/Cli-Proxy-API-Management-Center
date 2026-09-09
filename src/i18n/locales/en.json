@@ -29,6 +29,10 @@
       "continue-and-cooldown": "Continue and cool down"
     }
   },
+  "model_compatibility": {
+    "label": "Reasoning history compatibility",
+    "hint": "is-compat preserves thinking blocks or empty signatures required by compatible upstream models during protocol conversion. Off by default; it does not decrypt history or change declared reasoning capabilities. Saved changes apply when a new request attempt selects this model; attempts already running keep their captured value."
+  },
   "model_thinking": {
     "title": "Reasoning capability",
     "inherit": "Inherited defaults",

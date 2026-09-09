@@ -29,6 +29,10 @@
       "continue-and-cooldown": "繼續並冷卻"
     }
   },
+  "model_compatibility": {
+    "label": "思考歷史相容模式",
+    "hint": "is-compat 在協定轉換時保留相容上游需要的思考區塊或空簽章，預設關閉。不會解密歷史內容，也不改變宣告的推理能力。儲存後，新請求嘗試選用該模型時生效；已經開始的嘗試維持原設定。"
+  },
   "model_thinking": {
     "title": "推理能力",
     "inherit": "繼承現有預設",
