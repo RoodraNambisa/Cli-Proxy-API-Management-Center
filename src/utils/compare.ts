@@ -26,8 +26,8 @@ export function areKeyValueEntriesEqual(
 }
 
 export function areModelEntriesEqual(
-  a: readonly { name: string; alias: string; displayName?: string; maxContextLength?: number; thinking?: ModelThinking }[],
-  b: readonly { name: string; alias: string; displayName?: string; maxContextLength?: number; thinking?: ModelThinking }[]
+  a: readonly { name: string; alias: string; displayName?: string; maxContextLength?: number; thinking?: ModelThinking; isCompat?: boolean }[],
+  b: readonly { name: string; alias: string; displayName?: string; maxContextLength?: number; thinking?: ModelThinking; isCompat?: boolean }[]
 ): boolean {
   if (a === b) return true;
   if (a.length !== b.length) return false;
@@ -38,6 +38,7 @@ export function areModelEntriesEqual(
     if (left.name !== right.name || left.alias !== right.alias || (left.displayName ?? '') !== (right.displayName ?? '')) return false;
     if ((left.maxContextLength ?? 0) !== (right.maxContextLength ?? 0)) return false;
     if (!areModelThinkingEqual(left.thinking, right.thinking)) return false;
+    if ((left.isCompat === true) !== (right.isCompat === true)) return false;
   }
   return true;
 }

@@ -69,7 +69,7 @@ const normalizeModelEntries = (entries: ModelEntry[]) =>
       alias = '';
     }
     if (!name && !alias) return acc;
-    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined, maxContextLength: entry.maxContextLength, thinking: copyModelThinking(entry.thinking) });
+    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined, maxContextLength: entry.maxContextLength, thinking: copyModelThinking(entry.thinking), isCompat: entry.isCompat === true });
     return acc;
   }, []);
 
@@ -714,6 +714,7 @@ export function AiProvidersGeminiEditPage({
                 showDisplayName
                 showContextLength
                 showThinking
+                showCompatibility
                 entries={form.modelEntries}
                 onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
                 namePlaceholder={t('common.model_name_placeholder')}

@@ -52,7 +52,7 @@ const normalizeModelEntries = (entries: ModelEntry[]) =>
     const name = String(entry?.name ?? '').trim();
     const alias = String(entry?.alias ?? '').trim();
     if (!name && !alias) return acc;
-    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined, maxContextLength: entry.maxContextLength, thinking: copyModelThinking(entry.thinking) });
+    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined, maxContextLength: entry.maxContextLength, thinking: copyModelThinking(entry.thinking), isCompat: entry.isCompat === true });
     return acc;
   }, []);
 
@@ -435,6 +435,7 @@ export function AiProvidersVertexEditPage() {
                 showDisplayName
                 showContextLength
                 showThinking
+                showCompatibility
                 entries={form.modelEntries}
                 onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
                 addLabel={t('ai_providers.vertex_models_add_btn')}

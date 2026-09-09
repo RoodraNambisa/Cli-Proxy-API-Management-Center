@@ -78,7 +78,7 @@ const normalizeClaudeModelEntries = (entries: ModelEntry[]) =>
       alias = alias || name;
     }
     if (!name && !alias) return acc;
-    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined, maxContextLength: entry.maxContextLength, thinking: copyModelThinking(entry.thinking) });
+    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined, maxContextLength: entry.maxContextLength, thinking: copyModelThinking(entry.thinking), isCompat: entry.isCompat === true });
     return acc;
   }, []);
 

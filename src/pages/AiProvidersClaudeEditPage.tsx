@@ -406,6 +406,7 @@ export function AiProvidersClaudeEditPage() {
                 showDisplayName
                 showContextLength
                 showThinking
+                showCompatibility
                 entries={form.modelEntries}
                 onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
                 namePlaceholder={t('common.model_name_placeholder')}
