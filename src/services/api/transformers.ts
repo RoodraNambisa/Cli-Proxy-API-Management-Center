@@ -3,6 +3,7 @@ import { codexMediaField, normalizeCodexLiveMedia } from '@/utils/codexLiveMedia
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
 import { normalizeModelContextLength } from '@/utils/modelContextLength';
 import { normalizeModelThinking } from '@/utils/modelThinking';
+import { normalizeModelCompatibility } from '@/utils/modelCompatibility';
 import { normalizeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { normalizeOAuthRequestScopedErrors, normalizeRequestScopedErrors } from '@/utils/requestScopedErrors';
 import type {
@@ -473,7 +474,7 @@ const normalizeCodexCustomModels = (value: unknown): CodexCustomModelConfig[] | 
 
 const normalizeModelAliases = (
   models: unknown,
-  options: { preserveMatchingAliases?: boolean } = {}
+  options: { preserveMatchingAliases?: boolean; supportsCompatibility?: boolean } = {}
 ): ModelAlias[] => {
   if (!Array.isArray(models)) return [];
   return models
@@ -509,6 +510,14 @@ const normalizeModelAliases = (
       const thinking = normalizeModelThinking(item.thinking);
       delete entry.thinking;
       if (thinking !== undefined) entry.thinking = thinking;
+      if (options.supportsCompatibility !== false) {
+        const isCompat = normalizeModelCompatibility(
+          Object.prototype.hasOwnProperty.call(item, 'is-compat') ? item['is-compat'] : item.isCompat
+        );
+        delete entry['is-compat'];
+        delete entry.isCompat;
+        if (isCompat !== undefined) entry.isCompat = isCompat;
+      }
       if (alias && (options.preserveMatchingAliases || alias !== name)) {
         entry.alias = String(alias);
       }
@@ -759,7 +768,7 @@ const normalizeOpenAIProvider = (provider: unknown): OpenAIProviderConfig | null
   }
 
   const headers = normalizeHeaders(provider.headers);
-  const models = normalizeModelAliases(provider.models);
+  const models = normalizeModelAliases(provider.models, { supportsCompatibility: false });
   const priority = provider.priority ?? provider['priority'];
   const testModel = provider['test-model'] ?? provider.testModel;
 

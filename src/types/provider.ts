@@ -9,6 +9,7 @@ export interface ModelAlias {
   displayName?: string;
   maxContextLength?: number;
   thinking?: ModelThinking;
+  isCompat?: boolean;
   priority?: number;
   testModel?: string;
   [key: string]: unknown;

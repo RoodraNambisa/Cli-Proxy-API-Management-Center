@@ -2,6 +2,7 @@ import { serializeCredentialWeight } from '@/utils/credentialWeight';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
 import { serializeModelContextLength } from '@/utils/modelContextLength';
 import { serializeModelThinking } from '@/utils/modelThinking';
+import { normalizeModelCompatibility } from '@/utils/modelCompatibility';
 import { serializeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
 import { serializeRequestScopedErrors } from '@/utils/requestScopedErrors';
 import type { RequestScopedErrorRule } from '@/types/requestScopedErrors';
@@ -45,7 +46,10 @@ const buildProviderDeleteQuery = (apiKey: string, baseUrl?: string) => {
   return `?${params.toString()}`;
 };
 
-const serializeModelAliases = (models?: ModelAlias[]) =>
+const serializeModelAliases = (
+  models?: ModelAlias[],
+  options: { supportsCompatibility?: boolean } = {}
+) =>
   Array.isArray(models)
     ? models
         .map((model) => {
@@ -61,6 +65,14 @@ const serializeModelAliases = (models?: ModelAlias[]) =>
           const thinking = serializeModelThinking(model.thinking);
           delete payload.thinking;
           if (thinking !== undefined) payload.thinking = thinking;
+          if (options.supportsCompatibility !== false) {
+            const isCompat = normalizeModelCompatibility(
+              Object.prototype.hasOwnProperty.call(model, 'isCompat') ? model.isCompat : model['is-compat']
+            );
+            delete payload.isCompat;
+            delete payload['is-compat'];
+            if (isCompat !== undefined) payload['is-compat'] = isCompat;
+          }
           if (model.alias && model.alias !== model.name) {
             payload.alias = model.alias;
           }
@@ -222,7 +234,7 @@ const serializeOpenAIProvider = (provider: OpenAIProviderConfig, patch = false) 
   if (provider.prefix?.trim()) payload.prefix = provider.prefix.trim();
   const headers = serializeHeaders(provider.headers);
   if (headers) payload.headers = headers;
-  const models = serializeModelAliases(provider.models);
+  const models = serializeModelAliases(provider.models, { supportsCompatibility: false });
   if (models && models.length) payload.models = models;
   if (provider.priority !== undefined) payload.priority = provider.priority;
   if (provider.testModel) payload['test-model'] = provider.testModel;
