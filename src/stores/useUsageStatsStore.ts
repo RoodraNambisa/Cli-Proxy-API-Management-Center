@@ -9,6 +9,7 @@ import type {
   UsageRangeQuery,
 } from '@/types';
 import { parseTimestampMs } from '@/utils/timestamp';
+import { normalizeUsageResponseMetrics } from '@/utils/usage/responseMetrics';
 import {
   buildUsageRangeKey,
   extractLatencyMs,
@@ -273,6 +274,7 @@ export const normalizeUsageDetail = (detail: unknown, index: number): UsageDetai
       | number
       | null,
     latency_ms: latencyMs ?? undefined,
+    ...normalizeUsageResponseMetrics(record),
     tokens: {
       input_tokens: normalizeTokenNumber(tokensRecord.input_tokens),
       output_tokens: normalizeTokenNumber(tokensRecord.output_tokens),
