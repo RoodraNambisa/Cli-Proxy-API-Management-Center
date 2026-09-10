@@ -3232,7 +3232,7 @@ export function useVisualConfig() {
       const images = asRecord(parsed.images);
       const imagesChatGPTWeb = asRecord(images?.['chatgpt-web'] ?? images?.chatgptWeb);
       const pprof = asRecord(parsed.pprof);
-      const routing = asRecord(parsed.routing);
+      const routing = asRecord(readMergedYamlField(document, ['routing']));
       const payload = asRecord(parsed.payload);
       const streaming = asRecord(parsed.streaming);
       const legacyImagesOverrideUnsupportedParams = Boolean(
@@ -4666,8 +4666,10 @@ export function useVisualConfig() {
           deleteIfMapEmpty(doc, ['images']);
         }
 
+        const inheritedRouting = asRecord(readMergedYamlField(doc, ['routing']));
         if (
           docHas(doc, ['routing']) ||
+          inheritedRouting ||
           values.routingStrategy !== 'round-robin' ||
           values.routingPerAuthRequestLimit !== DEFAULT_VISUAL_VALUES.routingPerAuthRequestLimit ||
           values.routingPerAuthRequestWindowMinutes !==
@@ -4681,6 +4683,11 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.routingSessionAffinityFailover ||
           values.routingSessionAffinityTTL.trim()
         ) {
+          const routingNode = doc.getIn(['routing'], true);
+          detachErrorRuleAliases(doc, routingNode);
+          if (inheritedRouting && (!isMap(routingNode) || routingNode.has('<<'))) {
+            doc.setIn(['routing'], doc.createNode(inheritedRouting));
+          }
           ensureMapInDoc(doc, ['routing']);
           doc.setIn(['routing', 'strategy'], values.routingStrategy);
           if (values.routingStrategy === 'fill-first') {
