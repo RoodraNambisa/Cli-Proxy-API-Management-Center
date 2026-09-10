@@ -94,7 +94,25 @@ export interface AuthErrorSummary {
   diagnostic?: AuthErrorDiagnostic;
 }
 
+export interface CodexQuotaObservation {
+  observed_at: string;
+  source: 'http' | 'websocket';
+  signals: Record<string, string>;
+}
+
+export interface CodexObservedQuotaWindow {
+  id: string;
+  group: string;
+  name?: string;
+  kind: 'primary' | 'secondary';
+  usedPercent: number | null;
+  minutes: number | null;
+  resetAt: string | null;
+}
+
 export interface AuthFileItem {
+  quota_observation_enabled?: boolean;
+  quota_observation?: CodexQuotaObservation;
   weight?: number;
   name: string;
   email?: string;

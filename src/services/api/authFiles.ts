@@ -14,6 +14,7 @@ import type {
 } from '@/types/authFile';
 import type { OAuthModelAliasEntry } from '@/types';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
+import { normalizeCodexQuotaObservation } from '@/utils/codexQuotaObservation';
 import { parseTimestampMs } from '@/utils/timestamp';
 import { AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS, AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
 import { mapWithConcurrency } from '@/utils/concurrency';
@@ -600,6 +601,12 @@ export const normalizeAuthFileEntry = (entry: AuthFileEntry): AuthFileEntry => {
     normalized.websockets = websockets;
   }
   if (normalizedProvider === 'codex') {
+    const observation = normalizeCodexQuotaObservation(entry.quota_observation);
+    if (observation) normalized.quota_observation = observation;
+    else delete normalized.quota_observation;
+    if (typeof entry.quota_observation_enabled !== 'boolean') {
+      delete normalized.quota_observation_enabled;
+    }
     const authMode = readStringValue(entry.authMode ?? entry['auth_mode']);
     if (authMode) {
       normalized.authMode = authMode.toLowerCase() === 'agentidentity' ? 'agentIdentity' : authMode;
