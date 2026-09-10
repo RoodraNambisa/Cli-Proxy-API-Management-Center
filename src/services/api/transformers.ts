@@ -978,6 +978,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       estimateClaudeInputTokens: normalizeBoolean(
         codex['estimate-claude-input-tokens'] ?? codex.estimateClaudeInputTokens
       ) ?? false,
+      observeQuota: normalizeBoolean(codex['observe-quota'] ?? codex.observeQuota) ?? false,
       orphanDelegationCompatibility: normalizeBoolean(
         codex['orphan-delegation-compatibility'] ?? codex.orphanDelegationCompatibility
       ),

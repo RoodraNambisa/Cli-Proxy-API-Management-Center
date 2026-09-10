@@ -5116,6 +5116,18 @@ export function VisualConfigEditor({
                   </SectionGrid>
                 </PageGroup>
 
+                <PageGroup id="config-codex-quota-observation" active={activePageId === 'provider-codex'}>
+                  <SectionGrid>
+                    <ToggleRow
+                      title={t('config_management.visual.sections.network.codex_observe_quota')}
+                      description={t('config_management.visual.sections.network.codex_observe_quota_desc')}
+                      checked={values.codexObserveQuota}
+                      disabled={disabled}
+                      onChange={(codexObserveQuota) => onChange({ codexObserveQuota })}
+                    />
+                  </SectionGrid>
+                </PageGroup>
+
                 <PageGroup id="config-codex-orphan-delegation" active={activePageId === 'provider-codex'}>
                   <SectionGrid>
                     <ToggleRow

@@ -643,6 +643,7 @@ describe('ConfigPage save coordination', () => {
     { section: 'codex', field: 'passthrough-prompt-cache-key' },
     { section: 'codex', field: 'optimize-multi-agent-v2' },
     { section: 'codex', field: 'estimate-claude-input-tokens' },
+    { section: 'codex', field: 'observe-quota' },
     { section: 'codex', field: 'live-enabled' },
     { section: 'routing', field: 'session-affinity-across-priorities' },
     { section: 'routing', field: 'session-affinity-subagents' },

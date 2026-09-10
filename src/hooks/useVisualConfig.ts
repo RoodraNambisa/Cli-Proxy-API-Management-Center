@@ -2377,6 +2377,9 @@ function getNextDirtyFields(
       nextValues.codexEstimateClaudeInputTokens === baselineValues.codexEstimateClaudeInputTokens
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexObserveQuota')) {
+    updateDirty('codexObserveQuota', nextValues.codexObserveQuota === baselineValues.codexObserveQuota);
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexOrphanDelegationCompatibility')) {
     updateDirty(
       'codexOrphanDelegationCompatibility',
@@ -3198,6 +3201,10 @@ export function useVisualConfig() {
       if (codexEstimateClaudeInputTokens != null && typeof codexEstimateClaudeInputTokens !== 'boolean') {
         throw new Error('codex.estimate-claude-input-tokens must be a boolean');
       }
+      const codexObserveQuota = codex?.['observe-quota'] ?? codex?.observeQuota;
+      if (codexObserveQuota != null && typeof codexObserveQuota !== 'boolean') {
+        throw new Error('codex.observe-quota must be a boolean');
+      }
       const codexHeaderDefaults = asRecord(
         parsed['codex-header-defaults'] ?? parsed.codexHeaderDefaults
       );
@@ -3413,6 +3420,7 @@ export function useVisualConfig() {
         codexPassthroughPromptCacheKey: codexPassthroughPromptCacheKey ?? false,
         codexStreamBootstrapBuffering: codexStreamBootstrapBuffering ?? false,
         codexEstimateClaudeInputTokens: codexEstimateClaudeInputTokens ?? false,
+        codexObserveQuota: codexObserveQuota ?? false,
         codexOrphanDelegationCompatibility: codexOrphanDelegationCompatibility ?? false,
         codexOptimizeMultiAgentV2: codexOptimizeMultiAgentV2 ?? false,
         codexSpoofSessionIdentity: Boolean(
@@ -3973,6 +3981,7 @@ export function useVisualConfig() {
           values.codexPassthroughPromptCacheKey ||
           values.codexStreamBootstrapBuffering ||
           values.codexEstimateClaudeInputTokens ||
+          values.codexObserveQuota ||
           values.codexOrphanDelegationCompatibility ||
           values.codexOptimizeMultiAgentV2 ||
           values.codexSpoofSessionIdentity ||
@@ -3995,6 +4004,8 @@ export function useVisualConfig() {
           doc.deleteIn(['codex', 'streamBootstrapBuffering']);
           doc.setIn(['codex', 'estimate-claude-input-tokens'], values.codexEstimateClaudeInputTokens);
           doc.deleteIn(['codex', 'estimateClaudeInputTokens']);
+          doc.setIn(['codex', 'observe-quota'], values.codexObserveQuota);
+          doc.deleteIn(['codex', 'observeQuota']);
           doc.setIn(['codex', 'orphan-delegation-compatibility'], values.codexOrphanDelegationCompatibility);
           doc.deleteIn(['codex', 'orphanDelegationCompatibility']);
           doc.setIn(['codex', 'optimize-multi-agent-v2'], values.codexOptimizeMultiAgentV2);

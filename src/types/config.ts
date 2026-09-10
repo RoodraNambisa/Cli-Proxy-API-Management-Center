@@ -226,6 +226,7 @@ export interface CodexConfig {
   passthroughPromptCacheKey?: boolean;
   streamBootstrapBuffering?: boolean;
   estimateClaudeInputTokens?: boolean;
+  observeQuota?: boolean;
   orphanDelegationCompatibility?: boolean;
   identityConfuse?: boolean;
   spoofSessionIdentity?: boolean;

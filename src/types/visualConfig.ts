@@ -321,6 +321,7 @@ export type VisualConfigValues = {
   codexPassthroughPromptCacheKey: boolean;
   codexStreamBootstrapBuffering: boolean;
   codexEstimateClaudeInputTokens: boolean;
+  codexObserveQuota: boolean;
   codexOrphanDelegationCompatibility: boolean;
   codexOptimizeMultiAgentV2: boolean;
   codexSpoofSessionIdentity: boolean;
@@ -447,6 +448,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexPassthroughPromptCacheKey: false,
   codexStreamBootstrapBuffering: false,
   codexEstimateClaudeInputTokens: false,
+  codexObserveQuota: false,
   codexOrphanDelegationCompatibility: false,
   codexOptimizeMultiAgentV2: false,
   codexSpoofSessionIdentity: false,

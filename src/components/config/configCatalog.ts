@@ -128,6 +128,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'codexPassthroughPromptCacheKey',
       'codexStreamBootstrapBuffering',
       'codexEstimateClaudeInputTokens',
+      'codexObserveQuota',
       'codexOrphanDelegationCompatibility',
       'codexOptimizeMultiAgentV2',
       'codexSpoofSessionIdentity',
@@ -618,6 +619,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.codex_estimate_claude_input_tokens',
     yamlKeys: ['codex.estimate-claude-input-tokens', 'message_start', 'input_tokens'],
     aliases: ['token estimate', 'token 估算', 'token 估計', 'оценка токенов'],
+  },
+  {
+    id: 'config-codex-quota-observation',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.network.codex_observe_quota',
+    yamlKeys: ['codex.observe-quota', 'codex.rate_limits'],
+    aliases: ['passive quota', '额度观测', '額度觀測', 'наблюдение квоты'],
   },
   {
     id: 'config-codex-orphan-delegation',
