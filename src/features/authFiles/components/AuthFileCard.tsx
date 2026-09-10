@@ -44,6 +44,7 @@ import {
 import type { AuthFileStatusBarData } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import type { AuthFileUsageSummary } from '@/features/authFiles/hooks/useAuthFilesUsageSummary';
 import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
+import { CodexQuotaObservationPanel } from '@/features/authFiles/components/CodexQuotaObservationPanel';
 import { AuthFileUsageStatsPanel } from '@/features/authFiles/components/AuthFileUsageStatsPanel';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
@@ -1007,6 +1008,8 @@ export function AuthFileCard(props: AuthFileCardProps) {
               loading={usageLoading}
               compact={compact}
             />
+
+            {providerKey === 'codex' && <CodexQuotaObservationPanel file={file} compact={compact} />}
 
             {showQuotaLayout && quotaType && (
               <AuthFileQuotaSection

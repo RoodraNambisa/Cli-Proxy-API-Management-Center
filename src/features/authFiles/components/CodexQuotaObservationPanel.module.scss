@@ -1,0 +1,10 @@
+.observation {
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  summary {
+    cursor: pointer;
+    color: var(--text-secondary);
+  }
+}
