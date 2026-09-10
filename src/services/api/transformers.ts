@@ -1,4 +1,5 @@
 import { normalizeCredentialWeight } from '@/utils/credentialWeight';
+import { readCodexBooleanPolicy } from '@/utils/codexPolicy';
 import { codexMediaField, normalizeCodexLiveMedia } from '@/utils/codexLiveMedia';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
 import { normalizeModelContextLength } from '@/utils/modelContextLength';
@@ -975,22 +976,12 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     config.codex = {
       liveEnabled: liveEnabled ?? false,
       liveMediaRelay: normalizeCodexLiveMedia(codexMediaField(codex, 'live-media-relay', 'liveMediaRelay')),
-      optimizeMultiAgentV2: normalizeBoolean(
-        codex['optimize-multi-agent-v2'] ?? codex.optimizeMultiAgentV2
-      ),
-      passthroughPromptCacheKey: normalizeBoolean(
-        codex['passthrough-prompt-cache-key'] ?? codex.passthroughPromptCacheKey
-      ),
-      streamBootstrapBuffering: normalizeBoolean(
-        codex['stream-bootstrap-buffering'] ?? codex.streamBootstrapBuffering
-      ),
-      estimateClaudeInputTokens: normalizeBoolean(
-        codex['estimate-claude-input-tokens'] ?? codex.estimateClaudeInputTokens
-      ) ?? false,
-      observeQuota: normalizeBoolean(codex['observe-quota'] ?? codex.observeQuota) ?? false,
-      orphanDelegationCompatibility: normalizeBoolean(
-        codex['orphan-delegation-compatibility'] ?? codex.orphanDelegationCompatibility
-      ),
+      optimizeMultiAgentV2: readCodexBooleanPolicy(codex, 'optimize-multi-agent-v2', 'optimizeMultiAgentV2'),
+      passthroughPromptCacheKey: readCodexBooleanPolicy(codex, 'passthrough-prompt-cache-key', 'passthroughPromptCacheKey'),
+      streamBootstrapBuffering: readCodexBooleanPolicy(codex, 'stream-bootstrap-buffering', 'streamBootstrapBuffering'),
+      estimateClaudeInputTokens: readCodexBooleanPolicy(codex, 'estimate-claude-input-tokens', 'estimateClaudeInputTokens'),
+      observeQuota: readCodexBooleanPolicy(codex, 'observe-quota', 'observeQuota'),
+      orphanDelegationCompatibility: readCodexBooleanPolicy(codex, 'orphan-delegation-compatibility', 'orphanDelegationCompatibility'),
       identityConfuse: normalizeBoolean(codex['identity-confuse'] ?? codex.identityConfuse),
       spoofSessionIdentity: normalizeBoolean(
         codex['spoof-session-identity'] ?? codex.spoofSessionIdentity

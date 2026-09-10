@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useReducer } from 'react';
 import { readCodexLiveMediaYaml, codexLiveMediaErrors, codexLiveMediaEqual, writeCodexLiveMediaYaml } from '@/utils/codexLiveMedia';
+import { readCodexBooleanPolicy } from '@/utils/codexPolicy';
 import { preserveRoutingOverrideNodes } from '@/utils/routingYaml';
 import { detachErrorRuleAliases, readMergedYamlField, readOAuthErrorRulesYaml } from '@/utils/requestScopedErrorsYaml';
 import {
@@ -3179,48 +3180,16 @@ export function useVisualConfig() {
       if (codexLiveEnabled != null && typeof codexLiveEnabled !== 'boolean') {
         throw new Error('codex.live-enabled must be a boolean');
       }
-      const codexPassthroughPromptCacheKey =
-        codex?.['passthrough-prompt-cache-key'] ?? codex?.passthroughPromptCacheKey;
-      if (
-        codexPassthroughPromptCacheKey != null &&
-        typeof codexPassthroughPromptCacheKey !== 'boolean'
-      ) {
-        throw new Error('codex.passthrough-prompt-cache-key must be a boolean');
-      }
+      const codexPassthroughPromptCacheKey = readCodexBooleanPolicy(codex, 'passthrough-prompt-cache-key', 'passthroughPromptCacheKey');
       const codexFingerprint = asRecord(parsed['codex-fingerprint'] ?? parsed.codexFingerprint);
-      const codexStreamBootstrapBuffering =
-        codex?.['stream-bootstrap-buffering'] ?? codex?.streamBootstrapBuffering;
-      if (
-        codexStreamBootstrapBuffering != null &&
-        typeof codexStreamBootstrapBuffering !== 'boolean'
-      ) {
-        throw new Error('codex.stream-bootstrap-buffering must be a boolean');
-      }
-      const codexEstimateClaudeInputTokens =
-        codex?.['estimate-claude-input-tokens'] ?? codex?.estimateClaudeInputTokens;
-      if (codexEstimateClaudeInputTokens != null && typeof codexEstimateClaudeInputTokens !== 'boolean') {
-        throw new Error('codex.estimate-claude-input-tokens must be a boolean');
-      }
-      const codexObserveQuota = codex?.['observe-quota'] ?? codex?.observeQuota;
-      if (codexObserveQuota != null && typeof codexObserveQuota !== 'boolean') {
-        throw new Error('codex.observe-quota must be a boolean');
-      }
+      const codexStreamBootstrapBuffering = readCodexBooleanPolicy(codex, 'stream-bootstrap-buffering', 'streamBootstrapBuffering');
+      const codexEstimateClaudeInputTokens = readCodexBooleanPolicy(codex, 'estimate-claude-input-tokens', 'estimateClaudeInputTokens');
+      const codexObserveQuota = readCodexBooleanPolicy(codex, 'observe-quota', 'observeQuota');
       const codexHeaderDefaults = asRecord(
         parsed['codex-header-defaults'] ?? parsed.codexHeaderDefaults
       );
-      const codexOrphanDelegationCompatibility =
-        codex?.['orphan-delegation-compatibility'] ?? codex?.orphanDelegationCompatibility;
-      if (
-        codexOrphanDelegationCompatibility != null &&
-        typeof codexOrphanDelegationCompatibility !== 'boolean'
-      ) {
-        throw new Error('codex.orphan-delegation-compatibility must be a boolean');
-      }
-      const codexOptimizeMultiAgentV2 =
-        codex?.['optimize-multi-agent-v2'] ?? codex?.optimizeMultiAgentV2;
-      if (codexOptimizeMultiAgentV2 != null && typeof codexOptimizeMultiAgentV2 !== 'boolean') {
-        throw new Error('codex.optimize-multi-agent-v2 must be a boolean');
-      }
+      const codexOrphanDelegationCompatibility = readCodexBooleanPolicy(codex, 'orphan-delegation-compatibility', 'orphanDelegationCompatibility');
+      const codexOptimizeMultiAgentV2 = readCodexBooleanPolicy(codex, 'optimize-multi-agent-v2', 'optimizeMultiAgentV2');
       const chatgptWeb = asRecord(parsed['chatgpt-web'] ?? parsed.chatgptWeb);
       const chatgptWebAutoDeleteDeadPrioritiesRaw =
         chatgptWeb &&
