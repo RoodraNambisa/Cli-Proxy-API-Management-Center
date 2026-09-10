@@ -1,4 +1,16 @@
 {
+  "model_input_modalities": {
+    "title": "模型輸入類型",
+    "hint": "input-modalities 為選填，僅適用於 OpenAI 相容服務。只選擇模型實際支援的輸入；此項不增加上游能力或媒體介面。Codex 用戶端僅識別文字和圖片。設定更新在選擇模型時生效，已選定的嘗試保留原宣告。",
+    "text": "文字",
+    "image": "圖片",
+    "audio": "音訊",
+    "video": "影片",
+    "inherit": "繼承目錄，保留完整工具圖片。",
+    "text_only": "僅文字：工具結果轉為文字，協定圖片區塊替換為不支援圖片的提示。使用者輸入圖片與一般工具字串維持原樣。",
+    "declared": "覆寫輸入能力宣告，保留完整工具圖片。",
+    "reset": "恢復目錄繼承"
+  },
   "codex_quota_observation": {
     "retry_after": "重試提示（秒或時間）",
     "title": "最近被動額度",

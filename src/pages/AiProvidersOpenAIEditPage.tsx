@@ -644,6 +644,7 @@ export function AiProvidersOpenAIEditPage() {
                 showDisplayName
                 showContextLength
                 showThinking
+                showInputModalities
                 entries={form.modelEntries}
                 onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
                 namePlaceholder={t('common.model_name_placeholder')}

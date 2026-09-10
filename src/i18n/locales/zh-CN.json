@@ -1,4 +1,16 @@
 {
+  "model_input_modalities": {
+    "title": "模型输入类型",
+    "hint": "input-modalities 可选，仅适用于 OpenAI 兼容服务。只选择模型实际支持的输入；此项不增加上游能力或媒体接口。Codex 客户端仅识别文本和图片。配置更新在选择模型时生效，已选中的尝试保留原声明。",
+    "text": "文本",
+    "image": "图片",
+    "audio": "音频",
+    "video": "视频",
+    "inherit": "继承目录，保持完整工具图片。",
+    "text_only": "仅文本：工具结果转为文字，协议图片块替换为不支持图片的提示。用户输入图片和普通工具字符串保持原样。",
+    "declared": "覆盖输入能力声明，保持完整工具图片。",
+    "reset": "恢复目录继承"
+  },
   "codex_quota_observation": {
     "retry_after": "重试提示（秒或时间）",
     "title": "最近被动额度",

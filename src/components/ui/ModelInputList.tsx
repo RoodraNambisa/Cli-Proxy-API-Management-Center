@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { Input } from './Input';
 import { ModelThinkingEditor } from './ModelThinkingEditor';
+import { ModelInputModalitiesEditor } from './ModelInputModalitiesEditor';
 import { ToggleSwitch } from './ToggleSwitch';
 import { isValidModelContextLength, MAX_MODEL_CONTEXT_LENGTH } from '@/utils/modelContextLength';
 import { IconX } from './icons';
@@ -18,6 +19,7 @@ interface ModelInputListProps {
   showDisplayName?: boolean;
   showContextLength?: boolean;
   showThinking?: boolean;
+  showInputModalities?: boolean;
   showCompatibility?: boolean;
   hideAddButton?: boolean;
   onAdd?: () => void;
@@ -39,6 +41,7 @@ export function ModelInputList({
   showDisplayName = false,
   showContextLength = false,
   showThinking = false,
+  showInputModalities = false,
   showCompatibility = false,
   hideAddButton = false,
   onAdd,
@@ -122,6 +125,14 @@ export function ModelInputList({
               />
               <div id={`${displayNameId}-${index}-hint`} className="hint">{t('common.model_display_name_hint')}</div>
             </div>
+          )}
+          {showInputModalities && (
+            <ModelInputModalitiesEditor
+              value={entry.inputModalities}
+              index={index}
+              disabled={disabled}
+              onChange={(inputModalities) => onChange(currentEntries.map((item, idx) => idx === index ? { ...item, inputModalities } : item))}
+            />
           )}
           {showContextLength && (
             <Input

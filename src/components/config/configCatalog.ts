@@ -533,13 +533,14 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'common.model_catalog_label',
     yamlKeys: [
       'display-name', 'max-context-length', 'oauth-model-alias', 'thinking', 'is-compat',
+      'input-modalities', 'openai-compatibility[].models[].input-modalities',
       'thinking.levels', 'thinking.min', 'thinking.max', 'thinking.zero-allowed', 'thinking.dynamic-allowed',
       ...['codex-api-key', 'claude-api-key', 'gemini-api-key', 'interactions-api-key', 'vertex-api-key', 'openai-compatibility']
         .flatMap((family) => ['display-name', 'max-context-length', 'thinking', 'thinking.levels', 'thinking.min', 'thinking.max', 'thinking.zero-allowed', 'thinking.dynamic-allowed'].map((field) => `${family}[].models[].${field}`)),
       ...['codex-api-key', 'claude-api-key', 'gemini-api-key', 'interactions-api-key', 'vertex-api-key']
         .map((family) => `${family}[].models[].is-compat`),
     ],
-    aliases: ['model display name', 'context window override', 'reasoning capabilities', 'thinking budget', 'zero_allowed', 'dynamic_allowed', '显示名称', '上下文容量', '推理能力', '推理预算', '顯示名稱', '推理預算', 'объём контекста', 'возможности рассуждения', 'reasoning history compatibility', '思考历史兼容', '思考歷史相容', 'совместимость истории рассуждений'],
+    aliases: ['model display name', 'context window override', 'reasoning capabilities', 'thinking budget', 'zero_allowed', 'dynamic_allowed', '显示名称', '上下文容量', '推理能力', '推理预算', '顯示名稱', '推理預算', 'объём контекста', 'возможности рассуждения', 'reasoning history compatibility', '思考历史兼容', '思考歷史相容', 'совместимость истории рассуждений', 'input types', 'text only', '输入类型', '工具图片', '輸入類型', '工具圖片', 'типы ввода'],
   },
   {
     id: 'config-codex-alpha-search',

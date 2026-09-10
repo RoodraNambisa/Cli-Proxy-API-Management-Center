@@ -1,4 +1,16 @@
 {
+  "model_input_modalities": {
+    "title": "Model input types",
+    "hint": "input-modalities is optional and applies only to OpenAI compatibility providers. Select capabilities the model actually supports; this does not add upstream capability or media endpoints. Codex clients recognize text and image only. Updates apply when a model is selected; an already selected attempt keeps its declaration.",
+    "text": "Text",
+    "image": "Image",
+    "audio": "Audio",
+    "video": "Video",
+    "inherit": "Inherit the catalog. Tool images remain intact.",
+    "text_only": "Text only: tool result content is flattened to text, and protocol image parts become an unsupported-image notice. User input images and ordinary tool strings are preserved.",
+    "declared": "Override the declared input types. Tool images remain intact.",
+    "reset": "Inherit catalog"
+  },
   "codex_quota_observation": {
     "retry_after": "Retry hint (seconds or date)",
     "title": "Latest passive quota",
