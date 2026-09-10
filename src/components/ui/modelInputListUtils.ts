@@ -15,6 +15,7 @@ export const modelsToEntries = (models?: ModelAlias[]): ModelEntry[] => {
     delete entry.thinking;
     const thinking = normalizeModelThinking(model.thinking);
     if (thinking !== undefined) entry.thinking = thinking;
+    if (Array.isArray(entry.inputModalities)) entry.inputModalities = [...entry.inputModalities];
     return entry;
   });
 };
@@ -24,6 +25,7 @@ export const entriesToModels = (entries: ModelEntry[]): ModelAlias[] => {
     .filter((entry) => entry.name.trim())
     .map((entry) => {
       const model: ModelAlias = { ...entry, name: entry.name.trim() };
+      if (Array.isArray(model.inputModalities)) model.inputModalities = [...model.inputModalities];
       delete model.alias;
       delete model.displayName;
       const displayName = normalizeModelDisplayName(entry.displayName);

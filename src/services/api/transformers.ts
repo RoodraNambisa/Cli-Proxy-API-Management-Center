@@ -2,6 +2,7 @@ import { normalizeCredentialWeight } from '@/utils/credentialWeight';
 import { codexMediaField, normalizeCodexLiveMedia } from '@/utils/codexLiveMedia';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
 import { normalizeModelContextLength } from '@/utils/modelContextLength';
+import { normalizeModelInputModalities } from '@/utils/modelInputModalities';
 import { normalizeModelThinking } from '@/utils/modelThinking';
 import { normalizeModelCompatibility } from '@/utils/modelCompatibility';
 import { normalizeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
@@ -474,7 +475,7 @@ const normalizeCodexCustomModels = (value: unknown): CodexCustomModelConfig[] | 
 
 const normalizeModelAliases = (
   models: unknown,
-  options: { preserveMatchingAliases?: boolean; supportsCompatibility?: boolean } = {}
+  options: { preserveMatchingAliases?: boolean; supportsCompatibility?: boolean; supportsInputModalities?: boolean } = {}
 ): ModelAlias[] => {
   if (!Array.isArray(models)) return [];
   return models
@@ -507,6 +508,14 @@ const normalizeModelAliases = (
       }
       if (displayName !== undefined) entry.displayName = displayName;
       if (maxContextLength !== undefined) entry.maxContextLength = maxContextLength;
+      if (options.supportsInputModalities) {
+        const modalities = normalizeModelInputModalities(
+          Object.prototype.hasOwnProperty.call(item, 'input-modalities') ? item['input-modalities'] : item.inputModalities
+        );
+        delete entry['input-modalities'];
+        delete entry.inputModalities;
+        if (modalities !== undefined) entry.inputModalities = modalities;
+      }
       const thinking = normalizeModelThinking(item.thinking);
       delete entry.thinking;
       if (thinking !== undefined) entry.thinking = thinking;
@@ -768,7 +777,7 @@ const normalizeOpenAIProvider = (provider: unknown): OpenAIProviderConfig | null
   }
 
   const headers = normalizeHeaders(provider.headers);
-  const models = normalizeModelAliases(provider.models, { supportsCompatibility: false });
+  const models = normalizeModelAliases(provider.models, { supportsCompatibility: false, supportsInputModalities: true });
   const priority = provider.priority ?? provider['priority'];
   const testModel = provider['test-model'] ?? provider.testModel;
 

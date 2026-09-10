@@ -11,6 +11,7 @@
 import type { SetStateAction } from 'react';
 import { create } from 'zustand';
 import type { OpenAIFormState } from '@/components/providers/types';
+import type { ModelInputModality } from '@/types/provider';
 import { buildApiKeyEntry } from '@/components/providers/utils';
 
 export type OpenAITestStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -34,7 +35,7 @@ export type OpenAIEditBaseline = {
     proxyUrl: string;
     headers: Array<{ key: string; value: string }>;
   }>;
-  models: Array<{ name: string; alias: string; displayName?: string; maxContextLength?: number }>;
+  models: Array<{ name: string; alias: string; displayName?: string; maxContextLength?: number; inputModalities?: ModelInputModality[] }>;
   testModel: string;
 };
 

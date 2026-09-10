@@ -3,7 +3,10 @@
 import type { RequestScopedErrorRule } from './requestScopedErrors';
 import type { ModelThinking } from './modelThinking';
 
+export type ModelInputModality = 'text' | 'image' | 'audio' | 'video';
+
 export interface ModelAlias {
+  inputModalities?: ModelInputModality[];
   name: string;
   alias?: string;
   displayName?: string;

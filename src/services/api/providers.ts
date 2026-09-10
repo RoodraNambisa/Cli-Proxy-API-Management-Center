@@ -1,6 +1,7 @@
 import { serializeCredentialWeight } from '@/utils/credentialWeight';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
 import { serializeModelContextLength } from '@/utils/modelContextLength';
+import { normalizeModelInputModalities } from '@/utils/modelInputModalities';
 import { serializeModelThinking } from '@/utils/modelThinking';
 import { normalizeModelCompatibility } from '@/utils/modelCompatibility';
 import { serializeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
@@ -48,7 +49,7 @@ const buildProviderDeleteQuery = (apiKey: string, baseUrl?: string) => {
 
 const serializeModelAliases = (
   models?: ModelAlias[],
-  options: { supportsCompatibility?: boolean } = {}
+  options: { supportsCompatibility?: boolean; supportsInputModalities?: boolean } = {}
 ) =>
   Array.isArray(models)
     ? models
@@ -62,6 +63,14 @@ const serializeModelAliases = (
           if (displayName !== undefined) payload['display-name'] = displayName;
           const maxContextLength = serializeModelContextLength(model.maxContextLength);
           if (maxContextLength !== undefined) payload['max-context-length'] = maxContextLength;
+          if (options.supportsInputModalities) {
+            const modalities = normalizeModelInputModalities(
+              Object.prototype.hasOwnProperty.call(model, 'inputModalities') ? model.inputModalities : model['input-modalities']
+            );
+            delete payload.inputModalities;
+            delete payload['input-modalities'];
+            if (modalities !== undefined) payload['input-modalities'] = modalities;
+          }
           const thinking = serializeModelThinking(model.thinking);
           delete payload.thinking;
           if (thinking !== undefined) payload.thinking = thinking;
@@ -234,7 +243,7 @@ const serializeOpenAIProvider = (provider: OpenAIProviderConfig, patch = false) 
   if (provider.prefix?.trim()) payload.prefix = provider.prefix.trim();
   const headers = serializeHeaders(provider.headers);
   if (headers) payload.headers = headers;
-  const models = serializeModelAliases(provider.models, { supportsCompatibility: false });
+  const models = serializeModelAliases(provider.models, { supportsCompatibility: false, supportsInputModalities: true });
   if (models && models.length) payload.models = models;
   if (provider.priority !== undefined) payload.priority = provider.priority;
   if (provider.testModel) payload['test-model'] = provider.testModel;
