@@ -127,6 +127,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'codexIdentityConfuse',
       'codexPassthroughPromptCacheKey',
       'codexStreamBootstrapBuffering',
+      'codexEstimateClaudeInputTokens',
       'codexOrphanDelegationCompatibility',
       'codexOptimizeMultiAgentV2',
       'codexSpoofSessionIdentity',
@@ -610,6 +611,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.codex_stream_bootstrap_buffering',
     yamlKeys: ['codex.stream-bootstrap-buffering'],
     aliases: ['overload', 'bootstrap', '过载', '過載', 'перегрузка'],
+  },
+  {
+    id: 'config-codex-input-token-estimate',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.network.codex_estimate_claude_input_tokens',
+    yamlKeys: ['codex.estimate-claude-input-tokens', 'message_start', 'input_tokens'],
+    aliases: ['token estimate', 'token 估算', 'token 估計', 'оценка токенов'],
   },
   {
     id: 'config-codex-orphan-delegation',

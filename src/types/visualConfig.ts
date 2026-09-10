@@ -320,6 +320,7 @@ export type VisualConfigValues = {
   codexLiveMediaRelay: CodexLiveMediaVisualConfig;
   codexPassthroughPromptCacheKey: boolean;
   codexStreamBootstrapBuffering: boolean;
+  codexEstimateClaudeInputTokens: boolean;
   codexOrphanDelegationCompatibility: boolean;
   codexOptimizeMultiAgentV2: boolean;
   codexSpoofSessionIdentity: boolean;
@@ -445,6 +446,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexLiveMediaRelay: DEFAULT_CODEX_LIVE_MEDIA,
   codexPassthroughPromptCacheKey: false,
   codexStreamBootstrapBuffering: false,
+  codexEstimateClaudeInputTokens: false,
   codexOrphanDelegationCompatibility: false,
   codexOptimizeMultiAgentV2: false,
   codexSpoofSessionIdentity: false,

@@ -5104,6 +5104,18 @@ export function VisualConfigEditor({
                   </SectionGrid>
                 </PageGroup>
 
+                <PageGroup id="config-codex-input-token-estimate" active={activePageId === 'provider-codex'}>
+                  <SectionGrid>
+                    <ToggleRow
+                      title={t('config_management.visual.sections.network.codex_estimate_claude_input_tokens')}
+                      description={t('config_management.visual.sections.network.codex_estimate_claude_input_tokens_desc')}
+                      checked={values.codexEstimateClaudeInputTokens}
+                      disabled={disabled}
+                      onChange={(codexEstimateClaudeInputTokens) => onChange({ codexEstimateClaudeInputTokens })}
+                    />
+                  </SectionGrid>
+                </PageGroup>
+
                 <PageGroup id="config-codex-orphan-delegation" active={activePageId === 'provider-codex'}>
                   <SectionGrid>
                     <ToggleRow

@@ -975,6 +975,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       streamBootstrapBuffering: normalizeBoolean(
         codex['stream-bootstrap-buffering'] ?? codex.streamBootstrapBuffering
       ),
+      estimateClaudeInputTokens: normalizeBoolean(
+        codex['estimate-claude-input-tokens'] ?? codex.estimateClaudeInputTokens
+      ) ?? false,
       orphanDelegationCompatibility: normalizeBoolean(
         codex['orphan-delegation-compatibility'] ?? codex.orphanDelegationCompatibility
       ),

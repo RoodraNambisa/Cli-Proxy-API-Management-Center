@@ -225,6 +225,7 @@ export interface CodexConfig {
   optimizeMultiAgentV2?: boolean;
   passthroughPromptCacheKey?: boolean;
   streamBootstrapBuffering?: boolean;
+  estimateClaudeInputTokens?: boolean;
   orphanDelegationCompatibility?: boolean;
   identityConfuse?: boolean;
   spoofSessionIdentity?: boolean;

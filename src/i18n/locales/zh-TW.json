@@ -2366,6 +2366,8 @@
           "codex_orphan_delegation_compatibility": "孤立委派結果相容",
           "codex_orphan_delegation_compatibility_desc": "預設關閉。僅對攜帶 X-Openai-Subagent: collab_spawn 的請求，將缺少配對呼叫的 codex_app.create_thread、send_message_to_thread 結果轉成使用者訊息，保留結果文字；已有配對及其他工具保持原有處理。不依賴 Multi-agent v2 最佳化開關，不改變憑證分配，熱更新從下個請求或回合生效。",
           "codex_stream_bootstrap_buffering": "串流開頭過載切換",
+          "codex_estimate_claude_input_tokens": "估算 Claude 首段輸入 token",
+          "codex_estimate_claude_input_tokens_desc": "預設關閉。Claude 用戶端透過 Codex 接收串流回應時，以本機文字與工具估算值補齊第一個 message_start 中為零或缺少的輸入 token 數；既有數值、最終上游 Usage 與計費紀錄保持原樣。圖片、音訊、影片及不透明密文不納入估算。啟用會增加處理時間與記憶體配置，尤其是長對話及大型請求。熱更新從下一個請求生效，重試及傳輸回退共用相同估算值。",
           "codex_stream_bootstrap_buffering_desc": "預設關閉。開啟後暫存最多 16 個前導中繼資料事件、64 KiB，發現過載或限流時，在請求仍可重放且尚未提交輸出的情況下使用既有重試預算切換憑證；不會增加重試次數。實際內容或未知事件出現後恢復原有處理。增量 WebSocket 上下文不跨憑證重放，熱更新從下個請求或回合生效。",
           "codex_passthrough_prompt_cache_key": "透傳使用者快取鍵",
           "codex_passthrough_prompt_cache_key_desc": "預設關閉。開啟後保留使用者明確提供的非空 prompt_cache_key，不受身份混淆或會話收斂改寫；其他身份與隔離規則持續生效。未提供有效鍵時沿用自動產生，熱更新從下個請求或 WebSocket 回合生效。快取命中仍取決於提示前綴等條件。",
