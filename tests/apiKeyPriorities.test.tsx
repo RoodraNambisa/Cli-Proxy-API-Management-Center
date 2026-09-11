@@ -19,6 +19,28 @@ vi.mock('react-i18next', async (importOriginal) => ({
 }));
 beforeEach(() => vi.restoreAllMocks());
 
+test.each(['constructor', 'toString', '__proto__'])('handles a valid key matching an object prototype name: %s', async (key) => {
+  vi.spyOn(apiKeysApi, 'getAccessSnapshot').mockResolvedValue({ keys: [key], groups: [], lastUsed: {}, availablePriorities: [0, 1] });
+  const update = vi.spyOn(apiKeysApi, 'updatePriorities').mockResolvedValue({ status: 'ok' });
+  const view = render(<ApiKeysCardEditor value={key} active onChange={vi.fn()} />);
+  const checkbox = await screen.findByRole('checkbox', { name: 'config_management.visual.api_keys.priority_allowed: 1' });
+  expect(view.container.querySelector('time')).toBeNull();
+  expect(screen.getByText('config_management.visual.api_keys.last_used_never', { exact: false })).toBeTruthy();
+  fireEvent.click(checkbox);
+  await waitFor(() => expect(update).toHaveBeenCalledWith(key, 'allowedPriorities', [1]));
+  await waitFor(() => expect((checkbox as HTMLInputElement).checked).toBe(true));
+});
+
+test('canonical null priority fields override compatibility aliases', () => {
+  const config = normalizeConfigResponse({ 'api-key-groups': [{
+    'api-key': 'fixture', providers: [],
+    'allowed-priorities': null, allowedPriorities: [1],
+    'excluded-priorities': null, excludedPriorities: [2],
+  }] });
+  expect(config.apiKeyGroups?.[0].allowedPriorities).toEqual([]);
+  expect(config.apiKeyGroups?.[0].excludedPriorities).toEqual([]);
+});
+
 test('normalizes priority restrictions and writes only the changed field', async () => {
   const group = { 'api-key': 'fixture', providers: ['Codex'], 'allowed-priorities': [2, -1, 2], 'excluded-priorities': [2] };
   const patch = vi.spyOn(apiClient, 'patch').mockResolvedValue({ status: 'ok' });

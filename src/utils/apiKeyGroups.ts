@@ -24,10 +24,10 @@ export function normalizeClientApiKeyGroups(value: unknown): ClientApiKeyGroup[]
         : [],
     };
     if ('allowed-priorities' in record || 'allowedPriorities' in record) {
-      group.allowedPriorities = normalizeApiKeyPriorities(record['allowed-priorities'] ?? record.allowedPriorities);
+      group.allowedPriorities = normalizeApiKeyPriorities(Object.prototype.hasOwnProperty.call(record, 'allowed-priorities') ? record['allowed-priorities'] : record.allowedPriorities);
     }
     if ('excluded-priorities' in record || 'excludedPriorities' in record) {
-      group.excludedPriorities = normalizeApiKeyPriorities(record['excluded-priorities'] ?? record.excludedPriorities);
+      group.excludedPriorities = normalizeApiKeyPriorities(Object.prototype.hasOwnProperty.call(record, 'excluded-priorities') ? record['excluded-priorities'] : record.excludedPriorities);
     }
     return [group];
   });

@@ -190,6 +190,10 @@ function buildProtocolOptions(
   return options;
 }
 
+function apiKeyStateValue<T>(state: Record<string, T> | undefined, key: string): T | undefined {
+  return state && Object.prototype.hasOwnProperty.call(state, key) ? state[key] : undefined;
+}
+
 export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   value,
   savedValue = value,
@@ -372,7 +376,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
 
   const handleProviderToggle = async (apiKey: string, provider: string, checked: boolean) => {
     if (providerGroupsLoading || providerGroupUpdating || !serverKeys.has(apiKey)) return;
-    const current = providerGroups[apiKey] ?? [];
+    const current = apiKeyStateValue(providerGroups, apiKey) ?? [];
     const next = checked
       ? Array.from(new Set([...current, provider]))
       : current.filter((entry) => entry !== provider);
@@ -400,7 +404,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       await apiKeysApi.updatePriorities(apiKey, field, values);
       setPriorityGroups((previous) => ({
         ...previous,
-        [apiKey]: { ...(previous[apiKey] ?? { apiKey, providers: [] }), [field]: values },
+        [apiKey]: { ...(apiKeyStateValue(previous, apiKey) ?? { apiKey, providers: [] }), [field]: values },
       }));
       showNotification(t('config_management.visual.api_keys.priority_saved'), 'success');
       return true;
@@ -438,7 +442,11 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
         <div className={styles.emptyState}>{t('config_management.visual.api_keys.empty')}</div>
       ) : (
         <div className="item-list" style={{ marginTop: 4 }}>
-          {apiKeys.map((key, index) => (
+          {apiKeys.map((key, index) => {
+            const keyLastUsed = apiKeyStateValue(lastUsed, key);
+            const keyProviders = apiKeyStateValue(providerGroups, key) ?? [];
+            const keyPriorities = apiKeyStateValue(priorityGroups, key);
+            return (
             <div
               key={renderApiKeyIds[index] ?? `${key}-${index}`}
               className={`item-row ${styles.apiKeyItem}`}
@@ -452,8 +460,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                   <div className="item-subtitle">{maskApiKey(String(key || ''))}</div>
                   <div className="hint" title={t('config_management.visual.api_keys.last_used_hint')}>
                     {t('config_management.visual.api_keys.last_used')}{' '}
-                    {lastUsed?.[key] ? (
-                      <time dateTime={lastUsed[key]}>{formatDateTime(lastUsed[key])}</time>
+                    {keyLastUsed ? (
+                      <time dateTime={keyLastUsed}>{formatDateTime(keyLastUsed)}</time>
                     ) : t(`config_management.visual.api_keys.${lastUsed ? 'last_used_never' : 'last_used_unavailable'}`)}
                   </div>
                 </div>
@@ -509,9 +517,9 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                     <summary>
                       {t('config_management.visual.api_keys.provider_summary', {
                         providers:
-                          (providerGroups[key] ?? []).length === 0
+                          keyProviders.length === 0
                             ? t('config_management.visual.api_keys.provider_unrestricted')
-                            : (providerGroups[key] ?? [])
+                            : keyProviders
                                 .map(
                                   (provider) =>
                                     providerOptions.find((option) => option.value === provider)
@@ -524,7 +532,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                       {providerOptions.map((option) => (
                         <SelectionCheckbox
                           key={option.value}
-                          checked={(providerGroups[key] ?? []).includes(option.value)}
+                          checked={keyProviders.includes(option.value)}
                           disabled={
                             disabled || providerGroupsLoading || providerGroupUpdating !== null
                           }
@@ -554,13 +562,13 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                   ) : (
                     <details className={styles.apiKeyProviderDisclosure}>
                       <summary>
-                        {t('config_management.visual.api_keys.priority_allowed')}: {(priorityGroups[key]?.allowedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.provider_unrestricted')}
-                        {' · '}{t('config_management.visual.api_keys.priority_excluded')}: {(priorityGroups[key]?.excludedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.priority_none')}
+                        {t('config_management.visual.api_keys.priority_allowed')}: {(keyPriorities?.allowedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.provider_unrestricted')}
+                        {' · '}{t('config_management.visual.api_keys.priority_excluded')}: {(keyPriorities?.excludedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.priority_none')}
                       </summary>
                       <ApiKeyPriorityFields
-                        options={[...new Set([...availablePriorities, ...(priorityGroups[key]?.allowedPriorities ?? []), ...(priorityGroups[key]?.excludedPriorities ?? [])])].sort((a, b) => b - a)}
-                        allowedPriorities={priorityGroups[key]?.allowedPriorities}
-                        excludedPriorities={priorityGroups[key]?.excludedPriorities}
+                        options={[...new Set([...availablePriorities, ...(keyPriorities?.allowedPriorities ?? []), ...(keyPriorities?.excludedPriorities ?? [])])].sort((a, b) => b - a)}
+                        allowedPriorities={keyPriorities?.allowedPriorities}
+                        excludedPriorities={keyPriorities?.excludedPriorities}
                         disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null}
                         onChange={(field, values) => handlePriorityChange(key, field, values)}
                       />
@@ -570,7 +578,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
