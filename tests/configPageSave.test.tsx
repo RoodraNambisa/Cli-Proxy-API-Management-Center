@@ -1,8 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { ConfigPage } from '@/pages/ConfigPage';
 import { useStartupStatusStore } from '@/stores/useStartupStatusStore';
+import { apiClient } from '@/services/api/client';
+import { apiKeysApi } from '@/services/api/apiKeys';
 
 const harness = vi.hoisted(() => ({
   visualDirty: false,
@@ -494,6 +496,60 @@ describe('ConfigPage save coordination', () => {
     harness.usageCacheReload.mockResolvedValue(undefined);
     harness.fetchSharedConfig.mockResolvedValue(undefined);
     harness.translate.mockImplementation((key: string) => key);
+  });
+
+  test.each(['allowedPriorities', 'excludedPriorities', 'providers'] as const)(
+    'waits for an in-flight %s update before preparing the global YAML save',
+    async (field) => {
+      harness.visualDirty = true;
+      renderPage();
+      await waitFor(() => expect(harness.loadVisualValues).toHaveBeenCalled());
+      let finish!: () => void;
+      const pending = new Promise<void>((resolve) => { finish = resolve; });
+      const patch = vi.spyOn(apiClient, 'patch').mockReturnValue(pending);
+      const update = field === 'providers'
+        ? apiKeysApi.updateGroup('fixture', ['codex'])
+        : apiKeysApi.updatePriorities('fixture', field, [1]);
+      try {
+        await clickSave();
+        await act(async () => {});
+        expect(harness.fetchYaml).toHaveBeenCalledTimes(1);
+        expect(harness.applyVisualChanges).not.toHaveBeenCalled();
+        const latest = 'request-retry: 0\napi-key-groups: [{api-key: fixture, allowed-priorities: [1]}]\n';
+        harness.fetchYaml.mockResolvedValue(latest);
+        harness.applyVisualChanges.mockImplementation((yaml: string) => yaml.replace('request-retry: 0', 'request-retry: 1'));
+        await act(async () => { finish(); await update; });
+        fireEvent.click(await screen.findByRole('button', { name: 'confirm-diff' }));
+        await waitFor(() => expect(harness.saveYaml).toHaveBeenCalledWith(latest.replace('request-retry: 0', 'request-retry: 1')));
+      } finally {
+        finish();
+        await update;
+        patch.mockRestore();
+      }
+    }
+  );
+
+  test('a rejected priority write does not block saving unrelated configuration', async () => {
+    harness.visualDirty = true;
+    renderPage();
+    await waitFor(() => expect(harness.loadVisualValues).toHaveBeenCalled());
+    let reject!: (reason: Error) => void;
+    const pending = new Promise<void>((_, fail) => { reject = fail; });
+    const patch = vi.spyOn(apiClient, 'patch').mockReturnValue(pending);
+    const failure = new Error('fixture rejected');
+    const update = apiKeysApi.updatePriorities('fixture', 'allowedPriorities', [1]).catch((error) => error);
+    try {
+      await clickSave();
+      await act(async () => {});
+      expect(harness.fetchYaml).toHaveBeenCalledTimes(1);
+      await act(async () => { reject(failure); expect(await update).toBe(failure); });
+      fireEvent.click(await screen.findByRole('button', { name: 'confirm-diff' }));
+      await waitFor(() => expect(harness.saveYaml).toHaveBeenCalledWith(harness.mergedYaml));
+    } finally {
+      reject(failure);
+      await update;
+      patch.mockRestore();
+    }
   });
 
   test('refreshes the YAML snapshot after a sidecar-only save', async () => {

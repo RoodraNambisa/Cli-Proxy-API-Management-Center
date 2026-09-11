@@ -49,6 +49,7 @@ import { useVisualConfig } from '@/hooks/useVisualConfig';
 import { useNotificationStore, useAuthStore, useThemeStore, useConfigStore } from '@/stores';
 import { startupMutationsBlocked, useStartupStatusStore } from '@/stores/useStartupStatusStore';
 import { configFileApi } from '@/services/api/configFile';
+import { apiKeysApi } from '@/services/api/apiKeys';
 import styles from './ConfigPage.module.scss';
 
 type ConfigEditorTab = 'visual' | 'source';
@@ -551,6 +552,7 @@ export function ConfigPage() {
 
     setSaving(true);
     try {
+      await apiKeysApi.waitForGroupUpdates();
       const latestServerYaml = await configFileApi.fetchConfigYaml();
 
       if (yamlDirty && activeTab !== 'source') {

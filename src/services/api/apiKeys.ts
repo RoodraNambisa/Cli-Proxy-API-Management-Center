@@ -30,7 +30,26 @@ const normalizeProviders = (value: unknown): string[] => {
   return providers;
 };
 
+const pendingGroupUpdates = new Set<Promise<unknown>>();
+
+function trackGroupUpdate<T>(request: Promise<T>): Promise<T> {
+  pendingGroupUpdates.add(request);
+  void request.then(
+    () => { pendingGroupUpdates.delete(request); },
+    () => { pendingGroupUpdates.delete(request); }
+  );
+  return request;
+}
+
 export const apiKeysApi = {
+  // Global YAML saves must read after immediate access edits have settled.
+  // Failed writes still reject to their caller and leave the server value intact.
+  async waitForGroupUpdates(): Promise<void> {
+    while (pendingGroupUpdates.size > 0) {
+      await Promise.allSettled(pendingGroupUpdates);
+    }
+  },
+
   async listDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'keys' | 'lastUsed'>> {
     const data = await apiClient.get<Record<string, unknown>>('/api-keys');
     const keys = data['api-keys'] ?? data.apiKeys;
@@ -71,19 +90,19 @@ export const apiKeysApi = {
   },
 
   updateGroup: (apiKey: string, providers: string[]) =>
-    apiClient.patch('/api-key-groups', {
+    trackGroupUpdate(apiClient.patch('/api-key-groups', {
       'api-key': apiKey,
       providers: normalizeProviders(providers),
-    }),
+    })),
 
   updatePriorities: (apiKey: string, field: 'allowedPriorities' | 'excludedPriorities', values: number[]) =>
-    apiClient.patch('/api-key-groups', {
+    trackGroupUpdate(apiClient.patch('/api-key-groups', {
       'api-key': apiKey,
       [field === 'allowedPriorities' ? 'allowed-priorities' : 'excluded-priorities']: normalizeApiKeyPriorities(values),
-    }),
+    })),
 
   deleteGroup: (apiKey: string) =>
-    apiClient.delete(`/api-key-groups?api-key=${encodeURIComponent(apiKey)}`),
+    trackGroupUpdate(apiClient.delete(`/api-key-groups?api-key=${encodeURIComponent(apiKey)}`)),
 
   replace: (keys: string[]) => apiClient.put('/api-keys', keys),
 
