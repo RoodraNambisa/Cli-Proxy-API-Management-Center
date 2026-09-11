@@ -326,6 +326,36 @@ describe('configuration settings center', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  test('scrolls to the same field again when its search result is selected repeatedly', async () => {
+    renderEditor('/config?section=global-basics');
+    const search = screen.getByRole('searchbox', { name: 'Search configuration' });
+    for (let selection = 1; selection <= 2; selection += 1) {
+      fireEvent.change(search, { target: { value: 'max-in-flight' } });
+      fireEvent.click(screen.getByText('images.chatgpt-web.max-in-flight', { selector: 'code' }));
+      await waitFor(() => expect(scrollIntoViewMock).toHaveBeenCalledTimes(selection));
+      expect(document.activeElement?.id).toBe('config-chatgpt-web-image-max-in-flight');
+    }
+  });
+
+  test('cleans up the search highlight and its timer when the editor unmounts', async () => {
+    const setTimer = vi.spyOn(window, 'setTimeout');
+    const clearTimer = vi.spyOn(window, 'clearTimeout');
+    const { unmount } = renderEditor('/config?section=config-host');
+    try {
+      const input = document.getElementById('config-host')!;
+      await waitFor(() => expect(input.className).toContain('searchTargetHighlight'));
+      const highlightTimerIndex = setTimer.mock.calls.findIndex(([, delay]) => delay === 1400);
+      expect(highlightTimerIndex).toBeGreaterThanOrEqual(0);
+      unmount();
+      expect(input.className).not.toContain('searchTargetHighlight');
+      expect(clearTimer).toHaveBeenCalledWith(setTimer.mock.results[highlightTimerIndex].value);
+    } finally {
+      unmount();
+      setTimer.mockRestore();
+      clearTimer.mockRestore();
+    }
+  });
+
   test.each(
     CONFIG_SEARCH_DEFINITIONS.flatMap((item) =>
       Object.values(item.fieldTargets ?? {}).map((target) => [target])

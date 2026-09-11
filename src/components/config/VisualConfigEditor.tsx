@@ -839,6 +839,7 @@ export function VisualConfigEditor({
   const [focusTarget, setFocusTarget] = useState<string | undefined>(
     () => resolveConfigSection(sectionParam)?.targetId
   );
+  const [focusRequest, setFocusRequest] = useState(0);
   const routingStrategyLabelId = useId();
   const routingStrategyHintId = `${routingStrategyLabelId}-hint`;
   const maintenanceDeleteStatusCodesInputId = useId();
@@ -1862,6 +1863,8 @@ export function VisualConfigEditor({
 
   useEffect(() => {
     if (!focusTarget) return undefined;
+    let highlightedTarget: HTMLElement | undefined;
+    let highlightTimer: number | undefined;
     const timer = window.setTimeout(() => {
       const target = document.getElementById(focusTarget);
       if (!target) return;
@@ -1875,15 +1878,24 @@ export function VisualConfigEditor({
       visibleTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
       focusable?.focus({ preventScroll: true });
       visibleTarget.classList.add(styles.searchTargetHighlight);
-      window.setTimeout(() => visibleTarget.classList.remove(styles.searchTargetHighlight), 1400);
+      highlightedTarget = visibleTarget;
+      highlightTimer = window.setTimeout(
+        () => visibleTarget.classList.remove(styles.searchTargetHighlight),
+        1400
+      );
     }, 60);
-    return () => window.clearTimeout(timer);
-  }, [activePageId, focusTarget]);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(highlightTimer);
+      highlightedTarget?.classList.remove(styles.searchTargetHighlight);
+    };
+  }, [activePageId, focusTarget, focusRequest]);
 
   const handlePageChange = useCallback(
     (pageId: ConfigPageId, targetId?: string) => {
       setActivePageId(pageId);
       setFocusTarget(targetId);
+      if (targetId) setFocusRequest((request) => request + 1);
       localStorage.setItem('config-management:visual-page', pageId);
       const nextParams = new URLSearchParams(searchParams);
       nextParams.set('section', targetId ?? pageId);
