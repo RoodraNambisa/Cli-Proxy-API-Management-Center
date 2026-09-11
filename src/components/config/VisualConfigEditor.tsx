@@ -562,6 +562,20 @@ function LegacyImagesSettings({
           disabled={disabled}
           hint={t('config_management.visual.sections.images.image_model_hint')}
         />
+        <div id="config-images-tool-models" tabIndex={-1}>
+          <FieldShell
+            label={t('config_management.visual.sections.images.image_models')}
+            hint={t('config_management.visual.sections.images.image_models_hint')}
+          >
+            <StringListEditor
+              value={values.images.imageModels}
+              disabled={disabled}
+              placeholder="gpt-image-2.5"
+              inputAriaLabel={t('config_management.visual.sections.images.image_models')}
+              onChange={(imageModels) => onChange({ images: { ...values.images, imageModels } })}
+            />
+          </FieldShell>
+        </div>
         <Input
           label={t('config_management.visual.sections.images.unsupported_status_code')}
           type="number"
@@ -907,19 +921,21 @@ export function VisualConfigEditor({
   const nativeEditsDirty =
     JSON.stringify(values.images.native.edits) !==
     JSON.stringify(baselineValues.images.native.edits);
-  const legacyImagesDirty = (
-    [
-      'codexModel',
-      'imageModel',
-      'unsupportedStatusCode',
-      'enableFreePlanImageModel',
-      'enableNAggregation',
-      'overrideResponseFormatUrl',
-      'responseFormatUrlDataUrl',
-      'overrideTransparentBackground',
-      'overrideInputFidelity',
-    ] as const
-  ).some((field) => values.images[field] !== baselineValues.images[field]);
+  const legacyImagesDirty =
+    (
+      [
+        'codexModel',
+        'imageModel',
+        'unsupportedStatusCode',
+        'enableFreePlanImageModel',
+        'enableNAggregation',
+        'overrideResponseFormatUrl',
+        'responseFormatUrlDataUrl',
+        'overrideTransparentBackground',
+        'overrideInputFidelity',
+      ] as const
+    ).some((field) => values.images[field] !== baselineValues.images[field]) ||
+    JSON.stringify(values.images.imageModels) !== JSON.stringify(baselineValues.images.imageModels);
   const legacyImagesExpansionStorageKey = 'config-management:images-legacy-expanded';
   const persistedLegacyImagesExpansion = localStorage.getItem(legacyImagesExpansionStorageKey);
   const [legacyImagesExpandedPreference, setLegacyImagesExpandedPreference] = useState<
@@ -2336,13 +2352,31 @@ export function VisualConfigEditor({
                   hint={t(
                     'config_management.settings_center.chatgpt_web.image_upstream_model_description'
                   )}
-                  placeholder="gpt-5-5"
+                  placeholder="auto"
                   value={values.chatgptWebImageUpstreamModel}
                   disabled={disabled}
                   onChange={(event) =>
                     onChange({ chatgptWebImageUpstreamModel: event.target.value })
                   }
                 />
+                <div id="config-chatgpt-web-image-models" tabIndex={-1}>
+                  <FieldShell
+                    label={t('config_management.settings_center.chatgpt_web.image_models')}
+                    hint={t(
+                      'config_management.settings_center.chatgpt_web.image_models_description'
+                    )}
+                  >
+                    <StringListEditor
+                      value={values.chatgptWebImageModels}
+                      disabled={disabled}
+                      placeholder="gpt-image-2.5"
+                      inputAriaLabel={t(
+                        'config_management.settings_center.chatgpt_web.image_models'
+                      )}
+                      onChange={(chatgptWebImageModels) => onChange({ chatgptWebImageModels })}
+                    />
+                  </FieldShell>
+                </div>
               </SectionGrid>
               <ToggleRow
                 title={t(
@@ -5468,6 +5502,7 @@ export function VisualConfigEditor({
                   expanded={
                     legacyImagesExpanded ||
                     focusTarget === 'config-images-legacy' ||
+                    focusTarget === 'config-images-tool-models' ||
                     Boolean(imagesUnsupportedStatusCodeError) ||
                     legacyImagesDirty
                   }

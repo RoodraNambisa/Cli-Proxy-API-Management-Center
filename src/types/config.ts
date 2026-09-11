@@ -124,6 +124,7 @@ export interface NativeImagesConfig {
 export interface ImagesConfig {
   codexModel?: string;
   imageModel?: string;
+  imageModels?: string[];
   enableFreePlanImageModel?: boolean;
   enableNAggregation?: boolean;
   enableStreamFlush?: boolean;
@@ -136,6 +137,8 @@ export interface ImagesConfig {
   streamFlushIntervalMs?: number;
   streamFlushMinBytes?: number;
   chatgptWeb?: {
+    imageModels?: string[];
+    upstreamModel?: string;
     sanitizeErrorResponses?: boolean;
     normalizeMismatchedImageMime?: boolean;
     normalizeRemoteImageMime?: boolean;

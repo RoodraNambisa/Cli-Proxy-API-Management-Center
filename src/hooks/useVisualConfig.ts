@@ -2535,6 +2535,12 @@ function getNextDirtyFields(
       nextValues.chatgptWebImageUpstreamModel === baselineValues.chatgptWebImageUpstreamModel
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageModels')) {
+    updateDirty(
+      'chatgptWebImageModels',
+      areStringArraysEqual(nextValues.chatgptWebImageModels, baselineValues.chatgptWebImageModels)
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebIgnoreUnsupportedImageParams')) {
     updateDirty(
       'chatgptWebIgnoreUnsupportedImageParams',
@@ -2852,6 +2858,12 @@ function getNextDirtyFields(
       updateDirty(
         'images.imageModel',
         nextValues.images.imageModel === baselineValues.images.imageModel
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'imageModels')) {
+      updateDirty(
+        'images.imageModels',
+        areStringArraysEqual(nextValues.images.imageModels, baselineValues.images.imageModels)
       );
     }
     if (Object.prototype.hasOwnProperty.call(imagesPatch, 'enableFreePlanImageModel')) {
@@ -3466,6 +3478,9 @@ export function useVisualConfig() {
             : typeof imagesChatGPTWeb?.upstreamModel === 'string'
               ? imagesChatGPTWeb.upstreamModel
               : DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel,
+        chatgptWebImageModels: parseStringList(
+          imagesChatGPTWeb?.['image-models'] ?? imagesChatGPTWeb?.imageModels
+        ),
         chatgptWebIgnoreUnsupportedImageParams: Boolean(
           imagesChatGPTWeb?.['ignore-unsupported-params'] ??
           imagesChatGPTWeb?.ignoreUnsupportedParams
@@ -3650,6 +3665,7 @@ export function useVisualConfig() {
               : typeof images?.imageModel === 'string'
                 ? images.imageModel
                 : DEFAULT_VISUAL_VALUES.images.imageModel,
+          imageModels: parseStringList(images?.['image-models'] ?? images?.imageModels),
           enableFreePlanImageModel: imagesEnableFreePlanImageModel,
           enableNAggregation:
             images?.['enable-n-aggregation'] === undefined &&
@@ -4332,6 +4348,11 @@ export function useVisualConfig() {
           docHas(doc, ['images']) ||
           values.images.codexModel !== imagesDefaults.codexModel ||
           values.images.imageModel !== imagesDefaults.imageModel ||
+          !areStringArraysEqual(values.images.imageModels, imagesDefaults.imageModels) ||
+          !areStringArraysEqual(
+            values.chatgptWebImageModels,
+            DEFAULT_VISUAL_VALUES.chatgptWebImageModels
+          ) ||
           values.images.enableFreePlanImageModel !== imagesDefaults.enableFreePlanImageModel ||
           values.images.enableNAggregation !== imagesDefaults.enableNAggregation ||
           values.images.enableStreamFlush !== imagesDefaults.enableStreamFlush ||
@@ -4396,6 +4417,17 @@ export function useVisualConfig() {
           ensureMapInDoc(doc, ['images']);
           setStringInDoc(doc, ['images', 'codex-model'], values.images.codexModel);
           setStringInDoc(doc, ['images', 'image-model'], values.images.imageModel);
+          if (
+            docHas(doc, ['images', 'image-models']) ||
+            docHas(doc, ['images', 'imageModels']) ||
+            values.images.imageModels.length > 0
+          ) {
+            doc.setIn(
+              ['images', 'image-models'],
+              normalizeStringListItems(values.images.imageModels)
+            );
+            doc.deleteIn(['images', 'imageModels']);
+          }
           doc.setIn(
             ['images', 'enable-free-plan-image-model'],
             values.images.enableFreePlanImageModel
@@ -4432,6 +4464,10 @@ export function useVisualConfig() {
           );
           if (
             docHas(doc, ['images', 'chatgpt-web']) ||
+            !areStringArraysEqual(
+              values.chatgptWebImageModels,
+              DEFAULT_VISUAL_VALUES.chatgptWebImageModels
+            ) ||
             values.chatgptWebImageUpstreamModel !==
               DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel ||
             values.chatgptWebIgnoreUnsupportedImageParams !==
@@ -4481,6 +4517,17 @@ export function useVisualConfig() {
               DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryFinalizerConcurrency
           ) {
             ensureMapInDoc(doc, ['images', 'chatgpt-web']);
+            if (
+              docHas(doc, ['images', 'chatgpt-web', 'image-models']) ||
+              docHas(doc, ['images', 'chatgpt-web', 'imageModels']) ||
+              values.chatgptWebImageModels.length > 0
+            ) {
+              doc.setIn(
+                ['images', 'chatgpt-web', 'image-models'],
+                normalizeStringListItems(values.chatgptWebImageModels)
+              );
+              doc.deleteIn(['images', 'chatgpt-web', 'imageModels']);
+            }
             setStringInDoc(
               doc,
               ['images', 'chatgpt-web', 'upstream-model'],

@@ -162,6 +162,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebAutoDeleteDead',
       'chatgptWebInvalidPasskeyResponseAsDead',
       'chatgptWebImageUpstreamModel',
+      'chatgptWebImageModels',
       'chatgptWebIgnoreUnsupportedImageParams',
       'chatgptWebSanitizeErrorResponses',
       'chatgptWebRemoteImageUrlEnabled',
@@ -726,6 +727,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     yamlKeys: ['images.codex-model', 'images.image-model'],
   },
   {
+    id: 'config-images-tool-models',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.images.image_models',
+    yamlKeys: ['images.image-models'],
+    aliases: ['gpt-image-2.5', 'flare', 'sunburst', 'tool models', '图片工具模型'],
+  },
+  {
     id: 'config-images-stream-flush',
     pageId: 'provider-codex',
     labelKey: 'config_management.visual.sections.images.stream_flush_settings',
@@ -835,6 +843,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.settings_center.chatgpt_web.image_upstream_model',
     yamlKeys: ['images.chatgpt-web.upstream-model', 'images.chatgpt-web.ignore-unsupported-params'],
     aliases: ['picture_v2', 'web image', '图片参数', '忽略参数'],
+  },
+  {
+    id: 'config-chatgpt-web-image-models',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.image_models',
+    yamlKeys: ['images.chatgpt-web.image-models'],
+    aliases: ['gpt-image-2.5', 'flare', 'sunburst', 'image aliases', '图片别名'],
   },
   {
     id: 'config-chatgpt-web-sanitize-image-errors',

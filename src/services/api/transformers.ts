@@ -1117,6 +1117,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
         ? images.chatgptWeb
         : undefined;
     config.images = {
+      imageModels: normalizeStringArray(images['image-models'] ?? images.imageModels),
       codexModel:
         typeof codexModel === 'string'
           ? codexModel
@@ -1170,6 +1171,11 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       ),
       chatgptWeb: chatgptWeb
         ? {
+            imageModels: normalizeStringArray(chatgptWeb['image-models'] ?? chatgptWeb.imageModels),
+            upstreamModel:
+              typeof (chatgptWeb['upstream-model'] ?? chatgptWeb.upstreamModel) === 'string'
+                ? String(chatgptWeb['upstream-model'] ?? chatgptWeb.upstreamModel)
+                : undefined,
             sanitizeErrorResponses: normalizeBoolean(
               chatgptWeb['sanitize-error-responses'] ?? chatgptWeb.sanitizeErrorResponses
             ),

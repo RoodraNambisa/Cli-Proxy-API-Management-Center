@@ -184,6 +184,7 @@ export interface NativeImagesVisualConfig {
 export interface ImagesVisualConfig {
   codexModel: string;
   imageModel: string;
+  imageModels: string[];
   enableFreePlanImageModel: boolean;
   enableNAggregation: boolean;
   enableStreamFlush: boolean;
@@ -346,6 +347,7 @@ export type VisualConfigValues = {
   chatgptWebInvalidPasskeyResponseAsDead: boolean;
   chatgptWebAutoDeleteDeadPriorities: string[];
   chatgptWebImageUpstreamModel: string;
+  chatgptWebImageModels: string[];
   chatgptWebIgnoreUnsupportedImageParams: boolean;
   chatgptWebSanitizeErrorResponses: boolean;
   chatgptWebNormalizeMismatchedImageMime: boolean;
@@ -472,7 +474,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebAutoDeleteDeadAuths: false,
   chatgptWebInvalidPasskeyResponseAsDead: false,
   chatgptWebAutoDeleteDeadPriorities: [],
-  chatgptWebImageUpstreamModel: 'gpt-5-5',
+  chatgptWebImageUpstreamModel: 'auto',
+  chatgptWebImageModels: [],
   chatgptWebIgnoreUnsupportedImageParams: false,
   chatgptWebSanitizeErrorResponses: false,
   chatgptWebNormalizeMismatchedImageMime: false,
@@ -543,6 +546,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   images: {
     codexModel: 'gpt-5.4',
     imageModel: 'gpt-image-2',
+    imageModels: [],
     enableFreePlanImageModel: false,
     enableNAggregation: false,
     enableStreamFlush: true,
@@ -556,14 +560,26 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     native: {
       generations: {
         enabled: false,
-        models: ['gpt-image-2', 'gpt-image-1.5'],
+        models: [
+          'gpt-image-2',
+          'gpt-image-1.5',
+          'gpt-image-2.5',
+          'gpt-image-2.5-flare',
+          'gpt-image-2.5-sunburst',
+        ],
         paramRules: [],
         unsupportedModelStatusCode: '400',
         unsupportedModelMessage: 'Native image generation is not enabled for model {model}',
       },
       edits: {
         enabled: false,
-        models: ['gpt-image-2', 'gpt-image-1.5'],
+        models: [
+          'gpt-image-2',
+          'gpt-image-1.5',
+          'gpt-image-2.5',
+          'gpt-image-2.5-flare',
+          'gpt-image-2.5-sunburst',
+        ],
         paramRules: [],
         unsupportedModelStatusCode: '400',
         unsupportedModelMessage: 'Native image edit is not enabled for model {model}',

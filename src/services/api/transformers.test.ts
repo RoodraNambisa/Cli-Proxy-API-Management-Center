@@ -82,6 +82,22 @@ describe('normalizeConfigResponse Codex configuration', () => {
 });
 
 describe('normalizeConfigResponse ChatGPT Web image configuration', () => {
+  it.each([
+    {
+      'image-models': ['tool-a', 'tool-b'],
+      'chatgpt-web': { 'image-models': ['web-a', 'web-b'], 'upstream-model': 'auto' },
+    },
+    {
+      imageModels: ['tool-a', 'tool-b'],
+      chatgptWeb: { imageModels: ['web-a', 'web-b'], upstreamModel: 'auto' },
+    },
+  ])('keeps tool models, Web aliases and carrier separate', (images) => {
+    const result = normalizeConfigResponse({ images }).images;
+    expect(result?.imageModels).toEqual(['tool-a', 'tool-b']);
+    expect(result?.chatgptWeb?.imageModels).toEqual(['web-a', 'web-b']);
+    expect(result?.chatgptWeb?.upstreamModel).toBe('auto');
+  });
+
   it('normalizes poll stall breaker settings from YAML and camel-case keys', () => {
     expect(
       normalizeConfigResponse({
