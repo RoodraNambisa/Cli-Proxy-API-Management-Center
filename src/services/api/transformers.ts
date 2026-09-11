@@ -1,4 +1,5 @@
 import { normalizeCredentialWeight } from '@/utils/credentialWeight';
+import { normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
 import { readCodexBooleanPolicy } from '@/utils/codexPolicy';
 import { codexMediaField, normalizeCodexLiveMedia } from '@/utils/codexLiveMedia';
 import { normalizeModelDisplayName } from '@/utils/modelDisplayName';
@@ -1280,6 +1281,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   const apiKeysRaw = raw['api-keys'] ?? raw.apiKeys;
   if (Array.isArray(apiKeysRaw)) {
     config.apiKeys = apiKeysRaw.map((key) => String(key)).filter((key) => key.trim() !== '');
+  }
+  if ('api-key-groups' in raw || 'apiKeyGroups' in raw) {
+    config.apiKeyGroups = normalizeClientApiKeyGroups(raw['api-key-groups'] ?? raw.apiKeyGroups);
   }
 
   const geminiList = raw['gemini-api-key'] ?? raw.geminiApiKey ?? raw.geminiApiKeys;

@@ -47,6 +47,8 @@ import { formatDateTime, maskApiKey } from '@/utils/format';
 import { isValidApiKeyCharset } from '@/utils/validation';
 import { apiKeysApi } from '@/services/api/apiKeys';
 import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
+import { ApiKeyPriorityFields, type ApiKeyPriorityField } from './ApiKeyPriorityFields';
+import type { ClientApiKeyGroup } from '@/types/config';
 
 /** Minimum character count before the expand/collapse toggle appears. */
 const EXPAND_THRESHOLD = 30;
@@ -230,6 +232,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const [formError, setFormError] = useState('');
   const [serverKeys, setServerKeys] = useState<Set<string>>(new Set());
   const [lastUsed, setLastUsed] = useState<Record<string, string>>();
+  const [priorityGroups, setPriorityGroups] = useState<Record<string, ClientApiKeyGroup>>({});
+  const [availablePriorities, setAvailablePriorities] = useState<number[]>();
   const [providerGroups, setProviderGroups] = useState<Record<string, string[]>>({});
   const [providerGroupsLoading, setProviderGroupsLoading] = useState(false);
   const [providerGroupsLoaded, setProviderGroupsLoaded] = useState(false);
@@ -260,6 +264,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       const snapshot = await apiKeysApi.getAccessSnapshot();
       setServerKeys(new Set(snapshot.keys));
       setLastUsed(snapshot.lastUsed);
+      setPriorityGroups(Object.fromEntries(snapshot.groups.map((group) => [group.apiKey, group])));
+      setAvailablePriorities(snapshot.availablePriorities);
       setProviderGroups(
         Object.fromEntries(snapshot.groups.map((group) => [group.apiKey, group.providers]))
       );
@@ -272,6 +278,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
           : 0;
       setProviderGroupsUnsupported(status === 404);
       setLastUsed(undefined);
+      setAvailablePriorities(undefined);
       setProviderGroupsError(error instanceof Error ? error.message : '');
       setProviderGroupsLoaded(true);
     } finally {
@@ -381,6 +388,25 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
         t('config_management.visual.api_keys.provider_save_failed', { message }),
         'error'
       );
+    } finally {
+      setProviderGroupUpdating(null);
+    }
+  };
+
+  const handlePriorityChange = async (apiKey: string, field: ApiKeyPriorityField, values: number[]) => {
+    if (providerGroupsLoading || providerGroupUpdating || availablePriorities === undefined || !serverKeys.has(apiKey)) return false;
+    setProviderGroupUpdating(apiKey);
+    try {
+      await apiKeysApi.updatePriorities(apiKey, field, values);
+      setPriorityGroups((previous) => ({
+        ...previous,
+        [apiKey]: { ...(previous[apiKey] ?? { apiKey, providers: [] }), [field]: values },
+      }));
+      showNotification(t('config_management.visual.api_keys.priority_saved'), 'success');
+      return true;
+    } catch (error: unknown) {
+      showNotification(t('config_management.visual.api_keys.priority_save_failed', { message: error instanceof Error ? error.message : '' }), 'error');
+      return false;
     } finally {
       setProviderGroupUpdating(null);
     }
@@ -521,6 +547,28 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                   </details>
                 )}
               </div>
+              {serverKeys.has(key) && !providerGroupsError && (
+                <div className={styles.apiKeyProviderSection}>
+                  {availablePriorities === undefined ? (
+                    <div className="hint">{t('config_management.visual.api_keys.priority_unsupported')}</div>
+                  ) : (
+                    <details className={styles.apiKeyProviderDisclosure}>
+                      <summary>
+                        {t('config_management.visual.api_keys.priority_allowed')}: {(priorityGroups[key]?.allowedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.provider_unrestricted')}
+                        {' · '}{t('config_management.visual.api_keys.priority_excluded')}: {(priorityGroups[key]?.excludedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.priority_none')}
+                      </summary>
+                      <ApiKeyPriorityFields
+                        options={[...new Set([...availablePriorities, ...(priorityGroups[key]?.allowedPriorities ?? []), ...(priorityGroups[key]?.excludedPriorities ?? [])])].sort((a, b) => b - a)}
+                        allowedPriorities={priorityGroups[key]?.allowedPriorities}
+                        excludedPriorities={priorityGroups[key]?.excludedPriorities}
+                        disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null}
+                        onChange={(field, values) => handlePriorityChange(key, field, values)}
+                      />
+                      <div className="hint">{t('config_management.visual.api_keys.priority_hint')}</div>
+                    </details>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

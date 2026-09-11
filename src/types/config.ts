@@ -222,6 +222,13 @@ export const normalizeCodexTurnStatePolicy = (value: unknown): CodexTurnStatePol
     : DEFAULT_CODEX_TURN_STATE_POLICY;
 };
 
+export interface ClientApiKeyGroup {
+  apiKey: string;
+  providers: string[];
+  allowedPriorities?: number[];
+  excludedPriorities?: number[];
+}
+
 export interface CodexConfig {
   liveEnabled?: boolean;
   liveMediaRelay?: CodexLiveMediaConfig;
@@ -329,6 +336,7 @@ export interface Config {
   routingSessionAffinityFailover?: boolean;
   routingSessionAffinityTTL?: string;
   apiKeys?: string[];
+  apiKeyGroups?: ClientApiKeyGroup[];
   geminiApiKeys?: GeminiKeyConfig[];
   interactionsApiKeys?: GeminiKeyConfig[];
   codexApiKeys?: ProviderKeyConfig[];

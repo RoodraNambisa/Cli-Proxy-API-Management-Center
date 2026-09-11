@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useReducer } from 'react';
+import { normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
 import { readCodexLiveMediaYaml, codexLiveMediaErrors, codexLiveMediaEqual, writeCodexLiveMediaYaml } from '@/utils/codexLiveMedia';
 import { readCodexBooleanPolicy } from '@/utils/codexPolicy';
 import { preserveRoutingOverrideNodes } from '@/utils/routingYaml';
@@ -3179,6 +3180,7 @@ export function useVisualConfig() {
       const parsedRaw: unknown = parseYaml(yamlContent) || {};
       const preciseParsedRaw: unknown = parseYaml(yamlContent, { intAsBigInt: true }) || {};
       const parsed = asRecord(parsedRaw) ?? {};
+      normalizeClientApiKeyGroups(parsed['api-key-groups']);
       const preciseParsed = asRecord(preciseParsedRaw) ?? parsed;
       // Resolve aliases/merges for this map without changing legacy field readers.
       const oauthRequestScopedErrors = normalizeOAuthRequestScopedErrors(

@@ -3,16 +3,16 @@
  */
 
 import { apiClient } from './client';
+import type { ClientApiKeyGroup } from '@/types/config';
+import { normalizeApiKeyPriorities, normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
 
-export type ApiKeyGroup = {
-  apiKey: string;
-  providers: string[];
-};
+export type ApiKeyGroup = ClientApiKeyGroup;
 
 export type ApiKeyAccessSnapshot = {
   keys: string[];
   groups: ApiKeyGroup[];
   lastUsed?: Record<string, string>;
+  availablePriorities?: number[];
 };
 
 const normalizeProviders = (value: unknown): string[] => {
@@ -28,17 +28,6 @@ const normalizeProviders = (value: unknown): string[] => {
     providers.push(provider);
   });
   return providers;
-};
-
-const normalizeGroups = (value: unknown): ApiKeyGroup[] => {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item) => {
-    if (!item || typeof item !== 'object') return [];
-    const record = item as Record<string, unknown>;
-    const apiKey = String(record['api-key'] ?? record.apiKey ?? '').trim();
-    if (!apiKey) return [];
-    return [{ apiKey, providers: normalizeProviders(record.providers) }];
-  });
 };
 
 export const apiKeysApi = {
@@ -62,19 +51,35 @@ export const apiKeysApi = {
   },
 
   async listGroups(): Promise<ApiKeyGroup[]> {
+    return (await apiKeysApi.listGroupDetails()).groups;
+  },
+
+  async listGroupDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities'>> {
     const data = await apiClient.get<Record<string, unknown>>('/api-key-groups');
-    return normalizeGroups(data['api-key-groups'] ?? data.apiKeyGroups);
+    const result: Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities'> = {
+      groups: normalizeClientApiKeyGroups(data['api-key-groups'] ?? data.apiKeyGroups),
+    };
+    if ('available-priorities' in data) {
+      result.availablePriorities = normalizeApiKeyPriorities(data['available-priorities']);
+    }
+    return result;
   },
 
   async getAccessSnapshot(): Promise<ApiKeyAccessSnapshot> {
-    const [details, groups] = await Promise.all([apiKeysApi.listDetails(), apiKeysApi.listGroups()]);
-    return { ...details, groups };
+    const [details, groups] = await Promise.all([apiKeysApi.listDetails(), apiKeysApi.listGroupDetails()]);
+    return { ...details, ...groups };
   },
 
   updateGroup: (apiKey: string, providers: string[]) =>
     apiClient.patch('/api-key-groups', {
       'api-key': apiKey,
       providers: normalizeProviders(providers),
+    }),
+
+  updatePriorities: (apiKey: string, field: 'allowedPriorities' | 'excludedPriorities', values: number[]) =>
+    apiClient.patch('/api-key-groups', {
+      'api-key': apiKey,
+      [field === 'allowedPriorities' ? 'allowed-priorities' : 'excluded-priorities']: normalizeApiKeyPriorities(values),
     }),
 
   deleteGroup: (apiKey: string) =>
