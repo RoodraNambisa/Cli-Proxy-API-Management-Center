@@ -85,10 +85,13 @@ describe('Codex prompt cache passthrough configuration', () => {
     expect(onChange).toHaveBeenCalledWith({ codexPassthroughPromptCacheKey: true });
     const entry = CONFIG_SEARCH_DEFINITIONS.find((item) => item.id === 'config-codex-prompt-cache');
     expect(entry?.yamlKeys).toContain('codex.passthrough-prompt-cache-key');
+    expect(entry?.aliases).toEqual(expect.arrayContaining(['session_id', 'Session-Id']));
     expect(document.getElementById(entry!.id)).not.toBeNull();
     for (const locale of [en, ru, zhCN, zhTW]) {
-      expect(locale.config_management.visual.sections.network.codex_passthrough_prompt_cache_key).toBeTruthy();
-      expect(locale.config_management.visual.sections.network.codex_passthrough_prompt_cache_key_desc).toBeTruthy();
+      expect(locale.config_management.visual.sections.network.codex_passthrough_prompt_cache_key).toContain('Session ID');
+      const description = locale.config_management.visual.sections.network.codex_passthrough_prompt_cache_key_desc;
+      expect(description).toContain('UUID');
+      expect(description).toContain('HTTP 500 / invalid_prompt_cache_key');
     }
   });
 });

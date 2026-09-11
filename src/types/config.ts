@@ -223,6 +223,7 @@ export interface CodexConfig {
   liveEnabled?: boolean;
   liveMediaRelay?: CodexLiveMediaConfig;
   optimizeMultiAgentV2?: boolean;
+  // Preserve client cache keys and Session IDs at the final outbound stage.
   passthroughPromptCacheKey?: boolean;
   streamBootstrapBuffering?: boolean;
   estimateClaudeInputTokens?: boolean;

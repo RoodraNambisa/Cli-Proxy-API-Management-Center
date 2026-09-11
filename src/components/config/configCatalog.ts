@@ -630,7 +630,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     pageId: 'provider-codex',
     labelKey: 'config_management.visual.sections.network.codex_passthrough_prompt_cache_key',
     yamlKeys: ['codex.passthrough-prompt-cache-key'],
-    aliases: ['prompt_cache_key', 'cache key', '缓存键', '緩存鍵', 'ключ кеша'],
+    aliases: ['prompt_cache_key', 'session_id', 'Session-Id', 'cache key', 'session ID', '缓存键', '会话ID', '緩存鍵', '會話ID', 'ключ кеша', 'идентификатор сессии'],
   },
   {
     id: 'config-codex-stream-bootstrap',
