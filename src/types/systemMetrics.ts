@@ -174,6 +174,19 @@ export interface SystemChatGptWebImageProtocolSnapshot {
   hidden_outputs_ignored: number;
   incomplete_pointers_observed: number;
   all_sources_exhausted_without_output: number;
+  task_diagnostics?: {
+    empty_pages: number;
+    unrecognized_pages: number;
+    parse_errors: number;
+    records: number;
+    invalid_records: number;
+    image_records: number;
+    matched_records: number;
+    other_conversation_records: number;
+    identity_mismatch_records: number;
+    missing_task_id_records: number;
+    missing_response_id_records: number;
+  };
 }
 
 export interface SystemMetricsSnapshot {

@@ -138,6 +138,16 @@ const IMAGE_PHASE_ORDER = [
   'route_request_slot',
   'web_input_upload',
   'web_requirements',
+  'web_requirements_bootstrap',
+  'web_requirements_local_prepare',
+  'web_requirements_prepare',
+  'web_requirements_parse',
+  'web_requirements_observer_init',
+  'web_requirements_proof',
+  'web_requirements_turnstile',
+  'web_requirements_finalize',
+  'web_requirements_observer_snapshot',
+  'web_requirements_observer_cleanup',
   'web_conversation_prepare',
   'web_upstream_initial',
   'web_stream_settle',
@@ -1789,7 +1799,7 @@ export function SystemPage() {
                                             <dt>{t('system_info.image_runtime.task_stage')}</dt>
                                             <dd>
                                               {t(
-                                                `system_info.image_runtime.task_stages.${task.stage}`,
+                                                `system_info.image_runtime.${task.stage.startsWith('web_requirements_') ? 'phase_names' : 'task_stages'}.${task.stage}`,
                                                 { defaultValue: task.stage || '-' }
                                               )}
                                             </dd>
@@ -1861,6 +1871,29 @@ export function SystemPage() {
                         <p className={styles.imagePhaseNote}>
                           {t('system_info.image_runtime.protocol_note')}
                         </p>
+                        {imageProtocol.task_diagnostics ? (
+                          <>
+                            <h4>{t('system_info.image_runtime.task_diagnostics_title')}</h4>
+                            <dl
+                              className={styles.imageProtocolGrid}
+                              data-testid="image-task-page-diagnostics"
+                            >
+                              {Object.entries(imageProtocol.task_diagnostics).map(
+                                ([key, value]) => (
+                                  <div key={key}>
+                                    <dt>
+                                      {t(`system_info.image_runtime.task_diagnostics.${key}`)}
+                                    </dt>
+                                    <dd>{value}</dd>
+                                  </div>
+                                )
+                              )}
+                            </dl>
+                            <p className={styles.imagePhaseNote}>
+                              {t('system_info.image_runtime.task_diagnostics_note')}
+                            </p>
+                          </>
+                        ) : null}
                       </details>
                     ) : null}
 

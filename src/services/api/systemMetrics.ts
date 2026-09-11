@@ -276,6 +276,29 @@ const normalizeChatGptWebImageProtocol = (
     exact_stream_fallbacks: toNonNegativeNumber(source.exact_stream_fallbacks),
     final_messages_captured: toNonNegativeNumber(source.final_messages_captured),
     task_pages_fetched: toNonNegativeNumber(source.task_pages_fetched),
+    task_diagnostics: isRecord(source.task_diagnostics)
+      ? {
+          empty_pages: toNonNegativeNumber(source.task_diagnostics.empty_pages),
+          unrecognized_pages: toNonNegativeNumber(source.task_diagnostics.unrecognized_pages),
+          parse_errors: toNonNegativeNumber(source.task_diagnostics.parse_errors),
+          records: toNonNegativeNumber(source.task_diagnostics.records),
+          invalid_records: toNonNegativeNumber(source.task_diagnostics.invalid_records),
+          image_records: toNonNegativeNumber(source.task_diagnostics.image_records),
+          matched_records: toNonNegativeNumber(source.task_diagnostics.matched_records),
+          other_conversation_records: toNonNegativeNumber(
+            source.task_diagnostics.other_conversation_records
+          ),
+          identity_mismatch_records: toNonNegativeNumber(
+            source.task_diagnostics.identity_mismatch_records
+          ),
+          missing_task_id_records: toNonNegativeNumber(
+            source.task_diagnostics.missing_task_id_records
+          ),
+          missing_response_id_records: toNonNegativeNumber(
+            source.task_diagnostics.missing_response_id_records
+          ),
+        }
+      : undefined,
     hidden_outputs_ignored: toNonNegativeNumber(source.hidden_outputs_ignored),
     incomplete_pointers_observed: toNonNegativeNumber(source.incomplete_pointers_observed),
     all_sources_exhausted_without_output: toNonNegativeNumber(

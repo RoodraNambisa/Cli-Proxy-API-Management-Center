@@ -2,6 +2,50 @@ import { describe, expect, it } from 'vitest';
 import { normalizeSystemMetricsSnapshot } from './systemMetrics';
 
 describe('normalizeSystemMetricsSnapshot', () => {
+  it('normalizes task page diagnostics and keeps unreported diagnostics unavailable', () => {
+    const snapshot = normalizeSystemMetricsSnapshot({
+      chatgpt_web_image_protocol: {
+        task_diagnostics: {
+          empty_pages: 12,
+          unrecognized_pages: '3',
+          parse_errors: -1,
+          records: 20,
+          invalid_records: 'invalid',
+          image_records: 10,
+          matched_records: 2,
+          other_conversation_records: 5,
+          identity_mismatch_records: 3,
+          missing_task_id_records: 1,
+          missing_response_id_records: 1,
+          task_id: 'must-not-be-retained',
+        },
+      },
+      image_request_phases: {
+        metrics: { web_requirements_bootstrap: { count: 2, total_nanos: 100, max_nanos: 75 } },
+      },
+    });
+    expect(snapshot.chatgpt_web_image_protocol.task_diagnostics).toEqual({
+      empty_pages: 12,
+      unrecognized_pages: 3,
+      parse_errors: 0,
+      records: 20,
+      invalid_records: 0,
+      image_records: 10,
+      matched_records: 2,
+      other_conversation_records: 5,
+      identity_mismatch_records: 3,
+      missing_task_id_records: 1,
+      missing_response_id_records: 1,
+    });
+    expect(snapshot.image_request_phases.metrics.web_requirements_bootstrap.count).toBe(2);
+    for (const protocol of [undefined, {}, { task_diagnostics: null }, { task_diagnostics: [] }]) {
+      expect(
+        normalizeSystemMetricsSnapshot({ chatgpt_web_image_protocol: protocol })
+          .chatgpt_web_image_protocol.task_diagnostics
+      ).toBeUndefined();
+    }
+  });
+
   it('normalizes process rates and rolling image phases', () => {
     const snapshot = normalizeSystemMetricsSnapshot({
       runtime: {
