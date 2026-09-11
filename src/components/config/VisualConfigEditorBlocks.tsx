@@ -43,7 +43,7 @@ import {
   VISUAL_CONFIG_PAYLOAD_VALUE_TYPE_OPTIONS,
   VISUAL_CONFIG_PROTOCOL_OPTIONS,
 } from '@/hooks/useVisualConfig';
-import { maskApiKey } from '@/utils/format';
+import { formatDateTime, maskApiKey } from '@/utils/format';
 import { isValidApiKeyCharset } from '@/utils/validation';
 import { apiKeysApi } from '@/services/api/apiKeys';
 import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
@@ -229,6 +229,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const [inputValue, setInputValue] = useState('');
   const [formError, setFormError] = useState('');
   const [serverKeys, setServerKeys] = useState<Set<string>>(new Set());
+  const [lastUsed, setLastUsed] = useState<Record<string, string>>();
   const [providerGroups, setProviderGroups] = useState<Record<string, string[]>>({});
   const [providerGroupsLoading, setProviderGroupsLoading] = useState(false);
   const [providerGroupsLoaded, setProviderGroupsLoaded] = useState(false);
@@ -258,6 +259,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     try {
       const snapshot = await apiKeysApi.getAccessSnapshot();
       setServerKeys(new Set(snapshot.keys));
+      setLastUsed(snapshot.lastUsed);
       setProviderGroups(
         Object.fromEntries(snapshot.groups.map((group) => [group.apiKey, group.providers]))
       );
@@ -269,6 +271,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
           ? Number((error as { status?: unknown }).status)
           : 0;
       setProviderGroupsUnsupported(status === 404);
+      setLastUsed(undefined);
       setProviderGroupsError(error instanceof Error ? error.message : '');
       setProviderGroupsLoaded(true);
     } finally {
@@ -421,6 +424,12 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                     {t('config_management.visual.api_keys.input_label')}
                   </div>
                   <div className="item-subtitle">{maskApiKey(String(key || ''))}</div>
+                  <div className="hint" title={t('config_management.visual.api_keys.last_used_hint')}>
+                    {t('config_management.visual.api_keys.last_used')}{' '}
+                    {lastUsed?.[key] ? (
+                      <time dateTime={lastUsed[key]}>{formatDateTime(lastUsed[key])}</time>
+                    ) : t(`config_management.visual.api_keys.${lastUsed ? 'last_used_never' : 'last_used_unavailable'}`)}
+                  </div>
                 </div>
                 <div className="item-actions">
                   <Button

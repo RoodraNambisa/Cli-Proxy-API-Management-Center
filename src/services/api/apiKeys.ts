@@ -1,5 +1,5 @@
 /**
- * API 密钥管理
+ * Client API key management.
  */
 
 import { apiClient } from './client';
@@ -12,6 +12,7 @@ export type ApiKeyGroup = {
 export type ApiKeyAccessSnapshot = {
   keys: string[];
   groups: ApiKeyGroup[];
+  lastUsed?: Record<string, string>;
 };
 
 const normalizeProviders = (value: unknown): string[] => {
@@ -41,10 +42,23 @@ const normalizeGroups = (value: unknown): ApiKeyGroup[] => {
 };
 
 export const apiKeysApi = {
-  async list(): Promise<string[]> {
+  async listDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'keys' | 'lastUsed'>> {
     const data = await apiClient.get<Record<string, unknown>>('/api-keys');
     const keys = data['api-keys'] ?? data.apiKeys;
-    return Array.isArray(keys) ? keys.map((key) => String(key)) : [];
+    const result: Pick<ApiKeyAccessSnapshot, 'keys' | 'lastUsed'> = {
+      keys: Array.isArray(keys) ? keys.map((key) => String(key)) : [],
+    };
+    const usage = data['last-used'];
+    if (usage && typeof usage === 'object' && !Array.isArray(usage)) {
+      result.lastUsed = Object.fromEntries(
+        Object.entries(usage).filter(([, value]) => typeof value === 'string' && Number.isFinite(Date.parse(value)))
+      );
+    }
+    return result;
+  },
+
+  async list(): Promise<string[]> {
+    return (await apiKeysApi.listDetails()).keys;
   },
 
   async listGroups(): Promise<ApiKeyGroup[]> {
@@ -53,8 +67,8 @@ export const apiKeysApi = {
   },
 
   async getAccessSnapshot(): Promise<ApiKeyAccessSnapshot> {
-    const [keys, groups] = await Promise.all([apiKeysApi.list(), apiKeysApi.listGroups()]);
-    return { keys, groups };
+    const [details, groups] = await Promise.all([apiKeysApi.listDetails(), apiKeysApi.listGroups()]);
+    return { ...details, groups };
   },
 
   updateGroup: (apiKey: string, providers: string[]) =>
