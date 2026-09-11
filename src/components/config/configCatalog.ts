@@ -27,6 +27,7 @@ export type ConfigSearchDefinition = {
   pageId: ConfigPageId;
   labelKey: string;
   yamlKeys: string[];
+  fieldTargets?: Record<string, string>;
   aliases?: string[];
 };
 
@@ -229,7 +230,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-tls',
     pageId: 'global-basics',
     labelKey: 'config_management.visual.sections.tls.title',
-    yamlKeys: ['tls', 'tls.cert', 'tls.key'],
+    yamlKeys: ['tls', 'tls.enable', 'tls.cert', 'tls.key'],
   },
   {
     id: 'config-remote-management',
@@ -237,19 +238,24 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.remote.title',
     yamlKeys: [
       'remote-management',
-      'access-path',
-      'panel-repo',
-      'auth-files-pagination',
-      'live-logs',
-      'diagnostics',
-      'detail-level',
+      'remote-management.allow-remote',
+      'remote-management.disable-control-panel',
+      'remote-management.access-path',
+      'remote-management.panel-github-repository',
+      'remote-management.panel-repo',
+      'remote-management.auth-files-pagination.enabled',
+      'remote-management.live-logs.enabled',
+      'remote-management.diagnostics.detail-level',
     ],
+    fieldTargets: {
+      'remote-management.diagnostics.detail-level': 'config-management-diagnostics-detail-level',
+    },
   },
   {
     id: 'config-management-key',
     pageId: 'global-credentials',
     labelKey: 'config_management.visual.sections.remote.secret_key',
-    yamlKeys: ['remote-management.secret-key', 'secret-key'],
+    yamlKeys: ['remote-management.secret-key'],
     aliases: ['management key', '管理密钥'],
   },
   {
@@ -322,7 +328,6 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.routing_strategy',
     yamlKeys: [
       'routing.strategy',
-      'routing.priority-overrides',
       'routing.fill-first-range',
       'routing.fill-first-per-auth-rpm',
     ],
@@ -492,7 +497,17 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-auth-maintenance',
     pageId: 'global-observability',
     labelKey: 'config_management.visual.sections.maintenance.title',
-    yamlKeys: ['auth-maintenance'],
+    yamlKeys: [
+      'auth-maintenance',
+      'auth-maintenance.enable',
+      'auth-maintenance.scan-interval-seconds',
+      'auth-maintenance.delete-interval-seconds',
+      'auth-maintenance.delete-status-codes',
+      'auth-maintenance.delete-quota-exceeded',
+      'auth-maintenance.quota-strike-threshold',
+      'auth-maintenance.disable-quota-exceeded',
+      'auth-maintenance.disable-quota-strike-threshold',
+    ],
   },
   {
     id: 'config-logging',
@@ -524,7 +539,12 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-streaming',
     pageId: 'global-streaming',
     labelKey: 'config_management.visual.sections.streaming.title',
-    yamlKeys: ['streaming', 'keepalive-seconds', 'bootstrap-retries', 'trust-upstream-sse'],
+    yamlKeys: [
+      'streaming',
+      'streaming.keepalive-seconds',
+      'streaming.bootstrap-retries',
+      'streaming.trust-upstream-sse',
+    ],
     aliases: ['SSE', 'WebSocket', 'Ping', 'heartbeat', '心跳', '保活'],
   },
   {
@@ -546,7 +566,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-codex-alpha-search',
     pageId: 'provider-codex',
     labelKey: 'ai_providers.codex_alpha_search_label',
-    yamlKeys: ['codex-api-key[].alpha-search', 'alpha-search'],
+    yamlKeys: ['codex-api-key[].alpha-search'],
     aliases: ['Alpha Search', '独立搜索', '搜尋能力', 'поиск'],
   },
   {
@@ -570,6 +590,11 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'codex-fingerprint.force-http1',
       'codex-fingerprint.images-force-http1',
     ],
+    fieldTargets: {
+      'codex.turn-state-policy': 'config-codex-turn-state-policy',
+      'codex-fingerprint.default-mode': 'config-codex-fingerprint-default-mode',
+      'codex-fingerprint.session-identity-pool-size': 'config-codex-fingerprint-session-identity-pool-size',
+    },
     aliases: [
       'ja3',
       'tls clienthello',
@@ -604,8 +629,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-codex-prompt-cache',
     pageId: 'provider-codex',
     labelKey: 'config_management.visual.sections.network.codex_passthrough_prompt_cache_key',
-    yamlKeys: ['codex.passthrough-prompt-cache-key', 'prompt_cache_key'],
-    aliases: ['cache key', '缓存键', '緩存鍵', 'ключ кеша'],
+    yamlKeys: ['codex.passthrough-prompt-cache-key'],
+    aliases: ['prompt_cache_key', 'cache key', '缓存键', '緩存鍵', 'ключ кеша'],
   },
   {
     id: 'config-codex-stream-bootstrap',
@@ -618,15 +643,15 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-codex-input-token-estimate',
     pageId: 'provider-codex',
     labelKey: 'config_management.visual.sections.network.codex_estimate_claude_input_tokens',
-    yamlKeys: ['codex.estimate-claude-input-tokens', 'message_start', 'input_tokens'],
-    aliases: ['token estimate', 'token 估算', 'token 估計', 'оценка токенов'],
+    yamlKeys: ['codex.estimate-claude-input-tokens'],
+    aliases: ['message_start', 'input_tokens', 'token estimate', 'token 估算', 'token 估計', 'оценка токенов'],
   },
   {
     id: 'config-codex-quota-observation',
     pageId: 'provider-codex',
     labelKey: 'config_management.visual.sections.network.codex_observe_quota',
-    yamlKeys: ['codex.observe-quota', 'codex.rate_limits'],
-    aliases: ['passive quota', '额度观测', '額度觀測', 'наблюдение квоты'],
+    yamlKeys: ['codex.observe-quota'],
+    aliases: ['codex.rate_limits', 'passive quota', '额度观测', '額度觀測', 'наблюдение квоты'],
   },
   {
     id: 'config-codex-orphan-delegation',
@@ -728,6 +753,11 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'chatgpt-web.auto-relogin-queue-size',
       'chatgpt-web.manual-relogin-concurrency',
     ],
+    fieldTargets: {
+      'chatgpt-web.auto-relogin-workers': 'config-chatgpt-web-auto-relogin-workers',
+      'chatgpt-web.auto-relogin-queue-size': 'config-chatgpt-web-auto-relogin-queue-size',
+      'chatgpt-web.manual-relogin-concurrency': 'config-chatgpt-web-manual-relogin-concurrency',
+    },
     aliases: [
       '自动重登并发',
       '自动重登队列',
@@ -829,6 +859,11 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.remote-image-url-download-mode',
       'images.chatgpt-web.normalize-remote-image-mime',
     ],
+    fieldTargets: {
+      'images.chatgpt-web.remote-image-url-enabled': 'config-chatgpt-web-remote-image-url-enabled',
+      'images.chatgpt-web.remote-image-url-download-mode': 'config-chatgpt-web-remote-image-url-download-mode',
+      'images.chatgpt-web.normalize-remote-image-mime': 'config-chatgpt-web-normalize-remote-image-mime',
+    },
     aliases: [
       'image_url',
       'remote image',
@@ -853,6 +888,15 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.max-image-response-megabytes',
       'images.chatgpt-web.max-n',
     ],
+    fieldTargets: {
+      'images.chatgpt-web.strict-size': 'config-chatgpt-web-strict-size',
+      'images.chatgpt-web.aspect-ratio-max-error-percent': 'config-chatgpt-web-aspect-ratio-max-error-percent',
+      'images.chatgpt-web.resize-to-requested-size': 'config-chatgpt-web-resize-to-requested-size',
+      'images.chatgpt-web.resize-filter': 'config-chatgpt-web-resize-filter',
+      'images.chatgpt-web.max-resize-edge-pixels': 'config-chatgpt-web-max-resize-edge-pixels',
+      'images.chatgpt-web.max-image-response-megabytes': 'config-chatgpt-web-max-image-response-megabytes',
+      'images.chatgpt-web.max-n': 'config-chatgpt-web-max-n',
+    },
     aliases: [
       'aspect ratio',
       'resize',
@@ -881,6 +925,18 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.poll-stall-seconds',
       'images.chatgpt-web.memory-finalizer-concurrency',
     ],
+    fieldTargets: {
+      'images.chatgpt-web.max-in-flight': 'config-chatgpt-web-image-max-in-flight',
+      'images.chatgpt-web.admission-queue-size': 'config-chatgpt-web-image-admission-queue-size',
+      'images.chatgpt-web.admission-wait-milliseconds': 'config-chatgpt-web-image-admission-wait-milliseconds',
+      'images.chatgpt-web.max-finalizers': 'config-chatgpt-web-image-max-finalizers',
+      'images.chatgpt-web.completion-reserve-megabytes': 'config-chatgpt-web-image-completion-reserve-megabytes',
+      'images.chatgpt-web.memory-capacity-megabytes': 'config-chatgpt-web-image-memory-capacity-megabytes',
+      'images.chatgpt-web.poll-concurrency': 'config-chatgpt-web-image-poll-concurrency',
+      'images.chatgpt-web.poll-stall-breaker-enabled': 'config-chatgpt-web-image-poll-stall-breaker-enabled',
+      'images.chatgpt-web.poll-stall-seconds': 'config-chatgpt-web-image-poll-stall-seconds',
+      'images.chatgpt-web.memory-finalizer-concurrency': 'config-chatgpt-web-image-memory-finalizer-concurrency',
+    },
     aliases: [
       'image concurrency',
       'image capacity',
@@ -1016,8 +1072,10 @@ export function resolveConfigSection(
   if (isConfigPageId(value)) return { pageId: value };
   const alias = CONFIG_SECTION_ALIASES[value];
   if (alias) return alias;
-  const searchItem = CONFIG_SEARCH_DEFINITIONS.find((item) => item.id === value);
-  return searchItem ? { pageId: searchItem.pageId, targetId: searchItem.id } : null;
+  const searchItem = CONFIG_SEARCH_DEFINITIONS.find(
+    (item) => item.id === value || Object.values(item.fieldTargets ?? {}).includes(value)
+  );
+  return searchItem ? { pageId: searchItem.pageId, targetId: value } : null;
 }
 
 export function configPageHasDirtyFields(

@@ -1946,7 +1946,7 @@
         }
       },
       "rules_summary": "{{count}} 條規則",
-      "search_placeholder": "搜尋名稱、說明或 YAML key",
+      "search_placeholder": "搜尋名稱、說明或欄位名稱（如 priority-overrides）",
       "search_empty": "沒有符合的設定項目",
       "status_enabled": "已啟用",
       "status_disabled": "未啟用",

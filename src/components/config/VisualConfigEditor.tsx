@@ -32,6 +32,7 @@ import { ConfigSection } from '@/components/config/ConfigSection';
 import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { OAuthRequestScopedErrorsEditor } from '@/components/config/OAuthRequestScopedErrorsEditor';
 import { CodexLiveMediaEditor } from '@/components/config/CodexLiveMediaEditor';
+import { matchConfigSearch, normalizeConfigSearchQuery } from '@/components/config/configSearch';
 import {
   CONFIG_PAGE_DEFINITIONS,
   CONFIG_SEARCH_DEFINITIONS,
@@ -1901,37 +1902,24 @@ export function VisualConfigEditor({
     }
   }, [activePageId, handlePageChange, pageErrorCounts, pages]);
 
-  const normalizedConfigSearchQuery = configSearchQuery.trim().toLocaleLowerCase().replace(/\[\d+\]/g, '[]');
+  const normalizedConfigSearchQuery = normalizeConfigSearchQuery(configSearchQuery);
   const configSearchResults = useMemo(() => {
     if (!normalizedConfigSearchQuery) return [];
     const pageMap = new Map(pages.map((page) => [page.id, page]));
-    return CONFIG_SEARCH_DEFINITIONS.map((item) => {
+    return CONFIG_SEARCH_DEFINITIONS.flatMap((item) => {
       const page = pageMap.get(item.pageId);
+      if (!page) return [];
       const label = t(item.labelKey);
-      const searchText = [
+      const match = matchConfigSearch(item, normalizedConfigSearchQuery, [
         label,
-        page?.title ?? '',
-        page?.description ?? '',
-        ...item.yamlKeys,
-        ...(item.aliases ?? []),
-      ]
-        .join(' ')
-        .toLocaleLowerCase();
-      const matchesNestedYamlKey = item.yamlKeys.some((yamlKey) => {
-        const normalizedYamlKey = yamlKey.toLocaleLowerCase();
-        return (
-          normalizedConfigSearchQuery.startsWith(`${normalizedYamlKey}.`) ||
-          normalizedConfigSearchQuery.startsWith(`${normalizedYamlKey}[`)
-        );
-      });
-      return {
-        item,
-        page,
-        label,
-        matches: searchText.includes(normalizedConfigSearchQuery) || matchesNestedYamlKey,
-      };
+        page.title,
+        page.description,
+      ]);
+      if (!match) return [];
+      const targetId = match.rank < 3 ? (item.fieldTargets?.[match.yamlKey] ?? item.id) : item.id;
+      return [{ item, page, label, targetId, ...match }];
     })
-      .filter((result) => result.matches && result.page)
+      .sort((a, b) => a.rank - b.rank || (a.rank === 3 ? b.yamlKey.length - a.yamlKey.length : 0))
       .slice(0, 12);
   }, [normalizedConfigSearchQuery, pages, t]);
 
@@ -2009,13 +1997,13 @@ export function VisualConfigEditor({
           {normalizedConfigSearchQuery ? (
             <div className={styles.configSearchResults}>
               {configSearchResults.length > 0 ? (
-                configSearchResults.map(({ item, page, label }) => (
+                configSearchResults.map(({ item, page, label, targetId, yamlKey }) => (
                   <button
                     key={item.id}
                     type="button"
                     className={styles.configSearchResult}
                     onClick={() => {
-                      handlePageChange(item.pageId, item.id);
+                      handlePageChange(item.pageId, targetId);
                       setConfigSearchQuery('');
                     }}
                   >
@@ -2023,7 +2011,7 @@ export function VisualConfigEditor({
                       {t(`config_management.settings_center.groups.${page?.group}`)} / {page?.title}
                     </span>
                     <span className={styles.configSearchResultLabel}>{label}</span>
-                    <code>{item.yamlKeys[0]}</code>
+                    <code title={yamlKey}>{yamlKey}</code>
                   </button>
                 ))
               ) : (

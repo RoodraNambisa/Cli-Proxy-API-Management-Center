@@ -1919,7 +1919,7 @@
         }
       },
       "rules_summary": "Правил: {{count}}",
-      "search_placeholder": "Поиск по названию, описанию или YAML key",
+      "search_placeholder": "Название, описание или поле (например, priority-overrides)",
       "search_empty": "Подходящих настроек нет",
       "status_enabled": "Включено",
       "status_disabled": "Выключено",

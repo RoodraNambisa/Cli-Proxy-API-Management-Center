@@ -15,6 +15,7 @@ import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { VisualConfigEditor } from '@/components/config/VisualConfigEditor';
 import {
   CONFIG_PAGE_DEFINITIONS,
+  CONFIG_SEARCH_DEFINITIONS,
   configPageHasDirtyFields,
 } from '@/components/config/configCatalog';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
@@ -252,6 +253,87 @@ describe('configuration settings center', () => {
     fireEvent.click(screen.getByText('request-body-audit'));
 
     expect(screen.getByTestId('location').textContent).toBe('/config?section=request-body-audit');
+  });
+
+  test.each([
+    ['priority-overrides', 'routing.priority-overrides'],
+    ['routing.priority-overrides', 'routing.priority-overrides'],
+    ['  PRIORITY-OVERRIDES:  ', 'routing.priority-overrides'],
+    ['routing.priority-overrides[0].strategy', 'routing.priority-overrides[].strategy'],
+    ['priority-overrides.strategy', 'routing.priority-overrides[].strategy'],
+    [
+      'routing.priority-overrides[0].subscription-overrides[2].plan-types:',
+      'routing.priority-overrides[].subscription-overrides[].plan-types',
+    ],
+  ])('locates the priority override editor by field %s without changing values', async (query, path) => {
+    const onChange = vi.fn();
+    renderEditor('/config?section=global-basics', { onChange });
+
+    const search = screen.getByRole('searchbox', { name: 'Search configuration' });
+    fireEvent.change(search, { target: { value: query } });
+    const results = within(search.parentElement!).getAllByRole('button');
+    expect(results[0].querySelector('code')?.textContent).toBe(path);
+    expect(results[0].textContent).toContain(
+      'config_management.visual.sections.network.priority_overrides'
+    );
+    fireEvent.click(results[0]);
+
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-routing-priority-overrides'
+    );
+    const disclosure = document.querySelector(
+      '#config-routing-priority-overrides button[aria-expanded]'
+    );
+    await waitFor(() => expect(disclosure?.getAttribute('aria-expanded')).toBe('true'));
+    expect((search as HTMLInputElement).value).toBe('');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('modified')).toBeNull();
+  });
+
+  test.each([
+    ['logs-retention-days', 'logs-retention-days', 'config-logging'],
+    ['scan-interval-seconds', 'auth-maintenance.scan-interval-seconds', 'config-auth-maintenance'],
+    ['keepalive-seconds:', 'streaming.keepalive-seconds', 'config-streaming'],
+    ['allow-remote', 'remote-management.allow-remote', 'config-remote-management'],
+  ])('shows the matching YAML field %s for grouped settings', (query, path, target) => {
+    renderEditor('/config?section=global-basics');
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: query },
+    });
+    fireEvent.click(screen.getByText(path, { selector: 'code' }));
+    expect(screen.getByTestId('location').textContent).toBe(`/config?section=${target}`);
+  });
+
+  test('shows the matched capacity field and focuses its input inside the collapsed group', async () => {
+    const onChange = vi.fn();
+    renderEditor('/config?section=global-basics', { onChange });
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search configuration' }), {
+      target: { value: 'max-in-flight' },
+    });
+
+    const field = screen.getByText('images.chatgpt-web.max-in-flight', { selector: 'code' });
+    expect(field.previousElementSibling?.textContent).toBe(
+      'config_management.settings_center.chatgpt_web.image_capacity_title'
+    );
+    fireEvent.click(field);
+
+    expect(screen.getByTestId('location').textContent).toBe(
+      '/config?section=config-chatgpt-web-image-max-in-flight'
+    );
+    const input = document.getElementById('config-chatgpt-web-image-max-in-flight');
+    await waitFor(() => expect(document.activeElement).toBe(input));
+    expect(scrollIntoViewMock.mock.instances.at(-1)).toBe(input);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  test.each(
+    CONFIG_SEARCH_DEFINITIONS.flatMap((item) =>
+      Object.values(item.fieldTargets ?? {}).map((target) => [target])
+    )
+  )('restores a searchable field from its URL: %s', (target) => {
+    renderEditor(`/config?section=${target}`);
+    expect(document.getElementById(target)).not.toBeNull();
+    expect(screen.getByTestId('location').textContent).toBe(`/config?section=${target}`);
   });
 
   test('searches fully qualified nested YAML keys', () => {
@@ -752,7 +834,7 @@ describe('configuration settings center', () => {
     fireEvent.click(screen.getAllByText('Image aspect ratio and output size')[0]!);
 
     expect(screen.getByTestId('location').textContent).toBe(
-      '/config?section=config-chatgpt-web-adapt-size-to-aspect-ratio'
+      '/config?section=config-chatgpt-web-max-image-response-megabytes'
     );
     expect(
       screen
@@ -770,7 +852,7 @@ describe('configuration settings center', () => {
     fireEvent.click(screen.getAllByText('Remote image URLs')[0]!);
 
     expect(screen.getByTestId('location').textContent).toBe(
-      '/config?section=config-chatgpt-web-remote-image-url'
+      '/config?section=config-chatgpt-web-remote-image-url-download-mode'
     );
     expect(
       screen.getByRole('button', { name: /Remote image URLs/ }).getAttribute('aria-expanded')

@@ -1922,7 +1922,7 @@
         }
       },
       "rules_summary": "Rules: {{count}}",
-      "search_placeholder": "Search names, descriptions, or YAML keys",
+      "search_placeholder": "Search names, descriptions, or fields (e.g. priority-overrides)",
       "search_empty": "No matching configuration",
       "status_enabled": "Enabled",
       "status_disabled": "Disabled",
