@@ -405,15 +405,37 @@ export interface ChatGptWebImportSnapshot {
 }
 
 export interface ChatGptWebSentinelConfig {
+  'go-vm-compatibility'?: ChatGptWebSentinelCompatibility;
   'sdk-runtime-enabled': boolean;
   'sdk-workers': number;
   'sdk-queue-size': number;
   'sdk-cache-versions': number;
 }
 
+export type SentinelPropertyType = 'string' | 'boolean' | 'number' | 'null' | 'undefined';
+
+export interface ChatGptWebSentinelProperty {
+  path: string;
+  type: SentinelPropertyType;
+  value?: string | boolean | number | null;
+  enumerable: boolean;
+}
+
+export interface ChatGptWebSentinelCompatibility {
+  enabled: boolean;
+  'observer-state-auto-extend': boolean;
+  'writable-window-properties': string[];
+  'environment-properties': ChatGptWebSentinelProperty[];
+}
+
 export type ChatGptWebSentinelConfigPatch = Partial<ChatGptWebSentinelConfig>;
 
 export interface ChatGptWebSentinelSnapshot extends ChatGptWebSentinelConfig {
+  go_vm_rules_hash?: string;
+  go_vm_rule_count?: number;
+  go_vm_rules_applied_at?: string;
+  go_vm_extension_uses?: number;
+  go_vm_extension_fallbacks?: number;
   initialized: boolean;
   available: boolean;
   worker_limit: number;

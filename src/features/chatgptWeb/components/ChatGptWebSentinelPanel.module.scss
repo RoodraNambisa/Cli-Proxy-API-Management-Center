@@ -284,6 +284,85 @@
   font-size: 13px;
 }
 
+.compatibilityEditor {
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  min-width: 0;
+  summary {
+    cursor: pointer;
+    font-weight: 650;
+  }
+  p,
+  small {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  input:not([type='checkbox']),
+  textarea,
+  select {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+  textarea {
+    resize: vertical;
+  }
+}
+
+.compatibilityField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 14px 0;
+}
+
+.compatibilityProperty {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(90px, 1fr) minmax(0, 2fr) auto auto;
+  align-items: end;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    font-size: 12px;
+  }
+  legend {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .compatibilityCheckbox {
+    flex-direction: row;
+    align-items: center;
+    padding-bottom: 10px;
+  }
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (max-width: 540px) {
+    grid-template-columns: 1fr;
+  }
+}
+
 .diagnosticsActions {
   display: flex;
   align-items: center;

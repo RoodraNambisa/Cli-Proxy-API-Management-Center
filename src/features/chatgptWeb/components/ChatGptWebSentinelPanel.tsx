@@ -22,8 +22,15 @@ import type {
 } from '@/types';
 import { getChatGptWebErrorMessage } from '@/utils/chatgptWeb';
 import styles from './ChatGptWebSentinelPanel.module.scss';
+import { SentinelCompatibilityEditor } from './SentinelCompatibilityEditor';
+import {
+  toCompatibilityDraft,
+  readCompatibilityDraft,
+  type SentinelCompatibilityDraft,
+} from '../sentinelCompatibility';
 
 type SentinelDraft = {
+  compatibility: SentinelCompatibilityDraft;
   runtimeEnabled: boolean;
   workers: string;
   queueSize: string;
@@ -50,6 +57,7 @@ type ChatGptWebSentinelPanelProps = {
 const DISCLOSURE_STORAGE_KEY = 'config-management:chatgpt-web-sentinel-expanded';
 
 const DEFAULT_DRAFT: SentinelDraft = {
+  compatibility: toCompatibilityDraft(),
   runtimeEnabled: true,
   workers: '0',
   queueSize: '32',
@@ -57,6 +65,7 @@ const DEFAULT_DRAFT: SentinelDraft = {
 };
 
 const toDraft = (snapshot: ChatGptWebSentinelSnapshot): SentinelDraft => ({
+  compatibility: toCompatibilityDraft(snapshot['go-vm-compatibility']),
   runtimeEnabled: snapshot['sdk-runtime-enabled'],
   workers: String(snapshot['sdk-workers']),
   queueSize: String(snapshot['sdk-queue-size']),
@@ -75,6 +84,9 @@ const parseInteger = (value: string, min: number, max?: number): number | null =
 const readConfig = (
   draft: SentinelDraft
 ): { config: ChatGptWebSentinelConfig | null; errorKey: string | null } => {
+  const compatibility = readCompatibilityDraft(draft.compatibility);
+  if (!compatibility)
+    return { config: null, errorKey: 'chatgpt_web.sentinel.compatibility.invalid' };
   const workers = parseInteger(draft.workers, 0);
   if (workers === null) {
     return { config: null, errorKey: 'chatgpt_web.sentinel.validation_workers' };
@@ -89,6 +101,7 @@ const readConfig = (
   }
   return {
     config: {
+      'go-vm-compatibility': compatibility,
       'sdk-runtime-enabled': draft.runtimeEnabled,
       'sdk-workers': workers,
       'sdk-queue-size': queueSize,
@@ -102,6 +115,11 @@ const buildPatch = (
   current: ChatGptWebSentinelSnapshot,
   next: ChatGptWebSentinelConfig
 ): ChatGptWebSentinelConfigPatch => ({
+  ...(JSON.stringify(
+    readCompatibilityDraft(toCompatibilityDraft(current['go-vm-compatibility']))
+  ) !== JSON.stringify(next['go-vm-compatibility'])
+    ? { 'go-vm-compatibility': next['go-vm-compatibility'] }
+    : {}),
   ...(current['sdk-runtime-enabled'] !== next['sdk-runtime-enabled']
     ? { 'sdk-runtime-enabled': next['sdk-runtime-enabled'] }
     : {}),
@@ -387,6 +405,22 @@ export const ChatGptWebSentinelPanel = forwardRef<
       ]
     : [];
 
+  if (snapshot && typeof snapshot.go_vm_rule_count === 'number') {
+    statusItems.push(
+      { key: 'go_vm_rules_hash', value: snapshot.go_vm_rules_hash || '-' },
+      { key: 'go_vm_rule_count', value: snapshot.go_vm_rule_count },
+      {
+        key: 'go_vm_rules_applied_at',
+        value:
+          snapshot.go_vm_rules_applied_at && !snapshot.go_vm_rules_applied_at.startsWith('0001-')
+            ? new Date(snapshot.go_vm_rules_applied_at).toLocaleString()
+            : '-',
+      },
+      { key: 'go_vm_extension_uses', value: snapshot.go_vm_extension_uses ?? 0 },
+      { key: 'go_vm_extension_fallbacks', value: snapshot.go_vm_extension_fallbacks ?? 0 }
+    );
+  }
+
   const editorContent = (
     <>
       <div className={styles.runtimeRow}>
@@ -456,6 +490,13 @@ export const ChatGptWebSentinelPanel = forwardRef<
           <small>{t('chatgpt_web.sentinel.cache_versions_hint')}</small>
         </label>
       </div>
+
+      <SentinelCompatibilityEditor
+        draft={draft.compatibility}
+        onChange={(compatibility) => setDraft((current) => ({ ...current, compatibility }))}
+        disabled={controlsDisabled}
+        supported={!!snapshot?.['go-vm-compatibility']}
+      />
 
       {parsedDraft.errorKey ? (
         <p className={styles.validationError} role="alert">
