@@ -12,6 +12,9 @@
     "reset": "Наследовать каталог"
   },
   "codex_quota_observation": {
+    "window_unknown": "Окно квоты {{index}} (период неизвестен)",
+    "window_hours": "Лимит за {{hours}} ч.",
+    "window_quota_minutes": "Лимит за {{minutes}} мин.",
     "retry_after": "Рекомендованный повтор (секунды или дата)",
     "title": "Последнее наблюдение квоты",
     "observed": "Наблюдение через {{source}}:",

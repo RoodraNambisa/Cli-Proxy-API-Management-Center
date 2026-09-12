@@ -8,6 +8,7 @@ import panelStyles from './CodexQuotaObservationPanel.module.scss';
 
 export function CodexQuotaObservationPanel({ file, compact }: { file: AuthFileItem; compact: boolean }) {
   const { t } = useTranslation();
+  if (file.quota_observation_enabled === false) return null;
   const observation = normalizeCodexQuotaObservation(file.quota_observation);
   if (!observation && file.quota_observation_enabled !== true) return null;
   const windows = observation ? codexObservedQuotaWindows(observation) : [];
@@ -35,14 +36,19 @@ export function CodexQuotaObservationPanel({ file, compact }: { file: AuthFileIt
             <time dateTime={observation.observed_at}>{formatShanghaiDateTime(observation.observed_at)}</time>
           </div>
           <div className={styles.quotaReset}>
-            {t(file.quota_observation_enabled === false ? 'codex_quota_observation.disabled_history' : 'codex_quota_observation.history_hint')}
+            {t('codex_quota_observation.history_hint')}
           </div>
           {(windows.length > 0 || fields.some(([key]) => signals[key] !== undefined)) && <details open={!compact}>
             <summary>{t('codex_quota_observation.details')}</summary>
             <div className={styles.quotaRow}>
               {windows.map((window) => {
                 const group = window.group === 'code-review' ? t('codex_quota_observation.code_review') : window.name ?? window.group.replace(/^additional-/, '');
-                const label = [group, t(`codex_quota_observation.${window.kind}`)].filter(Boolean).join(' · ');
+                const period = window.minutes === 300 ? t('codex_quota.primary_window')
+                  : window.minutes === 10080 ? t('codex_quota.secondary_window')
+                  : window.minutes === null ? t('codex_quota_observation.window_unknown', { index: window.kind === 'primary' ? 1 : 2 })
+                  : window.minutes % 60 === 0 ? t('codex_quota_observation.window_hours', { hours: window.minutes / 60 })
+                  : t('codex_quota_observation.window_quota_minutes', { minutes: window.minutes });
+                const label = [group, period].filter(Boolean).join(' · ');
                 const remaining = window.usedPercent === null ? null : Number((100 - window.usedPercent).toFixed(2));
                 return (
                   <div key={window.id} className={styles.quotaRow}>
@@ -68,7 +74,7 @@ export function CodexQuotaObservationPanel({ file, compact }: { file: AuthFileIt
               {fields.map(([key, label]) => {
                 const value = signals[key];
                 if (value === undefined) return null;
-                const display = value === 'true' ? t('common.yes') : value === 'false' ? t('common.no') : value;
+                const display = value.toLowerCase() === 'true' ? t('common.yes') : value.toLowerCase() === 'false' ? t('common.no') : value;
                 return <div key={key} className={styles.quotaReset}>{t(`codex_quota_observation.${label}`)}: {display}</div>;
               })}
             </div>

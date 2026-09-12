@@ -12,6 +12,9 @@
     "reset": "恢复目录继承"
   },
   "codex_quota_observation": {
+    "window_unknown": "额度窗口 {{index}}（周期未知）",
+    "window_hours": "{{hours}} 小时限额",
+    "window_quota_minutes": "{{minutes}} 分钟限额",
     "retry_after": "重试提示（秒或时间）",
     "title": "最近被动额度",
     "observed": "{{source}} 观测于",

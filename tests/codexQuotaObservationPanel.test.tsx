@@ -34,9 +34,9 @@ describe('Codex passive quota display', () => {
     } finally { get.mockRestore(); post.mockRestore(); }
   });
 
-  test('shows timestamp, zero usage, false credits and historical disabled state', () => {
-    const { container } = render(panel(file({ 'X-Codex-Primary-Used-Percent': '0', 'X-Codex-Primary-Window-Minutes': '300', 'X-Codex-Primary-Reset-After-Seconds': '60', 'X-Codex-Credits-Has-Credits': 'false', 'X-Codex-Credits-Balance': '0' }, false)));
-    expect(screen.getByText(en.codex_quota_observation.disabled_history)).toBeTruthy();
+  test('shows timestamp, zero usage and case-insensitive false credits', () => {
+    const { container } = render(panel(file({ 'X-Codex-Primary-Used-Percent': '0', 'X-Codex-Primary-Window-Minutes': '300', 'X-Codex-Primary-Reset-After-Seconds': '60', 'X-Codex-Credits-Has-Credits': 'False', 'X-Codex-Credits-Balance': '0' })));
+    expect(screen.getByText(en.codex_quota_observation.history_hint)).toBeTruthy();
     expect(screen.getByText('100% remaining')).toBeTruthy();
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('100');
     expect(screen.getByText('Has credits: No')).toBeTruthy();
@@ -50,11 +50,38 @@ describe('Codex passive quota display', () => {
     rerender(panel(file({ 'X-Codex-Secondary-Window-Minutes': '10080' })));
     expect(screen.queryByText('50% remaining')).toBeNull();
     expect(screen.queryByText('Primary window')).toBeNull();
-    expect(screen.getByText('Secondary window')).toBeTruthy();
+    expect(screen.getByText(en.codex_quota.secondary_window)).toBeTruthy();
     expect(screen.queryByRole('progressbar')).toBeNull();
     expect(screen.getAllByText('Unknown').length).toBeGreaterThan(0);
     rerender(panel({ name: 'quota.json', type: 'codex' }));
     expect(screen.queryByText(en.codex_quota_observation.title)).toBeNull();
+  });
+
+  test('hides retained snapshots when disabled and restores them with the original timestamp', () => {
+    const entry = file({ 'X-Codex-Primary-Used-Percent': '20' });
+    const { container, rerender } = render(panel(entry));
+    expect(screen.getByText('80% remaining')).toBeTruthy();
+    rerender(panel({ ...entry, quota_observation_enabled: false }));
+    expect(container.textContent).toBe('');
+    rerender(panel(entry));
+    expect(screen.getByText('80% remaining')).toBeTruthy();
+    expect(container.querySelector('time')?.dateTime).toBe(entry.quota_observation?.observed_at);
+  });
+
+  test('labels periods by measured duration instead of the primary or secondary position', () => {
+    render(panel(file({
+      'X-Codex-Primary-Used-Percent': '2', 'X-Codex-Primary-Window-Minutes': '10080',
+      'X-Codex-Secondary-Used-Percent': '0', 'X-Codex-Secondary-Window-Minutes': '300',
+      'X-Codex-Additional-Spark-Limit-Name': 'Spark', 'X-Codex-Additional-Spark-Primary-Used-Percent': '0', 'X-Codex-Additional-Spark-Primary-Window-Minutes': '120',
+      'X-Codex-Code-Review-Primary-Used-Percent': '0',
+      'X-Codex-Code-Review-Secondary-Used-Percent': '10', 'X-Codex-Code-Review-Secondary-Window-Minutes': '42',
+    })));
+    expect(screen.getByRole('progressbar', { name: en.codex_quota.secondary_window }).getAttribute('aria-valuenow')).toBe('98');
+    expect(screen.getByRole('progressbar', { name: en.codex_quota.primary_window })).toBeTruthy();
+    expect(screen.getByRole('progressbar', { name: 'Spark · 2-hour limit' })).toBeTruthy();
+    expect(screen.getByRole('progressbar', { name: /42-minute limit/ })).toBeTruthy();
+    expect(screen.getByRole('progressbar', { name: /Quota window 1 \(period unknown\)/ })).toBeTruthy();
+    expect(screen.queryByText('Primary window')).toBeNull();
   });
 
   test('mounts on compact Codex credential cards and provides complete translations', () => {

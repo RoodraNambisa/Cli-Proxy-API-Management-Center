@@ -12,6 +12,9 @@
     "reset": "恢復目錄繼承"
   },
   "codex_quota_observation": {
+    "window_unknown": "額度視窗 {{index}}（週期未知）",
+    "window_hours": "{{hours}} 小時限額",
+    "window_quota_minutes": "{{minutes}} 分鐘限額",
     "retry_after": "重試提示（秒或時間）",
     "title": "最近被動額度",
     "observed": "{{source}} 觀測於",

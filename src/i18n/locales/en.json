@@ -12,6 +12,9 @@
     "reset": "Inherit catalog"
   },
   "codex_quota_observation": {
+    "window_unknown": "Quota window {{index}} (period unknown)",
+    "window_hours": "{{hours}}-hour limit",
+    "window_quota_minutes": "{{minutes}}-minute limit",
     "retry_after": "Retry hint (seconds or date)",
     "title": "Latest passive quota",
     "observed": "Observed via {{source}} at",
