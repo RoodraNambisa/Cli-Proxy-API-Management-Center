@@ -78,6 +78,11 @@ export function PageTransition({
   const currentLocationKey = currentLayer?.location.key ?? location.key;
   const currentLayerPathname = currentLayer?.location.pathname;
 
+  // Query-only updates derive the current snapshot without remounting or an effect cascade.
+  if (!isAnimating && currentLayerPathname === location.pathname && currentLayer?.location !== location) {
+    setLayers((prev) => prev.map((layer) => layer.status === 'current' ? { ...layer, location } : layer));
+  }
+
   const resolveScrollContainer = useCallback(() => {
     if (scrollContainerRef?.current) return scrollContainerRef.current;
     if (typeof document === 'undefined') return null;
@@ -87,11 +92,7 @@ export function PageTransition({
   useLayoutEffect(() => {
     if (isAnimating) return;
     if (location.key === currentLocationKey) return;
-    if (currentLayerPathname === location.pathname) {
-      // Keep the React layer key stable so query-only navigation preserves local drafts.
-      setLayers((prev) => prev.map((layer) => layer.status === 'current' ? { ...layer, location } : layer));
-      return;
-    }
+    if (currentLayerPathname === location.pathname) return;
     const scrollContainer = resolveScrollContainer();
     const exitScrollOffset = scrollContainer?.scrollTop ?? 0;
     exitScrollOffsetRef.current = exitScrollOffset;
