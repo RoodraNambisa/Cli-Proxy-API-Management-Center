@@ -911,7 +911,9 @@ export function AuthFilesPage() {
             }
           : {
               value: priority,
-              label: t('auth_files.priority_filter_value', { priority }),
+              label: priority === '0'
+                ? t('auth_files.priority_filter_explicit_zero')
+                : t('auth_files.priority_filter_value', { priority }),
             }
       ),
     ];
