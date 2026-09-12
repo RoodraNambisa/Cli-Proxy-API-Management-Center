@@ -2729,6 +2729,7 @@
         "payload_invalid_json": "Enter valid JSON"
       },
       "common": {
+        "read_details": "Full explanation: {{title}}",
         "edit": "Edit",
         "delete": "Delete",
         "cancel": "Cancel",

@@ -2753,6 +2753,7 @@
         "payload_invalid_json": "請輸入有效的 JSON"
       },
       "common": {
+        "read_details": "查看完整說明：{{title}}",
         "edit": "編輯",
         "delete": "刪除",
         "cancel": "取消",

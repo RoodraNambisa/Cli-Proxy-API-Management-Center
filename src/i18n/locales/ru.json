@@ -2726,6 +2726,7 @@
         "payload_invalid_json": "Введите корректный JSON"
       },
       "common": {
+        "read_details": "Подробное описание: {{title}}",
         "edit": "Изменить",
         "delete": "Удалить",
         "cancel": "Отменить",

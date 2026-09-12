@@ -2733,6 +2733,7 @@
         "payload_invalid_json": "请输入有效的 JSON"
       },
       "common": {
+        "read_details": "查看完整说明：{{title}}",
         "edit": "编辑",
         "delete": "删除",
         "cancel": "取消",

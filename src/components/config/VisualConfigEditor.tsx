@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/icons';
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
+import { ConfigHelp } from '@/components/config/ConfigHelp';
 import { OAuthRequestScopedErrorsEditor } from '@/components/config/OAuthRequestScopedErrorsEditor';
 import { CodexLiveMediaEditor } from '@/components/config/CodexLiveMediaEditor';
 import { matchConfigSearch, normalizeConfigSearchQuery } from '@/components/config/configSearch';
@@ -160,7 +161,7 @@ function ToggleRow({ title, description, checked, disabled, onChange }: ToggleRo
     <div className={styles.toggleRow}>
       <div className={styles.toggleCopy}>
         <div className={styles.toggleTitle}>{title}</div>
-        {description ? <div className={styles.toggleDescription}>{description}</div> : null}
+        {description ? <ConfigHelp title={title} text={description} /> : null}
       </div>
       <ToggleSwitch checked={checked} onChange={onChange} disabled={disabled} ariaLabel={title} />
     </div>

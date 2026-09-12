@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { ConfigHelp } from './ConfigHelp';
 import type { CodexLiveMediaVisualConfig, CodexLiveICEVisualEntry } from '@/types/codexLiveMedia';
 import { makeClientId } from '@/types/visualConfig';
 import { codexLiveMediaErrors } from '@/utils/codexLiveMedia';
@@ -30,7 +31,7 @@ export function CodexLiveMediaEditor({ value, onChange, disabled }: {
       <div className={styles.toggleRow}>
         <div className={styles.toggleCopy}>
           <div className={styles.toggleTitle}>{text('enabled')}</div>
-          <div className={styles.toggleDescription}>{text('enabled_desc')}</div>
+          <ConfigHelp title={text('enabled')} text={text('enabled_desc')} />
         </div>
         <ToggleSwitch checked={value.enabled} disabled={disabled} ariaLabel={text('enabled')}
           onChange={(enabled) => patch({ enabled })} />
@@ -51,7 +52,7 @@ export function CodexLiveMediaEditor({ value, onChange, disabled }: {
       <div className={styles.toggleRow}>
         <div className={styles.toggleCopy}>
           <div className={styles.toggleTitle}>{text('disable_private')}</div>
-          <div className={styles.toggleDescription}>{text('disable_private_desc')}</div>
+          <ConfigHelp title={text('disable_private')} text={text('disable_private_desc')} />
         </div>
         <ToggleSwitch checked={value.disablePrivateRemoteIps} disabled={disabled} ariaLabel={text('disable_private')}
           onChange={(disablePrivateRemoteIps) => patch({ disablePrivateRemoteIps })} />
