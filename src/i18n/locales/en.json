@@ -2733,6 +2733,10 @@
         "payload_invalid_json": "Enter valid JSON"
       },
       "common": {
+        "rule_column": "Rule",
+        "match_column": "Match conditions",
+        "effect_column": "Effect / settings",
+        "inherit_global": "Inherit global settings",
         "actions": "Actions",
         "read_details": "Full explanation: {{title}}",
         "edit": "Edit",

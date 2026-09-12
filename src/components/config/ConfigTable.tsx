@@ -4,12 +4,12 @@ import { Button } from '@/components/ui/Button';
 import { IconChevronDown, IconChevronUp } from '@/components/ui/icons';
 import styles from './ConfigTable.module.scss';
 
-export function ConfigTable({ label, columns, children }: {
-  label: string; columns: string[]; children: ReactNode;
+export function ConfigTable({ label, columns, children, numbered = false }: {
+  label: string; columns: string[]; children: ReactNode; numbered?: boolean;
 }) {
   return (
     <div className={styles.container}>
-      <table className={styles.table} aria-label={label}>
+      <table className={`${styles.table} ${numbered ? styles.numbered : ''}`} aria-label={label}>
         <thead><tr>{columns.map((column, index) => <th key={index} scope="col">{column}</th>)}</tr></thead>
         <tbody>{children}</tbody>
       </table>
@@ -36,7 +36,7 @@ export function ConfigTableRow({ title, cells, labels, actions, children, toggle
     <>
       <tr className={`${styles.row} ${expanded ? styles.expanded : ''}`}>
         {cells.map((cell, index) => <td key={index} data-label={labels[index]}><div className={styles.cell}>{cell}</div></td>)}
-        <td className={styles.actionCell}>
+        <td>
           <div className={styles.actions}>
             {invalid && <span className={styles.invalid} title={t('config_management.visual.validation_blocked_short')}>!</span>}
             <Button type="button" variant="ghost" size="sm"
@@ -54,4 +54,11 @@ export function ConfigTableRow({ title, cells, labels, actions, children, toggle
       </tr>}
     </>
   );
+}
+
+export function ConfigSummary({ entries, empty = '—' }: { entries: [string, string | undefined][]; empty?: string }) {
+  const populated = entries.filter(([, value]) => value?.trim());
+  return populated.length ? <dl className={styles.summary}>{populated.map(([label, value]) =>
+    <div key={label}><dt>{label}</dt><dd title={value}>{value}</dd></div>
+  )}</dl> : <span>{empty}</span>;
 }

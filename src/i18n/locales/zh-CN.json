@@ -2737,6 +2737,10 @@
         "payload_invalid_json": "请输入有效的 JSON"
       },
       "common": {
+        "rule_column": "规则",
+        "match_column": "匹配条件",
+        "effect_column": "处理 / 设置",
+        "inherit_global": "继承全局设置",
         "actions": "操作",
         "read_details": "查看完整说明：{{title}}",
         "edit": "编辑",

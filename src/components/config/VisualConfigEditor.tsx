@@ -33,6 +33,7 @@ import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { SettingsDisclosure } from '@/components/config/SettingsDisclosure';
 import { ConfigFocusContext } from '@/components/config/configFocus';
 import { ConfigHelp } from '@/components/config/ConfigHelp';
+import { ConfigTable, ConfigTableRow, ConfigSummary } from '@/components/config/ConfigTable';
 import { OAuthRequestScopedErrorsEditor } from '@/components/config/OAuthRequestScopedErrorsEditor';
 import { CodexLiveMediaEditor } from '@/components/config/CodexLiveMediaEditor';
 import { matchConfigSearch, normalizeConfigSearchQuery } from '@/components/config/configSearch';
@@ -3247,9 +3248,8 @@ export function VisualConfigEditor({
                     errorCount={authModelExclusionsErrorCount}
                   >
                     <div className={styles.blockHeaderRow}>
-                      <div className={styles.fieldHint}>
-                        {t('config_management.visual.sections.auth.auth_model_exclusions_hint')}
-                      </div>
+                      <ConfigHelp title={t('config_management.visual.sections.auth.auth_model_exclusions')}
+                        text={t('config_management.visual.sections.auth.auth_model_exclusions_hint')} />
                       <Button
                         type="button"
                         variant="secondary"
@@ -3265,7 +3265,12 @@ export function VisualConfigEditor({
                         {t('config_management.visual.sections.auth.auth_model_exclusions_empty')}
                       </div>
                     ) : (
-                      <div className={styles.blockStack}>
+                      <ConfigTable numbered label={t('config_management.visual.sections.auth.auth_model_exclusions')} columns={[
+                        t('config_management.visual.common.rule_column'),
+                        t('config_management.visual.common.match_column'),
+                        t('config_management.visual.common.effect_column'),
+                        t('config_management.visual.common.actions'),
+                      ]}>
                         {values.authModelExclusions.map((rule, index) => {
                           const modelsError = getAuthModelExclusionError(rule.clientId, 'models');
                           const prioritiesError = getAuthModelExclusionError(
@@ -3277,26 +3282,26 @@ export function VisualConfigEditor({
                           const allModelMode = isAuthModelExclusionAllMode(modelTags);
 
                           return (
-                            <div key={rule.clientId} className={styles.ruleCard}>
-                              <div className={styles.ruleCardHeader}>
-                                <div className={styles.ruleCardTitle}>
-                                  {t(
-                                    'config_management.visual.sections.auth.auth_model_exclusions_rule',
-                                    {
-                                      index: index + 1,
-                                    }
-                                  )}
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeAuthModelExclusion(rule.clientId)}
-                                  disabled={disabled}
-                                >
-                                  {t('config_management.visual.common.delete')}
-                                </Button>
-                              </div>
+                            <ConfigTableRow key={rule.clientId}
+                                title={t('config_management.visual.sections.auth.auth_model_exclusions_rule', { index: index + 1 })}
+                                initialExpanded={!baselineValues.authModelExclusions.some((saved) => saved.clientId === rule.clientId)}
+                                invalid={Object.keys(validationErrors ?? {}).some((key) => key.startsWith(`authModelExclusions.${rule.clientId}.`))}
+                                labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('config_management.visual.common.effect_column')]}
+                                cells={[
+                                  <strong>#{index + 1}</strong>,
+                                  <ConfigSummary entries={[
+                                    ['providers', rule.providers.join(', ')],
+                                    ['priorities', rule.priorities.join(', ')],
+                                    ['keyword-contains', rule.keywordContains.join(', ')],
+                                  ]} />,
+                                  <div><ConfigSummary entries={[
+                                    ['models', modelTags.join(', ')],
+                                  ]} />{rule.disableImageGeneration && <strong>{t('config_management.visual.sections.auth.auth_model_exclusions_disable_image_generation')}</strong>}</div>,
+                                ]}
+                                actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}
+                                  className={styles.destructiveAction} onClick={() => removeAuthModelExclusion(rule.clientId)}
+                                >{t('config_management.visual.common.delete')}</Button>}
+                              >
                               <ToggleRow
                                 title={t(
                                   'config_management.visual.sections.auth.auth_model_exclusions_disable_image_generation'
@@ -3357,6 +3362,7 @@ export function VisualConfigEditor({
                               >
                                 <TagListEditor
                                   value={rule.providers}
+                                  suggestionOptions={RUNTIME_PROVIDER_OPTIONS}
                                   disabled={disabled}
                                   placeholder={t(
                                     'config_management.visual.sections.auth.auth_model_exclusions_providers_placeholder'
@@ -3416,10 +3422,10 @@ export function VisualConfigEditor({
                                   />
                                 </FieldShell>
                               </div>
-                            </div>
+                            </ConfigTableRow>
                           );
                         })}
-                      </div>
+                      </ConfigTable>
                     )}
                   </SettingsDisclosure>
                 </PageGroup>
@@ -4058,9 +4064,8 @@ export function VisualConfigEditor({
                     errorCount={routingPriorityOverridesErrorCount}
                   >
                     <div className={styles.blockHeaderRow}>
-                      <div className={styles.fieldHint}>
-                        {t('config_management.visual.sections.network.priority_overrides_hint')}
-                      </div>
+                      <ConfigHelp title={t('config_management.visual.sections.network.priority_overrides')}
+                        text={t('config_management.visual.sections.network.priority_overrides_hint')} />
                       <Button
                         type="button"
                         variant="secondary"
@@ -4076,7 +4081,12 @@ export function VisualConfigEditor({
                         {t('config_management.visual.sections.network.priority_overrides_empty')}
                       </div>
                     ) : (
-                      <div className={styles.blockStack}>
+                      <ConfigTable numbered label={t('config_management.visual.sections.network.priority_overrides')} columns={[
+                        t('config_management.visual.common.rule_column'),
+                        t('config_management.visual.common.match_column'),
+                        t('config_management.visual.common.effect_column'),
+                        t('config_management.visual.common.actions'),
+                      ]}>
                         {values.routingPriorityOverrides.map((rule, index) => {
                           const priorityError = getRoutingPriorityOverrideError(
                             rule.clientId,
@@ -4111,26 +4121,28 @@ export function VisualConfigEditor({
                           );
 
                           return (
-                            <div key={rule.clientId} className={styles.ruleCard}>
-                              <div className={styles.ruleCardHeader}>
-                                <div className={styles.ruleCardTitle}>
-                                  {t(
-                                    'config_management.visual.sections.network.priority_overrides_rule',
-                                    {
-                                      index: index + 1,
-                                    }
-                                  )}
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeRoutingPriorityOverride(rule.clientId)}
-                                  disabled={disabled}
-                                >
-                                  {t('config_management.visual.common.delete')}
-                                </Button>
-                              </div>
+                            <ConfigTableRow key={rule.clientId}
+                                title={t('config_management.visual.sections.network.priority_overrides_rule', { index: index + 1 })}
+                                initialExpanded={!baselineValues.routingPriorityOverrides.some((saved) => saved.clientId === rule.clientId)}
+                                invalid={Object.keys(validationErrors ?? {}).some((key) => key.startsWith(`routingPriorityOverrides.${rule.clientId}.`))}
+                                labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('config_management.visual.common.effect_column')]}
+                                cells={[
+                                  <strong>#{index + 1}</strong>,
+                                  <ConfigSummary entries={[['priority', rule.priority]]} />,
+                                  <ConfigSummary empty={t('config_management.visual.common.inherit_global')} entries={[
+                                    ['strategy', rule.strategy],
+                                    ['max-retry-credentials', rule.maxRetryCredentials],
+                                    ['fill-first-range', rule.fillFirstRange],
+                                    ['fill-first-per-auth-rpm', rule.fillFirstPerAuthRpm],
+                                    ['per-auth-request-limit', rule.perAuthRequestLimit],
+                                    ['per-auth-request-window-minutes', rule.perAuthRequestWindowMinutes],
+                                    ['subscription-overrides', rule.subscriptionOverrides.length ? t('config_management.settings_center.rules_summary', { count: rule.subscriptionOverrides.length }) : ''],
+                                  ]} />,
+                                ]}
+                                actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}
+                                  className={styles.destructiveAction} onClick={() => removeRoutingPriorityOverride(rule.clientId)}
+                                >{t('config_management.visual.common.delete')}</Button>}
+                              >
                               <div
                                 className={`${styles.priorityOverrideGrid} ${
                                   effectiveStrategy === 'fill-first'
@@ -4523,10 +4535,10 @@ export function VisualConfigEditor({
                                   </div>
                                 )}
                               </div>
-                            </div>
+                            </ConfigTableRow>
                           );
                         })}
-                      </div>
+                      </ConfigTable>
                     )}
                   </SettingsDisclosure>
                 </PageGroup>
@@ -4560,9 +4572,8 @@ export function VisualConfigEditor({
                     errorCount={nonRetryableErrorsErrorCount}
                   >
                     <div className={styles.blockHeaderRow}>
-                      <div className={styles.fieldHint}>
-                        {t('config_management.visual.sections.network.non_retryable_errors_hint')}
-                      </div>
+                      <ConfigHelp title={t('config_management.visual.sections.network.non_retryable_errors')}
+                        text={t('config_management.visual.sections.network.non_retryable_errors_hint')} />
                       <Button
                         type="button"
                         variant="secondary"
@@ -4578,32 +4589,33 @@ export function VisualConfigEditor({
                         {t('config_management.visual.sections.network.non_retryable_errors_empty')}
                       </div>
                     ) : (
-                      <div className={styles.blockStack}>
+                      <ConfigTable numbered label={t('config_management.visual.sections.network.non_retryable_errors')} columns={[
+                        t('config_management.visual.common.rule_column'),
+                        t('config_management.visual.common.match_column'),
+                        t('config_management.visual.common.effect_column'),
+                        t('config_management.visual.common.actions'),
+                      ]}>
                         {values.nonRetryableErrors.map((rule, index) => {
                           const statusCodeError = getNonRetryableError(rule.clientId, 'statusCode');
                           const matchError = getNonRetryableError(rule.clientId, 'match');
 
                           return (
-                            <div key={rule.clientId} className={styles.ruleCard}>
-                              <div className={styles.ruleCardHeader}>
-                                <div className={styles.ruleCardTitle}>
-                                  {t(
-                                    'config_management.visual.sections.network.non_retryable_errors_rule',
-                                    {
-                                      index: index + 1,
-                                    }
-                                  )}
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeNonRetryableError(rule.clientId)}
-                                  disabled={disabled}
-                                >
-                                  {t('config_management.visual.common.delete')}
-                                </Button>
-                              </div>
+                            <ConfigTableRow key={rule.clientId}
+                                title={t('config_management.visual.sections.network.non_retryable_errors_rule', { index: index + 1 })}
+                                initialExpanded={!baselineValues.nonRetryableErrors.some((saved) => saved.clientId === rule.clientId)}
+                                invalid={Object.keys(validationErrors ?? {}).some((key) => key.startsWith(`nonRetryableErrors.${rule.clientId}.`))}
+                                labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('config_management.visual.common.effect_column')]}
+                                cells={[
+                                  <strong>#{index + 1}</strong>,
+                                  <ConfigSummary entries={[
+                                    ['HTTP', rule.statusCode], ['type', rule.type], ['code', rule.code], ['message-contains', rule.messageContains],
+                                  ]} />,
+                                  t('config_management.visual.sections.network.non_retryable_errors'),
+                                ]}
+                                actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}
+                                  className={styles.destructiveAction} onClick={() => removeNonRetryableError(rule.clientId)}
+                                >{t('config_management.visual.common.delete')}</Button>}
+                              >
                               <div className={styles.nonRetryableErrorGrid}>
                                 <Input
                                   label={t(
@@ -4669,10 +4681,10 @@ export function VisualConfigEditor({
                                 )}
                                 error={matchError}
                               />
-                            </div>
+                            </ConfigTableRow>
                           );
                         })}
-                      </div>
+                      </ConfigTable>
                     )}
                   </SettingsDisclosure>
                 </PageGroup>

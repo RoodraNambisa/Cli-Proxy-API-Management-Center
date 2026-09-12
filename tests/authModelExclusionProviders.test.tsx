@@ -76,6 +76,7 @@ describe('auth model exclusion providers', () => {
         '#config-auth-model-exclusions button[aria-expanded]'
       ) as HTMLButtonElement
     );
+    fireEvent.click(screen.getByRole('button', { name: /common.edit:.*auth_model_exclusions_rule/ }));
     expect(
       screen.getByText('config_management.visual.sections.auth.auth_model_exclusions_providers')
     ).not.toBeNull();

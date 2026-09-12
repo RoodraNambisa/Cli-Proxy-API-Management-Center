@@ -2757,6 +2757,10 @@
         "payload_invalid_json": "請輸入有效的 JSON"
       },
       "common": {
+        "rule_column": "規則",
+        "match_column": "符合條件",
+        "effect_column": "處理 / 設定",
+        "inherit_global": "繼承全域設定",
         "actions": "操作",
         "read_details": "查看完整說明：{{title}}",
         "edit": "編輯",

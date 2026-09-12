@@ -34,6 +34,15 @@
   time { color: var(--text-secondary); font-size: 12px; }
 }
 
+.numbered th:first-child { width: 64px; }
+.numbered th:last-child { width: 160px; }
+.summary {
+  margin: 0;
+  > div { display: flex; align-items: baseline; gap: 6px; }
+  dt { flex-shrink: 0; color: var(--text-secondary); font-size: 11px; }
+  dd { margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+}
+
 .row:hover,
 .expanded { background: color-mix(in srgb, var(--bg-secondary) 55%, transparent); }
 

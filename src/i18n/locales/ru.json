@@ -2730,6 +2730,10 @@
         "payload_invalid_json": "Введите корректный JSON"
       },
       "common": {
+        "rule_column": "Правило",
+        "match_column": "Условия",
+        "effect_column": "Действие / настройки",
+        "inherit_global": "Наследовать глобальные настройки",
         "actions": "Действия",
         "read_details": "Подробное описание: {{title}}",
         "edit": "Изменить",
