@@ -64,6 +64,12 @@ export function codexObservedQuotaWindows(observation: CodexQuotaObservation): C
     const minutes = quotaNumber(signals[`${start}window-minutes`], true);
     const absolute = quotaNumber(signals[`${start}reset-at`], true);
     const relative = quotaNumber(signals[`${start}reset-after-seconds`], true);
+    // Upstream can advertise an unused slot with three explicit zero values.
+    // Missing fields remain partial observations; a valid absolute reset is meaningful.
+    if (
+      used === 0 && minutes === 0 && relative === 0 &&
+      (signals[`${start}reset-at`] === undefined || absolute === 0)
+    ) continue;
     const absoluteReset = absolute !== null && absolute > 0 ? timestamp(absolute * 1000) : null;
     const relativeReset = relative !== null ? timestamp(Date.parse(observation.observed_at) + relative * 1000) : null;
     windows.set(id, {
