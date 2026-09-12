@@ -814,6 +814,9 @@ describe('ChatGPT Web account info and image quota', () => {
     ) as HTMLElement;
     fireEvent.click(within(diagnosticsSection).getByRole('button', { name: 'common.refresh' }));
     await waitFor(() => expect(getDiagnostics).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect((within(diagnosticsSection).getByRole('button', {
+      name: 'chatgpt_web.account_info.diagnostics.clear_button',
+    }) as HTMLButtonElement).disabled).toBe(false));
 
     fireEvent.click(
       within(diagnosticsSection).getByRole('button', {
