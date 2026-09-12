@@ -22,7 +22,12 @@ import styles from './LoginPage.module.scss';
 /**
  * 将 API 错误转换为本地化的用户友好消息
  */
-type RedirectState = { from?: { pathname?: string } };
+type RedirectState = { from?: { pathname?: string; search?: string; hash?: string } };
+
+function loginDestination(state: unknown) {
+  const from = (state as RedirectState | null)?.from;
+  return { pathname: from?.pathname || '/', search: from?.search || '', hash: from?.hash || '' };
+}
 
 function getLocalizedErrorMessage(error: unknown, t: (key: string) => string): string {
   const apiError = error as Partial<ApiError>;
@@ -94,7 +99,6 @@ export function LoginPage() {
   const [rememberPassword, setRememberPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [autoLoading, setAutoLoading] = useState(true);
-  const [autoLoginSuccess, setAutoLoginSuccess] = useState(false);
   const [error, setError] = useState('');
   const [retryProgress, setRetryProgress] = useState<StartupLoginRetryProgress | null>(null);
   const loginAbortRef = useRef<AbortController | null>(null);
@@ -130,16 +134,13 @@ export function LoginPage() {
   );
 
   useEffect(() => {
+    let active = true;
     const init = async () => {
       try {
         const autoLoggedIn = await restoreSession();
+        if (!active) return;
         if (autoLoggedIn) {
-          setAutoLoginSuccess(true);
-          // 延迟跳转，让用户看到成功动画
-          setTimeout(() => {
-            const redirect = (location.state as RedirectState | null)?.from?.pathname || '/';
-            navigate(redirect, { replace: true });
-          }, 1500);
+          navigate(loginDestination(location.state), { replace: true });
         } else {
           const parsedStoredTarget = parseConnectionTarget(
             storedBase || detectedBase,
@@ -151,13 +152,14 @@ export function LoginPage() {
           setRememberPassword(storedRememberPassword || Boolean(storedKey));
         }
       } finally {
-        if (!autoLoginSuccess) {
+        if (active) {
           setAutoLoading(false);
         }
       }
     };
 
     init();
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -201,7 +203,7 @@ export function LoginPage() {
       );
       if (abortController.signal.aborted) return;
       showNotification(t('common.connected_status'), 'success');
-      navigate('/', { replace: true });
+      navigate(loginDestination(location.state), { replace: true });
     } catch (err: unknown) {
       if (abortController.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
         return;
@@ -223,6 +225,7 @@ export function LoginPage() {
     login,
     managementKey,
     navigate,
+    location.state,
     rememberPassword,
     showNotification,
     t,
@@ -238,13 +241,12 @@ export function LoginPage() {
     [loading, handleSubmit]
   );
 
-  if (isAuthenticated && !autoLoading && !autoLoginSuccess) {
-    const redirect = (location.state as RedirectState | null)?.from?.pathname || '/';
-    return <Navigate to={redirect} replace />;
+  if (isAuthenticated && !autoLoading) {
+    return <Navigate to={loginDestination(location.state)} replace />;
   }
 
-  // 显示启动动画（自动登录中或自动登录成功）
-  const showSplash = autoLoading || autoLoginSuccess;
+  // Show the splash only while restoring the session.
+  const showSplash = autoLoading;
 
   return (
     <div className={styles.container}>
