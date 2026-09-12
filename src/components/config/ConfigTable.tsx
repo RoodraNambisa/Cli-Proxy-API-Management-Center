@@ -17,7 +17,7 @@ export function ConfigTable({ label, columns, children, numbered = false }: {
   );
 }
 
-export function ConfigTableRow({ title, cells, labels, actions, children, toggleLabel, initialExpanded = false, invalid = false }: {
+export function ConfigTableRow({ title, cells, labels, actions, children, toggleLabel, initialExpanded = false, invalid = false, expanded: controlledExpanded, onExpandedChange }: {
   title: string;
   cells: ReactNode[];
   labels: string[];
@@ -26,11 +26,15 @@ export function ConfigTableRow({ title, cells, labels, actions, children, toggle
   toggleLabel?: string;
   initialExpanded?: boolean;
   invalid?: boolean;
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }) {
   const { t } = useTranslation();
   const id = useId();
-  const [expanded, setExpanded] = useState(initialExpanded || invalid);
+  const [localExpanded, setExpanded] = useState(initialExpanded || invalid);
+  const expanded = controlledExpanded ?? localExpanded;
   const [visited, setVisited] = useState(expanded);
+  if (expanded && !visited) setVisited(true);
   const editLabel = toggleLabel ?? t('config_management.visual.common.edit');
   return (
     <>
@@ -41,7 +45,7 @@ export function ConfigTableRow({ title, cells, labels, actions, children, toggle
             {invalid && <span className={styles.invalid} title={t('config_management.visual.validation_blocked_short')}>!</span>}
             <Button type="button" variant="ghost" size="sm"
               aria-label={`${editLabel}: ${title}`} aria-expanded={expanded} aria-controls={id}
-              onClick={() => { setExpanded(!expanded); setVisited(true); }}
+              onClick={() => { setExpanded(!expanded); setVisited(true); onExpandedChange?.(!expanded); }}
             >
               {editLabel}{expanded ? <IconChevronUp size={13} /> : <IconChevronDown size={13} />}
             </Button>

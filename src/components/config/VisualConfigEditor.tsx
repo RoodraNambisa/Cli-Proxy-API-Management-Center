@@ -4314,7 +4314,10 @@ export function VisualConfigEditor({
                                     )}
                                   </div>
                                 ) : (
-                                  <div className={styles.subscriptionOverrideList}>
+                                  <ConfigTable numbered label={t('config_management.visual.sections.network.priority_subscription_overrides')} columns={[
+                                    t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'),
+                                    t('config_management.visual.common.effect_column'), t('config_management.visual.common.actions'),
+                                  ]}>
                                     {rule.subscriptionOverrides.map(
                                       (subscriptionRule, subscriptionIndex) => {
                                         const planTypesError = getRoutingSubscriptionOverrideError(
@@ -4340,34 +4343,26 @@ export function VisualConfigEditor({
                                         const providersInputId = `routing-subscription-${subscriptionRule.clientId}-providers`;
                                         const providersHintId = `${providersInputId}-hint`;
                                         return (
-                                          <div
+                                          <ConfigTableRow
                                             key={subscriptionRule.clientId}
-                                            className={styles.subscriptionOverrideItem}
+                                            title={t('config_management.visual.sections.network.priority_subscription_overrides_rule', { index: subscriptionIndex + 1 })}
+                                            initialExpanded={!baselineValues.routingPriorityOverrides.some((saved) => saved.subscriptionOverrides.some((entry) => entry.clientId === subscriptionRule.clientId))}
+                                            invalid={Boolean(planTypesError || subscriptionLimitError || subscriptionWindowError)}
+                                            labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('config_management.visual.common.effect_column')]}
+                                            cells={[
+                                              <strong>#{subscriptionIndex + 1}</strong>,
+                                              <ConfigSummary entries={[
+                                                ['providers', subscriptionRule.providers.join(', ')], ['plan-types', subscriptionRule.planTypes.join(', ')],
+                                              ]} />,
+                                              <ConfigSummary entries={[
+                                                ['per-auth-request-limit', subscriptionRule.perAuthRequestLimit],
+                                                ['per-auth-request-window-minutes', subscriptionRule.perAuthRequestWindowMinutes],
+                                              ]} empty={t('config_management.visual.sections.network.priority_subscription_overrides_inherit_priority')} />,
+                                            ]}
+                                            actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}
+                                              className={styles.destructiveAction} onClick={() => removeRoutingSubscriptionOverride(rule.clientId, subscriptionRule.clientId)}
+                                            >{t('config_management.visual.common.delete')}</Button>}
                                           >
-                                            <div className={styles.ruleCardHeader}>
-                                              <div className={styles.ruleCardTitle}>
-                                                {t(
-                                                  'config_management.visual.sections.network.priority_subscription_overrides_rule',
-                                                  {
-                                                    index: subscriptionIndex + 1,
-                                                  }
-                                                )}
-                                              </div>
-                                              <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                  removeRoutingSubscriptionOverride(
-                                                    rule.clientId,
-                                                    subscriptionRule.clientId
-                                                  )
-                                                }
-                                                disabled={disabled}
-                                              >
-                                                {t('config_management.visual.common.delete')}
-                                              </Button>
-                                            </div>
                                             <div className={styles.subscriptionOverrideGrid}>
                                               <FieldShell
                                                 label={t(
@@ -4514,11 +4509,11 @@ export function VisualConfigEditor({
                                                 error={subscriptionWindowError}
                                               />
                                             </div>
-                                          </div>
+                                          </ConfigTableRow>
                                         );
                                       }
                                     )}
-                                  </div>
+                                  </ConfigTable>
                                 )}
                               </div>
                             </ConfigTableRow>

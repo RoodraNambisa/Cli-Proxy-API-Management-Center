@@ -33,6 +33,7 @@ test('auth modal saves rule-only changes, keeps rejected drafts and reloads clea
   });
   render(<Harness />);
   fireEvent.click(screen.getByRole('button', { name: 'open' }));
+  fireEvent.click(await screen.findByRole('button', { name: /common.edit:/ }));
   const input = await screen.findByRole('textbox', { name: 'request_scoped_errors.match 1' });
   expect((input as HTMLTextAreaElement).value).toBe(' original ');
   const save = () => screen.getByRole('button', { name: 'common.save' }) as HTMLButtonElement;
@@ -54,6 +55,7 @@ test('auth modal saves rule-only changes, keeps rejected drafts and reloads clea
   expect(stored.access_token).toBe('test-secret-kept');
   expect(stored.extension).toBe('keep');
   fireEvent.click(screen.getByRole('button', { name: 'open' }));
+  fireEvent.click(await screen.findByRole('button', { name: /common.edit:/ }));
   const reloaded = await screen.findByRole('textbox', { name: 'request_scoped_errors.match 1' });
   expect((reloaded as HTMLTextAreaElement).value).toBe(' changed\ntext ');
   expect(save().disabled).toBe(true);

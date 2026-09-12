@@ -414,12 +414,9 @@ describe('routing request limits and error response rewrites', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'ChatGPT Web (chatgpt-web)' }));
     fireEvent.click(screen.getByRole('button', { name: 'common.confirm' }));
 
-    const title = screen.getByText(
-      'config_management.visual.sections.network.priority_subscription_overrides_rule'
-    );
-    const subscriptionCard = title.parentElement?.parentElement;
-    expect(subscriptionCard).not.toBeNull();
-    const card = within(subscriptionCard as HTMLElement);
+    const card = within(screen.getByRole('table', {
+      name: 'config_management.visual.sections.network.priority_subscription_overrides',
+    }));
     fireEvent.change(
       card.getByRole('spinbutton', {
         name: 'config_management.visual.sections.network.priority_subscription_overrides_limit',

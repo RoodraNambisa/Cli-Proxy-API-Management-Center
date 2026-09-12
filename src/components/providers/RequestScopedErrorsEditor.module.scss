@@ -6,21 +6,17 @@
 .rule {
   min-width: 0;
   margin: 0;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-
-  legend { padding: 0 6px; font-weight: 600; }
+  padding: 0;
+  border: 0;
 }
 
-.actions, .patternHeader {
+.patternHeader {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
 
-.actions { justify-content: flex-end; margin-bottom: 12px; }
 .patternHeader { justify-content: space-between; }
 .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .patterns { display: grid; gap: 8px; margin-top: 12px; }

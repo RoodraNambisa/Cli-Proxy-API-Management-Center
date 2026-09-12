@@ -42,11 +42,14 @@ describe('request error rule editor', () => {
 
   test('reorders whole rules without dropping unknown fields and allows clearing', () => {
     render(<Harness initial={[{ status: 500, action: 'stop', match: ['first'], future: 'keep' }, { status: 501, action: 'continue', match: ['second'] }]} />);
-    const groups = screen.getAllByRole('group');
-    fireEvent.click(within(groups[1]).getByRole('button', { name: 'common.move_up' }));
+    expect(screen.queryByRole('spinbutton')).toBeNull();
+    const rows = screen.getAllByRole('row').slice(1);
+    fireEvent.click(within(rows[1]).getByRole('button', { name: /common.edit:/ }));
+    fireEvent.click(within(rows[1]).getByRole('button', { name: 'common.move_up' }));
     expect(current().map((rule) => rule.status)).toEqual([501, 500]);
     expect(current()[1].future).toBe('keep');
-    fireEvent.click(within(screen.getAllByRole('group')[0]).getByRole('button', { name: 'request_scoped_errors.remove_rule' }));
+    expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('501');
+    fireEvent.click(screen.getAllByRole('button', { name: 'request_scoped_errors.remove_rule' })[0]);
     fireEvent.click(screen.getByRole('button', { name: 'request_scoped_errors.remove_rule' }));
     expect(current()).toEqual([]);
   });

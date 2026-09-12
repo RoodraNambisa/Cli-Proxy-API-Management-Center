@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ConfigTable, ConfigTableRow, ConfigSummary } from '@/components/config/ConfigTable';
+import { ConfigHelp } from '@/components/config/ConfigHelp';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { IconChevronDown, IconChevronUp } from '@/components/ui/icons';
 import { REQUEST_SCOPED_ERROR_ACTIONS, type RequestScopedErrorRule } from '@/types/requestScopedErrors';
 import { validateRequestScopedErrorRule } from '@/utils/requestScopedErrors';
 import styles from './RequestScopedErrorsEditor.module.scss';
@@ -12,27 +16,53 @@ export function RequestScopedErrorsEditor({ value = [], onChange, disabled = fal
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(() => {
+    const invalid = value.findIndex((rule) => validateRequestScopedErrorRule(rule));
+    return invalid >= 0 ? invalid : null;
+  });
   const update = (index: number, patch: Partial<RequestScopedErrorRule>) =>
     onChange(value.map((rule, current) => current === index ? { ...rule, ...patch } : rule));
   const move = (index: number, direction: number) => {
     const next = [...value];
     [next[index], next[index + direction]] = [next[index + direction], next[index]];
+    setExpandedIndex((current) => current === index ? index + direction : current === index + direction ? index : current);
     onChange(next);
+  };
+  const remove = (index: number) => {
+    setExpandedIndex((current) => current === null || current < index ? current : current === index ? null : current - 1);
+    onChange(value.filter((_, current) => current !== index));
   };
   return (
     <div className={styles.editor}>
-      <div className="hint">{t('request_scoped_errors.rules_hint')}</div>
+      <ConfigHelp title={t('request_scoped_errors.title')} text={t('request_scoped_errors.rules_hint')} />
       {value.length === 0 && <div className="hint">{t('request_scoped_errors.empty')}</div>}
+      {value.length > 0 && <ConfigTable numbered label={t('request_scoped_errors.title')} columns={[
+        t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'),
+        t('request_scoped_errors.action'), t('config_management.visual.common.actions'),
+      ]}>
       {value.map((rule, index) => {
         const issue = validateRequestScopedErrorRule(rule);
         return (
-          <fieldset className={styles.rule} key={index} disabled={disabled}>
-            <legend>{t('request_scoped_errors.rule', { index: index + 1 })}</legend>
-            <div className={styles.actions}>
-              <Button type="button" size="sm" variant="ghost" disabled={disabled || index === 0} onClick={() => move(index, -1)}>{t('common.move_up')}</Button>
-              <Button type="button" size="sm" variant="ghost" disabled={disabled || index === value.length - 1} onClick={() => move(index, 1)}>{t('common.move_down')}</Button>
-              <Button type="button" size="sm" variant="ghost" disabled={disabled} onClick={() => onChange(value.filter((_, current) => current !== index))}>{t('request_scoped_errors.remove_rule')}</Button>
-            </div>
+          <ConfigTableRow key={index} title={t('request_scoped_errors.rule', { index: index + 1 })}
+            invalid={Boolean(issue)} expanded={expandedIndex === index}
+            onExpandedChange={(expanded) => setExpandedIndex(expanded ? index : null)}
+            labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('request_scoped_errors.action')]}
+            cells={[
+              <strong>#{index + 1}</strong>,
+              <ConfigSummary entries={[
+                ['HTTP', rule.status === undefined ? undefined : String(rule.status)],
+                ['match', rule.match?.join(' · ')], ['regex', rule.matchRegexr?.join(' · ')],
+              ]} />,
+              REQUEST_SCOPED_ERROR_ACTIONS.includes(rule.action as typeof REQUEST_SCOPED_ERROR_ACTIONS[number])
+                ? t(`request_scoped_errors.actions.${rule.action}`) : rule.action || '—',
+            ]}
+            actions={<>
+              <Button type="button" size="sm" variant="ghost" aria-label={t('common.move_up')} title={t('common.move_up')} disabled={disabled || index === 0} onClick={() => move(index, -1)}><IconChevronUp size={14} /></Button>
+              <Button type="button" size="sm" variant="ghost" aria-label={t('common.move_down')} title={t('common.move_down')} disabled={disabled || index === value.length - 1} onClick={() => move(index, 1)}><IconChevronDown size={14} /></Button>
+              <Button type="button" size="sm" variant="ghost" disabled={disabled} onClick={() => remove(index)}>{t('request_scoped_errors.remove_rule')}</Button>
+            </>}
+          >
+          <fieldset className={styles.rule} disabled={disabled} aria-label={t('request_scoped_errors.rule', { index: index + 1 })}>
             <div className={styles.fields}>
               <Input
                 label={t('request_scoped_errors.status')}
@@ -77,9 +107,11 @@ export function RequestScopedErrorsEditor({ value = [], onChange, disabled = fal
             ))}
             {issue === 'match' && <div className="error-box">{t('request_scoped_errors.invalid_match')}</div>}
           </fieldset>
+          </ConfigTableRow>
         );
       })}
-      <Button type="button" variant="secondary" disabled={disabled} onClick={() => onChange([...value, { status: 500, action: 'stop', match: [] }])}>{t('request_scoped_errors.add_rule')}</Button>
+      </ConfigTable>}
+      <Button type="button" variant="secondary" disabled={disabled} onClick={() => { setExpandedIndex(value.length); onChange([...value, { status: 500, action: 'stop', match: [] }]); }}>{t('request_scoped_errors.add_rule')}</Button>
     </div>
   );
 }
