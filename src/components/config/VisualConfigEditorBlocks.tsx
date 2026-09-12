@@ -49,6 +49,7 @@ import { apiKeysApi } from '@/services/api/apiKeys';
 import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
 import { ApiKeyPriorityFields, type ApiKeyPriorityField } from './ApiKeyPriorityFields';
 import type { ClientApiKeyGroup } from '@/types/config';
+import { API_KEY_NAME_LIMIT, normalizeApiKeyName } from '@/utils/apiKeyGroups';
 
 /** Minimum character count before the expand/collapse toggle appears. */
 const EXPAND_THRESHOLD = 30;
@@ -196,16 +197,18 @@ function apiKeyStateValue<T>(state: Record<string, T> | undefined, key: string):
 
 export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   value,
+  names,
   savedValue = value,
   disabled,
   active = true,
   onChange,
 }: {
   value: string;
+  names?: Record<string, string>;
   savedValue?: string;
   disabled?: boolean;
   active?: boolean;
-  onChange: (nextValue: string) => void;
+  onChange: (nextValue: string, nextNames?: Record<string, string>) => void;
 }) {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
@@ -233,6 +236,9 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingApiKeyId, setEditingApiKeyId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
+  const [inputName, setInputName] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [namesSupported, setNamesSupported] = useState(false);
   const [formError, setFormError] = useState('');
   const [serverKeys, setServerKeys] = useState<Set<string>>(new Set());
   const [lastUsed, setLastUsed] = useState<Record<string, string>>();
@@ -268,6 +274,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       const snapshot = await apiKeysApi.getAccessSnapshot();
       setServerKeys(new Set(snapshot.keys));
       setLastUsed(snapshot.lastUsed);
+      setNamesSupported(snapshot.namesSupported === true);
       setPriorityGroups(Object.fromEntries(snapshot.groups.map((group) => [group.apiKey, group])));
       setAvailablePriorities(snapshot.availablePriorities);
       setProviderGroups(
@@ -282,6 +289,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
           : 0;
       setProviderGroupsUnsupported(status === 404);
       setLastUsed(undefined);
+      setNamesSupported(false);
       setAvailablePriorities(undefined);
       setProviderGroupsError(error instanceof Error ? error.message : '');
       setProviderGroupsLoaded(true);
@@ -306,6 +314,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const openAddModal = () => {
     setEditingApiKeyId(null);
     setInputValue('');
+    setInputName('');
+    setNameError('');
     setFormError('');
     setModalOpen(true);
   };
@@ -314,6 +324,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     const editingIndex = renderApiKeyIds.findIndex((id) => id === apiKeyId);
     setEditingApiKeyId(apiKeyId);
     setInputValue(apiKeys[editingIndex] ?? '');
+    setInputName(nameForKey(apiKeys[editingIndex] ?? ''));
+    setNameError('');
     setFormError('');
     setModalOpen(true);
   };
@@ -321,12 +333,18 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const closeModal = () => {
     setModalOpen(false);
     setInputValue('');
+    setInputName('');
+    setNameError('');
     setEditingApiKeyId(null);
     setFormError('');
   };
 
-  const updateApiKeys = (nextKeys: string[]) => {
-    onChange(nextKeys.join('\n'));
+  const currentNames = names ?? Object.fromEntries(Object.values(priorityGroups).filter((group) => group.name).map((group) => [group.apiKey, group.name!]));
+  const nameForKey = (key: string) => apiKeyStateValue(currentNames, key) ?? '';
+
+  const updateApiKeys = (nextKeys: string[], nextNames = currentNames) => {
+    const retained = Object.fromEntries(Object.entries(nextNames).filter(([key, name]) => nextKeys.includes(key) && name));
+    onChange(nextKeys.join('\n'), retained);
   };
 
   const handleDelete = (apiKeyId: string) => {
@@ -337,6 +355,13 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   };
 
   const handleSave = () => {
+    let name: string;
+    try {
+      name = normalizeApiKeyName(inputName);
+    } catch {
+      setNameError(t('config_management.visual.api_keys.name_error'));
+      return;
+    }
     const trimmed = inputValue.trim();
     if (!trimmed) {
       setFormError(t('config_management.visual.api_keys.error_empty'));
@@ -357,7 +382,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     if (editingApiKeyId === null) {
       setApiKeyIds([...renderApiKeyIds, makeClientId()]);
     }
-    updateApiKeys(nextKeys);
+    const nextNames = { ...currentNames, [trimmed]: name };
+    updateApiKeys(nextKeys, nextNames);
     closeModal();
   };
 
@@ -455,7 +481,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                 <div className="item-meta">
                   <div className="pill">#{index + 1}</div>
                   <div className="item-title">
-                    {t('config_management.visual.api_keys.input_label')}
+                    {nameForKey(key) || t('config_management.visual.api_keys.input_label')}
                   </div>
                   <div className="item-subtitle">{maskApiKey(String(key || ''))}</div>
                   <div className="hint" title={t('config_management.visual.api_keys.last_used_hint')}>
@@ -606,6 +632,24 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
           </>
         }
       >
+        <div className="form-group">
+          <label htmlFor={`${apiKeyInputId}-name`}>{t('config_management.visual.api_keys.name_label')}</label>
+          <input
+            id={`${apiKeyInputId}-name`}
+            className="input"
+            value={inputName}
+            placeholder={t('config_management.visual.api_keys.name_placeholder')}
+            maxLength={API_KEY_NAME_LIMIT * 2}
+            disabled={disabled || !namesSupported || providerGroupsLoading}
+            onChange={(event) => { setInputName(event.target.value); setNameError(''); }}
+            aria-invalid={Boolean(nameError)}
+            aria-describedby={`${apiKeyInputId}-name-hint`}
+          />
+          <div id={`${apiKeyInputId}-name-hint`} className="hint">
+            {t(`config_management.visual.api_keys.${namesSupported ? 'name_hint' : 'name_unsupported'}`)}
+          </div>
+          {nameError && <div className="error-box" role="alert">{nameError}</div>}
+        </div>
         <div className="form-group">
           <label htmlFor={apiKeyInputId}>
             {t('config_management.visual.api_keys.input_label')}

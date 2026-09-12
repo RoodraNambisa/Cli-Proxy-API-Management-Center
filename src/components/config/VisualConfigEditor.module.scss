@@ -1278,6 +1278,15 @@
   gap: 12px;
   flex-wrap: wrap;
   width: 100%;
+
+  :global(.item-meta) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  :global(.item-title) {
+    overflow-wrap: anywhere;
+  }
 }
 
 .apiKeyProviderSection {

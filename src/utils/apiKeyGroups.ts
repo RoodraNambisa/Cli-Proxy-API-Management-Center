@@ -1,6 +1,22 @@
 import type { ClientApiKeyGroup } from '@/types/config';
 
 export const API_KEY_PRIORITY_LIMIT = Number.MAX_SAFE_INTEGER;
+export const API_KEY_NAME_LIMIT = 100;
+
+export function normalizeApiKeyName(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value !== 'string') throw new Error('api-key-groups.name must be a string');
+  const name = value.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, '');
+  if (Array.from(name).length > API_KEY_NAME_LIMIT || /[\p{Cc}\p{Cs}]/u.test(name)) {
+    throw new Error('api-key-groups.name must contain at most 100 characters and no control characters');
+  }
+  return name;
+}
+
+export function apiKeyNamesEqual(first: Record<string, string>, second: Record<string, string>): boolean {
+  const entries = (names: Record<string, string>) => Object.entries(names).filter(([, name]) => name !== '').sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify(entries(first)) === JSON.stringify(entries(second));
+}
 
 export function normalizeApiKeyPriorities(value: unknown): number[] {
   if (value == null) return [];
@@ -23,6 +39,7 @@ export function normalizeClientApiKeyGroups(value: unknown): ClientApiKeyGroup[]
         ? [...new Set(record.providers.map((provider) => String(provider ?? '').trim().toLowerCase()).filter(Boolean))]
         : [],
     };
+    if ('name' in record) group.name = normalizeApiKeyName(record.name);
     if ('allowed-priorities' in record || 'allowedPriorities' in record) {
       group.allowedPriorities = normalizeApiKeyPriorities(Object.prototype.hasOwnProperty.call(record, 'allowed-priorities') ? record['allowed-priorities'] : record.allowedPriorities);
     }

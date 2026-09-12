@@ -1243,7 +1243,7 @@ export function VisualConfigEditor({
     [validationErrors]
   );
   const credentialAccessDirty = hasDirtyConfigField(dirtyFields, ['rmSecretKey', 'authDir']);
-  const apiKeysDirty = hasDirtyConfigField(dirtyFields, ['apiKeysText']);
+  const apiKeysDirty = hasDirtyConfigField(dirtyFields, ['apiKeysText', 'apiKeyNames']);
   const authModelExclusionsDirty = hasDirtyConfigField(dirtyFields, ['authModelExclusions']);
   const proxySettingsDirty = hasDirtyConfigField(dirtyFields, ['proxyUrl']);
   const retrySettingsDirty = hasDirtyConfigField(dirtyFields, [
@@ -1394,7 +1394,7 @@ export function VisualConfigEditor({
   );
 
   const handleApiKeysTextChange = useCallback(
-    (apiKeysText: string) => onChange({ apiKeysText }),
+    (apiKeysText: string, apiKeyNames?: Record<string, string>) => onChange({ apiKeysText, ...(apiKeyNames ? { apiKeyNames } : {}) }),
     [onChange]
   );
   const handleCodexCustomModelsChange = useCallback(
@@ -3220,6 +3220,7 @@ export function VisualConfigEditor({
                   >
                     <ApiKeysCardEditor
                       value={values.apiKeysText}
+                      names={values.apiKeyNames}
                       savedValue={baselineValues.apiKeysText}
                       disabled={disabled}
                       active={activePageId === 'global-credentials'}

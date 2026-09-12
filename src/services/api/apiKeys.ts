@@ -13,6 +13,7 @@ export type ApiKeyAccessSnapshot = {
   groups: ApiKeyGroup[];
   lastUsed?: Record<string, string>;
   availablePriorities?: number[];
+  namesSupported?: boolean;
 };
 
 const normalizeProviders = (value: unknown): string[] => {
@@ -73,14 +74,15 @@ export const apiKeysApi = {
     return (await apiKeysApi.listGroupDetails()).groups;
   },
 
-  async listGroupDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities'>> {
+  async listGroupDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported'>> {
     const data = await apiClient.get<Record<string, unknown>>('/api-key-groups');
-    const result: Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities'> = {
+    const result: Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported'> = {
       groups: normalizeClientApiKeyGroups(data['api-key-groups'] ?? data.apiKeyGroups),
     };
     if ('available-priorities' in data) {
       result.availablePriorities = normalizeApiKeyPriorities(data['available-priorities']);
     }
+    if ('names-supported' in data) result.namesSupported = data['names-supported'] === true;
     return result;
   },
 

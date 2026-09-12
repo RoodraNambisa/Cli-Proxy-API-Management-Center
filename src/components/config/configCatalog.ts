@@ -64,7 +64,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     group: 'global',
     titleKey: 'config_management.settings_center.pages.global_credentials.title',
     descriptionKey: 'config_management.settings_center.pages.global_credentials.description',
-    dirtyPrefixes: ['authDir', 'rmSecretKey', 'apiKeysText', 'authModelExclusions'],
+    dirtyPrefixes: ['authDir', 'rmSecretKey', 'apiKeysText', 'apiKeyNames', 'authModelExclusions'],
   },
   {
     id: 'global-network',
@@ -270,8 +270,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-api-keys',
     pageId: 'global-credentials',
     labelKey: 'config_management.visual.api_keys.label',
-    yamlKeys: ['api-keys', 'api-key-groups[].providers', 'api-key-groups[].allowed-priorities', 'api-key-groups[].excluded-priorities'],
-    aliases: ['last-used', '最近使用', '优先级限制', 'priority allowlist', 'priority exclusions'],
+    yamlKeys: ['api-keys', 'api-key-groups[].name', 'api-key-groups[].providers', 'api-key-groups[].allowed-priorities', 'api-key-groups[].excluded-priorities'],
+    aliases: ['last-used', '最近使用', '密钥名称', 'key name', '优先级限制', 'priority allowlist', 'priority exclusions'],
   },
   {
     id: 'config-auth-model-exclusions',

@@ -305,6 +305,7 @@ export type VisualConfigValues = {
   rmPanelRepo: string;
   authDir: string;
   apiKeysText: string;
+  apiKeyNames: Record<string, string>;
   codexCustomModels: CodexCustomModelVisualEntry[];
   debug: boolean;
   commercialMode: boolean;
@@ -434,6 +435,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   rmPanelRepo: '',
   authDir: '',
   apiKeysText: '',
+  apiKeyNames: {},
   codexCustomModels: [],
   debug: false,
   commercialMode: false,

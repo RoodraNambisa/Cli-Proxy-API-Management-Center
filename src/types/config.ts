@@ -226,6 +226,7 @@ export const normalizeCodexTurnStatePolicy = (value: unknown): CodexTurnStatePol
 
 export interface ClientApiKeyGroup {
   apiKey: string;
+  name?: string;
   providers: string[];
   allowedPriorities?: number[];
   excludedPriorities?: number[];

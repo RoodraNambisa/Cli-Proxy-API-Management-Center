@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useReducer } from 'react';
-import { normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
+import { apiKeyNamesEqual, normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
+import { writeApiKeyNamesYaml } from '@/utils/apiKeyNamesYaml';
 import { readCodexLiveMediaYaml, codexLiveMediaErrors, codexLiveMediaEqual, writeCodexLiveMediaYaml } from '@/utils/codexLiveMedia';
 import { readCodexBooleanPolicy } from '@/utils/codexPolicy';
 import { preserveRoutingOverrideNodes } from '@/utils/routingYaml';
@@ -160,8 +161,7 @@ function syncApiKeyGroupsInDoc(
   baselineKeys: string[],
   nextKeys: string[]
 ): void {
-  const parsed = asRecord(parseYaml(currentYaml));
-  const rawGroups = parsed?.['api-key-groups'];
+  const rawGroups = readMergedYamlField(parseDocument(currentYaml), ['api-key-groups']);
   if (!Array.isArray(rawGroups)) return;
 
   const baselineSet = new Set(baselineKeys);
@@ -200,6 +200,7 @@ function syncApiKeyGroupsInDoc(
     return [normalized];
   });
 
+  detachErrorRuleAliases(doc, doc.getIn(['api-key-groups'], true));
   if (groups.length > 0) {
     doc.setIn(['api-key-groups'], groups);
   } else {
@@ -2285,6 +2286,9 @@ function getNextDirtyFields(
   if (Object.prototype.hasOwnProperty.call(patch, 'apiKeysText')) {
     updateDirty('apiKeysText', nextValues.apiKeysText === baselineValues.apiKeysText);
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'apiKeyNames')) {
+    updateDirty('apiKeyNames', apiKeyNamesEqual(nextValues.apiKeyNames, baselineValues.apiKeyNames));
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexCustomModels')) {
     updateDirty(
       'codexCustomModels',
@@ -3206,7 +3210,7 @@ export function useVisualConfig() {
       const parsedRaw: unknown = parseYaml(yamlContent) || {};
       const preciseParsedRaw: unknown = parseYaml(yamlContent, { intAsBigInt: true }) || {};
       const parsed = asRecord(parsedRaw) ?? {};
-      normalizeClientApiKeyGroups(parsed['api-key-groups']);
+      const apiKeyGroups = normalizeClientApiKeyGroups(readMergedYamlField(document, ['api-key-groups']));
       const preciseParsed = asRecord(preciseParsedRaw) ?? parsed;
       // Resolve aliases/merges for this map without changing legacy field readers.
       const oauthRequestScopedErrors = normalizeOAuthRequestScopedErrors(
@@ -3383,6 +3387,7 @@ export function useVisualConfig() {
 
         authDir: typeof parsed['auth-dir'] === 'string' ? parsed['auth-dir'] : '',
         apiKeysText: resolveApiKeysText(parsed),
+        apiKeyNames: Object.fromEntries(apiKeyGroups.filter((group) => group.name).map((group) => [group.apiKey, group.name!])),
         codexCustomModels: parseCodexCustomModels(
           parsed['codex-custom-models'] ?? parsed.codexCustomModels
         ),
@@ -3910,6 +3915,9 @@ export function useVisualConfig() {
             splitApiKeysText(baselineValues.apiKeysText),
             apiKeys
           );
+        }
+        if (!apiKeyNamesEqual(values.apiKeyNames, baselineValues.apiKeyNames)) {
+          writeApiKeyNamesYaml(doc, splitApiKeysText(baselineValues.apiKeysText), apiKeys, baselineValues.apiKeyNames, values.apiKeyNames);
         }
         deleteLegacyApiKeysProvider(doc);
 
@@ -4955,7 +4963,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [baselineValues.apiKeysText, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {
