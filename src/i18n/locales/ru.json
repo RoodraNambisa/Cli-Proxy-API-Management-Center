@@ -328,6 +328,7 @@
     "delete_confirm": "Удалить этот API-ключ?"
   },
   "ai_providers": {
+    "codex_choose_credential": "Выберите API-учётные данные Codex, затем измените «{{setting}}».",
     "provider_request_retry_scope": "Это значение применяется ко всем учётным данным данного OpenAI-совместимого провайдера, в том числе при отсутствии API-ключа.",
     "request_retry_manage": "Настроить повторы для отдельных провайдеров",
     "request_retry_label": "Повторные попытки для учётных данных",

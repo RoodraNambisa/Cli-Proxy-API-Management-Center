@@ -3196,10 +3196,10 @@ export function VisualConfigEditor({
                     <p>{t('model_input_modalities.hint')}</p>
                   </div>
                   <div className={styles.providerHubActions}>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/ai-providers')}>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/ai-providers?provider=codex&section=models')}>
                       {t('common.model_catalog_manage')}<IconExternalLink size={14} />
                     </Button>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/auth-files/oauth-model-alias')}>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/auth-files/oauth-model-alias?provider=codex')}>
                       {t('common.oauth_model_display_name_manage')}<IconExternalLink size={14} />
                     </Button>
                   </div>
@@ -3211,7 +3211,7 @@ export function VisualConfigEditor({
                     <p>{t('ai_providers.codex_alpha_search_hint')}</p>
                   </div>
                   <div className={styles.providerHubActions}>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/ai-providers')}>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/ai-providers?provider=codex&section=alpha-search')}>
                       {t('ai_providers.codex_alpha_search_manage')}
                       <IconExternalLink size={14} />
                     </Button>

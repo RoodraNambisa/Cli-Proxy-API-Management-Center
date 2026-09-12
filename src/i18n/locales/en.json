@@ -328,6 +328,7 @@
     "delete_confirm": "Are you sure you want to delete this API key?"
   },
   "ai_providers": {
+    "codex_choose_credential": "Choose a Codex API credential, then edit {{setting}}.",
     "provider_request_retry_scope": "This override applies to every credential of this OpenAI-compatible provider, including a provider without an API key.",
     "request_retry_manage": "Edit retries for individual providers",
     "request_retry_label": "Credential request retries",

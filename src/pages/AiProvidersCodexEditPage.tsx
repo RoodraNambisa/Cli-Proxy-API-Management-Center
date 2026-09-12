@@ -18,6 +18,7 @@ import { Modal } from '@/components/ui/Modal';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
+import { useConfigFieldFocus } from '@/hooks/useConfigFieldFocus';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
 import { modelsApi, providersApi } from '@/services/api';
@@ -163,6 +164,10 @@ export function AiProvidersCodexEditPage() {
   }, [location.state, navigate]);
 
   const swipeRef = useEdgeSwipeBack({ onBack: handleBack });
+  const focusSection = new URLSearchParams(location.search).get('section');
+  useConfigFieldFocus(swipeRef,
+    focusSection === 'models' ? 'codex-models' : focusSection === 'alpha-search' ? 'codex-alpha-search' : undefined,
+    !loading && !invalidIndexParam && !invalidIndex);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -650,7 +655,7 @@ export function AiProvidersCodexEditPage() {
               />
               <div className="hint">{t('ai_providers.codex_websockets_hint')}</div>
             </div>
-            <div className="form-group">
+            <div id="codex-alpha-search" className="form-group">
               <label>{t('ai_providers.codex_alpha_search_label')}</label>
               <ToggleSwitch
                 checked={Boolean(form.alphaSearch)}
@@ -677,7 +682,7 @@ export function AiProvidersCodexEditPage() {
               disabled={disableControls || saving}
             />
 
-            <div className={styles.modelConfigSection}>
+            <div id="codex-models" className={styles.modelConfigSection}>
               <div className={styles.modelConfigHeader}>
                 <label className={styles.modelConfigTitle}>
                   {t('ai_providers.codex_models_label')}

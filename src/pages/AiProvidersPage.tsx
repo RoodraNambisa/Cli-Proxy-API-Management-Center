@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ClaudeSection,
   CodexSection,
@@ -16,6 +16,7 @@ import {
 } from '@/components/providers/utils';
 import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
+import { useConfigFieldFocus } from '@/hooks/useConfigFieldFocus';
 import { providersApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore, useThemeStore } from '@/stores';
 import type { GeminiKeyConfig, OpenAIProviderConfig, ProviderKeyConfig } from '@/types';
@@ -27,6 +28,11 @@ import styles from './AiProvidersPage.module.scss';
 export function AiProvidersPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const section = searchParams.get('section');
+  const codexSection = searchParams.get('provider') === 'codex' && (section === 'models' || section === 'alpha-search') ? section : undefined;
+  const codexEditSearch = codexSection ? `?section=${codexSection}` : '';
+  const pageRef = useRef<HTMLDivElement>(null);
   const { showNotification, showConfirmation } = useNotificationStore();
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
@@ -67,6 +73,7 @@ export function AiProvidersPage() {
 
   const pageTransitionLayer = usePageTransitionLayer();
   const isCurrentLayer = pageTransitionLayer ? pageTransitionLayer.status === 'current' : true;
+  useConfigFieldFocus(pageRef, codexSection ? 'provider-codex' : undefined, !loading && isCurrentLayer);
 
   const { keyStats, usageDetails, loadKeyStats, refreshKeyStats } = useProviderStats({
     enabled: isCurrentLayer,
@@ -455,7 +462,7 @@ export function AiProvidersPage() {
   };
 
   return (
-    <div className={styles.container}>
+    <div ref={pageRef} className={styles.container}>
       <h1 className={styles.pageTitle}>{t('ai_providers.title')}</h1>
       <div className={styles.content}>
         {error && <div className="error-box">{error}</div>}
@@ -510,6 +517,9 @@ export function AiProvidersPage() {
         </section>
 
         <div id="provider-codex">
+          {codexSection && <p className={styles.sectionHint}>
+            {t('ai_providers.codex_choose_credential', { setting: t(codexSection === 'models' ? 'ai_providers.codex_models_label' : 'ai_providers.codex_alpha_search_label') })}
+          </p>}
           <CodexSection
             configs={codexConfigs}
             keyStats={keyStats}
@@ -518,8 +528,8 @@ export function AiProvidersPage() {
             loading={loading}
             disableControls={disableControls}
             isSwitching={isSwitching}
-            onAdd={() => openEditor('/ai-providers/codex/new')}
-            onEdit={(index) => openEditor(`/ai-providers/codex/${index}`)}
+            onAdd={() => openEditor(`/ai-providers/codex/new${codexEditSearch}`)}
+            onEdit={(index) => openEditor(`/ai-providers/codex/${index}${codexEditSearch}`)}
             onDelete={(index) => void deleteProviderEntry('codex', index)}
             onToggle={(index, enabled) => void setConfigEnabled('codex', index, enabled)}
           />

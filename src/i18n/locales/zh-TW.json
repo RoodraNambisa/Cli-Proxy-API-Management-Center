@@ -326,6 +326,7 @@
     "delete_confirm": "確定要刪除這個 API 金鑰嗎？"
   },
   "ai_providers": {
+    "codex_choose_credential": "選擇要修改的 Codex API 憑證，進入後將定位到「{{setting}}」。",
     "provider_request_retry_scope": "此覆寫值對該 OpenAI 相容提供者的全部憑證生效，也適用於未設定 API Key 的提供者。",
     "request_retry_manage": "編輯各提供者的憑證重試次數",
     "request_retry_label": "憑證請求重試次數",
