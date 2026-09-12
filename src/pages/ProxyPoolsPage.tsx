@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { ConfigTable, ConfigTableRow, ConfigSummary } from '@/components/config/ConfigTable';
 import {
   IconCheck,
   IconChevronDown,
@@ -1486,7 +1487,10 @@ export function ProxyPoolsPage() {
           {rules.length === 0 ? (
             <div className={styles.emptyState}>{t('proxy_pools.rules_empty')}</div>
           ) : (
-            <div className={styles.ruleList}>
+            <ConfigTable numbered label={t('proxy_pools.rules_title')} columns={[
+              t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'),
+              t('proxy_pools.rule_targets'), t('config_management.visual.common.actions'),
+            ]}>
               {rules.map((rule, index) => {
                 const providers = rule.providers ?? [];
                 const unknownProviders = providers.filter(
@@ -1494,28 +1498,27 @@ export function ProxyPoolsPage() {
                     !PROVIDER_OPTIONS.includes(provider as (typeof PROVIDER_OPTIONS)[number])
                 );
                 return (
-                  <article key={rule.clientId} className={styles.ruleItem}>
-                    <div className={styles.ruleOrder}>
-                      <strong>{index + 1}</strong>
-                      <button
-                        type="button"
-                        onClick={() => moveRule(index, -1)}
-                        disabled={disabled || !rulesEditable || index === 0}
-                        title={t('proxy_pools.move_up')}
-                        aria-label={t('proxy_pools.move_up')}
-                      >
-                        <IconChevronUp size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveRule(index, 1)}
-                        disabled={disabled || !rulesEditable || index === rules.length - 1}
-                        title={t('proxy_pools.move_down')}
-                        aria-label={t('proxy_pools.move_down')}
-                      >
-                        <IconChevronDown size={15} />
-                      </button>
-                    </div>
+                  <ConfigTableRow key={rule.clientId} title={rule.name || `#${index + 1}`}
+                    initialExpanded={!rule.name || !rule.targets.length}
+                    labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('proxy_pools.rule_targets')]}
+                    cells={[
+                      <strong>#{index + 1}</strong>,
+                      <ConfigSummary entries={[
+                        [t('proxy_pools.rule_name'), rule.name], ['providers', providers.join(', ')], ['priorities', rule.priorities?.join(', ')],
+                      ]} />,
+                      <ConfigSummary entries={rule.targets.map((target) => [
+                        String(target.priority ?? 0), target.direct ? t('proxy_pools.rule_target_direct') : target.pool,
+                      ])} />,
+                    ]}
+                    actions={<>
+                      <Button type="button" size="sm" variant="ghost" aria-label={t('proxy_pools.move_up')} title={t('proxy_pools.move_up')}
+                        disabled={disabled || !rulesEditable || index === 0} onClick={() => moveRule(index, -1)}><IconChevronUp size={15} /></Button>
+                      <Button type="button" size="sm" variant="ghost" aria-label={t('proxy_pools.move_down')} title={t('proxy_pools.move_down')}
+                        disabled={disabled || !rulesEditable || index === rules.length - 1} onClick={() => moveRule(index, 1)}><IconChevronDown size={15} /></Button>
+                      <Button type="button" size="sm" variant="ghost" aria-label={t('common.delete')} title={t('common.delete')}
+                        disabled={disabled || !rulesEditable} onClick={() => setRules((current) => current.filter((item) => item.clientId !== rule.clientId))}><IconTrash2 size={15} /></Button>
+                    </>}
+                  >
                     <div className={styles.ruleFields}>
                       <Input
                         label={t('proxy_pools.rule_name')}
@@ -1570,24 +1573,10 @@ export function ProxyPoolsPage() {
                         </span>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setRules((current) =>
-                          current.filter((item) => item.clientId !== rule.clientId)
-                        )
-                      }
-                      disabled={disabled || !rulesEditable}
-                      title={t('common.delete')}
-                      aria-label={t('common.delete')}
-                    >
-                      <IconTrash2 size={15} />
-                    </Button>
-                  </article>
+                  </ConfigTableRow>
                 );
               })}
-            </div>
+            </ConfigTable>
           )}
         </section>
       ) : null}

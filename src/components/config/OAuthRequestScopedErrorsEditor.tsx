@@ -4,6 +4,8 @@ import { Select } from '@/components/ui/Select';
 import { RequestScopedErrorsEditor } from '@/components/providers/RequestScopedErrorsEditor';
 import type { OAuthRequestScopedErrors } from '@/types/requestScopedErrors';
 import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
+import { ConfigTable, ConfigTableRow } from './ConfigTable';
+import { validateRequestScopedErrorRule } from '@/utils/requestScopedErrors';
 import styles from './VisualConfigEditor.module.scss';
 
 const channels = new Set(['vertex', 'aistudio', 'antigravity', 'claude', 'codex', 'kimi', 'xai']);
@@ -18,17 +20,22 @@ export function OAuthRequestScopedErrorsEditor({ value, onChange, disabled }: {
   const options = RUNTIME_PROVIDER_OPTIONS.filter((provider) => channels.has(provider.value) && !used.has(provider.value));
   return (
     <div className={styles.blockStack}>
+      {Object.keys(value).length > 0 && <ConfigTable label={`${t('request_scoped_errors.provider')} · ${t('request_scoped_errors.title')}`} columns={[
+        t('request_scoped_errors.provider'), t('config_management.visual.common.rule_column'), t('config_management.visual.common.actions'),
+      ]}>
       {Object.entries(value).map(([provider, rules]) => (
-        <div className={styles.ruleCard} key={provider}>
-          <div className={styles.ruleCardHeader}>
-            <div className={styles.ruleCardTitle}>{provider}</div>
-            <Button type="button" variant="ghost" size="sm" disabled={disabled}
+        <ConfigTableRow key={provider} title={provider} initialExpanded={rules.length === 0}
+          invalid={rules.some((rule) => Boolean(validateRequestScopedErrorRule(rule)))}
+          labels={[t('request_scoped_errors.provider'), t('config_management.visual.common.rule_column')]}
+          cells={[<strong>{provider}</strong>, t('config_management.settings_center.rules_summary', { count: rules.length })]}
+          actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}
               onClick={() => onChange(Object.fromEntries(Object.entries(value).filter(([key]) => key !== provider)))}
-            >{t('request_scoped_errors.remove_provider')}</Button>
-          </div>
+            >{t('request_scoped_errors.remove_provider')}</Button>}
+        >
           <RequestScopedErrorsEditor value={rules} disabled={disabled} onChange={(next) => onChange({ ...value, [provider]: next })} />
-        </div>
+        </ConfigTableRow>
       ))}
+      </ConfigTable>}
       {options.length > 0 && <Select value="" options={options} ariaLabel={t('request_scoped_errors.provider')}
         placeholder={t('request_scoped_errors.add_provider')} disabled={disabled}
         onChange={(provider) => onChange({ ...value, [provider]: [] })} />}

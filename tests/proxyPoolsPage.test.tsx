@@ -226,12 +226,12 @@ describe('structured proxy health management page', () => {
     expect(addRule.disabled).toBe(false);
     fireEvent.click(addRule);
 
-    const targetsGroup = screen.getByText('proxy_pools.rule_targets').closest('.form-group');
+    const targetsGroup = screen.getAllByText('proxy_pools.rule_targets').map((node) => node.closest('.form-group')).find(Boolean);
     if (!targetsGroup) throw new Error('proxy target editor is missing');
     fireEvent.click(within(targetsGroup).getByText('proxy_pools.select_rule_target'));
     fireEvent.click(await screen.findByRole('option', { name: 'proxy_pools.rule_target_direct' }));
     fireEvent.click(within(targetsGroup).getByRole('button', { name: 'common.add' }));
-    expect(screen.getByText('proxy_pools.rule_target_direct')).toBeTruthy();
+    expect(screen.getAllByText('proxy_pools.rule_target_direct').length).toBeGreaterThan(0);
   });
 
   test('saves v2 pool and direct targets with independent priorities', async () => {
@@ -249,7 +249,9 @@ describe('structured proxy health management page', () => {
 
     await screen.findByText(pool.name);
     fireEvent.click(screen.getByRole('tab', { name: 'proxy_pools.tabs.rules' }));
-    const targetsGroup = screen.getByText('proxy_pools.rule_targets').closest('.form-group');
+    expect(screen.queryByLabelText('proxy_pools.rule_name')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /common.edit:/ }));
+    const targetsGroup = screen.getAllByText('proxy_pools.rule_targets').map((node) => node.closest('.form-group')).find(Boolean);
     if (!targetsGroup) throw new Error('proxy target editor is missing');
     fireEvent.click(within(targetsGroup).getByText('proxy_pools.select_rule_target'));
     fireEvent.click(await screen.findByRole('option', { name: 'proxy_pools.rule_target_direct' }));
@@ -285,6 +287,7 @@ describe('structured proxy health management page', () => {
 
     await screen.findByText(pool.name);
     fireEvent.click(screen.getByRole('tab', { name: 'proxy_pools.tabs.rules' }));
+    fireEvent.click(screen.getByRole('button', { name: /common.edit:/ }));
     expect(await screen.findByText('proxy_pools.legacy_rule_targets_hint')).toBeTruthy();
     expect(screen.queryByText('proxy_pools.rule_target_direct')).toBeNull();
   });
@@ -306,11 +309,12 @@ describe('structured proxy health management page', () => {
     await screen.findByText(pool.name);
     fireEvent.click(screen.getByRole('tab', { name: 'proxy_pools.tabs.rules' }));
     expect(await screen.findByText('proxy_pools.legacy_rule_targets_blocked')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /common.edit:/ }));
     expect((screen.getByLabelText('proxy_pools.rule_name') as HTMLInputElement).disabled).toBe(true);
     expect((screen.getByRole('button', { name: 'common.save' }) as HTMLButtonElement).disabled).toBe(
       true
     );
-    expect(screen.getByText('proxy_pools.rule_target_direct')).toBeTruthy();
+    expect(screen.getAllByText('proxy_pools.rule_target_direct').length).toBeGreaterThan(0);
   });
 
   test('provides health settings and asynchronous task labels in every supported locale', () => {
