@@ -4,6 +4,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 import path from 'path';
 import { execSync } from 'child_process';
 import fs from 'fs';
+import { panelBootstrap } from './build/panelBootstrap';
 
 // Get version from environment, git tag, or package.json
 function getVersion(): string {
@@ -41,7 +42,8 @@ export default defineConfig({
     react(),
     viteSingleFile({
       removeViteModuleLoader: true
-    })
+    }),
+    panelBootstrap()
   ],
   define: {
     __APP_VERSION__: JSON.stringify(getVersion())
