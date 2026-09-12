@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/Button';
 import { IconChevronDown, IconChevronUp } from '@/components/ui/icons';
 import styles from './ConfigTable.module.scss';
 
+const summaryLabels = new Set(['providers', 'priorities', 'sources', 'scope', 'cooldown-seconds', 'message-contains', 'per-auth-request-limit', 'per-auth-request-window-minutes', 'max-retry-credentials', 'plan-types', 'match', 'regex', 'code', 'type']);
+
 export function ConfigTable({ label, columns, children, numbered = false }: {
   label: string; columns: string[]; children: ReactNode; numbered?: boolean;
 }) {
@@ -61,8 +63,9 @@ export function ConfigTableRow({ title, cells, labels, actions, children, toggle
 }
 
 export function ConfigSummary({ entries, empty = '—' }: { entries: [string, string | undefined][]; empty?: string }) {
+  const { t } = useTranslation();
   const populated = entries.filter(([, value]) => value?.trim());
   return populated.length ? <dl className={styles.summary}>{populated.map(([label, value], index) =>
-    <div key={`${label}-${index}`}><dt>{label}</dt><dd title={value}>{value}</dd></div>
+    <div key={`${label}-${index}`}><dt title={label}>{summaryLabels.has(label) ? t(`config_management.visual.common.summary_${label.replaceAll('-', '_')}`) : label}</dt><dd title={value}>{value}</dd></div>
   )}</dl> : <span>{empty}</span>;
 }

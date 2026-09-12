@@ -1,8 +1,12 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
-import { ConfigTable, ConfigTableRow } from '@/components/config/ConfigTable';
+import { ConfigTable, ConfigTableRow, ConfigSummary } from '@/components/config/ConfigTable';
 import { ApiKeysCardEditor } from '@/components/config/VisualConfigEditorBlocks';
 import { apiKeysApi } from '@/services/api/apiKeys';
+import en from '@/i18n/locales/en.json';
+import zhCN from '@/i18n/locales/zh-CN.json';
+import zhTW from '@/i18n/locales/zh-TW.json';
+import ru from '@/i18n/locales/ru.json';
 
 vi.mock('react-i18next', async (original) => ({
   ...(await original<typeof import('react-i18next')>()),
@@ -26,6 +30,19 @@ test('collapses rule editors without losing their input drafts or mounting untou
   fireEvent.click(screen.getByRole('button', { name: /: A$/ }));
   expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('unsaved value');
   expect(screen.queryByLabelText('Draft B')).toBeNull();
+});
+
+test('short summary labels retain original field names and cover all four locales', () => {
+  render(<ConfigSummary entries={[
+    ['message-contains', 'Rate limit exceeded'], ['custom.payload.path', 'value'],
+  ]} />);
+  expect(screen.getByTitle('message-contains').textContent).toBe('config_management.visual.common.summary_message_contains');
+  expect(screen.getByTitle('custom.payload.path').textContent).toBe('custom.payload.path');
+  const keys = Object.keys(en.config_management.visual.common).filter((key) => key.startsWith('summary_'));
+  expect(keys).toHaveLength(14);
+  for (const locale of [zhCN, zhTW, ru]) {
+    expect(Object.keys(locale.config_management.visual.common).filter((key) => key.startsWith('summary_'))).toEqual(keys);
+  }
 });
 
 test('API keys summarize access in rows and keep unfinished restriction drafts on collapse', async () => {
