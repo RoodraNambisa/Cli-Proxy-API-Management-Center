@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { ConfigHelp } from './ConfigHelp';
+import { ConfigTable, ConfigTableRow, ConfigSummary } from './ConfigTable';
 import type { CodexLiveMediaVisualConfig, CodexLiveICEVisualEntry } from '@/types/codexLiveMedia';
 import { makeClientId } from '@/types/visualConfig';
 import { codexLiveMediaErrors } from '@/utils/codexLiveMedia';
@@ -57,19 +58,23 @@ export function CodexLiveMediaEditor({ value, onChange, disabled }: {
         <ToggleSwitch checked={value.disablePrivateRemoteIps} disabled={disabled} ariaLabel={text('disable_private')}
           onChange={(disablePrivateRemoteIps) => patch({ disablePrivateRemoteIps })} />
       </div>
-      <div className="hint">{text('ice_hint')}</div>
+      <ConfigHelp title={text('ice_server')} text={text('ice_hint')} />
+      {value.iceServers.length > 0 && <ConfigTable numbered label={text('ice_server')} columns={[
+        t('config_management.visual.common.rule_column'), text('ice_urls'), t('config_management.visual.common.actions'),
+      ]}>
       {value.iceServers.map((server, index) => {
         const urlsId = `${id}-${server.id}`;
         const urlError = error(`iceServers.${server.id}.urls`);
         return (
-          <div className={styles.ruleCard} key={server.id}>
-            <div className={styles.ruleCardHeader}>
-              <div className={styles.ruleCardTitle}>{text('ice_server')} {index + 1}</div>
-              <Button type="button" variant="ghost" size="sm" disabled={disabled}
+          <ConfigTableRow key={server.id} title={`${text('ice_server')} ${index + 1}`}
+            initialExpanded={!server.urls} invalid={Boolean(urlError || error(`iceServers.${server.id}.credential`))}
+            labels={[t('config_management.visual.common.rule_column'), text('ice_urls')]}
+            cells={[<strong>#{index + 1}</strong>, <ConfigSummary entries={[['URLs', server.urls]]} />]}
+            actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}
                 aria-label={`${text('remove_ice')} ${index + 1}`}
                 onClick={() => patch({ iceServers: value.iceServers.filter((_, i) => i !== index) })}
-              >{text('remove_ice')}</Button>
-            </div>
+              >{text('remove_ice')}</Button>}
+          >
             <div className="form-group">
               <label htmlFor={urlsId}>{text('ice_urls')}</label>
               <textarea id={urlsId} className="input" rows={2} value={server.urls} disabled={disabled}
@@ -84,9 +89,10 @@ export function CodexLiveMediaEditor({ value, onChange, disabled }: {
                 value={server.credential} disabled={disabled} error={error(`iceServers.${server.id}.credential`)}
                 onChange={(event) => updateServer(index, { credential: event.target.value })} />
             </div>
-          </div>
+          </ConfigTableRow>
         );
       })}
+      </ConfigTable>}
       <Button type="button" variant="secondary" size="sm" disabled={disabled}
         onClick={() => patch({ iceServers: [...value.iceServers, { id: makeClientId(), urls: '', username: '', credential: '' }] })}
       >{text('add_ice')}</Button>

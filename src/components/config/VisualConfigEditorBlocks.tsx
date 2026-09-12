@@ -52,7 +52,7 @@ import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
 import { ApiKeyPriorityFields, type ApiKeyPriorityField } from './ApiKeyPriorityFields';
 import type { ClientApiKeyGroup } from '@/types/config';
 import { API_KEY_NAME_LIMIT, normalizeApiKeyName } from '@/utils/apiKeyGroups';
-import { ConfigTable, ConfigTableRow } from './ConfigTable';
+import { ConfigTable, ConfigTableRow, ConfigSummary } from './ConfigTable';
 import { ConfigHelp } from './ConfigHelp';
 
 /** Minimum character count before the expand/collapse toggle appears. */
@@ -1008,28 +1008,26 @@ export const CodexCustomModelsEditor = memo(function CodexCustomModelsEditor({
 
   return (
     <div className={styles.blockStack}>
+      {models.length > 0 && <ConfigTable label={t('config_management.visual.payload_rules.models')} columns={[
+        t('config_management.visual.codex_custom_models.id'), t('config_management.visual.codex_custom_models.display_name'),
+        t('config_management.visual.codex_custom_models.groups'), t('config_management.visual.common.actions'),
+      ]}>
       {models.map((model, index) => {
         const errors = effectiveValidationErrors[model.clientId];
         const idError = getValidationMessage(t, errors?.id);
         const groupsError = getValidationMessage(t, errors?.groups);
 
         return (
-          <div key={model.clientId} className={styles.ruleCard}>
-            <div className={styles.ruleCardHeader}>
-              <div className={styles.ruleCardTitle}>
-                {t('config_management.visual.codex_custom_models.item_title', {
-                  index: index + 1,
-                })}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeModel(model.clientId)}
-                disabled={disabled}
-              >
-                {t('config_management.visual.common.delete')}
-              </Button>
-            </div>
+          <ConfigTableRow key={model.clientId}
+            title={t('config_management.visual.codex_custom_models.item_title', { index: index + 1 })}
+            initialExpanded={!model.id} invalid={Boolean(idError || groupsError)}
+            labels={[t('config_management.visual.codex_custom_models.id'), t('config_management.visual.codex_custom_models.display_name'), t('config_management.visual.codex_custom_models.groups')]}
+            cells={[<strong>{model.id || `#${index + 1}`}</strong>, model.displayName || '—',
+              model.groups.map((group) => groupOptions.find((option) => option.value === group)?.label || group).join(', ') || '—']}
+            actions={<Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => removeModel(model.clientId)}>
+              {t('config_management.visual.common.delete')}
+            </Button>}
+          >
 
             <div className={styles.codexCustomModelFieldGrid}>
               <div className="form-group">
@@ -1084,9 +1082,10 @@ export const CodexCustomModelsEditor = memo(function CodexCustomModelsEditor({
               </div>
               {groupsError ? <div className="error-box">{groupsError}</div> : null}
             </div>
-          </div>
+          </ConfigTableRow>
         );
       })}
+      </ConfigTable>}
 
       {models.length === 0 ? (
         <div className={styles.emptyState}>
@@ -1275,21 +1274,23 @@ export const PayloadRulesEditor = memo(function PayloadRulesEditor({
 
   return (
     <div className={styles.blockStack}>
+      {rules.length > 0 && <ConfigTable numbered label={t('config_management.visual.payload_rules.rule')} columns={[
+        t('config_management.visual.common.rule_column'), t('config_management.visual.payload_rules.models'),
+        t('config_management.visual.payload_rules.params'), t('config_management.visual.common.actions'),
+      ]}>
       {rules.map((rule, ruleIndex) => (
-        <div key={rule.id} className={styles.ruleCard}>
-          <div className={styles.ruleCardHeader}>
-            <div className={styles.ruleCardTitle}>
-              {t('config_management.visual.payload_rules.rule')} {ruleIndex + 1}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => removeRule(ruleIndex)}
-              disabled={disabled}
-            >
-              {t('config_management.visual.common.delete')}
-            </Button>
-          </div>
+        <ConfigTableRow key={rule.id} title={`${t('config_management.visual.payload_rules.rule')} ${ruleIndex + 1}`}
+          initialExpanded={!rule.models.length || !rule.params.length} invalid={rule.params.some((param) => Boolean(getParamErrorMessage(param)))}
+          labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.payload_rules.models'), t('config_management.visual.payload_rules.params')]}
+          cells={[
+            <strong>#{ruleIndex + 1}</strong>,
+            <ConfigSummary entries={rule.models.map((model) => [model.protocol || '*', model.name])} />,
+            <ConfigSummary entries={rule.params.map((param) => [param.path, param.value])} />,
+          ]}
+          actions={<Button type="button" variant="ghost" size="sm" onClick={() => removeRule(ruleIndex)} disabled={disabled}>
+            {t('config_management.visual.common.delete')}
+          </Button>}
+        >
 
           <div className={styles.blockStack}>
             <div className={styles.blockLabel}>
@@ -1441,8 +1442,9 @@ export const PayloadRulesEditor = memo(function PayloadRulesEditor({
               </Button>
             </div>
           </div>
-        </div>
+        </ConfigTableRow>
       ))}
+      </ConfigTable>}
 
       {rules.length === 0 && (
         <div className={styles.emptyState}>
@@ -1502,21 +1504,23 @@ export const PayloadFilterRulesEditor = memo(function PayloadFilterRulesEditor({
 
   return (
     <div className={styles.blockStack}>
+      {rules.length > 0 && <ConfigTable numbered label={t('config_management.visual.payload_rules.rule')} columns={[
+        t('config_management.visual.common.rule_column'), t('config_management.visual.payload_rules.models'),
+        t('config_management.visual.payload_rules.remove_params'), t('config_management.visual.common.actions'),
+      ]}>
       {rules.map((rule, ruleIndex) => (
-        <div key={rule.id} className={styles.ruleCard}>
-          <div className={styles.ruleCardHeader}>
-            <div className={styles.ruleCardTitle}>
-              {t('config_management.visual.payload_rules.rule')} {ruleIndex + 1}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => removeRule(ruleIndex)}
-              disabled={disabled}
-            >
-              {t('config_management.visual.common.delete')}
-            </Button>
-          </div>
+        <ConfigTableRow key={rule.id} title={`${t('config_management.visual.payload_rules.rule')} ${ruleIndex + 1}`}
+          initialExpanded={!rule.models.length || !rule.params.length}
+          labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.payload_rules.models'), t('config_management.visual.payload_rules.remove_params')]}
+          cells={[
+            <strong>#{ruleIndex + 1}</strong>,
+            <ConfigSummary entries={rule.models.map((model) => [model.protocol || '*', model.name])} />,
+            <ConfigSummary entries={[[t('config_management.visual.payload_rules.remove_params'), rule.params.join(', ')]]} />,
+          ]}
+          actions={<Button type="button" variant="ghost" size="sm" onClick={() => removeRule(ruleIndex)} disabled={disabled}>
+            {t('config_management.visual.common.delete')}
+          </Button>}
+        >
 
           <div className={styles.blockStack}>
             <div className={styles.blockLabel}>
@@ -1577,8 +1581,9 @@ export const PayloadFilterRulesEditor = memo(function PayloadFilterRulesEditor({
               onChange={(params) => updateRule(ruleIndex, { params })}
             />
           </div>
-        </div>
+        </ConfigTableRow>
       ))}
+      </ConfigTable>}
 
       {rules.length === 0 && (
         <div className={styles.emptyState}>

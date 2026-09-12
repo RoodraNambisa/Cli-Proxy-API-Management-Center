@@ -62,7 +62,7 @@ export function ConfigTableRow({ title, cells, labels, actions, children, toggle
 
 export function ConfigSummary({ entries, empty = '—' }: { entries: [string, string | undefined][]; empty?: string }) {
   const populated = entries.filter(([, value]) => value?.trim());
-  return populated.length ? <dl className={styles.summary}>{populated.map(([label, value]) =>
-    <div key={label}><dt>{label}</dt><dd title={value}>{value}</dd></div>
+  return populated.length ? <dl className={styles.summary}>{populated.map(([label, value], index) =>
+    <div key={`${label}-${index}`}><dt>{label}</dt><dd title={value}>{value}</dd></div>
   )}</dl> : <span>{empty}</span>;
 }

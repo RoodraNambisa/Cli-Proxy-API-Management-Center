@@ -83,6 +83,7 @@ describe('Codex Live media editor', () => {
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save fixture' })));
     expect(screen.getByText('rejected')).not.toBeNull();
     expect((screen.getByRole('button', { name: 'Save fixture' }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: /common.edit:/ }));
     expect((screen.getByLabelText(key('ice_credential')) as HTMLInputElement).value).toBe('fixture-secret');
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save fixture' })));
     expect((screen.getByRole('button', { name: 'Save fixture' }) as HTMLButtonElement).disabled).toBe(true);
