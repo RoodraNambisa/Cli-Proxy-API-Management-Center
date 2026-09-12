@@ -92,9 +92,35 @@ describe('startup and history storage panel', () => {
     vi.spyOn(historyStorageApi, 'getStorageHistory').mockResolvedValue(history);
   });
 
+  test('starts folded, preserves expansion across refresh, and folds on a new visit', async () => {
+    const view = render(<StartupHistoryPanel connected connectionKey="server-a" />);
+    await screen.findByTestId('history-storage');
+    const startupTitle = screen.getByText('system_info.startup.title');
+    const startupCard = startupTitle.closest('details')!;
+    const historyTitle = screen.getByText('system_info.history_storage.title');
+    const historyCard = historyTitle.closest('details')!;
+    expect(startupCard.open).toBe(false);
+    expect(historyCard.open).toBe(false);
+    fireEvent.click(within(startupCard).getByRole('button', { name: 'common.refresh' }));
+    await waitFor(() => expect(historyStorageApi.getStorageHistory).toHaveBeenCalledTimes(2));
+    expect(startupCard.open).toBe(false);
+    fireEvent.click(startupTitle);
+    fireEvent.click(historyTitle);
+    await waitFor(() => expect(startupCard.open && historyCard.open).toBe(true));
+    fireEvent.click(within(historyCard).getByRole('button', { name: 'common.refresh' }));
+    await waitFor(() => expect(historyStorageApi.getStorageHistory).toHaveBeenCalledTimes(3));
+    expect(startupCard.open && historyCard.open).toBe(true);
+    view.unmount();
+    render(<StartupHistoryPanel connected connectionKey="server-a" />);
+    expect(screen.getByText('system_info.startup.title').closest('details')!.open).toBe(false);
+    expect(screen.getByText('system_info.history_storage.title').closest('details')!.open).toBe(false);
+  });
+
   test('shows startup stages and aggregate history without exposing paths', async () => {
     render(<StartupHistoryPanel connected connectionKey="server-a" />);
 
+    fireEvent.click(screen.getByText('system_info.startup.title'));
+    fireEvent.click(screen.getByText('system_info.history_storage.title'));
     const startupPanel = await screen.findByTestId('startup-status');
     expect(within(startupPanel).getByText('system_info.startup.phases.ready')).toBeTruthy();
     expect(within(startupPanel).getByText('4,000 ms')).toBeTruthy();
@@ -132,6 +158,7 @@ describe('startup and history storage panel', () => {
     });
     render(<StartupHistoryPanel connected connectionKey="server-a" />);
     const panel = await screen.findByTestId('history-storage');
+    fireEvent.click(screen.getByText('system_info.history_storage.title'));
     const cleanup = within(panel).getByText('system_info.history_storage.cleanup_usage');
     expect(cleanup.closest('button')?.disabled).toBe(false);
 

@@ -998,6 +998,7 @@ export function SystemPage() {
         <Card
           title={t('system_info.metrics_title')}
           collapsible
+          defaultOpen={false}
           extra={
             <Button
               type="button"
@@ -2052,6 +2053,8 @@ export function SystemPage() {
 
         <Card
           title={t('system_info.control_panel_update_title')}
+          collapsible
+          defaultOpen={false}
           extra={
             <Button
               type="button"
@@ -2173,7 +2176,7 @@ export function SystemPage() {
           )}
         </Card>
 
-        <Card title={t('system_info.quick_links_title')}>
+        <Card title={t('system_info.quick_links_title')} collapsible defaultOpen={false}>
           <p className={styles.sectionDescription}>{t('system_info.quick_links_desc')}</p>
           <div className={styles.quickLinks}>
             <a
@@ -2234,6 +2237,8 @@ export function SystemPage() {
 
         <Card
           title={t('system_info.models_title')}
+          collapsible
+          defaultOpen={false}
           extra={
             <Button
               variant="secondary"
@@ -2288,7 +2293,7 @@ export function SystemPage() {
           )}
         </Card>
 
-        <Card title={t('system_info.clear_login_title')}>
+        <Card title={t('system_info.clear_login_title')} collapsible defaultOpen={false}>
           <p className={styles.sectionDescription}>{t('system_info.clear_login_desc')}</p>
           <div className={styles.clearLoginActions}>
             <Button variant="danger" onClick={handleClearLoginStorage}>

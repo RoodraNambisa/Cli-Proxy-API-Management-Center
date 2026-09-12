@@ -780,6 +780,24 @@ describe('system metrics and filesystem capacity', () => {
     );
   });
 
+  test('keeps all detail cards folded by default while leaving the overview visible', async () => {
+    vi.spyOn(systemMetricsApi, 'get').mockResolvedValue(createSystemSnapshot());
+    vi.spyOn(configApi, 'getControlPanelUpdateStatus').mockResolvedValue({} as never);
+    vi.spyOn(apiKeysApi, 'list').mockResolvedValue([]);
+    vi.spyOn(useConfigStore.getState(), 'fetchConfig').mockResolvedValue({} as never);
+    vi.spyOn(useModelsStore.getState(), 'fetchModels').mockResolvedValue([]);
+    render(<SystemPage />);
+    await screen.findByTestId('image-runtime-metrics');
+    for (const key of ['startup.title', 'history_storage.title', 'metrics_title', 'control_panel_update_title', 'quick_links_title', 'models_title', 'clear_login_title']) {
+      const title = screen.getByText(`system_info.${key}`);
+      const card = title.closest('details')!;
+      expect(card.open).toBe(false);
+      fireEvent.click(title);
+      await waitFor(() => expect(card.open).toBe(true));
+    }
+    expect(screen.getByText('system_info.about_title').closest('details')).toBeNull();
+  });
+
   test('shows bounded image runtime capacity and compact phase diagnostics', async () => {
     useAuthStore.setState({
       serverVersion: 'v7.2.136-fork.1',

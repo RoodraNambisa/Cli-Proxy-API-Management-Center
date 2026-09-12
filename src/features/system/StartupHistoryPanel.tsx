@@ -265,6 +265,7 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
       <Card
         title={t('system_info.startup.title')}
         collapsible
+        defaultOpen={false}
         extra={
           <Button
             type="button"
@@ -345,6 +346,7 @@ export function StartupHistoryPanel({ connected, connectionKey }: StartupHistory
       <Card
         title={t('system_info.history_storage.title')}
         collapsible
+        defaultOpen={false}
         extra={
           <Button
             type="button"
