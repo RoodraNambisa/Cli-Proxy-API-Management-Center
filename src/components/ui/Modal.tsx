@@ -131,9 +131,12 @@ export function Modal({
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCloseRef = useRef(onClose);
   const modalRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   const getFocusableElements = useCallback(() => {
     if (!modalRef.current) return [] as HTMLElement[];
@@ -151,11 +154,11 @@ export function Modal({
         setIsClosing(false);
         closeTimerRef.current = null;
         if (notifyParent) {
-          onClose();
+          onCloseRef.current();
         }
       }, CLOSE_ANIMATION_DURATION);
     },
-    [onClose]
+    []
   );
 
   useEffect(() => {
@@ -167,11 +170,11 @@ export function Modal({
         closeTimerRef.current = null;
       }
       queueMicrotask(() => {
-        if (cancelled) return;
+        if (cancelled || closeTimerRef.current !== null) return;
         setIsVisible(true);
         setIsClosing(false);
       });
-    } else if (isVisible) {
+    } else if (modalRef.current) {
       queueMicrotask(() => {
         if (cancelled) return;
         startClose(false);
@@ -181,7 +184,7 @@ export function Modal({
     return () => {
       cancelled = true;
     };
-  }, [open, isVisible, startClose]);
+  }, [open, startClose]);
 
   const handleClose = useCallback(() => {
     startClose(true);
