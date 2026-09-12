@@ -984,6 +984,7 @@
     "headers_invalid_value": "每個自訂請求標頭的值都必須是字串。",
     "prefix_proxy_invalid_json": "該驗證檔案不是 JSON 物件，無法編輯欄位。",
     "prefix_proxy_saved_success": "已更新驗證檔案「{{name}}」",
+    "disabled_quota_refresh_hint": "手動查詢配額，帳號仍保持停用，不會參與請求分配。",
     "quota_refresh_success": "已重新整理「{{name}}」的配額",
     "quota_refresh_failed": "重新整理「{{name}}」的配額失敗：{{message}}",
     "reset_credits_refresh_success": "已重新整理「{{name}}」的重置次數",

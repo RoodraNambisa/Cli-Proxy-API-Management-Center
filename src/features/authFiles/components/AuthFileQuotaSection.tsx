@@ -48,6 +48,11 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
   const showConfirmation = useNotificationStore((state) => state.showConfirmation);
   const [resetCreditsRefreshing, setResetCreditsRefreshing] = useState(false);
   const [resettingCreditId, setResettingCreditId] = useState<string | null>(null);
+  const quotaReadBlocked =
+    disableControls ||
+    isRuntimeOnlyAuthFile(file) ||
+    (quotaType === 'codex' &&
+      (file.retained_for_dependents === true || file.deletion_state === 'retained_for_dependents'));
 
   const quota = useQuotaStore((state) => {
     if (quotaType === 'antigravity') return state.antigravityQuota[file.name] as QuotaState;
@@ -70,9 +75,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
   });
 
   const refreshQuotaForFile = useCallback(async () => {
-    if (disableControls) return;
-    if (isRuntimeOnlyAuthFile(file)) return;
-    if (file.disabled) return;
+    if (quotaReadBlocked) return;
     if (quota?.status === 'loading') return;
 
     const config = getQuotaConfig(quotaType) as unknown as {
@@ -108,7 +111,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
       }));
       showNotification(t('auth_files.quota_refresh_failed', { name: file.name, message }), 'error');
     }
-  }, [disableControls, file, quota?.status, quotaType, showNotification, t, updateQuotaState]);
+  }, [quotaReadBlocked, file, quota?.status, quotaType, showNotification, t, updateQuotaState]);
 
   const config = getQuotaConfig(quotaType) as unknown as {
     i18nPrefix: string;
@@ -122,8 +125,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
 
   const resetQuotaForFile = useCallback(
     (credit: CodexRateLimitResetCredit) => {
-      if (disableControls) return;
-      if (isRuntimeOnlyAuthFile(file)) return;
+      if (quotaReadBlocked) return;
       if (file.disabled) return;
       if (quota?.status === 'loading') return;
       if (resettingCreditId) return;
@@ -161,7 +163,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
     },
     [
       config,
-      disableControls,
+      quotaReadBlocked,
       file,
       quota?.status,
       resettingCreditId,
@@ -173,9 +175,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
   );
 
   const refreshResetCreditsForFile = useCallback(async () => {
-    if (disableControls) return;
-    if (isRuntimeOnlyAuthFile(file)) return;
-    if (file.disabled) return;
+    if (quotaReadBlocked) return;
     if (resetCreditsRefreshing) return;
     const fetchResetCredits = config.fetchResetCredits;
     const buildResetCreditsSuccessState = config.buildResetCreditsSuccessState;
@@ -216,7 +216,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
     }
   }, [
     config,
-    disableControls,
+    quotaReadBlocked,
     file,
     resetCreditsRefreshing,
     showNotification,
@@ -225,11 +225,11 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
   ]);
 
   const quotaStatus = quota?.status ?? 'idle';
-  const canRefreshQuota = !disableControls && !file.disabled && !resettingCreditId;
+  const canRefreshQuota = !quotaReadBlocked && !resettingCreditId;
   const supportsResetCredits = Boolean(
     config.fetchResetCredits && config.buildResetCreditsSuccessState
   );
-  const showResetCreditControls = !disableControls && !file.disabled && supportsResetCredits;
+  const showQuotaActions = !quotaReadBlocked;
   const canRefreshResetCredits = canRefreshQuota && supportsResetCredits;
   const quotaErrorMessage = resolveQuotaErrorMessage(
     t,
@@ -239,28 +239,32 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
 
   return (
     <div className={styles.quotaSection}>
-      {showResetCreditControls && (
+      {showQuotaActions && (
         <div className={styles.quotaInlineActions}>
           <button
             type="button"
             className={styles.quotaInlineAction}
             onClick={() => void refreshQuotaForFile()}
             disabled={!canRefreshQuota || quotaStatus === 'loading' || resetCreditsRefreshing}
+            title={file.disabled ? t('auth_files.disabled_quota_refresh_hint') : undefined}
           >
             {t(`${config.i18nPrefix}.refresh_button`)}
           </button>
-          <button
-            type="button"
-            className={styles.quotaInlineAction}
-            onClick={() => void refreshResetCreditsForFile()}
-            disabled={
-              !canRefreshResetCredits || quotaStatus === 'loading' || resetCreditsRefreshing
-            }
-          >
-            {resetCreditsRefreshing
-              ? t('codex_quota.reset_credits_loading')
-              : t('codex_quota.refresh_reset_credits_button')}
-          </button>
+          {supportsResetCredits && (
+            <button
+              type="button"
+              className={styles.quotaInlineAction}
+              onClick={() => void refreshResetCreditsForFile()}
+              disabled={
+                !canRefreshResetCredits || quotaStatus === 'loading' || resetCreditsRefreshing
+              }
+              title={file.disabled ? t('auth_files.disabled_quota_refresh_hint') : undefined}
+            >
+              {resetCreditsRefreshing
+                ? t('codex_quota.reset_credits_loading')
+                : t('codex_quota.refresh_reset_credits_button')}
+            </button>
+          )}
         </div>
       )}
       {quotaStatus === 'loading' ? (
@@ -271,6 +275,11 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
           className={`${styles.quotaMessage} ${styles.quotaMessageAction}`}
           onClick={() => void refreshQuotaForFile()}
           disabled={!canRefreshQuota}
+          title={
+            file.disabled && !quotaReadBlocked
+              ? t('auth_files.disabled_quota_refresh_hint')
+              : undefined
+          }
         >
           {t(`${config.i18nPrefix}.idle`)}
         </button>
@@ -293,7 +302,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
                   className={styles.codexResetCreditAction}
                   onClick={() => resetQuotaForFile(credit)}
                   disabled={
-                    disableControls ||
+                    quotaReadBlocked ||
                     file.disabled ||
                     quotaStatus === 'loading' ||
                     resetCreditsRefreshing ||

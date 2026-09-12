@@ -986,6 +986,7 @@
     "headers_invalid_value": "每个自定义请求头的值都必须是字符串。",
     "prefix_proxy_invalid_json": "该认证文件不是 JSON 对象，无法编辑字段。",
     "prefix_proxy_saved_success": "已更新认证文件 \"{{name}}\"",
+    "disabled_quota_refresh_hint": "手动查询额度，账号仍保持停用，不会参与请求分配。",
     "quota_refresh_success": "已刷新 \"{{name}}\" 的额度",
     "quota_refresh_failed": "刷新 \"{{name}}\" 的额度失败：{{message}}",
     "reset_credits_refresh_success": "已刷新 \"{{name}}\" 的重置次数",

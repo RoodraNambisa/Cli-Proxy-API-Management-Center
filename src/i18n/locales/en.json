@@ -986,6 +986,7 @@
     "headers_invalid_value": "Each custom header value must be a string.",
     "prefix_proxy_invalid_json": "This auth file is not a JSON object, so fields cannot be edited.",
     "prefix_proxy_saved_success": "Updated auth file \"{{name}}\" successfully",
+    "disabled_quota_refresh_hint": "Check quota manually. The account remains disabled and unavailable for request routing.",
     "quota_refresh_success": "Quota refreshed for \"{{name}}\"",
     "quota_refresh_failed": "Failed to refresh quota for \"{{name}}\": {{message}}",
     "reset_credits_refresh_success": "Manual resets refreshed for \"{{name}}\"",

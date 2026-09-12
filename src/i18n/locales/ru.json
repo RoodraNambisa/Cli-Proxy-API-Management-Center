@@ -983,6 +983,7 @@
     "card_tools_title": "Инструменты",
     "quota_refresh_single": "Обновить квоту",
     "quota_refresh_hint": "Обновить квоту только для этих учётных данных",
+    "disabled_quota_refresh_hint": "Проверить квоту вручную. Учётная запись останется отключённой и не будет использоваться для обработки запросов.",
     "quota_refresh_success": "Квота для \"{{name}}\" обновлена",
     "quota_refresh_failed": "Не удалось обновить квоту для \"{{name}}\": {{message}}",
     "reset_credits_refresh_success": "Ручные сбросы для \"{{name}}\" обновлены",
