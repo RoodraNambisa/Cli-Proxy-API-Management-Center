@@ -38,6 +38,7 @@ test.each(forms)('$section saves and clears rules while retaining credentials an
   const writer = section === 'interactions-api-key' ? patch : put;
   const mount = () => render(<MemoryRouter initialEntries={['/edit/0']}><Routes><Route path="/edit/:index" element={element} /><Route path="/ai-providers" element={<div>saved</div>} /></Routes></MemoryRouter>);
   const first = mount();
+  fireEvent.click(await screen.findByRole('button', { name: /common.edit:/ }));
   const pattern = await screen.findByRole('textbox', { name: 'request_scoped_errors.match 1' });
   await waitFor(() => expect((pattern as HTMLTextAreaElement).value).toBe(' original '));
   fireEvent.change(pattern, { target: { value: ' changed ' } });
@@ -59,6 +60,7 @@ test.each(forms)('$section saves and clears rules while retaining credentials an
     'request-scoped-errors': [{ status: 500, match: [' changed '], action: 'stop', future: 'keep' }] });
   expect(saved[1]).toEqual(untouched);
   first.unmount(); const second = mount();
+  fireEvent.click(await screen.findByRole('button', { name: /common.edit:/ }));
   await screen.findByRole('textbox', { name: 'request_scoped_errors.match 1' });
   fireEvent.click(screen.getByRole('button', { name: 'request_scoped_errors.remove_rule' }));
   fireEvent.click(screen.getByRole('button', { name: 'common.save' }));

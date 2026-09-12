@@ -29,6 +29,7 @@ test('Codex rule-only edits survive rejected saves, reloads and clearing without
   vi.spyOn(useConfigStore.getState(), 'fetchConfig').mockImplementation(async () => normalizeConfigResponse({ 'codex-api-key': saved }).codexApiKeys);
   const put = vi.spyOn(apiClient, 'put').mockImplementation(async (_url, body) => { saved = JSON.parse(JSON.stringify(body)); return {}; });
   const first = mount();
+  fireEvent.click(await screen.findByRole('button', { name: /common.edit:/ }));
   const pattern = await screen.findByRole('textbox', { name: 'request_scoped_errors.match 1' });
   await waitFor(() => expect((pattern as HTMLTextAreaElement).value).toBe(' original '));
   expect(dirty()).toBe(false);
@@ -49,6 +50,7 @@ test('Codex rule-only edits survive rejected saves, reloads and clearing without
   expect(saved[1]).toEqual(untouched);
   first.unmount();
   const second = mount();
+  fireEvent.click(await screen.findByRole('button', { name: /common.edit:/ }));
   const reloaded = await screen.findByRole('textbox', { name: 'request_scoped_errors.match 1' });
   expect((reloaded as HTMLTextAreaElement).value).toBe('  changed\nvalue ');
   expect(dirty()).toBe(false);

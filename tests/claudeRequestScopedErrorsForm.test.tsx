@@ -30,6 +30,7 @@ test('Claude rules persist across route layers and rejection without losing the 
   const notify = vi.spyOn(useNotificationStore.getState(), 'showNotification');
   const put = vi.spyOn(apiClient, 'put').mockImplementation(async (_url, body) => { saved = JSON.parse(JSON.stringify(body)); return {}; });
   const first = mount();
+  fireEvent.click(await screen.findByRole('button', { name: /common.edit:/ }));
   const input = await screen.findByRole('textbox', { name: 'request_scoped_errors.match 1' });
   await waitFor(() => expect((input as HTMLTextAreaElement).value).toBe(' original '));
   fireEvent.change(input, { target: { value: ' changed ' } });
@@ -52,6 +53,7 @@ test('Claude rules persist across route layers and rejection without losing the 
   await screen.findByText('saved');
   expect(saved[0]).toMatchObject({ 'api-key': 'test-original', weight: 7, 'request-retry': 3, 'request-scoped-errors': [{ ...rule, match: [' changed '] }] });
   first.unmount(); const second = mount();
+  fireEvent.click(await screen.findByRole('button', { name: /common.edit:/ }));
   const reloaded = await screen.findByRole('textbox', { name: 'request_scoped_errors.match 1' });
   expect((reloaded as HTMLTextAreaElement).value).toBe(' changed ');
   fireEvent.click(screen.getByRole('button', { name: 'request_scoped_errors.remove_rule' }));
