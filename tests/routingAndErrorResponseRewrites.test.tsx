@@ -484,6 +484,9 @@ describe('routing request limits and error response rewrites', () => {
       ) as HTMLButtonElement
     );
 
+    fireEvent.click(within(screen.getByRole('table', {
+      name: 'config_management.visual.sections.network.error_response_rewrites',
+    })).getByRole('button', { name: /common.edit:/ }));
     const sourceInput = screen.getByRole('textbox', {
       name: 'config_management.visual.sections.network.error_response_rewrites_sources',
     });

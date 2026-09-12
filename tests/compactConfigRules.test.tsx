@@ -25,12 +25,25 @@ non-retryable-errors:
   - status-code: 400
     code: misalignment_policy_violation
     message-contains: blocked
+fixed-error-cooldowns:
+  - status-code: 429
+    message-contains: rate exceeded
+    cooldown-seconds: 10
+    scope: model
+error-response-rewrites:
+  - sources: [upstream]
+    auth-priorities: [3]
+    status-code: 429
+    response-status-code: 503
+    response-body: {error: {message: busy}}
 `;
 
 test.each([
   ['config-auth-model-exclusions', 'auth.auth_model_exclusions', 'image'],
   ['config-routing-priority-overrides', 'network.priority_overrides', 'priority'],
   ['config-non-retryable-errors', 'network.non_retryable_errors', 'error'],
+  ['config-fixed-error-cooldowns', 'quota.fixed_error_cooldowns', 'cooldown'],
+  ['config-error-response-rewrites', 'network.error_response_rewrites', 'rewrite'],
 ])('%s keeps matching semantics and saves edits made through a collapsed rule', (section, label, kind) => {
   const { result } = renderHook(() => useVisualConfig());
   act(() => result.current.loadVisualValuesFromYaml(source));
@@ -49,8 +62,9 @@ test.each([
   if (kind === 'image') {
     fireEvent.click(within(table).getByRole('checkbox', { name: `config_management.visual.sections.${label}_disable_image_generation` }));
   } else {
-    const suffix = kind === 'priority' ? '_priority' : '_code';
-    fireEvent.change(within(table).getByLabelText(`config_management.visual.sections.${label}${suffix}`), { target: { value: kind === 'priority' ? '4' : 'policy_violation' } });
+    const suffix = kind === 'priority' ? '_priority' : kind === 'cooldown' ? '_cooldown_seconds' : kind === 'rewrite' ? '_response_status_code' : '_code';
+    const value = kind === 'priority' ? '4' : kind === 'cooldown' ? '600' : kind === 'rewrite' ? '502' : 'policy_violation';
+    fireEvent.change(within(table).getByLabelText(`config_management.visual.sections.${label}${suffix}`), { target: { value } });
   }
   view.rerender(editor());
   expect(result.current.visualDirty).toBe(true);
@@ -62,6 +76,8 @@ test.each([
   if (kind === 'image') expect(yaml['auth-model-exclusions'][0]).toMatchObject({ providers: ['codex'], priorities: [0, 3], models: ['-all', '+gpt-5.5'], 'disable-image-generation': true });
   if (kind === 'priority') expect(yaml.routing['priority-overrides'][0]).toMatchObject({ priority: 4, strategy: 'random', 'max-retry-credentials': 2 });
   if (kind === 'error') expect(yaml['non-retryable-errors'][0]).toMatchObject({ 'status-code': 400, code: 'policy_violation', 'message-contains': 'blocked' });
+  if (kind === 'cooldown') expect(yaml['fixed-error-cooldowns'][0]).toMatchObject({ 'status-code': 429, 'cooldown-seconds': 600, scope: 'model', 'message-contains': 'rate exceeded' });
+  if (kind === 'rewrite') expect(yaml['error-response-rewrites'][0]).toMatchObject({ sources: ['upstream'], 'auth-priorities': [3], 'status-code': 429, 'response-status-code': 502, 'response-body': { error: { message: 'busy' } } });
   act(() => result.current.loadVisualValuesFromYaml(saved));
   view.rerender(editor());
   expect(result.current.visualDirty).toBe(false);

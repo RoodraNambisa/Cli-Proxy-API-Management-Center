@@ -4690,11 +4690,8 @@ export function VisualConfigEditor({
                     errorCount={errorResponseRewritesErrorCount}
                   >
                     <div className={styles.blockHeaderRow}>
-                      <div className={styles.fieldHint}>
-                        {t(
-                          'config_management.visual.sections.network.error_response_rewrites_hint'
-                        )}
-                      </div>
+                      <ConfigHelp title={t('config_management.visual.sections.network.error_response_rewrites')}
+                        text={t('config_management.visual.sections.network.error_response_rewrites_hint')} />
                       <Button
                         type="button"
                         variant="secondary"
@@ -4706,18 +4703,11 @@ export function VisualConfigEditor({
                       </Button>
                     </div>
 
-                    <div className={styles.errorRewriteNotice} role="note">
-                      <div>
-                        {t(
-                          'config_management.visual.sections.network.error_response_rewrites_streaming_notice'
-                        )}
-                      </div>
-                      <div>
-                        {t(
-                          'config_management.visual.sections.network.error_response_rewrites_trust_sse_notice'
-                        )}
-                      </div>
-                    </div>
+                    <ConfigHelp title={t('config_management.visual.sections.network.error_response_rewrites')}
+                      text={[
+                        t('config_management.visual.sections.network.error_response_rewrites_streaming_notice'),
+                        t('config_management.visual.sections.network.error_response_rewrites_trust_sse_notice'),
+                      ].join('\n')} />
 
                     {values.errorResponseRewrites.length === 0 ? (
                       <div className={styles.emptyState}>
@@ -4726,7 +4716,12 @@ export function VisualConfigEditor({
                         )}
                       </div>
                     ) : (
-                      <div className={styles.blockStack}>
+                      <ConfigTable numbered label={t('config_management.visual.sections.network.error_response_rewrites')} columns={[
+                        t('config_management.visual.common.rule_column'),
+                        t('config_management.visual.common.match_column'),
+                        t('config_management.visual.common.effect_column'),
+                        t('config_management.visual.common.actions'),
+                      ]}>
                         {values.errorResponseRewrites.map((rule, index) => {
                           const statusCodeError = getErrorResponseRewriteError(
                             rule.clientId,
@@ -4763,24 +4758,25 @@ export function VisualConfigEditor({
                             ruleAuthPriorities.some((priority) => priority.trim() !== '');
 
                           return (
-                            <div key={rule.clientId} className={styles.ruleCard}>
-                              <div className={styles.ruleCardHeader}>
-                                <div className={styles.ruleCardTitle}>
-                                  {t(
-                                    'config_management.visual.sections.network.error_response_rewrites_rule',
-                                    { index: index + 1 }
-                                  )}
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeErrorResponseRewrite(rule.clientId)}
-                                  disabled={disabled}
-                                >
-                                  {t('config_management.visual.common.delete')}
-                                </Button>
-                              </div>
+                            <ConfigTableRow key={rule.clientId}
+                              title={t('config_management.visual.sections.network.error_response_rewrites_rule', { index: index + 1 })}
+                              initialExpanded={!baselineValues.errorResponseRewrites.some((saved) => saved.clientId === rule.clientId)}
+                              invalid={Boolean(statusCodeError || authPrioritiesError || messageContainsError || responseStatusCodeError || responseBodyError)}
+                              labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('config_management.visual.common.effect_column')]}
+                              cells={[
+                                <strong>#{index + 1}</strong>,
+                                <ConfigSummary entries={[
+                                  ['sources', ruleSources.join(', ')], ['priorities', ruleAuthPriorities.join(', ')],
+                                  ['HTTP', rule.statusCode], ['message-contains', rule.messageContains],
+                                ]} />,
+                                <ConfigSummary entries={[
+                                  ['HTTP', rule.responseStatusCode], ['JSON', rule.responseBodyEnabled ? rule.responseBody : undefined],
+                                ]} />,
+                              ]}
+                              actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}
+                                className={styles.destructiveAction} onClick={() => removeErrorResponseRewrite(rule.clientId)}
+                              >{t('config_management.visual.common.delete')}</Button>}
+                            >
 
                               <div className={styles.errorResponseRewriteFilterGrid}>
                                 <FieldShell
@@ -4982,10 +4978,10 @@ export function VisualConfigEditor({
                               ) : responseBodyError ? (
                                 <div className="error-box">{responseBodyError}</div>
                               ) : null}
-                            </div>
+                            </ConfigTableRow>
                           );
                         })}
-                      </div>
+                      </ConfigTable>
                     )}
                   </SettingsDisclosure>
                 </PageGroup>
@@ -5622,7 +5618,12 @@ export function VisualConfigEditor({
                         {t('config_management.visual.sections.quota.fixed_error_cooldowns_empty')}
                       </div>
                     ) : (
-                      <div className={styles.blockStack}>
+                      <ConfigTable numbered label={t('config_management.visual.sections.quota.fixed_error_cooldowns')} columns={[
+                        t('config_management.visual.common.rule_column'),
+                        t('config_management.visual.common.match_column'),
+                        t('config_management.visual.common.effect_column'),
+                        t('config_management.visual.common.actions'),
+                      ]}>
                         {values.fixedErrorCooldowns.map((rule, index) => {
                           const statusCodeError = getFixedErrorCooldownError(
                             rule.clientId,
@@ -5638,26 +5639,23 @@ export function VisualConfigEditor({
                           );
 
                           return (
-                            <div key={rule.clientId} className={styles.ruleCard}>
-                              <div className={styles.ruleCardHeader}>
-                                <div className={styles.ruleCardTitle}>
-                                  {t(
-                                    'config_management.visual.sections.quota.fixed_error_cooldowns_rule',
-                                    {
-                                      index: index + 1,
-                                    }
-                                  )}
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeFixedErrorCooldown(rule.clientId)}
-                                  disabled={disabled}
-                                >
-                                  {t('config_management.visual.common.delete')}
-                                </Button>
-                              </div>
+                            <ConfigTableRow key={rule.clientId}
+                              title={t('config_management.visual.sections.quota.fixed_error_cooldowns_rule', { index: index + 1 })}
+                              initialExpanded={!baselineValues.fixedErrorCooldowns.some((saved) => saved.clientId === rule.clientId)}
+                              invalid={Boolean(statusCodeError || cooldownSecondsError || messageContainsError)}
+                              labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('config_management.visual.common.effect_column')]}
+                              cells={[
+                                <strong>#{index + 1}</strong>,
+                                <ConfigSummary entries={[['HTTP', rule.statusCode], ['message-contains', rule.messageContains]]} />,
+                                <ConfigSummary entries={[
+                                  ['cooldown-seconds', rule.cooldownSeconds],
+                                  ['scope', fixedErrorCooldownScopeOptions.find((option) => option.value === rule.scope)?.label],
+                                ]} />,
+                              ]}
+                              actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}
+                                className={styles.destructiveAction} onClick={() => removeFixedErrorCooldown(rule.clientId)}
+                              >{t('config_management.visual.common.delete')}</Button>}
+                            >
                               <div className={styles.fixedCooldownGrid}>
                                 <Input
                                   label={t(
@@ -5729,10 +5727,10 @@ export function VisualConfigEditor({
                                 )}
                                 error={messageContainsError}
                               />
-                            </div>
+                            </ConfigTableRow>
                           );
                         })}
-                      </div>
+                      </ConfigTable>
                     )}
                   </SettingsDisclosure>
                   <SettingsDisclosure
