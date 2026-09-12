@@ -122,6 +122,7 @@ export interface NativeImagesConfig {
 }
 
 export interface ImagesConfig {
+  codexRequestTimeoutSeconds?: number;
   codexModel?: string;
   imageModel?: string;
   imageModels?: string[];
@@ -137,6 +138,7 @@ export interface ImagesConfig {
   streamFlushIntervalMs?: number;
   streamFlushMinBytes?: number;
   chatgptWeb?: {
+    requestTimeoutSeconds?: number;
     imageModels?: string[];
     upstreamModel?: string;
     sanitizeErrorResponses?: boolean;

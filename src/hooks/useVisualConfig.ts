@@ -1691,6 +1691,18 @@ export function getVisualConfigValidationErrors(
       3600,
       'integer_range_30_3600'
     ),
+    chatgptWebImageRequestTimeoutSeconds: getIntegerRangeError(
+      values.chatgptWebImageRequestTimeoutSeconds,
+      0,
+      86400,
+      'integer_range_0_86400'
+    ),
+    'images.codexRequestTimeoutSeconds': getIntegerRangeError(
+      values.images.codexRequestTimeoutSeconds,
+      0,
+      86400,
+      'integer_range_0_86400'
+    ),
     chatgptWebImageMemoryFinalizerConcurrency: getCapacityIntegerError(
       values.chatgptWebImageMemoryFinalizerConcurrency,
       1
@@ -2690,6 +2702,13 @@ function getNextDirtyFields(
       nextValues.chatgptWebImagePollStallSeconds === baselineValues.chatgptWebImagePollStallSeconds
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageRequestTimeoutSeconds')) {
+    updateDirty(
+      'chatgptWebImageRequestTimeoutSeconds',
+      nextValues.chatgptWebImageRequestTimeoutSeconds ===
+        baselineValues.chatgptWebImageRequestTimeoutSeconds
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageMemoryFinalizerConcurrency')) {
     updateDirty(
       'chatgptWebImageMemoryFinalizerConcurrency',
@@ -2849,6 +2868,13 @@ function getNextDirtyFields(
   }
   if (patch.images) {
     const imagesPatch = patch.images;
+    if (Object.prototype.hasOwnProperty.call(imagesPatch, 'codexRequestTimeoutSeconds')) {
+      updateDirty(
+        'images.codexRequestTimeoutSeconds',
+        nextValues.images.codexRequestTimeoutSeconds ===
+          baselineValues.images.codexRequestTimeoutSeconds
+      );
+    }
     if (Object.prototype.hasOwnProperty.call(imagesPatch, 'codexModel')) {
       updateDirty(
         'images.codexModel',
@@ -3586,6 +3612,11 @@ export function useVisualConfig() {
             imagesChatGPTWeb?.pollStallSeconds ??
             DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallSeconds
         ),
+        chatgptWebImageRequestTimeoutSeconds: String(
+          imagesChatGPTWeb?.['request-timeout-seconds'] ??
+            imagesChatGPTWeb?.requestTimeoutSeconds ??
+            '0'
+        ),
         chatgptWebImageMemoryFinalizerConcurrency: String(
           imagesChatGPTWeb?.['memory-finalizer-concurrency'] ??
             imagesChatGPTWeb?.memoryFinalizerConcurrency ??
@@ -3661,6 +3692,9 @@ export function useVisualConfig() {
               : typeof images?.codexModel === 'string'
                 ? images.codexModel
                 : DEFAULT_VISUAL_VALUES.images.codexModel,
+          codexRequestTimeoutSeconds: String(
+            images?.['codex-request-timeout-seconds'] ?? images?.codexRequestTimeoutSeconds ?? '0'
+          ),
           imageModel:
             typeof images?.['image-model'] === 'string'
               ? images['image-model']
@@ -4349,6 +4383,7 @@ export function useVisualConfig() {
         const imagesDefined =
           docHas(doc, ['images']) ||
           values.images.codexModel !== imagesDefaults.codexModel ||
+          values.images.codexRequestTimeoutSeconds !== imagesDefaults.codexRequestTimeoutSeconds ||
           values.images.imageModel !== imagesDefaults.imageModel ||
           !areStringArraysEqual(values.images.imageModels, imagesDefaults.imageModels) ||
           !areStringArraysEqual(
@@ -4410,6 +4445,8 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallBreakerEnabled ||
           values.chatgptWebImagePollStallSeconds !==
             DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallSeconds ||
+          values.chatgptWebImageRequestTimeoutSeconds !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImageRequestTimeoutSeconds ||
           values.chatgptWebImageMemoryFinalizerConcurrency !==
             DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryFinalizerConcurrency ||
           docHas(doc, ['images', 'chatgpt-web']) ||
@@ -4418,6 +4455,12 @@ export function useVisualConfig() {
         if (imagesDefined) {
           ensureMapInDoc(doc, ['images']);
           setStringInDoc(doc, ['images', 'codex-model'], values.images.codexModel);
+          setIntFromStringInDoc(
+            doc,
+            ['images', 'codex-request-timeout-seconds'],
+            values.images.codexRequestTimeoutSeconds
+          );
+          doc.deleteIn(['images', 'codexRequestTimeoutSeconds']);
           setStringInDoc(doc, ['images', 'image-model'], values.images.imageModel);
           if (
             docHas(doc, ['images', 'image-models']) ||
@@ -4515,6 +4558,8 @@ export function useVisualConfig() {
               DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallBreakerEnabled ||
             values.chatgptWebImagePollStallSeconds !==
               DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallSeconds ||
+            values.chatgptWebImageRequestTimeoutSeconds !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImageRequestTimeoutSeconds ||
             values.chatgptWebImageMemoryFinalizerConcurrency !==
               DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryFinalizerConcurrency
           ) {
@@ -4636,6 +4681,11 @@ export function useVisualConfig() {
             );
             setIntFromStringInDoc(
               doc,
+              ['images', 'chatgpt-web', 'request-timeout-seconds'],
+              values.chatgptWebImageRequestTimeoutSeconds
+            );
+            setIntFromStringInDoc(
+              doc,
               ['images', 'chatgpt-web', 'memory-finalizer-concurrency'],
               values.chatgptWebImageMemoryFinalizerConcurrency
             );
@@ -4649,6 +4699,7 @@ export function useVisualConfig() {
               'pollConcurrency',
               'pollStallBreakerEnabled',
               'pollStallSeconds',
+              'requestTimeoutSeconds',
               'memoryFinalizerConcurrency',
               'remoteImageUrlEnabled',
               'remoteImageUrlDownloadMode',

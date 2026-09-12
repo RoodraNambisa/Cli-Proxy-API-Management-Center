@@ -1134,6 +1134,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       enableFreePlanImageModel: normalizeBoolean(
         images['enable-free-plan-image-model'] ?? images.enableFreePlanImageModel
       ),
+      codexRequestTimeoutSeconds: normalizeNumber(
+        images['codex-request-timeout-seconds'] ?? images.codexRequestTimeoutSeconds
+      ),
       enableNAggregation: normalizeBoolean(
         images['enable-n-aggregation'] ?? images.enableNAggregation
       ),
@@ -1192,6 +1195,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
             ),
             pollStallSeconds: normalizeNumber(
               chatgptWeb['poll-stall-seconds'] ?? chatgptWeb.pollStallSeconds
+            ),
+            requestTimeoutSeconds: normalizeNumber(
+              chatgptWeb['request-timeout-seconds'] ?? chatgptWeb.requestTimeoutSeconds
             ),
           }
         : undefined,

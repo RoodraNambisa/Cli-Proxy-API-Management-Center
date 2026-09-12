@@ -49,6 +49,8 @@ export type VisualConfigFieldPath =
   | 'chatgptWebImageMemoryCapacityMegabytes'
   | 'chatgptWebImagePollConcurrency'
   | 'chatgptWebImagePollStallSeconds'
+  | 'chatgptWebImageRequestTimeoutSeconds'
+  | 'images.codexRequestTimeoutSeconds'
   | 'chatgptWebImageMemoryFinalizerConcurrency'
   | 'routingFillFirstRange'
   | 'routingFillFirstPerAuthRpm'
@@ -113,6 +115,7 @@ export type VisualConfigValidationErrorCode =
   | 'integer_range_1_10'
   | 'integer_range_0_512'
   | 'integer_range_30_3600'
+  | 'integer_range_0_86400'
   | 'integer_range_0_9223372036'
   | 'strict_size_requires_aspect_adaptation'
   | 'resize_requires_aspect_adaptation'
@@ -182,6 +185,7 @@ export interface NativeImagesVisualConfig {
 }
 
 export interface ImagesVisualConfig {
+  codexRequestTimeoutSeconds: string;
   codexModel: string;
   imageModel: string;
   imageModels: string[];
@@ -371,6 +375,7 @@ export type VisualConfigValues = {
   chatgptWebImagePollConcurrency: string;
   chatgptWebImagePollStallBreakerEnabled: boolean;
   chatgptWebImagePollStallSeconds: string;
+  chatgptWebImageRequestTimeoutSeconds: string;
   chatgptWebImageMemoryFinalizerConcurrency: string;
   requestRetry: string;
   maxRetryCredentials: string;
@@ -499,6 +504,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebImagePollConcurrency: '64',
   chatgptWebImagePollStallBreakerEnabled: true,
   chatgptWebImagePollStallSeconds: '120',
+  chatgptWebImageRequestTimeoutSeconds: '0',
   chatgptWebImageMemoryFinalizerConcurrency: '1',
   requestRetry: '',
   maxRetryCredentials: '',
@@ -545,6 +551,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   },
   images: {
     codexModel: 'gpt-5.4',
+    codexRequestTimeoutSeconds: '0',
     imageModel: 'gpt-image-2',
     imageModels: [],
     enableFreePlanImageModel: false,

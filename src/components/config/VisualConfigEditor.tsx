@@ -1195,6 +1195,10 @@ export function VisualConfigEditor({
     t,
     validationErrors?.chatgptWebImagePollStallSeconds
   );
+  const chatGptWebImageRequestTimeoutSecondsError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImageRequestTimeoutSeconds
+  );
   const chatGptWebImageMemoryFinalizerConcurrencyError = getValidationMessage(
     t,
     validationErrors?.chatgptWebImageMemoryFinalizerConcurrency
@@ -1305,6 +1309,7 @@ export function VisualConfigEditor({
     'chatgptWebImagePollConcurrency',
     'chatgptWebImagePollStallBreakerEnabled',
     'chatgptWebImagePollStallSeconds',
+    'chatgptWebImageRequestTimeoutSeconds',
     'chatgptWebImageMemoryFinalizerConcurrency',
   ]);
   const chatGptWebImageCapacityErrorCount = [
@@ -1316,6 +1321,7 @@ export function VisualConfigEditor({
     chatGptWebImageMemoryCapacityMegabytesError,
     chatGptWebImagePollConcurrencyError,
     chatGptWebImagePollStallSecondsError,
+    chatGptWebImageRequestTimeoutSecondsError,
     chatGptWebImageMemoryFinalizerConcurrencyError,
   ].filter(Boolean).length;
   const retrySettingsErrorCount = [
@@ -1799,6 +1805,7 @@ export function VisualConfigEditor({
           'codexFingerprintSessionIdentityPoolSize',
           'disabledImageGenerationToolError.statusCode',
           'images.unsupportedStatusCode',
+          'images.codexRequestTimeoutSeconds',
           'images.streamFlushIntervalMs',
           'images.streamFlushMinBytes',
           'images.native.generations.unsupportedModelStatusCode',
@@ -1824,6 +1831,7 @@ export function VisualConfigEditor({
           'chatgptWebImageMemoryCapacityMegabytes',
           'chatgptWebImagePollConcurrency',
           'chatgptWebImagePollStallSeconds',
+          'chatgptWebImageRequestTimeoutSeconds',
           'chatgptWebImageMemoryFinalizerConcurrency',
         ]),
       'provider-grok': 0,
@@ -2717,6 +2725,7 @@ export function VisualConfigEditor({
                   'config-chatgpt-web-image-poll-concurrency',
                   'config-chatgpt-web-image-poll-stall-breaker-enabled',
                   'config-chatgpt-web-image-poll-stall-seconds',
+                  'config-chatgpt-web-image-request-timeout-seconds',
                   'config-chatgpt-web-image-memory-finalizer-concurrency',
                 ]}
                 dirty={chatGptWebImageCapacityDirty}
@@ -2810,6 +2819,26 @@ export function VisualConfigEditor({
                       disabled={disabled}
                       onChange={(event) =>
                         onChange({ chatgptWebImagePollStallSeconds: event.target.value })
+                      }
+                    />
+                    <Input
+                      id="config-chatgpt-web-image-request-timeout-seconds"
+                      type="number"
+                      min={0}
+                      max={86400}
+                      step={1}
+                      placeholder="0"
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.image_request_timeout_seconds'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_request_timeout_seconds_description'
+                      )}
+                      error={chatGptWebImageRequestTimeoutSecondsError}
+                      value={values.chatgptWebImageRequestTimeoutSeconds}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({ chatgptWebImageRequestTimeoutSeconds: event.target.value })
                       }
                     />
                     <Input
@@ -5415,6 +5444,31 @@ export function VisualConfigEditor({
               description={t('config_management.visual.sections.images.description')}
             >
               <SectionStack>
+                <Input
+                  id="config-images-codex-request-timeout-seconds"
+                  type="number"
+                  min={0}
+                  max={86400}
+                  step={1}
+                  placeholder="0"
+                  label={t(
+                    'config_management.visual.sections.images.codex_request_timeout_seconds'
+                  )}
+                  hint={t(
+                    'config_management.visual.sections.images.codex_request_timeout_seconds_hint'
+                  )}
+                  error={getValidationMessage(
+                    t,
+                    validationErrors?.['images.codexRequestTimeoutSeconds']
+                  )}
+                  value={values.images.codexRequestTimeoutSeconds}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    onChange({
+                      images: { ...values.images, codexRequestTimeoutSeconds: event.target.value },
+                    })
+                  }
+                />
                 <SectionSubsection
                   title={t('config_management.visual.sections.images.native_title')}
                   description={t('config_management.visual.sections.images.native_description')}

@@ -184,6 +184,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebImagePollConcurrency',
       'chatgptWebImagePollStallBreakerEnabled',
       'chatgptWebImagePollStallSeconds',
+      'chatgptWebImageRequestTimeoutSeconds',
       'chatgptWebImageMemoryFinalizerConcurrency',
     ],
   },
@@ -728,6 +729,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     yamlKeys: ['images.codex-model', 'images.image-model'],
   },
   {
+    id: 'config-images-codex-request-timeout-seconds',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.images.codex_request_timeout_seconds',
+    yamlKeys: ['images.codex-request-timeout-seconds'],
+    aliases: ['image timeout', 'total timeout', '图片总超时'],
+  },
+  {
     id: 'config-images-tool-models',
     pageId: 'provider-codex',
     labelKey: 'config_management.visual.sections.images.image_models',
@@ -939,19 +947,27 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.poll-concurrency',
       'images.chatgpt-web.poll-stall-breaker-enabled',
       'images.chatgpt-web.poll-stall-seconds',
+      'images.chatgpt-web.request-timeout-seconds',
       'images.chatgpt-web.memory-finalizer-concurrency',
     ],
     fieldTargets: {
       'images.chatgpt-web.max-in-flight': 'config-chatgpt-web-image-max-in-flight',
       'images.chatgpt-web.admission-queue-size': 'config-chatgpt-web-image-admission-queue-size',
-      'images.chatgpt-web.admission-wait-milliseconds': 'config-chatgpt-web-image-admission-wait-milliseconds',
+      'images.chatgpt-web.admission-wait-milliseconds':
+        'config-chatgpt-web-image-admission-wait-milliseconds',
       'images.chatgpt-web.max-finalizers': 'config-chatgpt-web-image-max-finalizers',
-      'images.chatgpt-web.completion-reserve-megabytes': 'config-chatgpt-web-image-completion-reserve-megabytes',
-      'images.chatgpt-web.memory-capacity-megabytes': 'config-chatgpt-web-image-memory-capacity-megabytes',
+      'images.chatgpt-web.completion-reserve-megabytes':
+        'config-chatgpt-web-image-completion-reserve-megabytes',
+      'images.chatgpt-web.memory-capacity-megabytes':
+        'config-chatgpt-web-image-memory-capacity-megabytes',
       'images.chatgpt-web.poll-concurrency': 'config-chatgpt-web-image-poll-concurrency',
-      'images.chatgpt-web.poll-stall-breaker-enabled': 'config-chatgpt-web-image-poll-stall-breaker-enabled',
+      'images.chatgpt-web.poll-stall-breaker-enabled':
+        'config-chatgpt-web-image-poll-stall-breaker-enabled',
       'images.chatgpt-web.poll-stall-seconds': 'config-chatgpt-web-image-poll-stall-seconds',
-      'images.chatgpt-web.memory-finalizer-concurrency': 'config-chatgpt-web-image-memory-finalizer-concurrency',
+      'images.chatgpt-web.request-timeout-seconds':
+        'config-chatgpt-web-image-request-timeout-seconds',
+      'images.chatgpt-web.memory-finalizer-concurrency':
+        'config-chatgpt-web-image-memory-finalizer-concurrency',
     },
     aliases: [
       'image concurrency',
