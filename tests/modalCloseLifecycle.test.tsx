@@ -39,3 +39,16 @@ test('reopening cancels an old controlled close', async () => {
   expect(close).not.toHaveBeenCalled();
   expect(screen.getByRole('dialog')).toBeTruthy();
 });
+
+test('collapsed rule inputs do not let keyboard focus escape the dialog', async () => {
+  render(<Modal open onClose={vi.fn()} title="Details">
+    <button>Last visible action</button>
+    <div hidden><input aria-label="Collapsed rule" /></div>
+    <fieldset disabled><input aria-label="Disabled rule" /></fieldset>
+  </Modal>);
+  await act(async () => { await Promise.resolve(); });
+  const last = screen.getByRole('button', { name: 'Last visible action' });
+  last.focus();
+  expect(fireEvent.keyDown(last, { key: 'Tab' })).toBe(false);
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'common.close' }));
+});

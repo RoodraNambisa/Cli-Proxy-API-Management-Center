@@ -141,7 +141,7 @@ export function Modal({
   const getFocusableElements = useCallback(() => {
     if (!modalRef.current) return [] as HTMLElement[];
     return Array.from(modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-      (element) => !element.hasAttribute('disabled') && element.tabIndex !== -1
+      (element) => !element.matches(':disabled') && !element.closest('[hidden], [inert]') && element.tabIndex !== -1
     );
   }, []);
 
