@@ -9,9 +9,9 @@ export function ConfigTable({ label, columns, children, numbered = false }: {
 }) {
   return (
     <div className={styles.container}>
-      <table className={`${styles.table} ${numbered ? styles.numbered : ''}`} aria-label={label}>
-        <thead><tr>{columns.map((column, index) => <th key={index} scope="col">{column}</th>)}</tr></thead>
-        <tbody>{children}</tbody>
+      <table role="table" className={`${styles.table} ${numbered ? styles.numbered : ''}`} aria-label={label}>
+        <thead role="rowgroup"><tr role="row">{columns.map((column, index) => <th role="columnheader" key={index} scope="col">{column}</th>)}</tr></thead>
+        <tbody role="rowgroup">{children}</tbody>
       </table>
     </div>
   );
@@ -34,9 +34,9 @@ export function ConfigTableRow({ title, cells, labels, actions, children, toggle
   const editLabel = toggleLabel ?? t('config_management.visual.common.edit');
   return (
     <>
-      <tr className={`${styles.row} ${expanded ? styles.expanded : ''}`}>
-        {cells.map((cell, index) => <td key={index} data-label={labels[index]}><div className={styles.cell}>{cell}</div></td>)}
-        <td>
+      <tr role="row" className={`${styles.row} ${expanded ? styles.expanded : ''}`}>
+        {cells.map((cell, index) => <td role="cell" key={index} data-label={labels[index]}><div className={styles.cell}>{cell}</div></td>)}
+        <td role="cell">
           <div className={styles.actions}>
             {invalid && <span className={styles.invalid} title={t('config_management.visual.validation_blocked_short')}>!</span>}
             <Button type="button" variant="ghost" size="sm"
@@ -49,8 +49,8 @@ export function ConfigTableRow({ title, cells, labels, actions, children, toggle
           </div>
         </td>
       </tr>
-      {visited && <tr hidden={!expanded} className={styles.detailRow}>
-        <td colSpan={cells.length + 1}><div id={id} className={styles.details}>{children}</div></td>
+      {visited && <tr role="row" hidden={!expanded} className={styles.detailRow}>
+        <td role="cell" colSpan={cells.length + 1}><div id={id} className={styles.details}>{children}</div></td>
       </tr>}
     </>
   );
