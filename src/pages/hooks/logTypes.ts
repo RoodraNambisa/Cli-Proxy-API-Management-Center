@@ -7,7 +7,7 @@ export type StatusGroup = (typeof STATUS_GROUPS)[number];
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
 export type LogState = {
-  buffer: string[];
+  buffer: ParsedLogLine[];
   visibleFrom: number;
 };
 
@@ -17,6 +17,13 @@ export type ParsedLogLine = {
   level?: LogLevel;
   source?: string;
   requestId?: string;
+  upstreamRequestId?: string;
+  provider?: string;
+  authIndex?: string;
+  authName?: string;
+  code?: string;
+  stage?: string;
+  responseBody?: string;
   statusCode?: number;
   latency?: string;
   ip?: string;

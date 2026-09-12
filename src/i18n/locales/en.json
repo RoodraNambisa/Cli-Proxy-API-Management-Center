@@ -1684,6 +1684,17 @@
     "newest": "Latest"
   },
   "logs": {
+    "live_and_file_unavailable_hint": "Live logs are unavailable and file logging is off. Reconnect live logs or enable a log source in configuration.",
+    "live_empty_desc": "Waiting for new log events.",
+    "file_disabled_empty_desc": "Turn on Live connection to view logs without file logging.",
+    "file_logging_disabled_hint": "File logging is off. Live logs remain available; clearing the display does not delete server logs.",
+    "clear_display_button": "Clear display",
+    "clear_display_success": "Displayed logs cleared. New live events will continue to appear.",
+    "request_id_label": "Request ID",
+    "upstream_request_id_label": "Upstream request ID",
+    "credential_label": "Credential",
+    "credential_unknown": "Credential no longer available",
+    "response_body_label": "Error response details",
     "title": "Logs Viewer",
     "refresh_button": "Refresh Logs",
     "clear_button": "Clear Logs",

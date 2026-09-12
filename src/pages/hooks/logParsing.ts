@@ -1,8 +1,10 @@
 import { HTTP_METHODS, type HttpMethod, type LogLevel, type ParsedLogLine } from './logTypes';
+import { formatLiveLogEvent, type LiveLogEvent } from '@/services/api/liveLogs';
 
 const HTTP_METHOD_REGEX = new RegExp(`\\b(${HTTP_METHODS.join('|')})\\b`);
 
-const LOG_TIMESTAMP_REGEX = /^\[?(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?)\]?/;
+const LOG_TIMESTAMP_REGEX =
+  /^\[?(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})?)\]?/;
 const LOG_LEVEL_REGEX = /^\[?(trace|debug|info|warn|warning|error|fatal)\s*\]?(?=\s|\[|$)\s*/i;
 const LOG_SOURCE_REGEX = /^\[([^\]]+)\]/;
 const LOG_LATENCY_REGEX =
@@ -18,7 +20,7 @@ const HTTP_STATUS_PATTERNS: RegExp[] = [
   /\|\s*([1-5]\d{2})\s*\|/,
   /\b([1-5]\d{2})\s*-/,
   new RegExp(`\\b(?:${HTTP_METHODS.join('|')})\\s+\\S+\\s+([1-5]\\d{2})\\b`),
-  /\b(?:status|code|http)[:\s]+([1-5]\d{2})\b/i,
+  /\b(?:status|code|http)[=:\s]+([1-5]\d{2})\b/i,
   /\b([1-5]\d{2})\s+(?:OK|Created|Accepted|No Content|Moved|Found|Bad Request|Unauthorized|Forbidden|Not Found|Method Not Allowed|Internal Server Error|Bad Gateway|Service Unavailable|Gateway Timeout)\b/i,
 ];
 
@@ -94,7 +96,7 @@ const extractHttpMethodAndPath = (text: string): { method?: HttpMethod; path?: s
   const method = match[1] as HttpMethod;
   const index = match.index ?? 0;
   const after = text.slice(index + match[0].length).trim();
-  const path = after ? after.split(/\s+/)[0] : undefined;
+  const path = after ? after.split(/\s+/)[0].replace(/^["']|["']$/g, '') : undefined;
   return { method, path };
 };
 
@@ -245,6 +247,7 @@ export const parseLogLine = (raw: string): ParsedLogLine => {
     path = parsed.path;
   }
 
+  if (statusCode === undefined) statusCode = detectHttpStatusCode(remaining);
   if (!level) level = inferLogLevel(raw);
 
   if (message) {
@@ -264,6 +267,12 @@ export const parseLogLine = (raw: string): ParsedLogLine => {
     level,
     source,
     requestId,
+    authName: readLogField(remaining, 'auth_name'),
+    authIndex: readLogField(remaining, 'auth_index') || readLogField(remaining, 'auth'),
+    upstreamRequestId: readLogField(remaining, 'upstream_request_id'),
+    provider: readLogField(remaining, 'provider'),
+    code: readLogField(remaining, 'code'),
+    stage: readLogField(remaining, 'stage'),
     statusCode,
     latency,
     ip,
@@ -273,3 +282,39 @@ export const parseLogLine = (raw: string): ParsedLogLine => {
   };
 };
 
+const readLogField = (text: string, field: string): string | undefined => {
+  const match = text.match(new RegExp(`(?:^|\\s)${field}=("(?:\\\\.|[^"\\\\])*"|[^\\s]+)`));
+  if (!match) return undefined;
+  if (!match[1].startsWith('"')) return match[1];
+  try {
+    return JSON.parse(match[1]) as string;
+  } catch {
+    return undefined;
+  }
+};
+
+// Live events carry their own metadata. Never infer it from an error message or body.
+export const parseLiveLogEvent = (event: LiveLogEvent): ParsedLogLine => {
+  const access = event.method && event.path ? parseLogLine(event.message) : undefined;
+  return {
+    raw: formatLiveLogEvent(event),
+    timestamp: event.timestamp,
+    level: extractLogLevel(event.level),
+    requestId: event.request_id,
+    upstreamRequestId: event.upstream_request_id,
+    provider: event.provider,
+    authIndex: event.auth_index,
+    authName: event.auth_name,
+    code: event.code,
+    stage: event.stage,
+    statusCode: event.status,
+    method: HTTP_METHODS.includes(event.method as HttpMethod)
+      ? (event.method as HttpMethod)
+      : undefined,
+    path: event.path,
+    latency: access?.latency,
+    ip: access?.ip,
+    message: access?.method === event.method ? (access?.message ?? event.message) : event.message,
+    responseBody: event.response_body,
+  };
+};

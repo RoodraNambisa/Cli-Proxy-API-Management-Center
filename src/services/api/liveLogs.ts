@@ -8,6 +8,8 @@ export type LiveLogEvent = {
   request_id?: string;
   provider?: string;
   auth_index?: string;
+  auth_name?: string;
+  upstream_request_id?: string;
   stage?: string;
   code?: string;
   status?: number;
@@ -121,7 +123,12 @@ export const formatLiveLogEvent = (event: LiveLogEvent): string => {
     .filter(Boolean)
     .join(' ');
   const details = [
+    event.request_id ? `request_id=${JSON.stringify(event.request_id)}` : '',
+    event.auth_name ? `auth_name=${JSON.stringify(event.auth_name)}` : '',
     event.auth_index ? `auth=${event.auth_index}` : '',
+    event.upstream_request_id
+      ? `upstream_request_id=${JSON.stringify(event.upstream_request_id)}`
+      : '',
     event.stage ? `stage=${event.stage}` : '',
     event.code ? `code=${event.code}` : '',
     event.retryable !== undefined ? `retryable=${event.retryable}` : '',

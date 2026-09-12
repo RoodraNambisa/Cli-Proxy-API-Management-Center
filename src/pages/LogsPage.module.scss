@@ -539,6 +539,9 @@
 
 .timestamp {
   color: var(--text-tertiary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   padding-top: 2px;
 
@@ -599,6 +602,31 @@
   color: #0891b2;
   background: rgba(8, 145, 178, 0.1);
   border-color: rgba(8, 145, 178, 0.25);
+}
+
+.credentialName {
+  display: inline-block;
+  max-width: min(440px, 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+.responseDetails {
+  flex-basis: 100%;
+  min-width: 0;
+  summary {
+    cursor: pointer;
+    color: var(--text-secondary);
+  }
+  pre {
+    margin: 6px 0;
+    padding: 10px;
+    background: var(--bg-primary);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font: inherit;
+  }
 }
 
 .statusBadge {

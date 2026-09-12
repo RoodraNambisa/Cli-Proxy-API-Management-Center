@@ -1,10 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  formatLiveLogEvent,
-  streamLiveLogs,
-  type LiveLogEvent,
-  type LiveLogQuery,
-} from '@/services/api/liveLogs';
+import { streamLiveLogs, type LiveLogEvent, type LiveLogQuery } from '@/services/api/liveLogs';
 
 export type LiveLogConnectionState =
   | 'idle'
@@ -20,7 +15,7 @@ type UseLiveLogsOptions = {
   connected: boolean;
   scopeKey: string;
   query: LiveLogQuery;
-  onLine: (line: string) => void;
+  onLine: (line: LiveLogEvent) => void;
   onReset?: () => void;
 };
 
@@ -79,15 +74,18 @@ export const useLiveLogs = (options: UseLiveLogsOptions) => {
             { ...requestQuery, cursor: cursorRef.current },
             {
               onOpen: () => {
+                if (controller.signal.aborted) return;
                 retryAttempt = 0;
                 setErrorState({ streamKey, message: '' });
                 setStreamState('connected');
               },
               onEvent: (event: LiveLogEvent) => {
+                if (controller.signal.aborted) return;
                 cursorRef.current = Math.max(cursorRef.current, event.cursor || 0);
-                onLineRef.current(formatLiveLogEvent(event));
+                onLineRef.current(event);
               },
               onGap: (gap) => {
+                if (controller.signal.aborted) return;
                 cursorRef.current = Math.max(cursorRef.current, gap.to || 0);
                 setGapState((current) => ({
                   streamKey,
@@ -131,10 +129,16 @@ export const useLiveLogs = (options: UseLiveLogsOptions) => {
     setRetryGeneration((current) => current + 1);
   }, [streamKey]);
 
+  const clearDisplay = useCallback(() => {
+    // Keep the cursor so reconnecting does not replay the cleared events.
+    onResetRef.current?.();
+    setGapState({ streamKey, count: 0 });
+  }, [streamKey]);
+
   const state: LiveLogConnectionState =
     !enabled || !connected ? 'idle' : paused ? 'paused' : streamState;
   const gapCount = gapState.streamKey === streamKey ? gapState.count : 0;
   const lastError = errorState.streamKey === streamKey ? errorState.message : '';
 
-  return { state, gapCount, lastError, retry };
+  return { state, gapCount, lastError, retry, clearDisplay };
 };

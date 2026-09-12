@@ -1708,6 +1708,17 @@
     "newest": "最新"
   },
   "logs": {
+    "live_and_file_unavailable_hint": "即時日誌暫時無法使用，檔案日誌也未開啟。可嘗試重新連線，或在設定中開啟日誌來源。",
+    "live_empty_desc": "正在等待新的即時日誌。",
+    "file_disabled_empty_desc": "開啟「即時連線」即可查看日誌，無需開啟檔案日誌。",
+    "file_logging_disabled_hint": "檔案日誌未開啟。仍可查看即時日誌；清空目前顯示不會刪除伺服器日誌。",
+    "clear_display_button": "清空目前顯示",
+    "clear_display_success": "已清空目前顯示，後續即時日誌仍會繼續顯示。",
+    "request_id_label": "請求 ID",
+    "upstream_request_id_label": "上游請求 ID",
+    "credential_label": "憑證",
+    "credential_unknown": "憑證已刪除或無法使用",
+    "response_body_label": "錯誤回應詳情",
     "title": "記錄檢視",
     "refresh_button": "重新整理記錄",
     "clear_button": "清空記錄",

@@ -1684,6 +1684,17 @@
     "newest": "最新"
   },
   "logs": {
+    "live_and_file_unavailable_hint": "实时日志暂不可用，文件日志也未开启。可尝试重连，或在配置中开启日志来源。",
+    "live_empty_desc": "正在等待新的实时日志。",
+    "file_disabled_empty_desc": "打开“实时连接”即可查看日志，无需开启文件日志。",
+    "file_logging_disabled_hint": "文件日志未开启。仍可查看实时日志；清空当前显示不会删除服务器日志。",
+    "clear_display_button": "清空当前显示",
+    "clear_display_success": "已清空当前显示，后续实时日志仍会继续显示。",
+    "request_id_label": "请求 ID",
+    "upstream_request_id_label": "上游请求 ID",
+    "credential_label": "凭证",
+    "credential_unknown": "凭证已删除或不可用",
+    "response_body_label": "错误响应详情",
     "title": "日志查看",
     "refresh_button": "刷新日志",
     "clear_button": "清空日志",

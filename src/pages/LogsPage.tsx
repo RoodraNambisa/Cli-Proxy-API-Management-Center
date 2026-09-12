@@ -24,13 +24,14 @@ import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import { logsApi } from '@/services/api/logs';
-import type { LiveLogQuery } from '@/services/api/liveLogs';
+import type { LiveLogEvent, LiveLogQuery } from '@/services/api/liveLogs';
 import { copyToClipboard } from '@/utils/clipboard';
 import { downloadBlob } from '@/utils/download';
 import { MANAGEMENT_API_PREFIX } from '@/utils/constants';
 import { formatUnixTimestamp } from '@/utils/format';
 import { HTTP_METHODS, STATUS_GROUPS, resolveStatusGroup, type LogState } from './hooks/logTypes';
-import { parseLogLine } from './hooks/logParsing';
+import { parseLogLine, parseLiveLogEvent } from './hooks/logParsing';
+import { useLogCredentialNames } from './hooks/useLogCredentialNames';
 import { useLogFilters } from './hooks/useLogFilters';
 import { useLiveLogs } from './hooks/useLiveLogs';
 import { isNearBottom, useLogScroller } from './hooks/useLogScroller';
@@ -43,7 +44,7 @@ interface ErrorLogItem {
   modified?: number;
 }
 
-// 初始只渲染最近 100 行，滚动到顶部再逐步加载更多（避免一次性渲染过多导致卡顿）
+// Render the latest 100 lines initially and expand when scrolling upward.
 const INITIAL_DISPLAY_LINES = 100;
 const MAX_BUFFER_LINES = 10000;
 const LONG_PRESS_MS = 650;
@@ -69,6 +70,7 @@ export function LogsPage() {
   const managementAccessPath = useAuthStore((state) => state.managementAccessPath);
   const managementKey = useAuthStore((state) => state.managementKey);
   const traceScopeKey = `${apiBase}::${managementAccessPath}::${managementKey}`;
+  const credentialNames = useLogCredentialNames(traceScopeKey, connectionStatus === 'connected');
   const config = useConfigStore((state) => state.config);
   const requestLogEnabled = config?.requestLog ?? false;
 
@@ -77,6 +79,7 @@ export function LogsPage() {
   const [liveEnabled, setLiveEnabled] = useLocalStorage('logsPage.liveEnabled', false);
   const [loading, setLoading] = useState(!liveEnabled);
   const [error, setError] = useState('');
+  const [fileLogsUnavailable, setFileLogsUnavailable] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [livePaused, setLivePaused] = useState(false);
   const [liveLevel, setLiveLevel] = useState('');
@@ -117,13 +120,16 @@ export function LogsPage() {
   } | null>(null);
   const logRequestInFlightRef = useRef(false);
   const pendingFullReloadRef = useRef(false);
+  const fileLoadGenerationRef = useRef(0);
+  const logSourceRef = useRef('');
 
-  // 保存最新时间戳用于增量获取
+  // Retain the latest timestamp for incremental file loading.
   const latestTimestampRef = useRef<number>(0);
 
   const disableControls = connectionStatus !== 'connected';
 
-  const appendLiveLine = useCallback((line: string) => {
+  const appendLiveLine = useCallback((event: LiveLogEvent) => {
+    const line = parseLiveLogEvent(event);
     const scrollerInstance = logScrollerRef.current;
     const stickToBottom = isNearBottom(scrollerInstance?.logViewerRef.current ?? null);
     if (stickToBottom) scrollerInstance?.requestScrollToBottom();
@@ -180,9 +186,14 @@ export function LogsPage() {
     onReset: resetLiveLines,
   });
   const liveFallback = liveEnabled && live.state === 'fallback';
+  const usingLiveLogs = liveEnabled && !liveFallback;
+  const fileLogsDisabled = config?.loggingToFile === false || fileLogsUnavailable;
+  const clearDisplayOnly = usingLiveLogs || fileLogsDisabled;
+  const logSourceKey = `${traceScopeKey}\u0000${usingLiveLogs}\u0000${fileLogsDisabled}`;
+  logSourceRef.current = logSourceKey;
 
   const loadLogs = async (incremental = false) => {
-    if (connectionStatus !== 'connected') {
+    if (connectionStatus !== 'connected' || usingLiveLogs || fileLogsDisabled) {
       setLoading(false);
       return;
     }
@@ -195,6 +206,9 @@ export function LogsPage() {
     }
 
     logRequestInFlightRef.current = true;
+    const generation = fileLoadGenerationRef.current;
+    const isCurrentLoad = () =>
+      generation === fileLoadGenerationRef.current && logSourceRef.current === logSourceKey;
 
     if (!incremental) {
       setLoading(true);
@@ -212,16 +226,17 @@ export function LogsPage() {
       const params =
         incremental && latestTimestampRef.current > 0 ? { after: latestTimestampRef.current } : {};
       const data = await logsApi.fetchLogs(params);
+      if (!isCurrentLoad()) return;
 
-      // 更新时间戳
+      // Update the incremental cursor only for the active source.
       if (data['latest-timestamp']) {
         latestTimestampRef.current = data['latest-timestamp'];
       }
 
-      const newLines = Array.isArray(data.lines) ? data.lines : [];
+      const newLines = Array.isArray(data.lines) ? data.lines.map(parseLogLine) : [];
 
       if (incremental && newLines.length > 0) {
-        // 增量更新：追加新日志并限制缓冲区大小（避免内存与渲染膨胀）
+        // Bound the buffered history during incremental updates.
         setLogState((prev) => {
           const prevRenderedCount = prev.buffer.length - prev.visibleFrom;
           const combined = [...prev.buffer, ...newLines];
@@ -229,7 +244,7 @@ export function LogsPage() {
           const buffer = dropCount > 0 ? combined.slice(dropCount) : combined;
           let visibleFrom = Math.max(prev.visibleFrom - dropCount, 0);
 
-          // 若用户停留在底部（跟随最新日志），则保持“渲染窗口”大小不变，避免无限增长
+          // Keep the rendered window bounded while following new entries.
           if (stickToBottom) {
             visibleFrom = Math.max(buffer.length - prevRenderedCount, 0);
           }
@@ -237,44 +252,79 @@ export function LogsPage() {
           return { buffer, visibleFrom };
         });
       } else if (!incremental) {
-        // 全量加载：默认只渲染最后 100 行，向上滚动再展开更多
+        // Initially show only the latest lines after a full reload.
         const buffer = newLines.slice(-MAX_BUFFER_LINES);
         const visibleFrom = Math.max(buffer.length - INITIAL_DISPLAY_LINES, 0);
         setLogState({ buffer, visibleFrom });
       }
     } catch (err: unknown) {
+      if (!isCurrentLoad()) return;
+      if (getErrorMessage(err).toLowerCase().includes('logging to file disabled')) {
+        setFileLogsUnavailable(true);
+        setAutoRefresh(false);
+        setError('');
+        return;
+      }
       console.error('Failed to load logs:', err);
-      if (!incremental) {
+      if (!incremental && isCurrentLoad()) {
         setError(getErrorMessage(err) || t('logs.load_error'));
       }
     } finally {
-      if (!incremental) {
+      if (!incremental && isCurrentLoad()) {
         setLoading(false);
       }
-      logRequestInFlightRef.current = false;
-      if (pendingFullReloadRef.current) {
+      if (isCurrentLoad()) logRequestInFlightRef.current = false;
+      if (pendingFullReloadRef.current && isCurrentLoad()) {
         pendingFullReloadRef.current = false;
         void loadLogs(false);
       }
     }
   };
 
-  useHeaderRefresh(() => loadLogs(false));
+  const refreshLogs = () => (usingLiveLogs ? live.retry() : loadLogs(false));
+  useHeaderRefresh(refreshLogs);
 
   const clearLogs = async () => {
+    if (clearDisplayOnly) {
+      fileLoadGenerationRef.current += 1;
+      pendingFullReloadRef.current = false;
+      live.clearDisplay();
+      setError('');
+      setLoading(false);
+      showNotification(t('logs.clear_display_success'), 'success');
+      return;
+    }
     showConfirmation({
       title: t('logs.clear_confirm_title', { defaultValue: 'Clear Logs' }),
       message: t('logs.clear_confirm'),
       variant: 'danger',
       confirmText: t('common.confirm'),
       onConfirm: async () => {
+        if (logSourceRef.current !== logSourceKey) return;
         try {
           await logsApi.clearLogs();
+          if (logSourceRef.current !== logSourceKey) return;
+          fileLoadGenerationRef.current += 1;
+          pendingFullReloadRef.current = false;
           setLogState({ buffer: [], visibleFrom: 0 });
           latestTimestampRef.current = 0;
+          logRequestInFlightRef.current = false;
+          setLoading(false);
           showNotification(t('logs.clear_success'), 'success');
         } catch (err: unknown) {
+          if (logSourceRef.current !== logSourceKey) return;
           const message = getErrorMessage(err);
+          if (message.toLowerCase().includes('logging to file disabled')) {
+            fileLoadGenerationRef.current += 1;
+            logRequestInFlightRef.current = false;
+            pendingFullReloadRef.current = false;
+            setFileLogsUnavailable(true);
+            live.clearDisplay();
+            setError('');
+            setLoading(false);
+            showNotification(t('logs.clear_display_success'), 'success');
+            return;
+          }
           showNotification(
             `${t('notification.delete_failed')}${message ? `: ${message}` : ''}`,
             'error'
@@ -285,7 +335,7 @@ export function LogsPage() {
   };
 
   const downloadLogs = () => {
-    const text = logState.buffer.join('\n');
+    const text = logState.buffer.map((line) => line.raw).join('\n');
     downloadBlob({ filename: 'logs.txt', blob: new Blob([text], { type: 'text/plain' }) });
     showNotification(t('logs.download_success'), 'success');
   };
@@ -300,7 +350,7 @@ export function LogsPage() {
     setErrorLogsError('');
     try {
       const res = await logsApi.fetchErrorLogs();
-      // API 返回 { files: [...] }
+      // The API returns a file metadata envelope.
       setErrorLogs(Array.isArray(res.files) ? res.files : []);
     } catch (err: unknown) {
       console.error('Failed to load error logs:', err);
@@ -329,17 +379,29 @@ export function LogsPage() {
   };
 
   useEffect(() => {
-    if (connectionStatus === 'connected') {
-      latestTimestampRef.current = 0;
-      if (!liveEnabled) void loadLogs(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionStatus, liveEnabled]);
+    fileLoadGenerationRef.current += 1;
+    logRequestInFlightRef.current = false;
+    pendingFullReloadRef.current = false;
+  }, [logSourceKey]);
 
   useEffect(() => {
-    if (liveFallback && connectionStatus === 'connected') void loadLogs(false);
+    setLogState({ buffer: [], visibleFrom: 0 });
+  }, [traceScopeKey]);
+
+  useEffect(() => {
+    setFileLogsUnavailable(false);
+    setError('');
+  }, [config?.loggingToFile, traceScopeKey]);
+
+  useEffect(() => {
+    setError('');
+    if (connectionStatus === 'connected') {
+      latestTimestampRef.current = 0;
+      if (!usingLiveLogs) void loadLogs(false);
+      else setLoading(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionStatus, liveFallback]);
+  }, [connectionStatus, usingLiveLogs, fileLogsDisabled, traceScopeKey]);
 
   useEffect(() => {
     if (activeTab !== 'errors') return;
@@ -350,7 +412,7 @@ export function LogsPage() {
 
   useEffect(() => {
     const shouldPollFileLogs = liveFallback || (!liveEnabled && autoRefresh);
-    if (!shouldPollFileLogs || connectionStatus !== 'connected') {
+    if (!shouldPollFileLogs || fileLogsDisabled || connectionStatus !== 'connected') {
       return;
     }
     const id = window.setInterval(() => {
@@ -358,7 +420,7 @@ export function LogsPage() {
     }, 8000);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefresh, connectionStatus, liveEnabled, liveFallback]);
+  }, [autoRefresh, connectionStatus, liveEnabled, liveFallback, fileLogsDisabled]);
 
   const visibleLines = useMemo(
     () => logState.buffer.slice(logState.visibleFrom),
@@ -373,16 +435,20 @@ export function LogsPage() {
     let working = baseLines;
 
     if (hideManagementLogs) {
-      working = working.filter((line) => !line.includes(MANAGEMENT_API_PREFIX));
+      working = working.filter((line) => !(line.path || line.raw).includes(MANAGEMENT_API_PREFIX));
     }
 
     if (trimmedSearchQuery) {
       const queryLowered = trimmedSearchQuery.toLowerCase();
-      working = working.filter((line) => line.toLowerCase().includes(queryLowered));
+      working = working.filter((line) =>
+        `${line.raw} ${line.authIndex ? credentialNames.get(line.authIndex) || '' : ''}`
+          .toLowerCase()
+          .includes(queryLowered)
+      );
     }
 
-    return working.map((line) => parseLogLine(line));
-  }, [baseLines, hideManagementLogs, trimmedSearchQuery]);
+    return working;
+  }, [baseLines, hideManagementLogs, trimmedSearchQuery, credentialNames]);
 
   const filters = useLogFilters({ parsedLines: parsedSearchLines });
   const structuredFiltersPanelId = 'logs-structured-filters';
@@ -554,7 +620,12 @@ export function LogsPage() {
       <div className={styles.content}>
         {activeTab === 'logs' && (
           <Card className={styles.logCard}>
-            {error && <div className="error-box">{error}</div>}
+            {!usingLiveLogs && error && <div className="error-box">{error}</div>}
+            {fileLogsDisabled && (
+              <div className={styles.liveHint} role="status">
+                {t('logs.file_logging_disabled_hint')}
+              </div>
+            )}
 
             <div className={styles.filters}>
               <div className={styles.searchWrapper}>
@@ -668,7 +739,13 @@ export function LogsPage() {
                   </div>
                 ) : null}
                 {liveFallback ? (
-                  <span className={styles.liveHint}>{t('logs.live_fallback_hint')}</span>
+                  <span className={styles.liveHint}>
+                    {t(
+                      fileLogsDisabled
+                        ? 'logs.live_and_file_unavailable_hint'
+                        : 'logs.live_fallback_hint'
+                    )}
+                  </span>
                 ) : live.lastError ? (
                   <span className={styles.liveHint}>{live.lastError}</span>
                 ) : null}
@@ -819,8 +896,8 @@ export function LogsPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => loadLogs(false)}
-                  disabled={disableControls || loading}
+                  onClick={refreshLogs}
+                  disabled={disableControls || loading || (!usingLiveLogs && fileLogsDisabled)}
                   className={styles.actionButton}
                 >
                   <span className={styles.buttonContent}>
@@ -831,7 +908,7 @@ export function LogsPage() {
                 <ToggleSwitch
                   checked={autoRefresh}
                   onChange={(value) => setAutoRefresh(value)}
-                  disabled={disableControls || (liveEnabled && !liveFallback)}
+                  disabled={disableControls || usingLiveLogs || fileLogsDisabled}
                   label={
                     <span className={styles.switchLabel}>
                       <IconTimer size={16} />
@@ -860,7 +937,7 @@ export function LogsPage() {
                 >
                   <span className={styles.buttonContent}>
                     <IconTrash2 size={16} />
-                    {t('logs.clear_button')}
+                    {t(clearDisplayOnly ? 'logs.clear_display_button' : 'logs.clear_button')}
                   </span>
                 </Button>
               </div>
@@ -897,6 +974,9 @@ export function LogsPage() {
                 ) : (
                   <div className={styles.logList}>
                     {parsedVisibleLines.map((line, index) => {
+                      const credentialName =
+                        line.authName ||
+                        (line.authIndex ? credentialNames.get(line.authIndex) : '');
                       const canTraceRequest = isTraceableRequestPath(line.path);
                       const rowClassNames = [styles.logRow];
                       if (line.level === 'warn') rowClassNames.push(styles.rowWarn);
@@ -918,7 +998,9 @@ export function LogsPage() {
                             defaultValue: 'Double-click to copy',
                           })}
                         >
-                          <div className={styles.timestamp}>{line.timestamp || ''}</div>
+                          <div className={styles.timestamp} title={line.timestamp}>
+                            {line.timestamp ? formatUnixTimestamp(line.timestamp) : ''}
+                          </div>
                           <div className={styles.rowMain}>
                             {line.level && (
                               <span
@@ -950,7 +1032,24 @@ export function LogsPage() {
                                 className={[styles.badge, styles.requestIdBadge].join(' ')}
                                 title={line.requestId}
                               >
-                                {line.requestId}
+                                {t('logs.request_id_label')}: {line.requestId}
+                              </span>
+                            )}
+
+                            {line.authIndex && (
+                              <span
+                                className={`${styles.pill} ${styles.credentialName}`}
+                                title={`${credentialName || t('logs.credential_unknown')}\n${line.authIndex}`}
+                              >
+                                {t('logs.credential_label')}: {credentialName || line.authIndex}
+                              </span>
+                            )}
+                            {line.provider && <span className={styles.badge}>{line.provider}</span>}
+                            {line.code && <span className={styles.pill}>{line.code}</span>}
+                            {line.stage && <span className={styles.pill}>{line.stage}</span>}
+                            {line.upstreamRequestId && (
+                              <span className={styles.pill}>
+                                {t('logs.upstream_request_id_label')}: {line.upstreamRequestId}
                               </span>
                             )}
 
@@ -988,6 +1087,12 @@ export function LogsPage() {
                             )}
 
                             {line.message && <span className={styles.message}>{line.message}</span>}
+                            {line.responseBody && (
+                              <details className={styles.responseDetails}>
+                                <summary>{t('logs.response_body_label')}</summary>
+                                <pre>{line.responseBody}</pre>
+                              </details>
+                            )}
 
                             {canTraceRequest && (
                               <button
@@ -1016,7 +1121,16 @@ export function LogsPage() {
                 description={t('logs.search_empty_desc')}
               />
             ) : (
-              <EmptyState title={t('logs.empty_title')} description={t('logs.empty_desc')} />
+              <EmptyState
+                title={t('logs.empty_title')}
+                description={t(
+                  usingLiveLogs
+                    ? 'logs.live_empty_desc'
+                    : fileLogsDisabled
+                      ? 'logs.file_disabled_empty_desc'
+                      : 'logs.empty_desc'
+                )}
+              />
             )}
           </Card>
         )}
