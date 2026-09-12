@@ -83,7 +83,7 @@ describe('Codex multi-agent v2 configuration control', () => {
     const original = 'codex:\n  future-field: retained\n';
     act(() => result.current.loadVisualValuesFromYaml(original));
     render(
-      <MemoryRouter initialEntries={['/config?section=provider-codex']}>
+      <MemoryRouter initialEntries={['/config?section=config-codex-multi-agent']}>
         <VisualConfigEditor
           values={result.current.visualValues}
           baselineValues={result.current.baselineValues}

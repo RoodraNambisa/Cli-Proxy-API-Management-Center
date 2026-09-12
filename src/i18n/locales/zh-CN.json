@@ -1833,6 +1833,13 @@
       "source": "源文件编辑"
     },
     "settings_center": {
+      "codex_groups": {
+        "catalog_desc": "API Key 模型声明、OAuth 别名与 Alpha Search。",
+        "requests": "请求、缓存与观测",
+        "requests_desc": "缓存身份透传、过载处理、Token 估算与被动额度观察。",
+        "collaboration": "子代理与协作兼容",
+        "collaboration_desc": "Multi-agent v2 与孤立委派结果兼容。"
+      },
       "nav": "配置分类",
       "groups": {
         "global": "全局",

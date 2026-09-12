@@ -29,7 +29,7 @@ test.each([
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: query } });
   fireEvent.click(screen.getByRole('button', { name: /common.model_catalog_label/ }));
   expect(document.getElementById('config-model-catalog-fields')?.closest('[hidden]')).toBeNull();
-  expect(document.getElementById('config-model-catalog-fields')?.closest('section')?.id).toBe('auth');
+  expect(document.getElementById('config-model-catalog-fields')?.closest('#auth')?.id).toBe('auth');
   const oauth = query.startsWith('oauth-model-alias');
   fireEvent.click(screen.getByRole('button', { name: oauth ? 'common.oauth_model_display_name_manage' : 'common.model_catalog_manage' }));
   expect(screen.getByText(oauth ? 'OAuth aliases' : 'API models')).toBeTruthy();

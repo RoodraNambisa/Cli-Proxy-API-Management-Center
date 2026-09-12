@@ -1857,6 +1857,13 @@
       "source": "原始檔編輯"
     },
     "settings_center": {
+      "codex_groups": {
+        "catalog_desc": "API Key 模型宣告、OAuth 別名與 Alpha Search。",
+        "requests": "請求、快取與觀測",
+        "requests_desc": "快取身分透傳、過載處理、Token 估算與被動額度觀察。",
+        "collaboration": "子代理與協作相容",
+        "collaboration_desc": "Multi-agent v2 與孤立委派結果相容。"
+      },
       "nav": "設定分類",
       "groups": { "global": "全域", "providers": "供應商", "advanced": "進階" },
       "pages": {

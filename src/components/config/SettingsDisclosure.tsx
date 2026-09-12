@@ -1,8 +1,8 @@
-import { useContext, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { ConfigDisclosure } from './ConfigDisclosure';
-import { ConfigFocusContext } from './configFocus';
+import { useSettingsDisclosure } from './useSettingsDisclosure';
 
-export function SettingsDisclosure({ id, title, description, summary, focusTarget, targetIds = [], dirty = false, errorCount = 0, children }: {
+export function SettingsDisclosure({ id, title, description, summary, focusTarget, targetIds = [], dirty = false, errorCount = 0, children, defaultExpanded = false }: {
   id: string;
   title: string;
   description?: string;
@@ -12,25 +12,16 @@ export function SettingsDisclosure({ id, title, description, summary, focusTarge
   dirty?: boolean;
   errorCount?: number;
   children: ReactNode;
+  defaultExpanded?: boolean;
 }) {
-  const storageKey = `config-management:${id}-expanded`;
-  const focusRequest = useContext(ConfigFocusContext);
-  const [expandedPreference, setExpandedPreference] = useState(() => localStorage.getItem(storageKey) === 'true');
-  const [manual, setManual] = useState<{ focusRequest: number; focusTarget?: string; errorCount: number; expanded: boolean }>();
   const focusMatches = focusTarget === id || Boolean(focusTarget && targetIds.includes(focusTarget));
-  const manualApplies = manual && errorCount <= manual.errorCount &&
-    (!focusMatches || (manual.focusRequest === focusRequest && manual.focusTarget === focusTarget));
-  const expanded = manualApplies ? manual.expanded
-    : expandedPreference || focusMatches || dirty || errorCount > 0;
+  const { expanded, setExpanded } = useSettingsDisclosure({ storageKey: `config-management:${id}-expanded`,
+    focusTarget, focusMatches, dirty, errorCount, defaultExpanded });
 
   return <ConfigDisclosure
     id={id} title={title} description={description} summary={summary}
     expanded={expanded} keepMounted
-    onExpandedChange={(nextExpanded) => {
-      setExpandedPreference(nextExpanded);
-      setManual({ focusRequest, focusTarget, errorCount, expanded: nextExpanded });
-      localStorage.setItem(storageKey, String(nextExpanded));
-    }}
+    onExpandedChange={setExpanded}
     dirty={dirty} errorCount={errorCount}
   >{children}</ConfigDisclosure>;
 }

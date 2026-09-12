@@ -66,7 +66,7 @@ describe('Codex fingerprint upload default config', () => {
   test('renders a fixed four-mode selector and indexes the YAML key', async () => {
     const onChange = vi.fn();
     render(
-      <MemoryRouter initialEntries={['/config?section=provider-codex']}>
+      <MemoryRouter initialEntries={['/config?section=config-codex-fingerprint']}>
         <VisualConfigEditor
           values={cloneValues()}
           baselineValues={cloneValues()}

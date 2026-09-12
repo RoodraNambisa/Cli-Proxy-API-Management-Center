@@ -32,6 +32,7 @@ import { ConfigSection } from '@/components/config/ConfigSection';
 import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { SettingsDisclosure } from '@/components/config/SettingsDisclosure';
 import { ConfigFocusContext } from '@/components/config/configFocus';
+import { useSettingsDisclosure } from '@/components/config/useSettingsDisclosure';
 import { ConfigHelp } from '@/components/config/ConfigHelp';
 import { ConfigTable, ConfigTableRow, ConfigSummary } from '@/components/config/ConfigTable';
 import { OAuthRequestScopedErrorsEditor } from '@/components/config/OAuthRequestScopedErrorsEditor';
@@ -289,11 +290,9 @@ function NativeImageEndpointEditor({
 }) {
   const { t } = useTranslation();
   const storageKey = `config-management:${targetPrefix}-expanded`;
-  const persistedExpansion = localStorage.getItem(storageKey);
-  const [expandedPreference, setExpandedPreference] = useState<boolean | null>(() =>
-    persistedExpansion === null ? null : persistedExpansion === 'true'
-  );
-  const expanded = expandedPreference ?? value.enabled;
+  const { expanded, setExpanded: handleExpandedChange } = useSettingsDisclosure({ storageKey,
+    focusTarget, focusMatches: Boolean(focusTarget?.startsWith(targetPrefix)),
+    dirty, errorCount: statusCodeError ? 1 : 0, defaultExpanded: value.enabled });
   const updateValue = (patch: Partial<NativeImageEndpointVisualConfig>) =>
     onChange({ ...value, ...patch });
 
@@ -307,11 +306,6 @@ function NativeImageEndpointEditor({
     return () => window.clearTimeout(timer);
   }, [focusTarget, targetPrefix]);
 
-  const handleExpandedChange = (nextExpanded: boolean) => {
-    setExpandedPreference(nextExpanded);
-    localStorage.setItem(storageKey, String(nextExpanded));
-  };
-
   return (
     <ConfigDisclosure
       id={targetPrefix}
@@ -322,12 +316,8 @@ function NativeImageEndpointEditor({
           ? 'config_management.settings_center.status_enabled'
           : 'config_management.settings_center.status_disabled'
       )}
-      expanded={
-        expanded ||
-        Boolean(focusTarget?.startsWith(targetPrefix)) ||
-        Boolean(statusCodeError) ||
-        Boolean(dirty)
-      }
+      expanded={expanded}
+      keepMounted
       onExpandedChange={handleExpandedChange}
       dirty={dirty}
       errorCount={statusCodeError ? 1 : 0}
@@ -336,8 +326,7 @@ function NativeImageEndpointEditor({
           checked={value.enabled}
           disabled={disabled}
           onChange={(enabled) => {
-            setExpandedPreference(enabled);
-            localStorage.setItem(storageKey, String(enabled));
+            handleExpandedChange(enabled);
             updateValue({ enabled });
           }}
           ariaLabel={t('config_management.visual.sections.images.native_enabled')}
@@ -893,14 +882,12 @@ export function VisualConfigEditor({
       ] as const
     ).some((field) => values.images[field] !== baselineValues.images[field]) ||
     JSON.stringify(values.images.imageModels) !== JSON.stringify(baselineValues.images.imageModels);
-  const legacyImagesExpansionStorageKey = 'config-management:images-legacy-expanded';
-  const persistedLegacyImagesExpansion = localStorage.getItem(legacyImagesExpansionStorageKey);
-  const [legacyImagesExpandedPreference, setLegacyImagesExpandedPreference] = useState<
-    boolean | null
-  >(() =>
-    persistedLegacyImagesExpansion === null ? null : persistedLegacyImagesExpansion === 'true'
-  );
-  const legacyImagesExpanded = legacyImagesExpandedPreference ?? !collapseLegacyImagesSettings;
+  const { expanded: legacyImagesExpanded, setExpanded: setLegacyImagesExpanded } = useSettingsDisclosure({
+    storageKey: 'config-management:images-legacy-expanded', focusTarget, focusRequest,
+    focusMatches: focusTarget === 'config-images-legacy' || focusTarget === 'config-images-tool-models',
+    dirty: legacyImagesDirty, errorCount: validationErrors?.['images.unsupportedStatusCode'] ? 1 : 0,
+    defaultExpanded: !collapseLegacyImagesSettings,
+  });
   const fixedErrorCooldownScopeOptions = useMemo(
     () => [
       {
@@ -3117,6 +3104,7 @@ export function VisualConfigEditor({
 
             <ConfigSection
               id="auth"
+              hideHeading={activePageId === 'provider-codex'}
               hidden={!['global-credentials', 'provider-codex'].includes(activePageId)}
               icon={<IconKey size={16} />}
               title={t(
@@ -3186,44 +3174,42 @@ export function VisualConfigEditor({
                     />
                   </SettingsDisclosure>
                 </PageGroup>
-                <PageGroup id="config-model-catalog-fields" active={activePageId === 'provider-codex'}>
-                  <div className={styles.providerHubHeader}>
-                    <h3>{t('common.model_catalog_label')}</h3>
-                    <p>{t('common.model_display_name_hint')}</p>
-                    <p>{t('common.model_context_length_hint')}</p>
-                    <p>{t('model_thinking.hint')}</p>
-                    <p>{t('model_compatibility.hint')}</p>
-                    <p>{t('model_input_modalities.hint')}</p>
-                  </div>
-                  <div className={styles.providerHubActions}>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/ai-providers?provider=codex&section=models')}>
-                      {t('common.model_catalog_manage')}<IconExternalLink size={14} />
-                    </Button>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/auth-files/oauth-model-alias?provider=codex')}>
-                      {t('common.oauth_model_display_name_manage')}<IconExternalLink size={14} />
-                    </Button>
-                  </div>
-                </PageGroup>
-
-                <PageGroup id="config-codex-alpha-search" active={activePageId === 'provider-codex'}>
-                  <div className={styles.providerHubHeader}>
-                    <h3>{t('ai_providers.codex_alpha_search_label')}</h3>
-                    <p>{t('ai_providers.codex_alpha_search_hint')}</p>
-                  </div>
-                  <div className={styles.providerHubActions}>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/ai-providers?provider=codex&section=alpha-search')}>
-                      {t('ai_providers.codex_alpha_search_manage')}
-                      <IconExternalLink size={14} />
-                    </Button>
-                  </div>
+                <PageGroup active={activePageId === 'provider-codex'}>
+                  <SettingsDisclosure id="config-model-catalog-fields" title={t('common.model_catalog_label')}
+                    description={t('config_management.settings_center.codex_groups.catalog_desc')}
+                    focusTarget={focusTarget} targetIds={['config-codex-alpha-search']}
+                  >
+                    <ConfigHelp title={t('common.model_catalog_label')} text={[
+                      t('common.model_display_name_hint'), t('common.model_context_length_hint'),
+                      t('model_thinking.hint'), t('model_compatibility.hint'), t('model_input_modalities.hint'),
+                    ].join('\n\n')} />
+                    <div className={styles.providerHubActions}>
+                      <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/ai-providers?provider=codex&section=models')}>
+                        {t('common.model_catalog_manage')}<IconExternalLink size={14} />
+                      </Button>
+                      <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/auth-files/oauth-model-alias?provider=codex')}>
+                        {t('common.oauth_model_display_name_manage')}<IconExternalLink size={14} />
+                      </Button>
+                    </div>
+                    <div id="config-codex-alpha-search">
+                      <ConfigHelp title={t('ai_providers.codex_alpha_search_label')} text={t('ai_providers.codex_alpha_search_hint')} />
+                      <div className={styles.providerHubActions}>
+                        <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/ai-providers?provider=codex&section=alpha-search')}>
+                          {t('ai_providers.codex_alpha_search_manage')}<IconExternalLink size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                  </SettingsDisclosure>
                 </PageGroup>
 
                 <PageGroup active={activePageId === 'provider-codex'}>
-                  <SectionSubsection
+                  <SettingsDisclosure id="config-codex-custom-models" focusTarget={focusTarget}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexCustomModels'])} errorCount={authSectionErrorCount}
+                    summary={t('config_management.settings_center.rules_summary', { count: values.codexCustomModels.length })}
                     title={t('config_management.visual.codex_custom_models.title')}
                     description={t('config_management.visual.codex_custom_models.description')}
                   >
-                    <div id="config-codex-custom-models">
+                    <div>
                       <CodexCustomModelsEditor
                         value={values.codexCustomModels}
                         validationErrors={codexCustomModelValidationErrors}
@@ -3231,7 +3217,7 @@ export function VisualConfigEditor({
                         onChange={handleCodexCustomModelsChange}
                       />
                     </div>
-                  </SectionSubsection>
+                  </SettingsDisclosure>
                 </PageGroup>
                 <PageGroup active={activePageId === 'global-credentials'}>
                   <SettingsDisclosure
@@ -3285,7 +3271,7 @@ export function VisualConfigEditor({
                             <ConfigTableRow key={rule.clientId}
                                 title={t('config_management.visual.sections.auth.auth_model_exclusions_rule', { index: index + 1 })}
                                 initialExpanded={!baselineValues.authModelExclusions.some((saved) => saved.clientId === rule.clientId)}
-                                invalid={Object.keys(validationErrors ?? {}).some((key) => key.startsWith(`authModelExclusions.${rule.clientId}.`))}
+                                invalid={Object.entries(validationErrors ?? {}).some(([key, error]) => Boolean(error) && key.startsWith(`authModelExclusions.${rule.clientId}.`))}
                                 labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('config_management.visual.common.effect_column')]}
                                 cells={[
                                   <strong>#{index + 1}</strong>,
@@ -3429,12 +3415,10 @@ export function VisualConfigEditor({
                     )}
                   </SettingsDisclosure>
                 </PageGroup>
-                <PageGroup id="config-codex-image-tool" active={activePageId === 'provider-codex'}>
-                  <SectionSubsection
-                    title={t('config_management.visual.sections.auth.disabled_image_tool_policy')}
-                    description={t(
-                      'config_management.visual.sections.auth.disabled_image_tool_policy_desc'
-                    )}
+                <PageGroup active={activePageId === 'provider-codex'}>
+                  <SettingsDisclosure id="config-codex-image-tool" title={t('config_management.visual.sections.auth.disabled_image_tool_policy')} description={t('config_management.visual.sections.auth.disabled_image_tool_policy_desc')}
+                    focusTarget={focusTarget} targetIds={[]}
+                    dirty={hasDirtyConfigField(dirtyFields, ['disabledImageGenerationToolFallback', 'disabledImageGenerationToolAction', 'disabledImageGenerationToolError'])} errorCount={countErrors(['disabledImageGenerationToolError.statusCode'])}
                   >
                     <ToggleRow
                       title={t(
@@ -3544,7 +3528,8 @@ export function VisualConfigEditor({
                         />
                       </SectionGrid>
                     ) : null}
-                  </SectionSubsection>
+
+                  </SettingsDisclosure>
                 </PageGroup>
               </SectionStack>
             </ConfigSection>
@@ -3707,6 +3692,7 @@ export function VisualConfigEditor({
 
             <ConfigSection
               id="network"
+              hideHeading={activePageId === 'provider-codex'}
               hidden={
                 !['global-network', 'global-request', 'provider-codex'].includes(activePageId)
               }
@@ -4124,7 +4110,7 @@ export function VisualConfigEditor({
                             <ConfigTableRow key={rule.clientId}
                                 title={t('config_management.visual.sections.network.priority_overrides_rule', { index: index + 1 })}
                                 initialExpanded={!baselineValues.routingPriorityOverrides.some((saved) => saved.clientId === rule.clientId)}
-                                invalid={Object.keys(validationErrors ?? {}).some((key) => key.startsWith(`routingPriorityOverrides.${rule.clientId}.`))}
+                                invalid={Object.entries(validationErrors ?? {}).some(([key, error]) => Boolean(error) && key.startsWith(`routingPriorityOverrides.${rule.clientId}.`))}
                                 labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('config_management.visual.common.effect_column')]}
                                 cells={[
                                   <strong>#{index + 1}</strong>,
@@ -4603,7 +4589,7 @@ export function VisualConfigEditor({
                             <ConfigTableRow key={rule.clientId}
                                 title={t('config_management.visual.sections.network.non_retryable_errors_rule', { index: index + 1 })}
                                 initialExpanded={!baselineValues.nonRetryableErrors.some((saved) => saved.clientId === rule.clientId)}
-                                invalid={Object.keys(validationErrors ?? {}).some((key) => key.startsWith(`nonRetryableErrors.${rule.clientId}.`))}
+                                invalid={Object.entries(validationErrors ?? {}).some(([key, error]) => Boolean(error) && key.startsWith(`nonRetryableErrors.${rule.clientId}.`))}
                                 labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('config_management.visual.common.effect_column')]}
                                 cells={[
                                   <strong>#{index + 1}</strong>,
@@ -5108,8 +5094,15 @@ export function VisualConfigEditor({
                   </SettingsDisclosure>
                 </PageGroup>
 
-                <PageGroup id="config-codex-prompt-cache" active={activePageId === 'provider-codex'}>
-                  <SectionGrid>
+                <PageGroup active={activePageId === 'provider-codex'}>
+                  <SettingsDisclosure id="config-codex-request-policies"
+                    title={t('config_management.settings_center.codex_groups.requests')}
+                    description={t('config_management.settings_center.codex_groups.requests_desc')}
+                    focusTarget={focusTarget} targetIds={['config-codex-prompt-cache', 'config-codex-stream-bootstrap', 'config-codex-input-token-estimate', 'config-codex-quota-observation']}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexPassthroughPromptCacheKey', 'codexStreamBootstrapBuffering', 'codexEstimateClaudeInputTokens', 'codexObserveQuota'])}
+                  >
+                    <SectionGrid>
+                <div id="config-codex-prompt-cache">
                     <ToggleRow
                       title={t(
                         'config_management.visual.sections.network.codex_passthrough_prompt_cache_key'
@@ -5123,11 +5116,9 @@ export function VisualConfigEditor({
                         onChange({ codexPassthroughPromptCacheKey })
                       }
                     />
-                  </SectionGrid>
-                </PageGroup>
+                </div>
 
-                <PageGroup id="config-codex-stream-bootstrap" active={activePageId === 'provider-codex'}>
-                  <SectionGrid>
+                <div id="config-codex-stream-bootstrap">
                     <ToggleRow
                       title={t('config_management.visual.sections.network.codex_stream_bootstrap_buffering')}
                       description={t('config_management.visual.sections.network.codex_stream_bootstrap_buffering_desc')}
@@ -5135,11 +5126,9 @@ export function VisualConfigEditor({
                       disabled={disabled}
                       onChange={(codexStreamBootstrapBuffering) => onChange({ codexStreamBootstrapBuffering })}
                     />
-                  </SectionGrid>
-                </PageGroup>
+                </div>
 
-                <PageGroup id="config-codex-input-token-estimate" active={activePageId === 'provider-codex'}>
-                  <SectionGrid>
+                <div id="config-codex-input-token-estimate">
                     <ToggleRow
                       title={t('config_management.visual.sections.network.codex_estimate_claude_input_tokens')}
                       description={t('config_management.visual.sections.network.codex_estimate_claude_input_tokens_desc')}
@@ -5147,11 +5136,9 @@ export function VisualConfigEditor({
                       disabled={disabled}
                       onChange={(codexEstimateClaudeInputTokens) => onChange({ codexEstimateClaudeInputTokens })}
                     />
-                  </SectionGrid>
-                </PageGroup>
+                </div>
 
-                <PageGroup id="config-codex-quota-observation" active={activePageId === 'provider-codex'}>
-                  <SectionGrid>
+                <div id="config-codex-quota-observation">
                     <ToggleRow
                       title={t('config_management.visual.sections.network.codex_observe_quota')}
                       description={t('config_management.visual.sections.network.codex_observe_quota_desc')}
@@ -5159,11 +5146,21 @@ export function VisualConfigEditor({
                       disabled={disabled}
                       onChange={(codexObserveQuota) => onChange({ codexObserveQuota })}
                     />
-                  </SectionGrid>
+                </div>
+
+                    </SectionGrid>
+                  </SettingsDisclosure>
                 </PageGroup>
 
-                <PageGroup id="config-codex-orphan-delegation" active={activePageId === 'provider-codex'}>
-                  <SectionGrid>
+                <PageGroup active={activePageId === 'provider-codex'}>
+                  <SettingsDisclosure id="config-codex-collaboration"
+                    title={t('config_management.settings_center.codex_groups.collaboration')}
+                    description={t('config_management.settings_center.codex_groups.collaboration_desc')}
+                    focusTarget={focusTarget} targetIds={['config-codex-orphan-delegation', 'config-codex-multi-agent']}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexOrphanDelegationCompatibility', 'codexOptimizeMultiAgentV2'])}
+                  >
+                    <SectionGrid>
+                <div id="config-codex-orphan-delegation">
                     <ToggleRow
                       title={t('config_management.visual.sections.network.codex_orphan_delegation_compatibility')}
                       description={t('config_management.visual.sections.network.codex_orphan_delegation_compatibility_desc')}
@@ -5171,11 +5168,9 @@ export function VisualConfigEditor({
                       disabled={disabled}
                       onChange={(codexOrphanDelegationCompatibility) => onChange({ codexOrphanDelegationCompatibility })}
                     />
-                  </SectionGrid>
-                </PageGroup>
+                </div>
 
-                <PageGroup id="config-codex-multi-agent" active={activePageId === 'provider-codex'}>
-                  <SectionGrid>
+                <div id="config-codex-multi-agent">
                     <ToggleRow
                       title={t('config_management.visual.sections.network.codex_optimize_multi_agent_v2')}
                       description={t('config_management.visual.sections.network.codex_optimize_multi_agent_v2_desc')}
@@ -5183,10 +5178,17 @@ export function VisualConfigEditor({
                       disabled={disabled}
                       onChange={(codexOptimizeMultiAgentV2) => onChange({ codexOptimizeMultiAgentV2 })}
                     />
-                  </SectionGrid>
+                </div>
+
+                    </SectionGrid>
+                  </SettingsDisclosure>
                 </PageGroup>
 
-                <PageGroup id="config-codex-fingerprint" active={activePageId === 'provider-codex'}>
+                <PageGroup active={activePageId === 'provider-codex'}>
+                  <SettingsDisclosure id="config-codex-fingerprint" title={t('config_management.settings_center.subsections.codex_transport')} description={t('config_management.settings_center.subsections.codex_transport_desc')}
+                    focusTarget={focusTarget} targetIds={['config-codex-headers', 'config-codex-turn-state-policy', 'config-codex-fingerprint-default-mode', 'config-codex-fingerprint-session-identity-pool-size']}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexIdentityConfuse', 'codexSpoofSessionIdentity', 'codexTurnStatePolicy', 'codexFingerprintDefaultMode', 'codexFingerprintSessionIdentityPoolSize', 'codexFingerprintJA3', 'codexFingerprintForceHTTP1', 'codexFingerprintImagesForceHTTP1', 'codexEnforceSoftwareIdentity', 'codexHeaderDefaultsUserAgent', 'codexHeaderDefaultsBetaFeatures', 'codexHeaderDefaultsOriginator'])} errorCount={countErrors(['codexFingerprintSessionIdentityPoolSize'])}
+                  >
                   <SectionGrid>
                     <ToggleRow
                       title={t('config_management.visual.sections.network.codex_identity_confuse')}
@@ -5373,18 +5375,25 @@ export function VisualConfigEditor({
                       />
                     </SectionGrid>
                   </div>
+
+                  </SettingsDisclosure>
                 </PageGroup>
               </SectionStack>
             </ConfigSection>
 
             <ConfigSection
               id="codex-live"
+              hideHeading
               hidden={activePageId !== 'provider-codex'}
               icon={<IconCode size={16} />}
               title={t('config_management.visual.sections.codex_live.title')}
               description={t('config_management.visual.sections.codex_live.description')}
             >
-              <PageGroup id="config-codex-live" active={activePageId === 'provider-codex'}>
+              <PageGroup active={activePageId === 'provider-codex'}>
+                  <SettingsDisclosure id="config-codex-live" title={t('config_management.visual.sections.codex_live.title')} description={t('config_management.visual.sections.codex_live.description')}
+                    focusTarget={focusTarget} targetIds={[]}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexLiveEnabled'])} errorCount={0}
+                  >
                 <SectionGrid>
                   <ToggleRow
                     title={t('config_management.visual.sections.codex_live.enabled')}
@@ -5394,26 +5403,35 @@ export function VisualConfigEditor({
                     onChange={(codexLiveEnabled) => onChange({ codexLiveEnabled })}
                   />
                 </SectionGrid>
-              </PageGroup>
-              <PageGroup id="config-codex-live-media" active={activePageId === 'provider-codex'}>
-                <SectionSubsection
-                  title={t('config_management.visual.sections.codex_media.title')}
-                  description={t('config_management.visual.sections.codex_media.description')}
-                >
+
+                  </SettingsDisclosure>
+                </PageGroup>
+              <PageGroup active={activePageId === 'provider-codex'}>
+                  <SettingsDisclosure id="config-codex-live-media" title={t('config_management.visual.sections.codex_media.title')} description={t('config_management.visual.sections.codex_media.description')}
+                    focusTarget={focusTarget} targetIds={[]}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexLiveMediaRelay'])} errorCount={Object.entries(validationErrors ?? {}).filter(([key, error]) => error && key.startsWith('codexLiveMediaRelay.')).length}
+                  >
                   <CodexLiveMediaEditor value={values.codexLiveMediaRelay} disabled={disabled}
                     onChange={(codexLiveMediaRelay) => onChange({ codexLiveMediaRelay })} />
-                </SectionSubsection>
-              </PageGroup>
+
+                  </SettingsDisclosure>
+                </PageGroup>
             </ConfigSection>
 
             <ConfigSection
               id="images"
+              hideHeading
               hidden={activePageId !== 'provider-codex'}
               icon={<IconDiamond size={16} />}
               title={t('config_management.visual.sections.images.title')}
               description={t('config_management.visual.sections.images.description')}
             >
-              <SectionStack>
+              <SettingsDisclosure id="config-codex-image-endpoints" title={t('config_management.visual.sections.images.title')}
+                description={t('config_management.visual.sections.images.description')} focusTarget={focusTarget}
+                targetIds={['config-images-codex-request-timeout-seconds', 'images-native-generations', 'images-native-generations-models', 'images-native-generations-param-rules', 'images-native-generations-status-code', 'images-native-edits', 'images-native-edits-models', 'images-native-edits-param-rules', 'images-native-edits-status-code', 'config-images-stream-flush', 'config-images-legacy', 'config-images-tool-models']}
+                dirty={hasDirtyConfigField(dirtyFields, ['images'])}
+                errorCount={Object.entries(validationErrors ?? {}).filter(([key, error]) => error && key.startsWith('images.')).length}
+              >
                 <Input
                   id="config-images-codex-request-timeout-seconds"
                   type="number"
@@ -5523,17 +5541,9 @@ export function VisualConfigEditor({
                       ? 'config_management.settings_center.legacy_images_optional'
                       : 'config_management.settings_center.legacy_images_active'
                   )}
-                  expanded={
-                    legacyImagesExpanded ||
-                    focusTarget === 'config-images-legacy' ||
-                    focusTarget === 'config-images-tool-models' ||
-                    Boolean(imagesUnsupportedStatusCodeError) ||
-                    legacyImagesDirty
-                  }
-                  onExpandedChange={(expanded) => {
-                    setLegacyImagesExpandedPreference(expanded);
-                    localStorage.setItem(legacyImagesExpansionStorageKey, String(expanded));
-                  }}
+                  expanded={legacyImagesExpanded}
+                  onExpandedChange={setLegacyImagesExpanded}
+                  keepMounted
                   dirty={legacyImagesDirty}
                   errorCount={imagesUnsupportedStatusCodeError ? 1 : 0}
                 >
@@ -5544,7 +5554,7 @@ export function VisualConfigEditor({
                     onChange={onChange}
                   />
                 </ConfigDisclosure>
-              </SectionStack>
+              </SettingsDisclosure>
             </ConfigSection>
 
             <ConfigSection

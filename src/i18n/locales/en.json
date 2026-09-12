@@ -1833,6 +1833,13 @@
       "source": "Source File Editor"
     },
     "settings_center": {
+      "codex_groups": {
+        "catalog_desc": "API key model declarations, OAuth aliases and Alpha Search.",
+        "requests": "Requests, cache and observations",
+        "requests_desc": "Cache identity passthrough, overload handling, token estimates and passive quota.",
+        "collaboration": "Agent collaboration",
+        "collaboration_desc": "Multi-agent v2 and orphan delegation compatibility."
+      },
       "nav": "Configuration categories",
       "groups": { "global": "Global", "providers": "Providers", "advanced": "Advanced" },
       "pages": {

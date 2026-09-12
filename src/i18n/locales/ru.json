@@ -1830,6 +1830,13 @@
       "source": "Редактор файла"
     },
     "settings_center": {
+      "codex_groups": {
+        "catalog_desc": "Модели API-ключей, псевдонимы OAuth и Alpha Search.",
+        "requests": "Запросы, кэш и наблюдения",
+        "requests_desc": "Идентификаторы кэша, перегрузка, оценка токенов и наблюдение квоты.",
+        "collaboration": "Совместная работа агентов",
+        "collaboration_desc": "Multi-agent v2 и совместимость результатов делегирования."
+      },
       "nav": "Категории конфигурации",
       "groups": { "global": "Общие", "providers": "Провайдеры", "advanced": "Дополнительно" },
       "pages": {

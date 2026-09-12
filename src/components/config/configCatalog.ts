@@ -1098,6 +1098,9 @@ export function isConfigPageId(value: string | null | undefined): value is Confi
 }
 
 const CONFIG_SECTION_ALIASES: Record<string, { pageId: ConfigPageId; targetId?: string }> = {
+  'config-codex-request-policies': { pageId: 'provider-codex', targetId: 'config-codex-request-policies' },
+  'config-codex-collaboration': { pageId: 'provider-codex', targetId: 'config-codex-collaboration' },
+  'config-codex-image-endpoints': { pageId: 'provider-codex', targetId: 'config-codex-image-endpoints' },
   'codex-images': { pageId: 'provider-codex', targetId: 'images-native-generations' },
   'request-body': { pageId: 'global-request', targetId: 'request-body-release' },
 };

@@ -191,7 +191,7 @@ describe('configuration settings center', () => {
 
   test('offers Codex turn-state policy as a fixed dropdown', async () => {
     const onChange = vi.fn();
-    renderEditor('/config?section=provider-codex', { onChange });
+    renderEditor('/config?section=config-codex-fingerprint', { onChange });
 
     const policySelect = screen.getByLabelText('Codex turn-state policy');
     expect(policySelect.tagName).toBe('BUTTON');
@@ -579,7 +579,7 @@ describe('configuration settings center', () => {
     );
     expect(rewriteDisclosure?.getAttribute('aria-expanded')).toBe('true');
     fireEvent.click(rewriteDisclosure as HTMLButtonElement);
-    expect(rewriteDisclosure?.getAttribute('aria-expanded')).toBe('true');
+    expect(rewriteDisclosure?.getAttribute('aria-expanded')).toBe('false');
     dirty.unmount();
 
     renderEditor('/config?section=global-request', {
@@ -599,7 +599,7 @@ describe('configuration settings center', () => {
     loadedValues.images.native.edits.enabled = true;
 
     const view = render(
-      <MemoryRouter initialEntries={['/config?section=provider-codex']}>
+      <MemoryRouter initialEntries={['/config?section=config-codex-image-endpoints']}>
         <VisualConfigEditor
           values={initialValues}
           baselineValues={cloneValues()}
@@ -609,7 +609,7 @@ describe('configuration settings center', () => {
     );
 
     view.rerender(
-      <MemoryRouter initialEntries={['/config?section=provider-codex']}>
+      <MemoryRouter initialEntries={['/config?section=config-codex-image-endpoints']}>
         <VisualConfigEditor
           values={loadedValues}
           baselineValues={loadedValues}
@@ -637,7 +637,7 @@ describe('configuration settings center', () => {
     const values = cloneValues();
     values.images.native.generations.enabled = true;
 
-    renderEditor('/config?section=provider-codex', {
+    renderEditor('/config?section=config-codex-image-endpoints', {
       values,
       baselineValues: values,
     });

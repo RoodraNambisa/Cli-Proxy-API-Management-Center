@@ -6,19 +6,20 @@ interface ConfigSectionProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> 
   description?: ReactNode;
   indexLabel?: ReactNode;
   icon?: ReactNode;
+  hideHeading?: boolean;
 }
 
 export const ConfigSection = forwardRef<HTMLElement, PropsWithChildren<ConfigSectionProps>>(
   function ConfigSection(
-    { title, description, indexLabel, icon, className, children, hidden, ...rest },
+    { title, description, indexLabel, icon, className, children, hidden, hideHeading, ...rest },
     ref
   ) {
     if (hidden) return null;
-    const sectionClassName = [styles.section, className].filter(Boolean).join(' ');
+    const sectionClassName = [styles.section, hideHeading ? styles.unheaded : '', className].filter(Boolean).join(' ');
 
     return (
       <section ref={ref} className={sectionClassName} {...rest}>
-        <header className={styles.header}>
+        {!hideHeading && <header className={styles.header}>
           <div className={styles.titleRow}>
             {indexLabel ? <span className={styles.indexBadge}>{indexLabel}</span> : null}
             {icon ? <span className={styles.iconBadge}>{icon}</span> : null}
@@ -27,7 +28,7 @@ export const ConfigSection = forwardRef<HTMLElement, PropsWithChildren<ConfigSec
             <h3 className={styles.title}>{title}</h3>
             {description ? <p className={styles.description}>{description}</p> : null}
           </div>
-        </header>
+        </header>}
         <div className={styles.content}>{children}</div>
       </section>
     );

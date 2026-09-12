@@ -74,13 +74,13 @@ describe('Codex Live admission configuration', () => {
   test('renders a separate searchable realtime switch and explains established sessions in four languages', () => {
     const onChange = vi.fn();
     render(
-      <MemoryRouter initialEntries={['/config?section=provider-codex']}>
+      <MemoryRouter initialEntries={['/config?section=config-codex-live']}>
         <VisualConfigEditor values={DEFAULT_VISUAL_VALUES} baselineValues={DEFAULT_VISUAL_VALUES} onChange={onChange} renderRequestBodyPanels={() => null} />
       </MemoryRouter>
     );
     const toggle = screen.getByRole('checkbox', { name: 'config_management.visual.sections.codex_live.enabled' });
     expect((toggle as HTMLInputElement).checked).toBe(false);
-    expect(toggle.closest('section')?.id).toBe('codex-live');
+    expect(toggle.closest('#codex-live')?.id).toBe('codex-live');
     fireEvent.click(toggle);
     expect(onChange).toHaveBeenCalledWith({ codexLiveEnabled: true });
     const entry = CONFIG_SEARCH_DEFINITIONS.find((item) => item.id === 'config-codex-live')!;

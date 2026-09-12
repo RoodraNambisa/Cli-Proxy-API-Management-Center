@@ -41,6 +41,14 @@
   }
 }
 
+.unheaded {
+  padding: 0;
+  border: 0;
+  gap: 0;
+  margin-bottom: 14px;
+  &:first-child { padding-top: 0; }
+}
+
 .titleRow {
   display: flex;
   align-items: center;

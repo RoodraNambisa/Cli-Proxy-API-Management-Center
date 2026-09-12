@@ -11,6 +11,11 @@ Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
   writable: true,
   value: vi.fn(),
 });
+Object.defineProperty(Element.prototype, 'scrollIntoView', {
+  configurable: true,
+  writable: true,
+  value: vi.fn(),
+});
 
 afterEach(async () => {
   await act(async () => {

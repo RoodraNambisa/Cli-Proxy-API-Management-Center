@@ -45,12 +45,12 @@ describe('Codex Live media editor', () => {
   });
 
   test('is searchable within the existing Live section and has complete four-language text', () => {
-    render(<MemoryRouter initialEntries={['/config?section=provider-codex']}><VisualConfigEditor
+    render(<MemoryRouter initialEntries={['/config?section=config-codex-live-media']}><VisualConfigEditor
       values={DEFAULT_VISUAL_VALUES} baselineValues={DEFAULT_VISUAL_VALUES} onChange={vi.fn()} renderRequestBodyPanels={() => null}
     /></MemoryRouter>);
     const entry = CONFIG_SEARCH_DEFINITIONS.find((item) => item.id === 'config-codex-live-media')!;
     expect(entry.yamlKeys).toHaveLength(7);
-    expect(document.getElementById(entry.id)?.closest('section')?.id).toBe('codex-live');
+    expect(document.getElementById(entry.id)?.closest('#codex-live')?.id).toBe('codex-live');
     expect(new Set(CONFIG_SEARCH_DEFINITIONS.map((item) => item.id)).size).toBe(CONFIG_SEARCH_DEFINITIONS.length);
     for (const locale of [en, ru, zhCN, zhTW]) {
       expect(Object.keys(locale.config_management.visual.sections.codex_media)).toEqual(Object.keys(en.config_management.visual.sections.codex_media));

@@ -29,7 +29,7 @@ test.each([
   ['common.oauth_model_display_name_manage', '/auth-files/oauth-model-alias?provider=codex'],
   ['ai_providers.codex_alpha_search_manage', '/ai-providers?provider=codex&section=alpha-search'],
 ])('the %s shortcut retains the intended editor destination', (name, expected) => {
-  render(<MemoryRouter initialEntries={['/config?section=provider-codex']}><Routes>
+  render(<MemoryRouter initialEntries={['/config?section=config-model-catalog-fields']}><Routes>
     <Route path="/config" element={<VisualConfigEditor values={DEFAULT_VISUAL_VALUES} baselineValues={DEFAULT_VISUAL_VALUES} onChange={vi.fn()} />} />
     <Route path="*" element={<Destination />} />
   </Routes></MemoryRouter>);

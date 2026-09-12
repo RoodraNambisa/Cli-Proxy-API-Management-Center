@@ -67,7 +67,7 @@ describe('Codex stream bootstrap configuration', () => {
   test('renders a searchable switch with four translations', () => {
     const onChange = vi.fn();
     render(
-      <MemoryRouter initialEntries={['/config?section=provider-codex']}>
+      <MemoryRouter initialEntries={['/config?section=config-codex-stream-bootstrap']}>
         <VisualConfigEditor values={DEFAULT_VISUAL_VALUES} baselineValues={DEFAULT_VISUAL_VALUES} onChange={onChange} renderRequestBodyPanels={() => null} />
       </MemoryRouter>
     );
