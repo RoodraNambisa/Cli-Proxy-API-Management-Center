@@ -38,6 +38,26 @@ error-response-rewrites:
     response-body: {error: {message: busy}}
 `;
 
+test('retry controls keep their save behavior and the credential link has its own action row', () => {
+  const { result } = renderHook(() => useVisualConfig());
+  const yaml = 'request-retry: 1\nmax-retry-credentials: 2\nmax-retry-interval: 10\n';
+  act(() => result.current.loadVisualValuesFromYaml(yaml));
+  const editor = () => <MemoryRouter initialEntries={['/config?section=config-credential-request-retry']}>
+    <VisualConfigEditor values={result.current.visualValues} baselineValues={result.current.baselineValues}
+      onChange={result.current.setVisualValues} />
+  </MemoryRouter>;
+  const view = render(editor());
+  const retry = screen.getByLabelText('config_management.visual.sections.network.request_retry');
+  const link = screen.getByRole('button', { name: 'ai_providers.request_retry_manage' });
+  expect(document.getElementById('config-credential-request-retry')!.contains(link)).toBe(true);
+  expect(retry.parentElement!.parentElement!.contains(link)).toBe(false);
+  fireEvent.change(retry, { target: { value: '3' } });
+  view.rerender(editor());
+  expect(parse(result.current.applyVisualChangesToYaml(yaml))).toMatchObject({
+    'request-retry': 3, 'max-retry-credentials': 2, 'max-retry-interval': 10,
+  });
+});
+
 test.each([
   ['config-auth-model-exclusions', 'auth.auth_model_exclusions', 'image'],
   ['config-routing-priority-overrides', 'network.priority_overrides', 'priority'],
