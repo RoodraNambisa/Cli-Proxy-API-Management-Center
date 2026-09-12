@@ -22,7 +22,8 @@ export function movePanelAssetsAfterShell(html: string): string {
   );
   const bodyEnd = shell.lastIndexOf('</body>');
   if (bodyEnd < 0) throw new Error('Management panel build is missing its body');
-  return `${shell.slice(0, bodyEnd)}${styles.join('\n')}\n${scripts.join('\n')}\n${shell.slice(bodyEnd)}`;
+  const ready = '<script>document.getElementById("management-bootstrap")?.dispatchEvent(new Event("management-assets-ready"));</script>';
+  return `${shell.slice(0, bodyEnd)}${styles.join('\n')}\n${scripts.join('\n')}\n${ready}\n${shell.slice(bodyEnd)}`;
 }
 
 export function panelBootstrap(): Plugin {

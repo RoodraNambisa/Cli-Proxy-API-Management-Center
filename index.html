@@ -7,31 +7,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CLI Proxy API Management Center</title>
     <style id="management-bootstrap-style">
-      #management-bootstrap { position: fixed; inset: 0; display: grid; place-content: center; gap: 14px; padding: 24px; text-align: center; background: #faf9f6; color: #35342f; font: 15px/1.6 system-ui, sans-serif; }
+      #management-bootstrap { position: fixed; inset: 0; display: grid; place-content: center; gap: 16px; padding: 24px; text-align: center; background: #faf9f6; color: #35342f; font: 15px/1.6 system-ui, sans-serif; }
       #management-bootstrap strong { font-size: 22px; }
       #management-bootstrap p { margin: 0; opacity: .7; }
-      #management-bootstrap .boot-spinner { width: 24px; height: 24px; margin: 4px auto; border: 2px solid #8885; border-top-color: currentColor; border-radius: 50%; animation: boot-spin 1s linear infinite; }
-      @keyframes boot-spin { to { transform: rotate(360deg); } }
+      #management-bootstrap .boot-track { width: min(340px, calc(100vw - 48px)); height: 4px; margin: 4px auto 0; overflow: hidden; border-radius: 4px; background: #8883; }
+      #management-bootstrap .boot-track::after { content: ''; display: block; width: 40%; height: 100%; border-radius: inherit; background: #8d8b83; animation: boot-progress 1.6s ease-in-out infinite alternate; }
+      #management-bootstrap .boot-steps { display: flex; justify-content: space-between; width: min(340px, calc(100vw - 48px)); margin: 0; padding: 0; list-style: none; gap: 12px; font-size: 12px; opacity: .65; }
+      #management-bootstrap .boot-steps [aria-current] { font-weight: 650; opacity: 1; }
+      #management-bootstrap .boot-time { font-size: 12px; font-variant-numeric: tabular-nums; }
+      #management-bootstrap .boot-help { max-width: 340px; font-size: 12px; }
+      #management-bootstrap button { justify-self: center; color: inherit; background: transparent; border: 1px solid #8885; border-radius: 7px; padding: 6px 14px; font: inherit; cursor: pointer; }
+      #management-bootstrap button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+      #management-bootstrap [hidden] { display: none; }
+      #management-bootstrap[data-failed] .boot-track::after { animation: none; width: 100%; background: #ba5b46; }
+      @keyframes boot-progress { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
       @media (prefers-color-scheme: dark) { #management-bootstrap { background: #1d1d1b; color: #e8e6df; } }
-      @media (prefers-reduced-motion: reduce) { #management-bootstrap .boot-spinner { animation: none; } }
+      @media (prefers-reduced-motion: reduce) { #management-bootstrap .boot-track::after { animation: none; margin: auto; } }
     </style>
   </head>
   <body>
     <div id="root">
-      <div id="management-bootstrap" role="status" aria-live="polite">
+      <div id="management-bootstrap">
         <strong>CLI Proxy API</strong>
-        <div class="boot-spinner" aria-hidden="true"></div>
-        <p id="management-bootstrap-message">正在加载管理页面…</p>
+        <div id="management-bootstrap-progress" class="boot-track" role="progressbar" aria-label="正在下载页面资源"></div>
+        <ol class="boot-steps" aria-hidden="true">
+          <li id="management-bootstrap-download" aria-current="step">下载资源</li>
+          <li id="management-bootstrap-initialize">初始化界面</li>
+        </ol>
+        <p id="management-bootstrap-message" role="status" aria-live="polite">正在下载页面资源…</p>
+        <p id="management-bootstrap-elapsed" class="boot-time"></p>
+        <p id="management-bootstrap-help" class="boot-help" hidden></p>
+        <button id="management-bootstrap-reload" type="button" hidden>重新加载</button>
         <noscript>请启用 JavaScript / Please enable JavaScript.</noscript>
       </div>
     </div>
-    <script>
+    <script id="management-bootstrap-script">
       (() => {
+        const shell = document.getElementById('management-bootstrap');
+        const get = (name) => document.getElementById('management-bootstrap-' + name);
         const locale = navigator.language.toLowerCase();
-        const message = locale.startsWith('zh')
-          ? (/tw|hk|hant/.test(locale) ? '正在載入管理頁面…' : '正在加载管理页面…')
-          : (locale.startsWith('ru') ? 'Загрузка панели управления…' : 'Loading management panel…');
-        document.getElementById('management-bootstrap-message').textContent = message;
+        const messages = locale.startsWith('zh')
+          ? (/tw|hk|hant/.test(locale)
+            ? ['下載資源', '初始化介面', '正在下載頁面資源…', '資源已下載，正在初始化介面…', '已等待 {s} 秒', '頁面仍在載入，可繼續等待或重新載入。', '頁面載入失敗，請重新載入。', '重新載入']
+            : ['下载资源', '初始化界面', '正在下载页面资源…', '资源已下载，正在初始化界面…', '已等待 {s} 秒', '页面仍在加载，可继续等待或重新加载。', '页面加载失败，请重新加载。', '重新加载'])
+          : (locale.startsWith('ru')
+            ? ['Загрузка ресурсов', 'Подготовка интерфейса', 'Загрузка ресурсов страницы…', 'Ресурсы загружены, подготовка интерфейса…', 'Ожидание: {s} с', 'Загрузка продолжается. Можно подождать или перезагрузить страницу.', 'Не удалось загрузить страницу. Попробуйте перезагрузить её.', 'Перезагрузить']
+            : ['Download resources', 'Initialize interface', 'Downloading page resources…', 'Resources downloaded, initializing interface…', 'Waiting {s}s', 'The page is still loading. You can wait or reload it.', 'The page failed to load. Please reload it.', 'Reload']);
+        get('download').textContent = messages[0];
+        get('initialize').textContent = messages[1];
+        get('message').textContent = messages[2];
+        get('progress').setAttribute('aria-label', messages[2]);
+        get('reload').textContent = messages[7];
+        get('reload').addEventListener('click', () => location.reload());
+        const started = performance.now();
+        let failed = false;
+        const tick = () => {
+          if (!shell.isConnected) return;
+          const seconds = Math.floor((performance.now() - started) / 1000);
+          get('elapsed').textContent = messages[4].replace('{s}', seconds);
+          if (seconds >= 15 && !failed) {
+            get('help').textContent = messages[5];
+            get('help').hidden = false;
+            get('reload').hidden = false;
+          }
+        };
+        tick();
+        const timer = setInterval(tick, 1000);
+        const ready = () => {
+          if (failed || !shell.isConnected) return;
+          get('download').removeAttribute('aria-current');
+          get('initialize').setAttribute('aria-current', 'step');
+          get('message').textContent = messages[3];
+          get('progress').setAttribute('aria-label', messages[3]);
+        };
+        const fail = () => {
+          if (!shell.isConnected) return;
+          failed = true;
+          shell.setAttribute('data-failed', '');
+          get('message').textContent = messages[6];
+          get('progress').setAttribute('aria-label', messages[6]);
+          get('help').hidden = true;
+          get('reload').hidden = false;
+          clearInterval(timer);
+        };
+        shell.addEventListener('management-assets-ready', ready);
+        window.addEventListener('error', fail);
+        window.addEventListener('unhandledrejection', fail);
+        const observer = new MutationObserver(() => {
+          if (shell.isConnected) return;
+          clearInterval(timer);
+          window.removeEventListener('error', fail);
+          window.removeEventListener('unhandledrejection', fail);
+          shell.removeEventListener('management-assets-ready', ready);
+          observer.disconnect();
+        });
+        observer.observe(shell.parentNode, { childList: true });
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
