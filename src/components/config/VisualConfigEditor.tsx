@@ -30,6 +30,8 @@ import {
 } from '@/components/ui/icons';
 import { ConfigSection } from '@/components/config/ConfigSection';
 import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
+import { SettingsDisclosure } from '@/components/config/SettingsDisclosure';
+import { ConfigFocusContext } from '@/components/config/configFocus';
 import { ConfigHelp } from '@/components/config/ConfigHelp';
 import { OAuthRequestScopedErrorsEditor } from '@/components/config/OAuthRequestScopedErrorsEditor';
 import { CodexLiveMediaEditor } from '@/components/config/CodexLiveMediaEditor';
@@ -217,53 +219,6 @@ function SectionSubsection({
   );
 }
 
-function SettingsDisclosure({
-  id,
-  title,
-  description,
-  summary,
-  focusTarget,
-  targetIds = [],
-  dirty = false,
-  errorCount = 0,
-  children,
-}: {
-  id: string;
-  title: string;
-  description?: string;
-  summary?: ReactNode;
-  focusTarget?: string;
-  targetIds?: string[];
-  dirty?: boolean;
-  errorCount?: number;
-  children: ReactNode;
-}) {
-  const storageKey = `config-management:${id}-expanded`;
-  const [expandedPreference, setExpandedPreference] = useState(
-    () => localStorage.getItem(storageKey) === 'true'
-  );
-  const focusMatches =
-    focusTarget === id || Boolean(focusTarget && targetIds.includes(focusTarget));
-  const expanded = expandedPreference || focusMatches || dirty || errorCount > 0;
-
-  return (
-    <ConfigDisclosure
-      id={id}
-      title={title}
-      description={description}
-      summary={summary}
-      expanded={expanded}
-      onExpandedChange={(nextExpanded) => {
-        setExpandedPreference(nextExpanded);
-        localStorage.setItem(storageKey, String(nextExpanded));
-      }}
-      dirty={dirty}
-      errorCount={errorCount}
-    >
-      {children}
-    </ConfigDisclosure>
-  );
-}
 
 function hasDirtyConfigField(dirtyFields: string[], prefixes: string[]) {
   return dirtyFields.some((field) =>
@@ -2020,6 +1975,7 @@ export function VisualConfigEditor({
   );
 
   return (
+    <ConfigFocusContext.Provider value={focusRequest}>
     <div className={styles.visualEditor}>
       <div className={styles.settingsToolbar}>
         <div className={styles.configSearch}>
@@ -6220,5 +6176,6 @@ export function VisualConfigEditor({
         </main>
       </div>
     </div>
+    </ConfigFocusContext.Provider>
   );
 }

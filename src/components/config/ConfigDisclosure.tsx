@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { IconChevronDown, IconChevronRight } from '@/components/ui/icons';
 import styles from './ConfigDisclosure.module.scss';
 
@@ -8,6 +8,7 @@ type ConfigDisclosureProps = {
   description?: ReactNode;
   summary?: ReactNode;
   expanded: boolean;
+  keepMounted?: boolean;
   onExpandedChange: (expanded: boolean) => void;
   actions?: ReactNode;
   dirty?: boolean;
@@ -21,6 +22,7 @@ export function ConfigDisclosure({
   description,
   summary,
   expanded,
+  keepMounted = false,
   onExpandedChange,
   actions,
   dirty = false,
@@ -28,6 +30,8 @@ export function ConfigDisclosure({
   children,
 }: ConfigDisclosureProps) {
   const contentId = `${id}-content`;
+  const [wasExpanded, setWasExpanded] = useState(expanded);
+  if (expanded && !wasExpanded) setWasExpanded(true);
 
   return (
     <section id={id} className={styles.disclosure} data-config-target={id}>
@@ -56,8 +60,8 @@ export function ConfigDisclosure({
           {actions ? <div className={styles.actions}>{actions}</div> : null}
         </div>
       </div>
-      {expanded ? (
-        <div id={contentId} className={styles.content}>
+      {expanded || (keepMounted && wasExpanded) ? (
+        <div id={contentId} className={styles.content} hidden={!expanded}>
           {children}
         </div>
       ) : null}
