@@ -1560,6 +1560,13 @@
     "failure_summary_description": "依目前時間範圍彙總主要請求與輔助嘗試；只顯示安全分類，不包含回應正文或憑證內容。",
     "failure_summary_empty": "目前時間範圍沒有失敗請求。",
     "failure_summary_unsupported": "目前後端不支援失敗原因彙總。",
+    "error_details": {
+      "upstream_status": "上游 HTTP 狀態",
+      "title": "請求失敗詳情", "view": "查看失敗詳情", "status": "錯誤狀態碼", "code": "錯誤代碼", "type": "錯誤類型", "stage": "失敗階段",
+      "request_id": "本機請求 ID", "upstream_id": "上游請求 ID", "message": "錯誤訊息", "response": "錯誤回應欄位摘要（已遮蔽敏感資訊）",
+      "unavailable": "此記錄未收集錯誤訊息。舊記錄或未回報詳情的入口無法事後還原上游回應。",
+      "selected": "已選擇憑證", "committed": "上游請求已提交", "limited": "已計入憑證速率限制"
+    },
     "failure_by_error_code": "依錯誤原因",
     "failure_by_stage": "依失敗階段",
     "failure_boundary_main": "主要請求失敗",
@@ -1584,6 +1591,8 @@
       "unknown": "未分類錯誤"
     },
     "failure_stages": {
+      "execution": "執行處理",
+      "preflight": "請求準備",
       "selection": "憑證選取",
       "admission": "資源准入",
       "upstream": "上游請求",

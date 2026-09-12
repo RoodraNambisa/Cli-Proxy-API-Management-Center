@@ -1536,6 +1536,13 @@
     "failure_summary_description": "按当前时间范围聚合主请求与辅助尝试；仅展示安全分类，不包含响应正文或凭证内容。",
     "failure_summary_empty": "当前时间范围没有失败请求。",
     "failure_summary_unsupported": "当前后端不支持失败原因聚合，请升级后端。",
+    "error_details": {
+      "upstream_status": "上游 HTTP 状态",
+      "title": "请求失败详情", "view": "查看失败详情", "status": "错误状态码", "code": "错误代码", "type": "错误类型", "stage": "失败阶段",
+      "request_id": "本地请求 ID", "upstream_id": "上游请求 ID", "message": "错误消息", "response": "错误响应字段摘要（已脱敏）",
+      "unavailable": "此记录未采集错误消息。旧记录或未上报详情的入口无法事后还原上游响应。",
+      "selected": "已选择凭证", "committed": "上游请求已提交", "limited": "已计入凭证速率限制"
+    },
     "failure_by_error_code": "按错误原因",
     "failure_by_stage": "按失败阶段",
     "failure_boundary_main": "主请求失败",
@@ -1560,6 +1567,8 @@
       "unknown": "未分类错误"
     },
     "failure_stages": {
+      "execution": "执行处理",
+      "preflight": "请求准备",
       "selection": "凭证选择",
       "admission": "资源准入",
       "upstream": "上游请求",

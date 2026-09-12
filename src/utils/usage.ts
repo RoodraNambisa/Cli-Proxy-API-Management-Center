@@ -6,6 +6,7 @@
 import type { ScriptableContext } from 'chart.js';
 import type { LatencyAccumulator, LatencyStats } from './usage/latency';
 import { normalizeUsageResponseMetrics, type UsageResponseMetrics } from './usage/responseMetrics';
+import { normalizeUsageFailureDetails, type UsageFailureDetails } from './usage/failureDetails';
 import {
   addLatencySample,
   calculateLatencyStatsFromDetails,
@@ -55,7 +56,7 @@ export interface ModelPrice {
   cache: number;
 }
 
-export interface UsageDetail extends UsageResponseMetrics {
+export interface UsageDetail extends UsageResponseMetrics, UsageFailureDetails {
   timestamp: string;
   source: string;
   auth_index: string | number | null;
@@ -617,6 +618,7 @@ export function collectUsageDetails(usageData: unknown): UsageDetail[] {
             null) as UsageDetail['auth_index'],
           latency_ms: latencyMs ?? undefined,
           ...normalizeUsageResponseMetrics(detailRaw),
+          ...normalizeUsageFailureDetails(detailRaw),
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
           request_service_tier: (() => {
@@ -702,6 +704,7 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
             null) as UsageDetail['auth_index'],
           latency_ms: latencyMs ?? undefined,
           ...normalizeUsageResponseMetrics(detailRaw),
+          ...normalizeUsageFailureDetails(detailRaw),
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
           __modelName: modelName,

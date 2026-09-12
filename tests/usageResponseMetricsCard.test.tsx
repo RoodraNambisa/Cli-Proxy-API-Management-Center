@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { RequestEventsDetailsCard } from '@/components/usage/RequestEventsDetailsCard';
 import { downloadBlob } from '@/utils/download';
@@ -97,6 +97,24 @@ describe('usage response metrics display and export', () => {
     for (const key of ['response_mode', 'generate', 'first_content_latency', 'first_packet_latency']) {
       expect(within(table).queryByRole('columnheader', { name: `usage_stats.${key}` })).toBeNull();
     }
+  });
+
+  test('opens a failed request and preserves its diagnostics in both exports', async () => {
+    const diagnostics = { status_code: 500, upstream_status_code: 200, error_code: 'resource_exhausted', error_type: 'server_error', failure_stage: 'upstream', error_message: 'capacity exhausted', error_response: '{"error":{"message":"capacity exhausted"}}', request_id: 'req-fixture', upstream_request_id: 'req-upstream' };
+    await showDetails([detail('error-model', { failed: true, ...diagnostics })]);
+    fireEvent.click(screen.getByRole('button', { name: /usage_stats.error_details.view/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('resource_exhausted')).toBeTruthy();
+    expect(within(dialog).getByText('capacity exhausted')).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'usage_stats.export_json' }));
+    const exported = JSON.parse(await readBlob(vi.mocked(downloadBlob).mock.calls.at(-1)![0].blob));
+    expect(exported[0]).toMatchObject(diagnostics);
+    fireEvent.click(screen.getByRole('button', { name: 'usage_stats.export_csv' }));
+    const csv = await readBlob(vi.mocked(downloadBlob).mock.calls.at(-1)![0].blob);
+    expect(csv.split('\n')[0]).toContain('status_code,upstream_status_code,error_code,error_type,failure_stage,error_message');
+    expect(csv).toContain('"500","200","resource_exhausted","server_error","upstream","capacity exhausted"');
   });
 
   test('provides labels and explanations in all supported locales', () => {

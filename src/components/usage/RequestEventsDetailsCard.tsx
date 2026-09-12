@@ -30,6 +30,8 @@ import { downloadBlob } from '@/utils/download';
 import { buildUsageDetailsQuery, type UsageDetailFilters } from './requestDetailsQuery';
 import type { UsageResourceStatus } from './hooks/useUsageData';
 import styles from '@/pages/UsagePage.module.scss';
+import { UsageErrorDetails } from './UsageErrorDetails';
+import { normalizeUsageFailureDetails, type UsageFailureDetails } from '@/utils/usage/failureDetails';
 
 const ALL_FILTER = '__all__';
 const FAILED_FILTER = 'failed';
@@ -51,6 +53,7 @@ type RequestEventRow = {
   sourceType: string;
   authIndex: string;
   failed: boolean;
+  diagnostics: UsageFailureDetails;
   latencyMs: number | null;
   stream: boolean | undefined;
   generate: boolean | undefined;
@@ -120,6 +123,7 @@ export function RequestEventsDetailsCard({
   });
 
   const [detailsOpened, setDetailsOpened] = useState(false);
+  const [selectedError, setSelectedError] = useState<UsageFailureDetails | null>(null);
   const [detailsUnsupported, setDetailsUnsupported] = useState(false);
   const [detailsPage, setDetailsPage] = useState<UsageDetailsPage | null>(null);
   const [modelFilter, setModelFilter] = useState(ALL_FILTER);
@@ -211,6 +215,7 @@ export function RequestEventsDetailsCard({
         sourceType,
         authIndex,
         failed: detail.failed === true,
+        diagnostics: normalizeUsageFailureDetails({ ...detail }),
         latencyMs,
         stream: detail.stream,
         generate: detail.generate,
@@ -472,6 +477,7 @@ export function RequestEventsDetailsCard({
 
   const handleExportCsv = () => {
     if (!rows.length) return;
+    const includeFailureDetails = rows.some((row) => row.diagnostics.error_code || row.diagnostics.status_code);
 
     const csvHeader = [
       'timestamp',
@@ -486,6 +492,7 @@ export function RequestEventsDetailsCard({
       ...(hasTTFTData ? ['ttft_ms'] : []),
       ...(hasFirstPacketData ? ['first_packet_ms'] : []),
       ...(hasServiceTierData ? ['request_service_tier', 'response_service_tier'] : []),
+      ...(includeFailureDetails ? ['status_code', 'upstream_status_code', 'error_code', 'error_type', 'failure_stage', 'error_message', 'request_id', 'upstream_request_id', 'error_response'] : []),
       'input_tokens',
       'output_tokens',
       'reasoning_tokens',
@@ -508,6 +515,7 @@ export function RequestEventsDetailsCard({
         ...(hasTTFTData ? [row.ttftMs ?? ''] : []),
         ...(hasFirstPacketData ? [row.firstPacketMs ?? ''] : []),
         ...(hasServiceTierData ? [row.requestServiceTier, row.responseServiceTier] : []),
+        ...(includeFailureDetails ? [row.diagnostics.status_code ?? '', row.diagnostics.upstream_status_code ?? '', row.diagnostics.error_code ?? '', row.diagnostics.error_type ?? '', row.diagnostics.failure_stage ?? '', row.diagnostics.error_message ?? '', row.diagnostics.request_id ?? '', row.diagnostics.upstream_request_id ?? '', row.diagnostics.error_response ?? ''] : []),
         row.inputTokens,
         row.outputTokens,
         row.reasoningTokens,
@@ -537,6 +545,7 @@ export function RequestEventsDetailsCard({
       source_raw: row.sourceRaw,
       auth_index: row.authIndex,
       failed: row.failed,
+      ...row.diagnostics,
       ...(row.stream !== undefined ? { stream: row.stream } : {}),
       ...(row.generate !== undefined ? { generate: row.generate } : {}),
       ...(hasLatencyData && row.latencyMs !== null ? { latency_ms: row.latencyMs } : {}),
@@ -790,7 +799,12 @@ export function RequestEventsDetailsCard({
                                 : styles.requestEventsResultSuccess
                             }
                           >
-                            {row.failed ? t('stats.failure') : t('stats.success')}
+                            {row.failed ? <Button type="button" variant="ghost" size="sm"
+                              style={{ color: 'inherit' }}
+                              title={row.diagnostics.error_message || row.diagnostics.error_code}
+                              aria-label={`${t('usage_stats.error_details.view')}: ${row.timestampLabel}`}
+                              onClick={() => setSelectedError(row.diagnostics)}
+                            >{t('stats.failure')}{row.diagnostics.status_code ? ` · ${row.diagnostics.status_code}` : ''} ⓘ</Button> : t('stats.success')}
                           </span>
                         </td>
                         {hasStreamData && (
@@ -862,6 +876,7 @@ export function RequestEventsDetailsCard({
           )}
         </>
       )}
+      <UsageErrorDetails detail={selectedError} onClose={() => setSelectedError(null)} />
     </Card>
   );
 }

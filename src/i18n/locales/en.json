@@ -1536,6 +1536,13 @@
     "failure_summary_description": "Aggregates primary requests and auxiliary attempts for the selected range. Only safe classifications are shown; response bodies and credential data are excluded.",
     "failure_summary_empty": "No failed requests in this time range.",
     "failure_summary_unsupported": "This backend does not support failure aggregation.",
+    "error_details": {
+      "upstream_status": "Upstream HTTP status",
+      "title": "Request failure details", "view": "View failure details", "status": "Error status", "code": "Error code", "type": "Error type", "stage": "Failure stage",
+      "request_id": "Local request ID", "upstream_id": "Upstream request ID", "message": "Error message", "response": "Error response fields (redacted)",
+      "unavailable": "No error message was captured. Responses from older records or paths without diagnostics cannot be reconstructed.",
+      "selected": "Credential selected", "committed": "Upstream request committed", "limited": "Counted toward credential rate limit"
+    },
     "failure_by_error_code": "By error reason",
     "failure_by_stage": "By failure stage",
     "failure_boundary_main": "Primary failures",
@@ -1560,6 +1567,8 @@
       "unknown": "Unclassified error"
     },
     "failure_stages": {
+      "execution": "Request execution",
+      "preflight": "Request preparation",
       "selection": "Credential selection",
       "admission": "Resource admission",
       "upstream": "Upstream request",

@@ -10,6 +10,7 @@ import type {
 } from '@/types';
 import { parseTimestampMs } from '@/utils/timestamp';
 import { normalizeUsageResponseMetrics } from '@/utils/usage/responseMetrics';
+import { normalizeUsageFailureDetails } from '@/utils/usage/failureDetails';
 import {
   buildUsageRangeKey,
   extractLatencyMs,
@@ -275,6 +276,7 @@ export const normalizeUsageDetail = (detail: unknown, index: number): UsageDetai
       | null,
     latency_ms: latencyMs ?? undefined,
     ...normalizeUsageResponseMetrics(record),
+    ...normalizeUsageFailureDetails(record),
     tokens: {
       input_tokens: normalizeTokenNumber(tokensRecord.input_tokens),
       output_tokens: normalizeTokenNumber(tokensRecord.output_tokens),
