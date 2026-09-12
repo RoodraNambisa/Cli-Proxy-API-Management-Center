@@ -66,6 +66,6 @@ export function ConfigSummary({ entries, empty = '—' }: { entries: [string, st
   const { t } = useTranslation();
   const populated = entries.filter(([, value]) => value?.trim());
   return populated.length ? <dl className={styles.summary}>{populated.map(([label, value], index) =>
-    <div key={`${label}-${index}`}><dt title={label}>{summaryLabels.has(label) ? t(`config_management.visual.common.summary_${label.replaceAll('-', '_')}`) : label}</dt><dd title={value}>{value}</dd></div>
+    <div key={`${label}-${index}`}><dt title={label}>{summaryLabels.has(label) ? t(`config_management.visual.common.summary_${label.replace(/-/g, '_')}`) : label}</dt><dd title={value}>{value}</dd></div>
   )}</dl> : <span>{empty}</span>;
 }
