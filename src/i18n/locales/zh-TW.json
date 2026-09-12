@@ -2625,6 +2625,10 @@
         }
       },
       "api_keys": {
+        "name_key_column": "名稱 / API 金鑰",
+        "provider_column": "提供者",
+        "priorities_column": "優先級",
+        "restrictions": "限制",
         "label": "API 金鑰清單（api-keys）",
         "add": "新增 API 金鑰",
         "generate": "產生",
@@ -2753,6 +2757,7 @@
         "payload_invalid_json": "請輸入有效的 JSON"
       },
       "common": {
+        "actions": "操作",
         "read_details": "查看完整說明：{{title}}",
         "edit": "編輯",
         "delete": "刪除",

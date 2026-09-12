@@ -71,6 +71,7 @@ describe('API Key provider groups', () => {
       <ApiKeysCardEditor value="client-key" active onChange={vi.fn()} disabled={false} />
     );
 
+  fireEvent.click(screen.getByRole('button', { name: /^config_management.visual.api_keys.restrictions:/ }));
     const grokCheckbox = await screen.findByRole('checkbox', { name: 'Grok (xai)' });
     fireEvent.click(grokCheckbox);
 
@@ -88,6 +89,7 @@ describe('API Key provider groups', () => {
 
     render(<ApiKeysCardEditor value="client-key" active onChange={vi.fn()} disabled={false} />);
 
+  fireEvent.click(screen.getByRole('button', { name: /^config_management.visual.api_keys.restrictions:/ }));
     const checkbox = await screen.findByRole('checkbox', {
       name: 'ChatGPT Web (chatgpt-web)',
     });
@@ -137,6 +139,7 @@ describe('API Key provider groups', () => {
       .mockReturnValueOnce(pendingRefresh);
 
     render(<ApiKeysCardEditor value="client-key" active onChange={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: /^config_management.visual.api_keys.restrictions:/ }));
     const grokCheckbox = await screen.findByRole('checkbox', { name: 'Grok (xai)' });
     fireEvent.click(
       screen.getByTitle('config_management.visual.api_keys.provider_refresh')

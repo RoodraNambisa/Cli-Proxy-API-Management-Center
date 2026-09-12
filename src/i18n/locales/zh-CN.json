@@ -2605,6 +2605,10 @@
         }
       },
       "api_keys": {
+        "name_key_column": "名称 / API 密钥",
+        "provider_column": "提供者",
+        "priorities_column": "优先级",
+        "restrictions": "限制",
         "label": "API 密钥列表 (api-keys)",
         "add": "添加 API 密钥",
         "generate": "生成",
@@ -2733,6 +2737,7 @@
         "payload_invalid_json": "请输入有效的 JSON"
       },
       "common": {
+        "actions": "操作",
         "read_details": "查看完整说明：{{title}}",
         "edit": "编辑",
         "delete": "删除",

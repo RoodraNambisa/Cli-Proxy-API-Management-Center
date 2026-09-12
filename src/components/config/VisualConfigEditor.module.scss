@@ -1257,34 +1257,7 @@
   flex-wrap: wrap;
 }
 
-.apiKeyItem {
-  align-items: stretch;
-  flex-direction: column;
-}
-
-.apiKeyItemTopRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  width: 100%;
-
-  :global(.item-meta) {
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  :global(.item-title) {
-    overflow-wrap: anywhere;
-  }
-}
-
-.apiKeyProviderSection {
-  width: 100%;
-  padding-top: 10px;
-  border-top: 1px dashed color-mix(in srgb, var(--border-color) 76%, transparent);
-}
+.destructiveAction { color: var(--danger-color); }
 
 .apiKeyPriorityFields {
   display: grid;
@@ -1310,19 +1283,6 @@
 
   input { min-width: 0; flex: 1; width: 0; }
   button { flex-shrink: 0; white-space: nowrap; }
-}
-
-.apiKeyProviderDisclosure {
-  width: 100%;
-
-  > summary {
-    cursor: pointer;
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 650;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-  }
 }
 
 .apiKeyProviderOptions {
@@ -1389,8 +1349,7 @@
 }
 
 @include mobile {
-  .apiKeyHeaderActions,
-  .apiKeyItemTopRow {
+  .apiKeyHeaderActions {
     width: 100%;
     align-items: stretch;
   }

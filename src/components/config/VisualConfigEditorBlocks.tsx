@@ -16,6 +16,8 @@ import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import {
   IconChevronDown,
   IconChevronUp,
+  IconCopy,
+  IconEdit,
   IconPlus,
   IconRefreshCw,
   IconSlidersHorizontal,
@@ -50,6 +52,8 @@ import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
 import { ApiKeyPriorityFields, type ApiKeyPriorityField } from './ApiKeyPriorityFields';
 import type { ClientApiKeyGroup } from '@/types/config';
 import { API_KEY_NAME_LIMIT, normalizeApiKeyName } from '@/utils/apiKeyGroups';
+import { ConfigTable, ConfigTableRow } from './ConfigTable';
+import { ConfigHelp } from './ConfigHelp';
 
 /** Minimum character count before the expand/collapse toggle appears. */
 const EXPAND_THRESHOLD = 30;
@@ -467,130 +471,80 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       {apiKeys.length === 0 ? (
         <div className={styles.emptyState}>{t('config_management.visual.api_keys.empty')}</div>
       ) : (
-        <div className="item-list" style={{ marginTop: 4 }}>
+        <ConfigTable label={t('config_management.visual.api_keys.label')} columns={[
+          t('config_management.visual.api_keys.name_key_column'),
+          t('config_management.visual.api_keys.provider_column'),
+          t('config_management.visual.api_keys.priorities_column'),
+          t('config_management.visual.api_keys.last_used'),
+          t('config_management.visual.common.actions'),
+        ]}>
           {apiKeys.map((key, index) => {
             const keyLastUsed = apiKeyStateValue(lastUsed, key);
             const keyProviders = apiKeyStateValue(providerGroups, key) ?? [];
             const keyPriorities = apiKeyStateValue(priorityGroups, key);
+            const title = nameForKey(key) || `${t('config_management.visual.api_keys.input_label')} #${index + 1}`;
+            const restrictionsKnown = providerGroupsLoaded && !providerGroupsError && !providerGroupsUnsupported && serverKeys.has(key);
+            const providers = keyProviders.length === 0
+              ? t('config_management.visual.api_keys.provider_unrestricted')
+              : keyProviders.map((provider) => providerOptions.find((option) => option.value === provider)?.label ?? provider).join(', ');
             return (
-            <div
-              key={renderApiKeyIds[index] ?? `${key}-${index}`}
-              className={`item-row ${styles.apiKeyItem}`}
-            >
-              <div className={styles.apiKeyItemTopRow}>
-                <div className="item-meta">
-                  <div className="pill">#{index + 1}</div>
-                  <div className="item-title">
-                    {nameForKey(key) || t('config_management.visual.api_keys.input_label')}
-                  </div>
-                  <div className="item-subtitle">{maskApiKey(String(key || ''))}</div>
-                  <div className="hint" title={t('config_management.visual.api_keys.last_used_hint')}>
-                    {t('config_management.visual.api_keys.last_used')}{' '}
-                    {keyLastUsed ? (
-                      <time dateTime={keyLastUsed}>{formatDateTime(keyLastUsed)}</time>
-                    ) : t(`config_management.visual.api_keys.${lastUsed ? 'last_used_never' : 'last_used_unavailable'}`)}
-                  </div>
-                </div>
-                <div className="item-actions">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleCopy(key)}
-                    disabled={disabled}
-                  >
-                    {t('common.copy')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => openEditModal(renderApiKeyIds[index] ?? '')}
-                    disabled={disabled}
-                  >
-                    {t('config_management.visual.common.edit')}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleDelete(renderApiKeyIds[index] ?? '')}
-                    disabled={disabled}
-                  >
-                    {t('config_management.visual.common.delete')}
-                  </Button>
-                </div>
-              </div>
-
-              <div className={styles.apiKeyProviderSection}>
+              <ConfigTableRow
+                key={renderApiKeyIds[index] ?? `${key}-${index}`}
+                title={title}
+                labels={[
+                  t('config_management.visual.api_keys.name_key_column'),
+                  t('config_management.visual.api_keys.provider_column'),
+                  t('config_management.visual.api_keys.priorities_column'),
+                  t('config_management.visual.api_keys.last_used'),
+                ]}
+                toggleLabel={t('config_management.visual.api_keys.restrictions')}
+                cells={[
+                  <div><strong>{title}</strong><div><code>{maskApiKey(String(key || ''))}</code></div></div>,
+                  <span title={restrictionsKnown ? providers : undefined}>{restrictionsKnown ? providers : '—'}</span>,
+                  restrictionsKnown && availablePriorities !== undefined ? <div>
+                    <div>{t('config_management.visual.api_keys.priority_allowed')}: {(keyPriorities?.allowedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.provider_unrestricted')}</div>
+                    <div>{t('config_management.visual.api_keys.priority_excluded')}: {(keyPriorities?.excludedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.priority_none')}</div>
+                  </div> : '—',
+                  <span title={t('config_management.visual.api_keys.last_used_hint')}>
+                    {keyLastUsed ? <time dateTime={keyLastUsed}>{formatDateTime(keyLastUsed)}</time>
+                      : t(`config_management.visual.api_keys.${lastUsed ? 'last_used_never' : 'last_used_unavailable'}`)}
+                  </span>,
+                ]}
+                actions={<>
+                  <Button variant="ghost" size="sm" onClick={() => handleCopy(key)} disabled={disabled} title={t('common.copy')} aria-label={t('common.copy')}><IconCopy size={15} /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => openEditModal(renderApiKeyIds[index] ?? '')} disabled={disabled} title={t('config_management.visual.common.edit')} aria-label={t('config_management.visual.common.edit')}><IconEdit size={15} /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(renderApiKeyIds[index] ?? '')} disabled={disabled} title={t('config_management.visual.common.delete')} aria-label={t('config_management.visual.common.delete')} className={styles.destructiveAction}><IconTrash2 size={15} /></Button>
+                </>}
+              >
                 {providerGroupsLoading && !providerGroupsLoaded ? (
-                  <div className="hint">
-                    {t('config_management.visual.api_keys.provider_loading')}
-                  </div>
+                  <div className="hint">{t('config_management.visual.api_keys.provider_loading')}</div>
                 ) : providerGroupsUnsupported ? (
-                  <div className="hint">
-                    {t('config_management.visual.api_keys.provider_unsupported')}
-                  </div>
+                  <div className="hint">{t('config_management.visual.api_keys.provider_unsupported')}</div>
                 ) : providerGroupsError ? (
-                  <div className="error-box">
-                    {t('config_management.visual.api_keys.provider_load_failed', {
-                      message: providerGroupsError,
-                    })}
-                  </div>
+                  <div className="error-box">{t('config_management.visual.api_keys.provider_load_failed', { message: providerGroupsError })}</div>
                 ) : !serverKeys.has(key) ? (
-                  <div className="hint">
-                    {t('config_management.visual.api_keys.provider_save_key_first')}
-                  </div>
+                  <div className="hint">{t('config_management.visual.api_keys.provider_save_key_first')}</div>
                 ) : (
-                  <details className={styles.apiKeyProviderDisclosure}>
-                    <summary>
-                      {t('config_management.visual.api_keys.provider_summary', {
-                        providers:
-                          keyProviders.length === 0
-                            ? t('config_management.visual.api_keys.provider_unrestricted')
-                            : keyProviders
-                                .map(
-                                  (provider) =>
-                                    providerOptions.find((option) => option.value === provider)
-                                      ?.label ?? provider
-                                )
-                                .join(', '),
-                      })}
-                    </summary>
-                    <div className={styles.apiKeyProviderOptions}>
-                      {providerOptions.map((option) => (
-                        <SelectionCheckbox
-                          key={option.value}
-                          checked={keyProviders.includes(option.value)}
-                          disabled={
-                            disabled || providerGroupsLoading || providerGroupUpdating !== null
-                          }
-                          ariaLabel={`${option.label} (${option.value})`}
-                          label={
-                            <span className={styles.apiKeyProviderOptionLabel}>
-                              <span>{option.label}</span>
-                              <code>{option.value}</code>
-                            </span>
-                          }
-                          onChange={(checked) =>
-                            void handleProviderToggle(key, option.value, checked)
-                          }
-                        />
-                      ))}
+                  <>
+                    <div>
+                      <strong>{t('config_management.visual.api_keys.provider_column')}</strong>
+                      <div className={styles.apiKeyProviderOptions}>
+                        {providerOptions.map((option) => (
+                          <SelectionCheckbox
+                            key={option.value}
+                            checked={keyProviders.includes(option.value)}
+                            disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null}
+                            ariaLabel={`${option.label} (${option.value})`}
+                            label={<span className={styles.apiKeyProviderOptionLabel}><span>{option.label}</span><code>{option.value}</code></span>}
+                            onChange={(checked) => void handleProviderToggle(key, option.value, checked)}
+                          />
+                        ))}
+                      </div>
+                      <ConfigHelp title={t('config_management.visual.api_keys.provider_column')} text={t('config_management.visual.api_keys.provider_hint')} />
                     </div>
-                    <div className="hint">
-                      {t('config_management.visual.api_keys.provider_hint')}
-                    </div>
-                  </details>
-                )}
-              </div>
-              {serverKeys.has(key) && !providerGroupsError && (
-                <div className={styles.apiKeyProviderSection}>
-                  {availablePriorities === undefined ? (
-                    <div className="hint">{t('config_management.visual.api_keys.priority_unsupported')}</div>
-                  ) : (
-                    <details className={styles.apiKeyProviderDisclosure}>
-                      <summary>
-                        {t('config_management.visual.api_keys.priority_allowed')}: {(keyPriorities?.allowedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.provider_unrestricted')}
-                        {' · '}{t('config_management.visual.api_keys.priority_excluded')}: {(keyPriorities?.excludedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.priority_none')}
-                      </summary>
+                    {availablePriorities === undefined ? (
+                      <div className="hint">{t('config_management.visual.api_keys.priority_unsupported')}</div>
+                    ) : <div>
                       <ApiKeyPriorityFields
                         options={[...new Set([...availablePriorities, ...(keyPriorities?.allowedPriorities ?? []), ...(keyPriorities?.excludedPriorities ?? [])])].sort((a, b) => b - a)}
                         allowedPriorities={keyPriorities?.allowedPriorities}
@@ -598,15 +552,14 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                         disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null}
                         onChange={(field, values) => handlePriorityChange(key, field, values)}
                       />
-                      <div className="hint">{t('config_management.visual.api_keys.priority_hint')}</div>
-                    </details>
-                  )}
-                </div>
-              )}
-            </div>
+                      <ConfigHelp title={t('config_management.visual.api_keys.priorities_column')} text={t('config_management.visual.api_keys.priority_hint')} />
+                    </div>}
+                  </>
+                )}
+              </ConfigTableRow>
             );
           })}
-        </div>
+        </ConfigTable>
       )}
 
       <div className="hint">{t('config_management.visual.api_keys.hint')}</div>

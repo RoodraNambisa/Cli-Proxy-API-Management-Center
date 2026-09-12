@@ -23,6 +23,7 @@ test.each(['constructor', 'toString', '__proto__'])('handles a valid key matchin
   vi.spyOn(apiKeysApi, 'getAccessSnapshot').mockResolvedValue({ keys: [key], groups: [], lastUsed: {}, availablePriorities: [0, 1] });
   const update = vi.spyOn(apiKeysApi, 'updatePriorities').mockResolvedValue({ status: 'ok' });
   const view = render(<ApiKeysCardEditor value={key} active onChange={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: /^config_management.visual.api_keys.restrictions:/ }));
   const checkbox = await screen.findByRole('checkbox', { name: 'config_management.visual.api_keys.priority_allowed: 1' });
   expect(view.container.querySelector('time')).toBeNull();
   expect(screen.getByText('config_management.visual.api_keys.last_used_never', { exact: false })).toBeTruthy();
@@ -66,6 +67,7 @@ test('saves and reloads a multi-selection without changing key contents', async 
     .mockResolvedValueOnce({ keys: ['fixture'], groups: [{ apiKey: 'fixture', providers: ['codex'], excludedPriorities: [2] }], availablePriorities: [0, 1, 2] })
     .mockResolvedValueOnce({ keys: ['fixture'], groups: [{ apiKey: 'fixture', providers: ['codex'], allowedPriorities: [1], excludedPriorities: [2] }], availablePriorities: [0, 1, 2] });
   render(<ApiKeysCardEditor value="fixture" active onChange={onChange} />);
+  fireEvent.click(screen.getByRole('button', { name: /^config_management.visual.api_keys.restrictions:/ }));
   const allowed = await screen.findByRole('checkbox', { name: 'config_management.visual.api_keys.priority_allowed: 1' });
   fireEvent.click(allowed);
   await waitFor(() => expect(update).toHaveBeenCalledWith('fixture', 'allowedPriorities', [1]));
@@ -81,6 +83,7 @@ test('does not show a saved selection after backend rejection', async () => {
   vi.spyOn(apiKeysApi, 'getAccessSnapshot').mockResolvedValue({ keys: ['fixture'], groups: [], availablePriorities: [0, 1] });
   vi.spyOn(apiKeysApi, 'updatePriorities').mockRejectedValue(new Error('rejected'));
   render(<ApiKeysCardEditor value="fixture" active onChange={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: /^config_management.visual.api_keys.restrictions:/ }));
   const checkbox = await screen.findByRole('checkbox', { name: 'config_management.visual.api_keys.priority_allowed: 1' });
   fireEvent.click(checkbox);
   await waitFor(() => expect(checkbox.hasAttribute('disabled')).toBe(false));

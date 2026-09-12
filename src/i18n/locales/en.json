@@ -2601,6 +2601,10 @@
         }
       },
       "api_keys": {
+        "name_key_column": "Name / API key",
+        "provider_column": "Providers",
+        "priorities_column": "Priorities",
+        "restrictions": "Restrictions",
         "label": "API Keys List (api-keys)",
         "add": "Add API Key",
         "generate": "Generate",
@@ -2729,6 +2733,7 @@
         "payload_invalid_json": "Enter valid JSON"
       },
       "common": {
+        "actions": "Actions",
         "read_details": "Full explanation: {{title}}",
         "edit": "Edit",
         "delete": "Delete",

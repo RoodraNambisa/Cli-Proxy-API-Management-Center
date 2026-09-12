@@ -39,6 +39,7 @@ test('refreshes displayed usage without saving or dirtying the key configuration
 test('does not claim an unused key when the backend does not expose usage', async () => {
   vi.spyOn(apiKeysApi, 'getAccessSnapshot').mockResolvedValue({ keys: ['fixture'], groups: [] });
   render(<ApiKeysCardEditor value="fixture" active onChange={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: /^config_management.visual.api_keys.restrictions:/ }));
   await screen.findByRole('checkbox', { name: 'Codex (codex)' });
   expect(screen.getByText('config_management.visual.api_keys.last_used_unavailable', { exact: false })).toBeTruthy();
   expect(screen.queryByText('config_management.visual.api_keys.last_used_never', { exact: false })).toBeNull();

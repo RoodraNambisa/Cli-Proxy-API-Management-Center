@@ -2598,6 +2598,10 @@
         }
       },
       "api_keys": {
+        "name_key_column": "Имя / API-ключ",
+        "provider_column": "Провайдеры",
+        "priorities_column": "Приоритеты",
+        "restrictions": "Ограничения",
         "label": "Список API-ключей (api-keys)",
         "add": "Добавить API-ключ",
         "generate": "Сгенерировать",
@@ -2726,6 +2730,7 @@
         "payload_invalid_json": "Введите корректный JSON"
       },
       "common": {
+        "actions": "Действия",
         "read_details": "Подробное описание: {{title}}",
         "edit": "Изменить",
         "delete": "Удалить",
