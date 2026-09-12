@@ -522,13 +522,10 @@ export function AuthFileCard(props: AuthFileCardProps) {
               <span className={styles.metaLabel}>{t('auth_files.file_modified')}</span>
               <span className={styles.metaValue}>{formatModified(file)}</span>
             </div>
-            <div
-              className={`${styles.metaItem} ${styles.priorityBadge}`}
-              title={priorityValue === undefined ? t('auth_files.priority_default_hint') : undefined}
-            >
+            <div className={`${styles.metaItem} ${styles.priorityBadge}`}>
               <span className={styles.metaLabel}>{t('auth_files.priority_display')}</span>
               <span className={`${styles.metaValue} ${styles.priorityValue}`}>
-                {priorityValue ?? t('auth_files.priority_default_value')}
+                {priorityValue ?? 0}
               </span>
             </div>
           </div>

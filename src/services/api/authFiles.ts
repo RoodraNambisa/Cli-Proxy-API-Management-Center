@@ -707,7 +707,7 @@ const authFilesListQuery = (params: AuthFilesListParams) => ({
   page_size: params.pageSize,
   provider: params.provider || 'all',
   plan: params.plan || 'all',
-  priority: params.priority || 'all',
+  priority: params.priority === '__unset__' ? '0' : params.priority || 'all',
   account_info_recovery_state: params.recoveryState || 'all',
   problem_only: params.problemOnly === true,
   enabled_only: params.enabledOnly === true,
@@ -960,8 +960,8 @@ export const authFilesApi = {
     params: AuthFilesListParams,
     connection?: ApiClientConnectionSnapshot,
     signal?: AbortSignal
-  ) =>
-    dedupeAuthFilesResponse(
+  ): Promise<AuthFilesResponse> => {
+    const response = dedupeAuthFilesResponse(
       connection
         ? await apiClient.getAtConnection<AuthFilesResponse>(connection, '/auth-files', {
             params: authFilesListQuery(params),
@@ -971,7 +971,17 @@ export const authFilesApi = {
             params: authFilesListQuery(params),
             ...(signal ? { signal } : {}),
           })
-    ),
+    );
+    // Older pagination separates unset priorities. Use the existing local filtering path
+    // only when that would make an effective-zero result incomplete.
+    if (
+      authFilesListQuery(params).priority === '0' && response.pagination?.enabled &&
+      response.facets?.priorities?.some((facet) => facet.value === '__unset__')
+    ) {
+      return authFilesApi.list(connection, signal);
+    }
+    return response;
+  },
 
   listSelection: async (params: AuthFilesListParams, signal?: AbortSignal) =>
     dedupeAuthFilesResponse(

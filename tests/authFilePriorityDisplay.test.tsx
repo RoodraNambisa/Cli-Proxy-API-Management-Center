@@ -4,10 +4,7 @@ import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { AuthFileCard, type AuthFileCardProps } from '@/features/authFiles/components/AuthFileCard';
 import type { AuthFileItem } from '@/types';
-import en from '@/i18n/locales/en.json';
-import ru from '@/i18n/locales/ru.json';
 import zhCN from '@/i18n/locales/zh-CN.json';
-import zhTW from '@/i18n/locales/zh-TW.json';
 
 const i18n = createInstance();
 beforeAll(() => i18n.init({ lng: 'zh-CN', resources: { 'zh-CN': { translation: zhCN } }, interpolation: { escapeValue: false } }));
@@ -28,14 +25,14 @@ function renderCard(file: AuthFileItem, compact = true) {
 test.each([true, false])('shows default zero without adding a saved value, compact=%s', (compact) => {
   const file = Object.freeze({ name: 'default-priority.json', type: 'codex' });
   const badge = renderCard(file, compact);
-  expect(within(badge).getByText('0（默认）')).toBeTruthy();
-  expect(badge.title).toBe(zhCN.auth_files.priority_default_hint);
+  expect(within(badge).getByText('0')).toBeTruthy();
+  expect(badge.title).toBe('');
   expect(file).not.toHaveProperty('priority');
 });
 
 test.each([null, '', 'invalid'])('shows effective zero for a legacy value %s', (priority) => {
   const badge = renderCard({ name: 'legacy.json', type: 'codex', priority });
-  expect(within(badge).getByText('0（默认）')).toBeTruthy();
+  expect(within(badge).getByText('0')).toBeTruthy();
 });
 
 test.each([0, '0', -1, '4'])('preserves an explicit priority %s', (priority) => {
@@ -43,14 +40,4 @@ test.each([0, '0', -1, '4'])('preserves an explicit priority %s', (priority) => 
   expect(within(badge).getByText(String(priority))).toBeTruthy();
   expect(within(badge).queryByText('0（默认）')).toBeNull();
   expect(badge.title).toBe('');
-});
-
-test('all locales identify default zero in the card and filter separately from explicit zero', () => {
-  for (const { auth_files: text } of [en, ru, zhCN, zhTW]) {
-    expect(text.priority_default_value).toContain('0');
-    expect(text.priority_default_hint).toContain('0');
-    expect(text.priority_filter_unset).toContain('0');
-    expect(text.priority_filter_explicit_zero).toContain('0');
-    expect(text.priority_filter_unset).not.toBe(text.priority_filter_explicit_zero);
-  }
 });

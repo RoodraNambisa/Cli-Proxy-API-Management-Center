@@ -6,6 +6,7 @@ import {
   getAvailablePriorityFilters,
   matchesAuthFilePlanFilter,
   matchesAuthFilePriorityFilter,
+  normalizeAuthFilePriorityFilter,
 } from '@/features/authFiles/linkedFilters';
 import type { AuthFileItem } from '@/types';
 
@@ -27,7 +28,7 @@ describe('linked auth file filters', () => {
   });
 
   test('keeps priority choices independent from the selected plan', () => {
-    expect(getAvailablePriorityFilters(files)).toEqual(['4', '1', UNSET_PRIORITY_FILTER]);
+    expect(getAvailablePriorityFilters(files)).toEqual(['4', '1', '0']);
   });
 
   test('uses the same matching semantics for options and final filtering', () => {
@@ -35,5 +36,15 @@ describe('linked auth file filters', () => {
     expect(matchesAuthFilePlanFilter(files[0], 'free')).toBe(false);
     expect(matchesAuthFilePriorityFilter(files[0], '4')).toBe(true);
     expect(matchesAuthFilePriorityFilter(files[4], UNSET_PRIORITY_FILTER)).toBe(true);
+  });
+
+  test('merges implicit and explicit zero for choices, matching and saved legacy filters', () => {
+    const both = [...files, { name: 'explicit-zero.json', type: 'codex', priority: 0, plan_type: 'plus' }];
+    expect(getAvailablePriorityFilters(both)).toEqual(['4', '1', '0']);
+    for (const filter of ['0', UNSET_PRIORITY_FILTER]) {
+      expect(both.filter((file) => matchesAuthFilePriorityFilter(file, filter)).map((file) => file.name)).toEqual(['free-unset.json', 'explicit-zero.json']);
+      expect(getAvailablePlanFilters(both, filter)).toEqual(['free', 'plus']);
+    }
+    expect(normalizeAuthFilePriorityFilter(UNSET_PRIORITY_FILTER)).toBe('0');
   });
 });

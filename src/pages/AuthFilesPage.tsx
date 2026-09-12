@@ -72,7 +72,7 @@ import { useChatGptWebAccountInfoRefresh } from '@/features/authFiles/hooks/useC
 import {
   ALL_PLAN_FILTER,
   ALL_PRIORITY_FILTER,
-  UNSET_PRIORITY_FILTER,
+  normalizeAuthFilePriorityFilter,
   getAvailablePlanFilters,
   getAvailablePriorityFilters,
   matchesAuthFilePlanFilter,
@@ -646,7 +646,7 @@ export function AuthFilesPage() {
         setPlanFilter(persisted.planFilter);
       }
       if (typeof persisted.priorityFilter === 'string' && persisted.priorityFilter.trim()) {
-        setPriorityFilter(persisted.priorityFilter);
+        setPriorityFilter(normalizeAuthFilePriorityFilter(persisted.priorityFilter));
       }
       if (
         typeof persisted.recoveryFilter === 'string' &&
@@ -895,7 +895,8 @@ export function AuthFilesPage() {
   const availablePriorityFilters = useMemo(
     () =>
       serverPagination
-        ? (filesFacets?.priorities.map((facet) => facet.value) ?? [])
+        ? [...new Set(filesFacets?.priorities.map((facet) => normalizeAuthFilePriorityFilter(facet.value)) ?? [])]
+            .sort((a, b) => Number(b) - Number(a))
         : getAvailablePriorityFilters(filesMatchingStatusFilters),
     [filesFacets?.priorities, filesMatchingStatusFilters, serverPagination]
   );
@@ -903,19 +904,10 @@ export function AuthFilesPage() {
   const priorityFilterOptions = useMemo(() => {
     return [
       { value: ALL_PRIORITY_FILTER, label: t('auth_files.priority_filter_all') },
-      ...availablePriorityFilters.map((priority) =>
-        priority === UNSET_PRIORITY_FILTER
-          ? {
-              value: priority,
-              label: t('auth_files.priority_filter_unset'),
-            }
-          : {
-              value: priority,
-              label: priority === '0'
-                ? t('auth_files.priority_filter_explicit_zero')
-                : t('auth_files.priority_filter_value', { priority }),
-            }
-      ),
+      ...availablePriorityFilters.map((priority) => ({
+        value: priority,
+        label: t('auth_files.priority_filter_value', { priority }),
+      })),
     ];
   }, [availablePriorityFilters, t]);
 

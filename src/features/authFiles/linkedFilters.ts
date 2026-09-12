@@ -6,6 +6,9 @@ export const ALL_PLAN_FILTER = 'all';
 export const ALL_PRIORITY_FILTER = 'all';
 export const UNSET_PRIORITY_FILTER = '__unset__';
 
+export const normalizeAuthFilePriorityFilter = (value: string): string =>
+  value === UNSET_PRIORITY_FILTER ? '0' : value;
+
 export const matchesAuthFilePlanFilter = (file: AuthFileItem, planFilter: string): boolean =>
   planFilter === ALL_PLAN_FILTER || resolveCodexPlanType(file) === planFilter;
 
@@ -15,10 +18,8 @@ export const matchesAuthFilePriorityFilter = (
 ): boolean => {
   if (priorityFilter === ALL_PRIORITY_FILTER) return true;
 
-  const priority = parsePriorityValue(file.priority ?? file['priority']);
-  return priorityFilter === UNSET_PRIORITY_FILTER
-    ? priority === undefined
-    : priority !== undefined && String(priority) === priorityFilter;
+  const priority = parsePriorityValue(file.priority ?? file['priority']) ?? 0;
+  return String(priority) === normalizeAuthFilePriorityFilter(priorityFilter);
 };
 
 export const getAvailablePlanFilters = (
@@ -36,21 +37,10 @@ export const getAvailablePlanFilters = (
 
 export const getAvailablePriorityFilters = (files: readonly AuthFileItem[]): string[] => {
   const priorities = new Set<number>();
-  let hasUnsetPriority = false;
-
   files.forEach((file) => {
-    const priority = parsePriorityValue(file.priority ?? file['priority']);
-    if (priority === undefined) {
-      hasUnsetPriority = true;
-      return;
-    }
+    const priority = parsePriorityValue(file.priority ?? file['priority']) ?? 0;
     priorities.add(priority);
   });
 
-  return [
-    ...Array.from(priorities)
-      .sort((a, b) => b - a)
-      .map(String),
-    ...(hasUnsetPriority ? [UNSET_PRIORITY_FILTER] : []),
-  ];
+  return Array.from(priorities).sort((a, b) => b - a).map(String);
 };

@@ -132,6 +132,37 @@ describe('auth files server-side pagination', () => {
     expect(resetRecoveryState).toHaveBeenCalledOnce();
   });
 
+  test.each(['0', '__unset__'])('merges legacy zero filtering without changing connection or cancellation, priority=%s', async (priority) => {
+    const connection = apiClient.captureConnection();
+    const signal = new AbortController().signal;
+    const get = vi.spyOn(apiClient, 'getAtConnection')
+      .mockResolvedValueOnce({
+        files: [{ name: 'explicit.json', type: 'codex', priority: 0 }], total: 1,
+        pagination: { enabled: true, page: 1, page_size: 9, total_pages: 1 },
+        facets: { priorities: [{ value: '__unset__', count: 1 }, { value: '0', count: 1 }], providers: [], plans: [] },
+      })
+      .mockResolvedValueOnce({ files: [
+        { name: 'default.json', type: 'codex' }, { name: 'explicit.json', type: 'codex', priority: 0 },
+      ] });
+    const result = await authFilesApi.listPaged({ ...params(1), priority }, connection, signal);
+    expect(get).toHaveBeenNthCalledWith(1, connection, '/auth-files', expect.objectContaining({ signal, params: expect.objectContaining({ priority: '0' }) }));
+    expect(get).toHaveBeenNthCalledWith(2, connection, '/auth-files', { signal });
+    expect(result.pagination).toBeUndefined();
+    expect(result.files.map((file) => file.name)).toEqual(['default.json', 'explicit.json']);
+  });
+
+  test('keeps server pagination for a backend whose zero facet already includes defaults', async () => {
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({
+      files: [{ name: 'default.json', type: 'codex' }], total: 2,
+      pagination: { enabled: true, page: 1, page_size: 1, total_pages: 2 },
+      facets: { priorities: [{ value: '0', count: 2 }], providers: [], plans: [] },
+    });
+    const result = await authFilesApi.listPaged({ ...params(1), pageSize: 1 });
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(result.pagination?.enabled).toBe(true);
+    expect(result.total).toBe(2);
+  });
+
   test('falls back to a legacy full response when pagination metadata is absent', async () => {
     vi.spyOn(apiClient, 'get').mockResolvedValue({
       files: [
