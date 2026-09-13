@@ -645,18 +645,22 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
 export const StringListEditor = memo(function StringListEditor({
   value,
   disabled,
+  compact = false,
   placeholder,
   inputAriaLabel,
   onChange,
 }: {
   value: string[];
   disabled?: boolean;
+  compact?: boolean;
   placeholder?: string;
   inputAriaLabel?: string;
   onChange: (next: string[]) => void;
 }) {
   const { t } = useTranslation();
   const items = value.length ? value : [];
+  const pendingFocusId = useRef<string | null>(null);
+  const compactItemsRef = useRef<HTMLDivElement>(null);
   const [itemIds, setItemIds] = useState(() => items.map(() => makeClientId()));
   const renderItemIds = useMemo(() => {
     if (itemIds.length === items.length) return itemIds;
@@ -667,16 +671,70 @@ export const StringListEditor = memo(function StringListEditor({
     ];
   }, [itemIds, items.length]);
 
+  useLayoutEffect(() => {
+    const active = document.activeElement;
+    if (compact && active instanceof HTMLInputElement && compactItemsRef.current?.contains(active)) {
+      // Typing can move an auto-sized chip onto a new row in the scroll area.
+      active.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [compact, value]);
+
   const updateItem = (index: number, nextValue: string) =>
     onChange(items.map((item, i) => (i === index ? nextValue : item)));
   const addItem = () => {
-    setItemIds([...renderItemIds, makeClientId()]);
+    const id = makeClientId();
+    if (compact) pendingFocusId.current = id;
+    setItemIds([...renderItemIds, id]);
     onChange([...items, '']);
   };
   const removeItem = (index: number) => {
     setItemIds(renderItemIds.filter((_, i) => i !== index));
     onChange(items.filter((_, i) => i !== index));
   };
+
+  if (compact) {
+    return (
+      <div className={styles.compactStringList}>
+        {items.length > 0 && <div ref={compactItemsRef} className={styles.compactStringItems}>
+          {items.map((item, index) => (
+            <div key={renderItemIds[index] ?? `item-${index}`} className={styles.compactStringItem}>
+              <input
+                ref={(node) => {
+                  if (node && pendingFocusId.current === renderItemIds[index]) {
+                    pendingFocusId.current = null;
+                    node.focus();
+                  }
+                }}
+                className={styles.compactStringInput}
+                size={Math.max(10, Math.min((item || placeholder || '').length, 32))}
+                placeholder={placeholder}
+                aria-label={inputAriaLabel ?? placeholder}
+                title={item || placeholder}
+                spellCheck={false}
+                value={item}
+                disabled={disabled}
+                onChange={(event) => updateItem(index, event.target.value.replace(/[\r\n]/g, ''))}
+              />
+              <button
+                type="button"
+                className={styles.compactStringRemove}
+                onClick={() => removeItem(index)}
+                disabled={disabled}
+                title={t('common.delete')}
+                aria-label={`${t('common.delete')}: ${item || index + 1}`}
+              >
+                <IconTrash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>}
+        <Button type="button" variant="secondary" size="sm" className={styles.compactStringAdd} onClick={addItem} disabled={disabled}>
+          <IconPlus size={14} />
+          {t('config_management.visual.common.add')}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.stringList}>

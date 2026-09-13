@@ -234,6 +234,7 @@ function FieldShell({
   htmlFor,
   hint,
   hintId,
+  compactHint = false,
   error,
   errorId,
   children,
@@ -243,6 +244,7 @@ function FieldShell({
   htmlFor?: string;
   hint?: string;
   hintId?: string;
+  compactHint?: boolean;
   error?: string;
   errorId?: string;
   children: ReactNode;
@@ -260,7 +262,7 @@ function FieldShell({
       ) : null}
       {hint ? (
         <div id={hintId} className={styles.fieldHint}>
-          {hint}
+          {compactHint ? <ConfigHelp title={label} text={hint} /> : hint}
         </div>
       ) : null}
     </div>
@@ -337,8 +339,10 @@ function NativeImageEndpointEditor({
         <FieldShell
           label={t('config_management.visual.sections.images.native_models')}
           hint={t('config_management.visual.sections.images.native_models_hint')}
+          compactHint
         >
           <StringListEditor
+            compact
             value={value.models}
             disabled={disabled}
             placeholder={t('config_management.visual.sections.images.native_models_placeholder')}
@@ -512,8 +516,10 @@ function LegacyImagesSettings({
           <FieldShell
             label={t('config_management.visual.sections.images.image_models')}
             hint={t('config_management.visual.sections.images.image_models_hint')}
+            compactHint
           >
             <StringListEditor
+              compact
               value={values.images.imageModels}
               disabled={disabled}
               placeholder="gpt-image-2.5"
@@ -2299,28 +2305,38 @@ export function VisualConfigEditor({
                   </FieldShell>
                 </div>
               </div>
-              <SectionGrid>
-                <Input
-                  id="config-chatgpt-web-image-upstream-model"
+              <div className={styles.webImageModelGrid}>
+                <FieldShell
+                  htmlFor="config-chatgpt-web-image-upstream-model"
                   label={t('config_management.settings_center.chatgpt_web.image_upstream_model')}
                   hint={t(
                     'config_management.settings_center.chatgpt_web.image_upstream_model_description'
                   )}
-                  placeholder="auto"
-                  value={values.chatgptWebImageUpstreamModel}
-                  disabled={disabled}
-                  onChange={(event) =>
-                    onChange({ chatgptWebImageUpstreamModel: event.target.value })
-                  }
-                />
+                  hintId="config-chatgpt-web-image-upstream-model-hint"
+                  compactHint
+                >
+                  <input
+                    id="config-chatgpt-web-image-upstream-model"
+                    className="input"
+                    aria-describedby="config-chatgpt-web-image-upstream-model-hint"
+                    placeholder="auto"
+                    value={values.chatgptWebImageUpstreamModel}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      onChange({ chatgptWebImageUpstreamModel: event.target.value })
+                    }
+                  />
+                </FieldShell>
                 <div id="config-chatgpt-web-image-models" tabIndex={-1}>
                   <FieldShell
                     label={t('config_management.settings_center.chatgpt_web.image_models')}
                     hint={t(
                       'config_management.settings_center.chatgpt_web.image_models_description'
                     )}
+                    compactHint
                   >
                     <StringListEditor
+                      compact
                       value={values.chatgptWebImageModels}
                       disabled={disabled}
                       placeholder="gpt-image-2.5"
@@ -2331,7 +2347,7 @@ export function VisualConfigEditor({
                     />
                   </FieldShell>
                 </div>
-              </SectionGrid>
+              </div>
               <ToggleRow
                 title={t(
                   'config_management.settings_center.chatgpt_web.ignore_unsupported_image_params'

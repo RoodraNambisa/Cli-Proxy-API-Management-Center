@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { useState } from 'react';
 import { describe, expect, test, vi } from 'vitest';
 import { VisualConfigEditor } from '@/components/config/VisualConfigEditor';
+import { StringListEditor } from '@/components/config/VisualConfigEditorBlocks';
 import { CONFIG_PAGE_DEFINITIONS, CONFIG_SEARCH_DEFINITIONS, configPageHasDirtyFields } from '@/components/config/configCatalog';
 import { DEFAULT_VISUAL_VALUES } from '@/types/visualConfig';
 import en from '@/i18n/locales/en.json';
@@ -15,6 +17,33 @@ vi.mock('react-i18next', async (importOriginal) => ({
 }));
 
 describe('Provider-scoped image model controls', () => {
+  test('keeps a newly added alias focused and visible as it grows, and preserves edits after deletion', () => {
+    function Editor() {
+      const [value, setValue] = useState(['gpt-image-2', 'gpt-image-2.5']);
+      return <StringListEditor compact value={value} inputAriaLabel="Image aliases" onChange={setValue} />;
+    }
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView');
+    try {
+      render(<Editor />);
+      fireEvent.click(screen.getByRole('button', { name: 'config_management.visual.common.add' }));
+      const added = screen.getAllByRole('textbox')[2] as HTMLInputElement;
+      expect(document.activeElement).toBe(added);
+      scroll.mockClear();
+      const longName = 'custom-image-alias-with-a-very-long-name-for-width-check';
+      fireEvent.change(added, { target: { value: longName } });
+      expect(document.activeElement).toBe(added);
+      expect(added.value).toBe(longName);
+      expect(added.title).toBe(longName);
+      expect(scroll).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+
+      fireEvent.click(screen.getByRole('button', { name: 'common.delete: gpt-image-2' }));
+      expect(screen.getAllByRole('textbox').map((node) => (node as HTMLInputElement).value)).toEqual(['gpt-image-2.5', longName]);
+      expect(screen.getAllByRole('textbox')[1]).toBe(added);
+    } finally {
+      scroll.mockRestore();
+    }
+  });
+
   test.each([
     ['config-images-tool-models', 'provider-codex', 'images.imageModels', 'images.image-models'],
     ['config-chatgpt-web-image-models', 'provider-chatgpt-web', 'chatgptWebImageModels', 'images.chatgpt-web.image-models'],
