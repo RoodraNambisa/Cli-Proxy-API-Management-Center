@@ -46,6 +46,35 @@ describe('Passive Codex quota data', () => {
     ]);
   });
 
+  test('scopes the main windows to the active pool without renaming other quota groups', () => {
+    const signals = {
+      'X-Codex-Active-Limit': 'codex_bengalfox',
+      'X-Codex-Primary-Used-Percent': '0',
+      'X-Codex-Primary-Window-Minutes': '300',
+      'X-Codex-Secondary-Used-Percent': '2',
+      'X-Codex-Secondary-Window-Minutes': '10080',
+      'X-Codex-Additional-Spark-Limit-Name': 'GPT-5.3-Codex-Spark',
+      'X-Codex-Additional-Spark-Secondary-Used-Percent': '2',
+      'X-Codex-Code-Review-Primary-Used-Percent': '10',
+    };
+    expect(codexObservedQuotaWindows(observation(signals))).toMatchObject([
+      { id: 'primary', name: 'codex_bengalfox', usedPercent: 0 },
+      { id: 'secondary', name: 'codex_bengalfox', usedPercent: 2 },
+      { id: 'code-review-primary', name: undefined, usedPercent: 10 },
+      { id: 'additional-spark-secondary', name: 'GPT-5.3-Codex-Spark', usedPercent: 2 },
+    ]);
+
+    const next = observation({
+      'X-Codex-Active-Limit': 'premium',
+      'X-Codex-Primary-Used-Percent': '35',
+      'X-Codex-Primary-Window-Minutes': '10080',
+    });
+    expect(codexObservedQuotaWindows(next)).toMatchObject([
+      { id: 'primary', name: 'premium', usedPercent: 35, minutes: 10080 },
+    ]);
+    expect(codexObservedQuotaWindows(observation({ 'X-Codex-Primary-Used-Percent': '35' }))[0].name).toBeUndefined();
+  });
+
   test('prefers valid absolute resets and never carries data from a previous list response', () => {
     const snapshot = observation({ 'X-Codex-Primary-Reset-At': '1789042200', 'X-Codex-Primary-Reset-After-Seconds': '3600' });
     expect(codexObservedQuotaWindows(snapshot)[0].resetAt).toBe(new Date(1789042200000).toISOString());

@@ -68,6 +68,34 @@ describe('Codex passive quota display', () => {
     expect(container.querySelector('time')?.dateTime).toBe(entry.quota_observation?.observed_at);
   });
 
+  test('labels changing active pools so unrelated weekly limits are not presented as one balance', () => {
+    const additional = {
+      'X-Codex-Additional-Spark-Limit-Name': 'GPT-5.3-Codex-Spark',
+      'X-Codex-Additional-Spark-Secondary-Used-Percent': '2',
+      'X-Codex-Additional-Spark-Secondary-Window-Minutes': '10080',
+    };
+    const { rerender } = render(panel(file({
+      ...additional,
+      'X-Codex-Active-Limit': 'codex_bengalfox',
+      'X-Codex-Secondary-Used-Percent': '2',
+      'X-Codex-Secondary-Window-Minutes': '10080',
+    })));
+    const weekly = en.codex_quota.secondary_window;
+    expect(screen.getByRole('progressbar', { name: `codex_bengalfox · ${weekly}` }).getAttribute('aria-valuenow')).toBe('98');
+    expect(screen.getByRole('progressbar', { name: `GPT-5.3-Codex-Spark · ${weekly}` }).getAttribute('aria-valuenow')).toBe('98');
+    expect(screen.queryByRole('progressbar', { name: weekly })).toBeNull();
+
+    rerender(panel(file({
+      ...additional,
+      'X-Codex-Active-Limit': 'premium',
+      'X-Codex-Primary-Used-Percent': '35',
+      'X-Codex-Primary-Window-Minutes': '10080',
+    })));
+    expect(screen.getByRole('progressbar', { name: `premium · ${weekly}` }).getAttribute('aria-valuenow')).toBe('65');
+    expect(screen.queryByText(/codex_bengalfox/)).toBeNull();
+    expect(screen.getByRole('progressbar', { name: `GPT-5.3-Codex-Spark · ${weekly}` }).getAttribute('aria-valuenow')).toBe('98');
+  });
+
   test('labels periods by measured duration instead of the primary or secondary position', () => {
     render(panel(file({
       'X-Codex-Primary-Used-Percent': '2', 'X-Codex-Primary-Window-Minutes': '10080',

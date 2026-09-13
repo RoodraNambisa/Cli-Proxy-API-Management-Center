@@ -75,7 +75,9 @@ export function codexObservedQuotaWindows(observation: CodexQuotaObservation): C
     windows.set(id, {
       id,
       group: prefix.replace(/-$/, ''),
-      name: prefix ? signals[`x-codex-${prefix}limit-name`] : undefined,
+      // Unprefixed windows describe this response's active pool, which may change
+      // between requests. They are not necessarily the account's premium quota.
+      name: prefix ? signals[`x-codex-${prefix}limit-name`] : signals['x-codex-active-limit'],
       kind: kind as 'primary' | 'secondary',
       usedPercent: used !== null && used <= 100 ? used : null,
       minutes: minutes !== null && minutes > 0 ? minutes : null,
