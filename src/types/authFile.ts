@@ -33,6 +33,7 @@ export type ChatGptWebAccountInfoRecoveryState =
   | 'interaction_required';
 
 export interface AuthFileModelItem {
+	upstream_id?: string;
   id: string;
   display_name?: string;
   type?: string;

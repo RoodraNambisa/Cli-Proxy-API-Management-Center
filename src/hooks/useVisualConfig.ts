@@ -1,3 +1,4 @@
+import { grokConfigErrors, readGrokConfig, writeGrokConfig } from '@/utils/grokConfig';
 import { useCallback, useMemo, useReducer } from 'react';
 import { apiKeyNamesEqual, normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
 import { writeApiKeyNamesYaml } from '@/utils/apiKeyNamesYaml';
@@ -1716,6 +1717,7 @@ export function getVisualConfigValidationErrors(
     ...fixedErrorCooldownErrors,
     ...errorResponseRewriteErrors,
     ...codexLiveMediaErrors(values.codexLiveMediaRelay),
+    ...grokConfigErrors(values.grok),
     ...nonRetryableErrorErrors,
     ...oauthRequestScopedErrorErrors,
     ...authModelExclusionErrors,
@@ -2232,6 +2234,9 @@ function getNextDirtyFields(
     }
   };
 
+  if (Object.prototype.hasOwnProperty.call(patch, 'grok')) {
+    updateDirty('grok', JSON.stringify(nextValues.grok) === JSON.stringify(baselineValues.grok));
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'host')) {
     updateDirty('host', nextValues.host === baselineValues.host);
   }
@@ -3369,6 +3374,7 @@ export function useVisualConfig() {
           : 'safe';
 
       const newValues: VisualConfigValues = {
+        grok: readGrokConfig(readMergedYamlField(document, ['xai'])),
         host: typeof parsed.host === 'string' ? parsed.host : '',
         port: String(parsed.port ?? ''),
 
@@ -3857,6 +3863,10 @@ export function useVisualConfig() {
           doc.contents = doc.createNode({}) as unknown as typeof doc.contents;
         }
         const values = visualValues;
+        if (state.dirtyFields.size === 1 && state.dirtyFields.has('grok')) {
+          writeGrokConfig(doc, values.grok, baselineValues.grok);
+          return doc.toString({ indent: 2, lineWidth: 120, minContentWidth: 0 });
+        }
 
         setStringInDoc(doc, ['host'], values.host);
         setIntFromStringInDoc(doc, ['port'], values.port);
@@ -4008,6 +4018,7 @@ export function useVisualConfig() {
           deleteIfMapEmpty(doc, ['pprof']);
         }
 
+        writeGrokConfig(doc, values.grok, baselineValues.grok);
         setStringInDoc(doc, ['proxy-url'], values.proxyUrl);
         setBooleanInDoc(doc, ['force-model-prefix'], values.forceModelPrefix);
         setIntFromStringInDoc(doc, ['request-retry'], values.requestRetry);
@@ -4986,7 +4997,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [state.dirtyFields, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {

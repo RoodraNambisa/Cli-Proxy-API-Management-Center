@@ -1,3 +1,4 @@
+import { DEFAULT_GROK_CONFIG, type GrokVisualConfig } from './grok';
 import type {
   CodexCustomModelGroup,
   CodexFingerprintDefaultMode,
@@ -99,6 +100,8 @@ export type VisualConfigValidationErrorCode =
   | 'request_scoped_error_match_required'
   | 'error_response_rewrite_match_required'
   | 'error_response_rewrite_result_required'
+  | 'grok_headers'
+  | 'grok_parameter'
   | 'json_object'
   | 'auth_model_exclusion_models_required'
   | 'auth_model_exclusion_match_required'
@@ -290,6 +293,7 @@ export type CodexCustomModelValidationErrors = Record<
 >;
 
 export type VisualConfigValues = {
+  grok: GrokVisualConfig;
   host: string;
   port: string;
   tlsEnable: boolean;
@@ -421,6 +425,7 @@ export const makeClientId = () => {
 };
 
 export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
+  grok: DEFAULT_GROK_CONFIG,
   host: '',
   port: '',
   tlsEnable: false,

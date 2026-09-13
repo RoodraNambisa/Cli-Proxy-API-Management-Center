@@ -1401,7 +1401,7 @@
     "kimi_oauth_polling_error": "Failed to check authentication status:",
     "xai_oauth_title": "xAI/Grok OAuth",
     "xai_oauth_button": "Start Grok Login",
-    "xai_oauth_hint": "Sign in to Grok with the xAI device authorization flow. The credential is saved automatically after authorization.",
+    "xai_oauth_hint": "Sign in to Grok with a device code or PKCE browser authorization. Credentials are saved after authentication.",
     "xai_oauth_url_label": "Device authorization URL:",
     "xai_open_link": "Open Link",
     "xai_copy_link": "Copy Link",
@@ -1805,6 +1805,45 @@
     "upgrade_required_desc": "The current server version does not support the logs viewing feature. Please upgrade to the latest version of CLI Proxy API to use this feature."
   },
   "config_management": {
+    "grok": {
+      "headers": "Global request headers",
+      "global_hint": "Applies to existing and new Grok credentials. Blank software fields use the built-in Grok Build profile.",
+      "userAgent": "User-Agent",
+      "clientVersion": "Client version",
+      "clientIdentifier": "Client identifier",
+      "headers_hint": "Credential headers override global custom headers, which override the fields above. Model selection and session fields are controlled by the final upstream model and identity policies. OAuth login uses separate headers.",
+      "add_header": "Add header",
+      "header_name": "Header name",
+      "header_value": "Header value",
+      "identity": "Sessions and identity",
+      "passthrough": "Pass through client identity",
+      "passthrough_hint": "Preserve explicitly supplied session, conversation and cache keys, including intentional differences. These fields take priority over convergence and obfuscation.",
+      "spoof": "Fill missing identity",
+      "spoof_hint": "Fill missing session, conversation, cache, agent and request IDs. Agent identity persists with the credential; each logical request gets one request ID reused across retries.",
+      "convergence": "Converge session identity",
+      "convergence_hint": "Map unprotected session and cache identities to a bounded pool. The same explicit session and credential use the same slot across API keys and models. This does not enable sticky routing.",
+      "confuse": "Stable identity obfuscation",
+      "confuse_hint": "Map unprotected identities to stable pseudonyms per credential. Equal session and cache fields stay equal. Message content and tool IDs are unchanged.",
+      "poolSize": "Identity pool size",
+      "pool_hint": "1–64, default 4; only active when convergence is enabled. Changing the size reallocates sessions. Slots are outgoing identities, not shared conversation context.",
+      "passthrough_priority": "Explicit session and cache fields pass through unchanged; only unprotected fields converge or use pseudonyms.",
+      "identity_hint": "All identity policies default to off. History inference follows the shared routing history switch. Without an identity, routing follows its configured strategy.",
+      "parameters": "Models and request defaults",
+      "defaults_hint": "Only fills omitted client parameters. Explicit client values take priority; Payload override rules still apply. Model aliases remain in the model settings.",
+      "unset": "Unset — use client value",
+      "webSearch": "Inject Web Search",
+      "webSearch_hint": "Add the native web_search tool when absent. Respects the client’s tool_choice.",
+      "xSearch": "Inject X Search",
+      "xSearch_hint": "Add the native x_search tool when absent. Respects the client’s tool_choice.",
+      "login_diagnostics": "Login and diagnostics",
+      "login_flow": "Login method",
+      "device": "Device code (default)",
+      "pkce": "Browser login (PKCE)",
+      "pkce_hint": "After authorizing, paste the complete loopback callback URL below if the browser cannot connect to the server. The callback can be used only once.",
+      "refresh_models": "Refresh Grok model directory",
+      "models_cached": "Refresh failed; retaining the previous directory",
+      "models_fresh": "Model directory refreshed"
+    },
     "title": "Config Panel",
     "editor_title": "Configuration File",
     "reload": "Reload",
@@ -1907,7 +1946,7 @@
         },
         "provider_grok": {
           "title": "Grok",
-          "description": "Open Grok OAuth, auth files, and quota management. Credential switches remain on the auth files page."
+          "description": "Global Grok headers, session identity, request defaults, login and model diagnostics."
         },
         "advanced_payload": {
           "title": "Payload Rules",
@@ -2716,6 +2755,8 @@
         "boolean_false": "false"
       },
       "validation": {
+        "grok_headers": "Use valid, unique HTTP header names and values (up to 64).",
+        "grok_parameter": "Invalid Grok parameter value.",
         "codex_media_capacity": "Enter an integer from 0 to 2147483647; 0 uses 32 sessions.",
         "codex_media_ports": "Set both ports to 0, or a valid ordered range of 1–65535 with at least two ports per session.",
         "codex_media_ip": "Enter an IPv4/IPv6 address or leave empty.",

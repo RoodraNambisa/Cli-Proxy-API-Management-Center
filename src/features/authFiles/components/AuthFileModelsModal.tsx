@@ -15,6 +15,8 @@ import styles from '@/pages/AuthFilesPage.module.scss';
 
 export type AuthFileModelsModalProps = {
   open: boolean;
+  onRefreshGrok?: () => Promise<void>;
+  catalogInfo?: {source: string; updated_at: string; using_cached: boolean; error?: string} | null;
   fileName: string;
   fileType: string;
   loading: boolean;
@@ -57,11 +59,19 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
       onClose={onClose}
       title={t('auth_files.models_title', { defaultValue: '支持的模型' }) + ` - ${fileName}`}
       footer={
+        <>
+        {normalizedFileType === 'xai' && props.onRefreshGrok && <Button variant="secondary" loading={loading} disabled={!file} onClick={() => void props.onRefreshGrok?.()}>{t('config_management.grok.refresh_models')}</Button>}
         <Button variant="secondary" onClick={onClose}>
           {t('common.close')}
         </Button>
+        </>
       }
     >
+      {props.catalogInfo && <div className={styles.hint} role="status">
+        {t(props.catalogInfo.using_cached ? 'config_management.grok.models_cached' : 'config_management.grok.models_fresh')}
+        {' · '}{props.catalogInfo.source}{' · '}{props.catalogInfo.source === 'builtin' ? '—' : formatDateTime(props.catalogInfo.updated_at)}
+        {props.catalogInfo.error && <div>{props.catalogInfo.error}</div>}
+      </div>}
       {loading ? (
         <div className={styles.hint}>
           {t('auth_files.models_loading', { defaultValue: '正在加载模型列表...' })}
@@ -228,6 +238,7 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
                   }
                 >
                   <span className={styles.modelId}>{model.id}</span>
+                  {normalizedFileType === 'xai' && model.upstream_id && model.upstream_id !== model.id && <span className={styles.hint}>→ {model.upstream_id}</span>}
                   {model.display_name && model.display_name !== model.id && (
                     <span className={styles.modelDisplayName}>{model.display_name}</span>
                   )}

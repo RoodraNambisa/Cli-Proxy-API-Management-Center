@@ -1399,7 +1399,7 @@
     "kimi_oauth_polling_error": "檢查驗證狀態失敗:",
     "xai_oauth_title": "xAI/Grok OAuth",
     "xai_oauth_button": "開始 Grok 登入",
-    "xai_oauth_hint": "透過 xAI 裝置授權流程登入 Grok，授權成功後自動儲存憑證。",
+    "xai_oauth_hint": "使用裝置碼或 PKCE 瀏覽器授權登入 Grok，驗證成功後自動儲存憑證。",
     "xai_oauth_url_label": "裝置授權連結:",
     "xai_open_link": "開啟連結",
     "xai_copy_link": "複製連結",
@@ -1829,6 +1829,45 @@
     "upgrade_required_desc": "目前伺服器版本不支援記錄檢視功能，請升級到最新版本的 CLI Proxy API 以使用此功能。"
   },
   "config_management": {
+    "grok": {
+      "headers": "全局請求頭",
+      "global_hint": "作用于現有及新添加的 Grok 憑證；软件身份留空時使用內置 Grok Build 兼容值。",
+      "userAgent": "User-Agent",
+      "clientVersion": "客戶端版本",
+      "clientIdentifier": "客戶端標識",
+      "headers_hint": "同名標頭以「憑證自訂標頭 → 全域自訂標頭 → 上方常用欄位」為優先順序。模型覆寫及會話欄位由最終上游模型與身份策略統一處理；OAuth 登入使用獨立標頭。",
+      "add_header": "添加請求頭",
+      "header_name": "請求頭名称",
+      "header_value": "請求頭值",
+      "identity": "會話與身份",
+      "passthrough": "客戶端身份透傳",
+      "passthrough_hint": "保留明確提供的 session、conversation 和緩存 key，包括三者原本的差異。受保護字段優先于收敛和混淆。",
+      "spoof": "偽裝補齊",
+      "spoof_hint": "只補齊缺失的會話、conversation、緩存、agent 和請求 ID。agent 身份隨憑證持久保存；每個邏輯請求的 ID 在重试中複用。",
+      "convergence": "會話身份收敛",
+      "convergence_hint": "把未受透傳保護的會話和緩存身份映射到有限槽位。同一顯式會話、同一憑證跨 API 密钥和模型保持同槽；不會自動開啟账號黏性。",
+      "confuse": "穩定身份混淆",
+      "confuse_hint": "按憑證把未保護的身份映射為穩定偽名。原本相同的會話和緩存字段映射后仍相同；不修改消息正文及工具調用 ID。",
+      "poolSize": "收敛槽位數",
+      "pool_hint": "範圍 1–64，默認 4，僅在開啟收敛時生效。調整數量會重新分配會話；槽位僅代表外发身份，不共享對話上下文。",
+      "passthrough_priority": "當前組合：顯式會話和緩存字段優先原樣透傳，其余字段再參與收敛或混淆。",
+      "identity_hint": "四项策略默認關闭。消息历史識別遵循路由中的共用開關；無會話依據時按已配置的隨機、輪詢等策略選账號。",
+      "parameters": "模型與參數",
+      "defaults_hint": "只補齊客戶端未指定的參數；客戶端顯式值優先，Payload 強制覆蓋规則繼續生效。模型別名仍在模型設置中維護。",
+      "unset": "未設置，使用客戶端參數",
+      "webSearch": "注入 Web Search",
+      "webSearch_hint": "客戶端未提供時添加原生 web_search 工具，繼續尊重 tool_choice。",
+      "xSearch": "注入 X Search",
+      "xSearch_hint": "客戶端未提供時添加原生 x_search 工具，繼續尊重 tool_choice。",
+      "login_diagnostics": "登錄與诊断",
+      "login_flow": "登錄方式",
+      "device": "設備碼登錄（默認）",
+      "pkce": "瀏覽器登錄（PKCE）",
+      "pkce_hint": "授权后，如果瀏覽器無法連接回調地址，請把完整的本機回調 URL 粘贴到下方提交。每個回調只能使用一次。",
+      "refresh_models": "刷新 Grok 模型目錄",
+      "models_cached": "刷新失敗，保留原模型目錄",
+      "models_fresh": "模型目錄已刷新"
+    },
     "title": "設定面板",
     "editor_title": "設定檔",
     "reload": "重新載入",
@@ -1931,7 +1970,7 @@
         },
         "provider_grok": {
           "title": "Grok",
-          "description": "前往 Grok OAuth、認證檔案和配額管理；憑證層級開關仍在認證檔案頁維護。"
+          "description": "Grok 全域請求頭、會話身份、參數預設值、登入和模型診斷。"
         },
         "advanced_payload": {
           "title": "Payload 規則",
@@ -2740,6 +2779,8 @@
         "boolean_false": "false"
       },
       "validation": {
+        "grok_headers": "請求頭名稱和值必須合法，同名頭不能重複，最多 64 項。",
+        "grok_parameter": "Grok 參數值不合法。",
         "codex_media_capacity": "請輸入 0–2147483647 的整數；0 表示預設 32 個工作階段。",
         "codex_media_ports": "兩個連接埠同時為 0，或填寫 1–65535 的有序範圍，且每個工作階段至少兩個連接埠。",
         "codex_media_ip": "請輸入 IPv4/IPv6 位址，或留空。",

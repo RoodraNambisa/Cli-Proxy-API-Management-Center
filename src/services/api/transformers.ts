@@ -1019,6 +1019,8 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       ),
     };
   }
+  if (isRecord(raw.xai)) config.xai = { ...raw.xai };
+
   const codexHeaderDefaults = raw['codex-header-defaults'] ?? raw.codexHeaderDefaults;
   if (isRecord(codexHeaderDefaults)) {
     config.codexHeaderDefaults = {

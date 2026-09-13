@@ -27,8 +27,9 @@ export interface OAuthCancelResponse {
 const WEBUI_SUPPORTED: OAuthProvider[] = ['codex', 'anthropic', 'antigravity'];
 
 export const oauthApi = {
-  startAuth: (provider: OAuthProvider) => {
+  startAuth: (provider: OAuthProvider, flow?: 'device' | 'pkce') => {
     const params: Record<string, string | boolean> = {};
+    if (provider === 'xai' && flow) params.flow = flow;
     if (WEBUI_SUPPORTED.includes(provider)) {
       params.is_webui = true;
     }

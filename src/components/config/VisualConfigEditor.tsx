@@ -1,3 +1,4 @@
+import { GrokConfigEditor } from './GrokConfigEditor';
 import {
   useCallback,
   useEffect,
@@ -2924,6 +2925,8 @@ export function VisualConfigEditor({
               })}
             </div>
 
+            {activePageId === 'provider-grok' && <GrokConfigEditor value={values.grok} onChange={(grok) => onChange({ grok })} disabled={disabled} />}
+
             <section
               id="config-grok-auth"
               className={styles.providerHub}
@@ -2933,7 +2936,7 @@ export function VisualConfigEditor({
               <div className={styles.providerHubHeader}>
                 <div>
                   <h3 id="grok-provider-hub-title">
-                    {t('config_management.settings_center.grok.title')}
+                    {t('config_management.grok.login_diagnostics')}
                   </h3>
                   <p>{t('config_management.settings_center.grok.description')}</p>
                 </div>

@@ -1263,6 +1263,10 @@ export const authFilesApi = {
   },
 
   // 获取认证凭证支持的模型
+  refreshXAIModels(name: string, connection: ApiClientConnectionSnapshot, signal?: AbortSignal) {
+    return apiClient.postAtConnection<{ models: AuthFileModelItem[]; updated_at: string; source: string; using_cached: boolean; error?: string }>(connection, '/auth-files/xai/models/refresh', { name }, { signal });
+  },
+
   async getModelsForAuthFile(
     name: string,
     connection?: ApiClientConnectionSnapshot,

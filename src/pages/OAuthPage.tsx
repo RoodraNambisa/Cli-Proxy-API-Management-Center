@@ -1,3 +1,4 @@
+import { Select } from '@/components/ui/Select';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -134,6 +135,7 @@ export function OAuthPage() {
   const requestedProvider = searchParams.get('provider')?.trim().toLowerCase();
   const { showNotification } = useNotificationStore();
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
+  const [xaiFlow, setXaiFlow] = useState<'device' | 'pkce'>('device');
   const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>(
     {} as Record<OAuthProvider, ProviderState>
   );
@@ -350,7 +352,7 @@ export function OAuthPage() {
       cancelling: false,
     });
     try {
-      const res = await oauthApi.startAuth(provider);
+      const res = await oauthApi.startAuth(provider, provider === 'xai' ? xaiFlow : undefined);
       if (!res.state) {
         const message = t('auth_login.missing_state');
         updateProviderState(provider, {
@@ -532,7 +534,7 @@ export function OAuthPage() {
       <div className={styles.content}>
         {PROVIDERS.map((provider) => {
           const state = states[provider.id] || {};
-          const canSubmitCallback = CALLBACK_SUPPORTED.includes(provider.id) && Boolean(state.url);
+          const canSubmitCallback = (CALLBACK_SUPPORTED.includes(provider.id) || (provider.id === 'xai' && state.flow === 'pkce')) && Boolean(state.url);
           const loginButtonLabel =
             state.status === 'success'
               ? t('auth_login.login_another_account')
@@ -570,6 +572,8 @@ export function OAuthPage() {
               >
                 <div className={styles.cardContent}>
                   <div className={styles.cardHint}>{t(provider.hintKey)}</div>
+                  {provider.id === 'xai' && <Select ariaLabel={t('config_management.grok.login_flow')} value={xaiFlow} disabled={state.polling} onChange={(value) => setXaiFlow(value as 'device' | 'pkce')} options={[{value: 'device', label: t('config_management.grok.device')}, {value: 'pkce', label: t('config_management.grok.pkce')}]} />}
+                  {provider.id === 'xai' && state.flow === 'pkce' && state.status === 'waiting' && <p className={styles.cardHint}>{t('config_management.grok.pkce_hint')} {typeof state.remainingSeconds === 'number' && formatCountdown(state.remainingSeconds)}</p>}
                   {state.url && (
                     <div className={styles.authUrlBox}>
                       <div className={styles.authUrlLabel}>{t(provider.urlLabelKey)}</div>

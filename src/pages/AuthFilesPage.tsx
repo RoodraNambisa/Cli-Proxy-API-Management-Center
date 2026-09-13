@@ -530,6 +530,8 @@ export function AuthFilesPage() {
     modelsFile,
     modelsFileName,
     modelsFileType,
+    refreshGrokModels,
+    modelsCatalogInfo,
     modelsError,
     showModels,
     closeModelsModal,
@@ -2109,6 +2111,8 @@ export function AuthFilesPage() {
       />
 
       <AuthFileModelsModal
+        onRefreshGrok={refreshGrokModels}
+        catalogInfo={modelsCatalogInfo}
         open={modelsModalOpen}
         fileName={modelsFileName}
         fileType={modelsFileType}

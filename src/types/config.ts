@@ -290,6 +290,7 @@ export interface CodexCustomModelConfig {
 }
 
 export interface Config {
+  xai?: Record<string, unknown>;
   debug?: boolean;
   proxyUrl?: string;
   requestRetry?: number;

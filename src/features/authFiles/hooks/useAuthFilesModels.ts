@@ -21,6 +21,8 @@ export type UseAuthFilesModelsResult = {
   modelsError: ModelsError;
   showModels: (item: AuthFileItem) => Promise<void>;
   closeModelsModal: () => void;
+  refreshGrokModels: () => Promise<void>;
+  modelsCatalogInfo: { source: string; updated_at: string; using_cached: boolean; error?: string } | null;
 };
 
 export function useAuthFilesModels(
@@ -37,6 +39,7 @@ export function useAuthFilesModels(
   const [modelsSnapshotOrder, setModelsSnapshotOrder] = useState(0);
   const [modelsFileName, setModelsFileName] = useState('');
   const [modelsFileType, setModelsFileType] = useState('');
+  const [modelsCatalogInfo, setModelsCatalogInfo] = useState<UseAuthFilesModelsResult['modelsCatalogInfo']>(null);
   const [modelsError, setModelsError] = useState<ModelsError>(null);
   const requestSequenceRef = useRef(0);
   const requestAbortRef = useRef<AbortController | null>(null);
@@ -55,6 +58,7 @@ export function useAuthFilesModels(
     setModelsSnapshotOrder(0);
     setModelsFileName('');
     setModelsFileType('');
+    setModelsCatalogInfo(null);
     setModelsError(null);
     return () => {
       requestAbortRef.current?.abort();
@@ -70,7 +74,7 @@ export function useAuthFilesModels(
   }, []);
 
   const showModels = useCallback(
-    async (item: AuthFileItem) => {
+    async (item: AuthFileItem, refreshGrok = false) => {
       requestAbortRef.current?.abort();
       const abortController = new AbortController();
       requestAbortRef.current = abortController;
@@ -84,11 +88,13 @@ export function useAuthFilesModels(
       setModelsLoadedAtMs(0);
       setModelsSnapshotOrder(0);
       setModelsError(null);
+      setModelsCatalogInfo(null);
       setModelsModalOpen(true);
 
       setModelsLoading(true);
       const connection = apiClient.captureConnection();
       try {
+        const catalog = refreshGrok ? await authFilesApi.refreshXAIModels(item.name, connection, abortController.signal) : null;
         const models = await authFilesApi.getModelsForAuthFile(
           item.name,
           connection,
@@ -101,6 +107,7 @@ export function useAuthFilesModels(
           return;
         }
         setModelsList(models);
+        setModelsCatalogInfo(catalog);
         setModelsSnapshotOrder(requestSnapshotOrder);
         setModelsLoadedAtMs(Date.now());
       } catch (err) {
@@ -136,7 +143,13 @@ export function useAuthFilesModels(
     [showNotification, t]
   );
 
+  const refreshGrokModels = useCallback(async () => {
+    if (modelsFile && modelsFileType === 'xai') await showModels(modelsFile, true);
+  }, [modelsFile, modelsFileType, showModels]);
+
   return {
+    refreshGrokModels,
+    modelsCatalogInfo,
     modelsModalOpen,
     modelsLoading,
     modelsList,

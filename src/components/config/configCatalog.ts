@@ -193,7 +193,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     group: 'providers',
     titleKey: 'config_management.settings_center.pages.provider_grok.title',
     descriptionKey: 'config_management.settings_center.pages.provider_grok.description',
-    dirtyPrefixes: [],
+    dirtyPrefixes: ['grok'],
   },
   {
     id: 'advanced-payload',
@@ -1085,6 +1085,15 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'chatgpt-web.image-usage.fallback-usage.output-image-tokens',
     ],
     aliases: ['usage cache', 'token estimation', 'fallback usage', '计费缓存', 'token 估算'],
+  },
+  {
+    id: 'config-grok-headers', pageId: 'provider-grok', labelKey: 'config_management.grok.headers', yamlKeys: ['xai.headers', 'xai.header-defaults', 'xai.user-agent', 'xai.client-version', 'xai.client-identifier'], aliases: ['grok'],
+  },
+  {
+    id: 'config-grok-identity', pageId: 'provider-grok', labelKey: 'config_management.grok.identity', yamlKeys: ['xai.passthrough-client-identity', 'xai.spoof-session-identity', 'xai.session-identity-convergence', 'xai.session-identity-pool-size', 'xai.identity-confuse'], aliases: ['grok'],
+  },
+  {
+    id: 'config-grok-parameters', pageId: 'provider-grok', labelKey: 'config_management.grok.parameters', yamlKeys: ['xai.request-defaults', 'xai.inject-web-search', 'xai.inject-x-search'], aliases: ['grok'],
   },
   {
     id: 'config-grok-auth',

@@ -1401,7 +1401,7 @@
     "kimi_oauth_polling_error": "检查认证状态失败:",
     "xai_oauth_title": "xAI/Grok OAuth",
     "xai_oauth_button": "开始 Grok 登录",
-    "xai_oauth_hint": "通过 xAI 设备授权流程登录 Grok，认证成功后自动保存凭证。",
+    "xai_oauth_hint": "使用设备码或 PKCE 浏览器授权登录 Grok，认证成功后自动保存凭证。",
     "xai_oauth_url_label": "设备授权链接:",
     "xai_open_link": "打开链接",
     "xai_copy_link": "复制链接",
@@ -1805,6 +1805,45 @@
     "upgrade_required_desc": "当前服务器版本不支持日志查看功能，请升级到最新版本的 CLI Proxy API 以使用此功能。"
   },
   "config_management": {
+    "grok": {
+      "headers": "全局请求头",
+      "global_hint": "作用于现有及新添加的 Grok 凭证；软件身份留空时使用内置 Grok Build 兼容值。",
+      "userAgent": "User-Agent",
+      "clientVersion": "客户端版本",
+      "clientIdentifier": "客户端标识",
+      "headers_hint": "同名头按“凭证自定义头 → 全局自定义头 → 上方常用字段”取优先值。模型覆盖及会话字段由最终上游模型和身份策略统一处理；OAuth 登录使用独立请求头。",
+      "add_header": "添加请求头",
+      "header_name": "请求头名称",
+      "header_value": "请求头值",
+      "identity": "会话与身份",
+      "passthrough": "客户端身份透传",
+      "passthrough_hint": "保留明确提供的 session、conversation 和缓存 key，包括三者原本的差异。受保护字段优先于收敛和混淆。",
+      "spoof": "伪装补齐",
+      "spoof_hint": "只补齐缺失的会话、conversation、缓存、agent 和请求 ID。agent 身份随凭证持久保存；每个逻辑请求的 ID 在重试中复用。",
+      "convergence": "会话身份收敛",
+      "convergence_hint": "把未受透传保护的会话和缓存身份映射到有限槽位。同一显式会话、同一凭证跨 API 密钥和模型保持同槽；不会自动开启账号黏性。",
+      "confuse": "稳定身份混淆",
+      "confuse_hint": "按凭证把未保护的身份映射为稳定伪名。原本相同的会话和缓存字段映射后仍相同；不修改消息正文及工具调用 ID。",
+      "poolSize": "收敛槽位数",
+      "pool_hint": "范围 1–64，默认 4，仅在开启收敛时生效。调整数量会重新分配会话；槽位仅代表外发身份，不共享对话上下文。",
+      "passthrough_priority": "当前组合：显式会话和缓存字段优先原样透传，其余字段再参与收敛或混淆。",
+      "identity_hint": "四项策略默认关闭。消息历史识别遵循路由中的共用开关；无会话依据时按已配置的随机、轮询等策略选账号。",
+      "parameters": "模型与参数",
+      "defaults_hint": "只补齐客户端未指定的参数；客户端显式值优先，Payload 强制覆盖规则继续生效。模型别名仍在模型设置中维护。",
+      "unset": "未设置，使用客户端参数",
+      "webSearch": "注入 Web Search",
+      "webSearch_hint": "客户端未提供时添加原生 web_search 工具，继续尊重 tool_choice。",
+      "xSearch": "注入 X Search",
+      "xSearch_hint": "客户端未提供时添加原生 x_search 工具，继续尊重 tool_choice。",
+      "login_diagnostics": "登录与诊断",
+      "login_flow": "登录方式",
+      "device": "设备码登录（默认）",
+      "pkce": "浏览器登录（PKCE）",
+      "pkce_hint": "授权后，如果浏览器无法连接回调地址，请把完整的本机回调 URL 粘贴到下方提交。每个回调只能使用一次。",
+      "refresh_models": "刷新 Grok 模型目录",
+      "models_cached": "刷新失败，保留原模型目录",
+      "models_fresh": "模型目录已刷新"
+    },
     "title": "配置面板",
     "editor_title": "配置文件",
     "reload": "重新加载",
@@ -1911,7 +1950,7 @@
         },
         "provider_grok": {
           "title": "Grok",
-          "description": "进入 Grok OAuth、认证文件和额度管理；凭证级开关仍在认证文件页维护。"
+          "description": "Grok 全局请求头、会话身份、参数默认值、登录和模型诊断。"
         },
         "advanced_payload": {
           "title": "Payload 规则",
@@ -2720,6 +2759,8 @@
         "boolean_false": "false"
       },
       "validation": {
+        "grok_headers": "请求头名称和值必须合法，同名头不能重复，最多 64 项。",
+        "grok_parameter": "Grok 参数值不合法。",
         "codex_media_capacity": "请输入 0–2147483647 的整数；0 表示默认 32 个会话。",
         "codex_media_ports": "两个端口同时为 0，或填写 1–65535 的有序范围，且每个会话至少两个端口。",
         "codex_media_ip": "请输入 IPv4/IPv6 地址，或留空。",
