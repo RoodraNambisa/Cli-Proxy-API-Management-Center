@@ -333,6 +333,7 @@ export interface Config {
   routingPerAuthRequestWindowMinutes?: number;
   routingPriorityOverrides?: RoutingPriorityOverrideConfig[];
   routingSessionAffinity?: boolean;
+  routingSessionAffinityUseHistory?: boolean;
   routingSessionAffinityAcrossPriorities?: boolean;
   routingSessionAffinitySubagents?: boolean;
   routingSessionAffinityLCP?: boolean;
@@ -390,6 +391,7 @@ export type RawConfigSection =
   | 'routing/per-auth-request-window-minutes'
   | 'routing/priority-overrides'
   | 'routing/session-affinity'
+  | 'routing/session-affinity-use-history'
   | 'routing/session-affinity-across-priorities'
   | 'routing/session-affinity-subagents'
   | 'routing/session-affinity-lcp'

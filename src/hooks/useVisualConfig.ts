@@ -3017,6 +3017,12 @@ function getNextDirtyFields(
       nextValues.routingSessionAffinityFailover === baselineValues.routingSessionAffinityFailover
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinityUseHistory')) {
+    updateDirty(
+      'routingSessionAffinityUseHistory',
+      nextValues.routingSessionAffinityUseHistory === baselineValues.routingSessionAffinityUseHistory
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinityAcrossPriorities')) {
     updateDirty(
       'routingSessionAffinityAcrossPriorities',
@@ -3322,6 +3328,13 @@ export function useVisualConfig() {
           : routing?.sessionAffinityLCP;
       if (routingSessionAffinityLCP != null && typeof routingSessionAffinityLCP !== 'boolean') {
         throw new Error('routing.session-affinity-lcp must be a boolean');
+      }
+      const routingSessionAffinityUseHistory =
+        routing && Object.prototype.hasOwnProperty.call(routing, 'session-affinity-use-history')
+          ? routing['session-affinity-use-history']
+          : routing?.sessionAffinityUseHistory;
+      if (routingSessionAffinityUseHistory != null && typeof routingSessionAffinityUseHistory !== 'boolean') {
+        throw new Error('routing.session-affinity-use-history must be a boolean');
       }
       const codexFingerprintJA3 = Boolean(codexFingerprint?.ja3 ?? codexFingerprint?.JA3);
       const codexFingerprintForceHTTP1 = codexFingerprintJA3
@@ -3772,6 +3785,7 @@ export function useVisualConfig() {
         routingSessionAffinityAcrossPriorities: routingSessionAffinityAcrossPriorities ?? false,
         routingSessionAffinitySubagents: routingSessionAffinitySubagents ?? false,
         routingSessionAffinityLCP: routingSessionAffinityLCP ?? false,
+        routingSessionAffinityUseHistory: routingSessionAffinityUseHistory ?? true,
         routingSessionAffinityFailover:
           routingSessionAffinityFailoverRaw === undefined ||
           routingSessionAffinityFailoverRaw === null
@@ -4753,6 +4767,7 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.routingPerAuthRequestWindowMinutes ||
           values.routingPriorityOverrides.length > 0 ||
           values.routingSessionAffinity ||
+          values.routingSessionAffinityUseHistory !== DEFAULT_VISUAL_VALUES.routingSessionAffinityUseHistory ||
           values.routingSessionAffinityAcrossPriorities ||
           values.routingSessionAffinitySubagents ||
           values.routingSessionAffinityLCP ||
@@ -4806,6 +4821,14 @@ export function useVisualConfig() {
             doc.deleteIn(['routing', 'priority-overrides']);
           }
           setBooleanInDoc(doc, ['routing', 'session-affinity'], values.routingSessionAffinity);
+          if (
+            values.routingSessionAffinityUseHistory !== DEFAULT_VISUAL_VALUES.routingSessionAffinityUseHistory ||
+            docHas(doc, ['routing', 'session-affinity-use-history']) ||
+            docHas(doc, ['routing', 'sessionAffinityUseHistory'])
+          ) {
+            doc.setIn(['routing', 'session-affinity-use-history'], values.routingSessionAffinityUseHistory);
+            doc.deleteIn(['routing', 'sessionAffinityUseHistory']);
+          }
           if (
             values.routingSessionAffinityAcrossPriorities ||
             docHas(doc, ['routing', 'session-affinity-across-priorities']) ||

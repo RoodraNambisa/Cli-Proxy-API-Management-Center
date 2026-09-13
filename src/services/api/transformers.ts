@@ -1262,6 +1262,10 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     config.routingSessionAffinity = normalizeBoolean(
       routing['session-affinity'] ?? routing.sessionAffinity
     );
+    const useHistoryRaw = Object.prototype.hasOwnProperty.call(routing, 'session-affinity-use-history')
+      ? routing['session-affinity-use-history']
+      : routing.sessionAffinityUseHistory;
+    config.routingSessionAffinityUseHistory = useHistoryRaw == null ? true : normalizeBoolean(useHistoryRaw);
     config.routingSessionAffinityAcrossPriorities = normalizeBoolean(
       Object.prototype.hasOwnProperty.call(routing, 'session-affinity-across-priorities')
         ? routing['session-affinity-across-priorities']

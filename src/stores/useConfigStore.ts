@@ -71,6 +71,7 @@ const SECTION_KEYS: RawConfigSection[] = [
   'routing/per-auth-request-window-minutes',
   'routing/priority-overrides',
   'routing/session-affinity',
+  'routing/session-affinity-use-history',
   'routing/session-affinity-across-priorities',
   'routing/session-affinity-subagents',
   'routing/session-affinity-lcp',
@@ -164,6 +165,8 @@ const extractSectionValue = (config: Config | null, section?: RawConfigSection) 
       return config.routingPriorityOverrides;
     case 'routing/session-affinity':
       return config.routingSessionAffinity;
+    case 'routing/session-affinity-use-history':
+      return config.routingSessionAffinityUseHistory;
     case 'routing/session-affinity-across-priorities':
       return config.routingSessionAffinityAcrossPriorities;
     case 'routing/session-affinity-subagents':
@@ -405,6 +408,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
           break;
         case 'routing/session-affinity':
           nextConfig.routingSessionAffinity = value as Config['routingSessionAffinity'];
+          break;
+        case 'routing/session-affinity-use-history':
+          nextConfig.routingSessionAffinityUseHistory = value as Config['routingSessionAffinityUseHistory'];
           break;
         case 'routing/session-affinity-across-priorities':
           nextConfig.routingSessionAffinityAcrossPriorities =

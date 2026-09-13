@@ -1207,6 +1207,7 @@ export function VisualConfigEditor({
   ]);
   const sessionSettingsDirty = hasDirtyConfigField(dirtyFields, [
     'routingSessionAffinity',
+    'routingSessionAffinityUseHistory',
     'routingSessionAffinityAcrossPriorities',
     'routingSessionAffinitySubagents',
     'routingSessionAffinityLCP',
@@ -4992,6 +4993,7 @@ export function VisualConfigEditor({
                     targetIds={[
                       'config-force-model-prefix',
                       'config-session-affinity',
+                      'config-session-affinity-use-history',
                       'config-session-affinity-across-priorities',
                       'config-session-affinity-subagents',
                       'config-session-affinity-lcp',
@@ -5045,6 +5047,15 @@ export function VisualConfigEditor({
                           }
                         />
                       </div>
+                      <div id="config-session-affinity-use-history" className={styles.pageGroup}>
+                        <ToggleRow
+                          title={t('config_management.visual.sections.network.session_affinity_use_history')}
+                          description={t('config_management.visual.sections.network.session_affinity_use_history_desc')}
+                          checked={values.routingSessionAffinityUseHistory}
+                          disabled={disabled}
+                          onChange={(routingSessionAffinityUseHistory) => onChange({ routingSessionAffinityUseHistory })}
+                        />
+                      </div>
                       <div id="config-session-affinity-subagents" className={styles.pageGroup}>
                         <ToggleRow
                           title={t('config_management.visual.sections.network.session_affinity_subagents')}
@@ -5056,12 +5067,18 @@ export function VisualConfigEditor({
                           }
                         />
                       </div>
-                      <div id="config-session-affinity-lcp" className={styles.pageGroup}>
+                      <div
+                        id="config-session-affinity-lcp"
+                        className={`${styles.pageGroup} ${!values.routingSessionAffinityUseHistory ? styles.historyPolicyPaused : ''}`}
+                      >
                         <ToggleRow
                           title={t('config_management.visual.sections.network.session_affinity_lcp')}
-                          description={t('config_management.visual.sections.network.session_affinity_lcp_desc')}
+                          description={[
+                            !values.routingSessionAffinityUseHistory && t('config_management.visual.sections.network.session_affinity_lcp_paused'),
+                            t('config_management.visual.sections.network.session_affinity_lcp_desc'),
+                          ].filter(Boolean).join(' ')}
                           checked={values.routingSessionAffinityLCP}
-                          disabled={disabled}
+                          disabled={disabled || !values.routingSessionAffinityUseHistory}
                           onChange={(routingSessionAffinityLCP) => onChange({ routingSessionAffinityLCP })}
                         />
                       </div>

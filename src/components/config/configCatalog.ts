@@ -387,6 +387,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     yamlKeys: ['routing.session-affinity-across-priorities'],
   },
   {
+    id: 'config-session-affinity-use-history',
+    pageId: 'global-network',
+    labelKey: 'config_management.visual.sections.network.session_affinity_use_history',
+    yamlKeys: ['routing.session-affinity-use-history'],
+    aliases: ['message hash', 'history fallback', '消息历史', '消息哈希'],
+  },
+  {
     id: 'config-session-affinity-subagents',
     pageId: 'global-network',
     labelKey: 'config_management.visual.sections.network.session_affinity_subagents',

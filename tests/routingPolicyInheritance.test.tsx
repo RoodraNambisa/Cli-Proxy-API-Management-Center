@@ -5,6 +5,7 @@ import { useVisualConfig } from '@/hooks/useVisualConfig';
 
 const policies = `  strategy: weighted-round-robin
   session-affinity: true
+  session-affinity-use-history: true
   session-affinity-lcp: true
   session-affinity-subagents: true
   session-affinity-across-priorities: true
@@ -24,10 +25,12 @@ test.each([
     routingStrategy: 'weighted-round-robin', routingSessionAffinity: true,
     routingSessionAffinityLCP: true, routingSessionAffinitySubagents: true,
     routingSessionAffinityAcrossPriorities: true,
+    routingSessionAffinityUseHistory: true,
   });
   act(() => result.current.setVisualValues({
     routingStrategy: 'round-robin', routingSessionAffinityLCP: false,
     routingSessionAffinitySubagents: false, routingSessionAffinityAcrossPriorities: false,
+    routingSessionAffinityUseHistory: false,
   }));
   expect(result.current.visualDirty).toBe(true);
   const saved = result.current.applyVisualChangesToYaml(original);
@@ -35,6 +38,7 @@ test.each([
   expect(decoded.routing).toMatchObject({
     strategy: 'round-robin', 'session-affinity': true, 'session-affinity-lcp': false,
     'session-affinity-subagents': false, 'session-affinity-across-priorities': false,
+    'session-affinity-use-history': false,
     'future-number': 9007199254740993n,
   });
   const before = parse(original, { merge: true, intAsBigInt: true });
@@ -44,5 +48,6 @@ test.each([
   expect(result.current.visualValues.routingSessionAffinityLCP).toBe(false);
   expect(result.current.visualValues.routingSessionAffinitySubagents).toBe(false);
   expect(result.current.visualValues.routingSessionAffinityAcrossPriorities).toBe(false);
+  expect(result.current.visualValues.routingSessionAffinityUseHistory).toBe(false);
   expect(result.current.visualDirty).toBe(false);
 });
