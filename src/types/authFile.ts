@@ -98,6 +98,15 @@ export interface CodexQuotaObservation {
   observed_at: string;
   source: 'http' | 'websocket';
   signals: Record<string, string>;
+  pools?: CodexQuotaPool[];
+}
+
+export interface CodexQuotaPool {
+  id: string;
+  name?: string;
+  observed_at: string;
+  source: 'http' | 'websocket';
+  signals: Record<string, string>;
 }
 
 export interface CodexObservedQuotaWindow {
@@ -108,6 +117,9 @@ export interface CodexObservedQuotaWindow {
   usedPercent: number | null;
   minutes: number | null;
   resetAt: string | null;
+  poolId?: string;
+  observedAt?: string;
+  source?: 'http' | 'websocket';
 }
 
 export interface AuthFileItem {

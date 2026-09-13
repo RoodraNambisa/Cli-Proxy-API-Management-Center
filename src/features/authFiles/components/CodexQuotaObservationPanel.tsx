@@ -38,6 +38,9 @@ export function CodexQuotaObservationPanel({ file, compact }: { file: AuthFileIt
           <div className={styles.quotaReset}>
             {t('codex_quota_observation.history_hint')}
           </div>
+          {windows.length > 0 && !windows.some((window) => window.poolId === 'codex') && (
+            <div className={styles.quotaMessage}>{t('codex_quota_observation.shared_missing')}</div>
+          )}
           {(windows.length > 0 || fields.some(([key]) => signals[key] !== undefined)) && <details open={!compact}>
             <summary>{t('codex_quota_observation.details')}</summary>
             <div className={styles.quotaRow}>
@@ -64,6 +67,12 @@ export function CodexQuotaObservationPanel({ file, compact }: { file: AuthFileIt
                       </div>
                     )}
                     {window.minutes !== null && <div className={styles.quotaReset}>{t('codex_quota_observation.window_minutes', { minutes: window.minutes })}</div>}
+                    {window.observedAt && window.observedAt !== observation.observed_at && (
+                      <div className={styles.quotaReset}>
+                        {t('codex_quota_observation.retained_observed')}{' '}
+                        <time dateTime={window.observedAt}>{formatShanghaiDateTime(window.observedAt)}</time>
+                      </div>
+                    )}
                     <div className={styles.quotaReset}>
                       {t('codex_quota_observation.reset')}{' '}
                       {window.resetAt ? <time dateTime={window.resetAt}>{formatShanghaiDateTime(window.resetAt)}</time> : t('codex_quota_observation.unknown')}

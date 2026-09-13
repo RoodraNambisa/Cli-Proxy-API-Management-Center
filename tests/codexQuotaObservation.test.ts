@@ -81,4 +81,53 @@ describe('Passive Codex quota data', () => {
     expect(normalizeAuthFileEntry({ name: 'quota.json', type: 'codex' })).not.toHaveProperty('quota_observation');
     expect(normalizeAuthFileEntry({ name: 'quota.json', type: 'codex', quota_observation_enabled: 'false' as never })).not.toHaveProperty('quota_observation_enabled');
   });
+
+  test('deduplicates the active Spark alias using its native header family on older servers', () => {
+    const snapshot = observation({
+      'X-Codex-Active-Limit': 'codex_bengalfox',
+      'X-Codex-Primary-Used-Percent': '0', 'X-Codex-Primary-Window-Minutes': '300',
+      'X-Codex-Secondary-Used-Percent': '2', 'X-Codex-Secondary-Window-Minutes': '10080',
+      'X-Codex-Bengalfox-Limit-Name': 'GPT-5.3-Codex-Spark',
+      'X-Codex-Bengalfox-Primary-Used-Percent': '0', 'X-Codex-Bengalfox-Primary-Window-Minutes': '300',
+      'X-Codex-Bengalfox-Secondary-Used-Percent': '2', 'X-Codex-Bengalfox-Secondary-Window-Minutes': '10080',
+      'X-Codex-Other-Primary-Used-Percent': '0', 'X-Codex-Other-Primary-Window-Minutes': '300',
+    });
+    const windows = codexObservedQuotaWindows(snapshot);
+    expect(windows).toHaveLength(3);
+    expect(windows.filter((window) => window.poolId === 'codex_bengalfox')).toMatchObject([
+      { name: 'GPT-5.3-Codex-Spark', usedPercent: 0, minutes: 300 },
+      { name: 'GPT-5.3-Codex-Spark', usedPercent: 2, minutes: 10080 },
+    ]);
+    expect(windows.some((window) => window.poolId === 'codex_other')).toBe(true);
+    expect(windows.some((window) => window.poolId === 'codex')).toBe(false);
+  });
+
+  test('keeps each retained pool timestamp and reset clock independently scoped', () => {
+    const oldAt = '2026-09-10T11:00:00Z';
+    const snapshot = normalizeCodexQuotaObservation({
+      observed_at: observedAt, source: 'http', signals: { 'X-Codex-Active-Limit': 'codex_bengalfox' },
+      pools: [
+        { id: 'codex', observed_at: oldAt, source: 'http', signals: { 'X-Codex-Primary-Used-Percent': '50', 'X-Codex-Primary-Window-Minutes': '10080', 'X-Codex-Primary-Reset-After-Seconds': '7200' } },
+        { id: 'codex_bengalfox', name: 'GPT-5.3-Codex-Spark', observed_at: observedAt, source: 'websocket', signals: { 'X-Codex-Secondary-Used-Percent': '2', 'X-Codex-Secondary-Window-Minutes': '10080', 'X-Codex-Secondary-Reset-After-Seconds': '7200' } },
+      ],
+    })!;
+    expect(codexObservedQuotaWindows(snapshot)).toMatchObject([
+      { poolId: 'codex', group: '', usedPercent: 50, observedAt: oldAt, resetAt: '2026-09-10T13:00:00.000Z' },
+      { poolId: 'codex_bengalfox', name: 'GPT-5.3-Codex-Spark', usedPercent: 2, observedAt, resetAt: '2026-09-10T14:00:00.000Z' },
+    ]);
+  });
+
+  test('bounds and validates retained pools without trusting nested or private data', () => {
+    const valid = { id: 'codex', observed_at: observedAt, source: 'http', signals: { 'X-Codex-Primary-Used-Percent': '0', 'X-Codex-Bengalfox-Primary-Used-Percent': '99', Authorization: 'private' } };
+    const snapshot = normalizeCodexQuotaObservation({
+      ...valid,
+      pools: [valid, { ...valid, id: 'codex', name: 'duplicate' }, { ...valid, id: 'bad/id' }, { ...valid, id: 'future', observed_at: '2027-01-01T00:00:00Z' }, { ...valid, id: 'other', pools: [valid] }],
+    })!;
+    expect(snapshot.pools?.map((pool) => pool.id)).toEqual(['codex', 'other']);
+    expect(JSON.stringify(snapshot)).not.toMatch(/private|Authorization|duplicate|future/);
+    expect(snapshot.pools?.[1]).not.toHaveProperty('pools');
+    expect(snapshot.pools?.[0].signals).toEqual({ 'x-codex-primary-used-percent': '0' });
+    const bounded = normalizeCodexQuotaObservation({ ...valid, pools: Array.from({ length: 12 }, (_, i) => ({ ...valid, id: `pool_${i}` })) })!;
+    expect(bounded.pools).toHaveLength(8);
+  });
 });

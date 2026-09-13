@@ -1,4 +1,4 @@
-import type { CodexObservedQuotaWindow, CodexQuotaObservation } from '@/types/authFile';
+import type { CodexObservedQuotaWindow, CodexQuotaObservation, CodexQuotaPool } from '@/types/authFile';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -16,10 +16,30 @@ const signalName = (key: string): boolean => {
   if (!/^[a-z0-9._-]{1,256}$/.test(key)) return false;
   if (key === 'retry-after' || key.startsWith('x-ratelimit-')) return true;
   if (['x-codex-plan-type', 'x-codex-active-limit', 'x-codex-credits-has-credits', 'x-codex-credits-unlimited', 'x-codex-credits-balance'].includes(key)) return true;
-  return key.startsWith('x-codex-') && /-(allowed|limit-reached|limit-name|used-percent|window-minutes|reset-after-seconds|reset-at|over-secondary-limit-percent)$/.test(key);
+  return key.startsWith('x-codex-') && /-(allowed|limit-reached|limit-name|limit-id|used-percent|window-minutes|reset-after-seconds|reset-at|over-secondary-limit-percent)$/.test(key);
 };
 
 export function normalizeCodexQuotaObservation(value: unknown): CodexQuotaObservation | undefined {
+  const observation = normalizeQuotaSignals(value);
+  if (!observation || !isRecord(value) || !Array.isArray(value.pools)) return observation;
+  const pools: CodexQuotaPool[] = [];
+  const ids = new Set<string>();
+  for (const raw of value.pools.slice(0, 8)) {
+    if (!isRecord(raw) || typeof raw.id !== 'string' || !/^[a-z0-9._-]{1,128}$/.test(raw.id)) continue;
+    const pool = normalizeQuotaSignals(raw);
+    const id = normalizePoolId(raw.id);
+    if (!pool || ids.has(id) || Date.parse(pool.observed_at) > Date.parse(observation.observed_at)) continue;
+    pool.signals = Object.fromEntries(Object.entries(pool.signals).filter(([key]) =>
+      /^x-codex-(primary|secondary)-(used-percent|window-minutes|reset-after-seconds|reset-at)$/.test(key)
+    ));
+    if (!Object.keys(pool.signals).length) continue;
+    ids.add(id);
+    pools.push({ ...pool, id, ...(signalText(raw.name) ? { name: raw.name.trim() } : {}) });
+  }
+  return pools.length ? { ...observation, pools } : observation;
+}
+
+function normalizeQuotaSignals(value: unknown): CodexQuotaObservation | undefined {
   if (!isRecord(value) || !isRecord(value.signals)) return undefined;
   if (value.source !== 'http' && value.source !== 'websocket') return undefined;
   if (typeof value.observed_at !== 'string' || value.observed_at.length > 128 || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value.observed_at) || !Number.isFinite(Date.parse(value.observed_at))) return undefined;
@@ -51,6 +71,40 @@ const timestamp = (milliseconds: number): string | null => {
 // Relative resets are measured from observation time, never from rendering time.
 // Missing or invalid fields remain unknown; no quota is inferred from a refusal.
 export function codexObservedQuotaWindows(observation: CodexQuotaObservation): CodexObservedQuotaWindow[] {
+  if (observation.pools?.length) {
+    return observation.pools.flatMap((pool) => parseQuotaWindows(pool).map((window) => ({
+      ...window,
+      id: `${pool.id}/${window.kind}`,
+      group: pool.id === 'codex' ? '' : pool.id === 'codex_code_review' ? 'code-review' : pool.id,
+      name: pool.name,
+      poolId: pool.id,
+      observedAt: pool.observed_at,
+      source: pool.source,
+    }))).sort(compareQuotaWindows);
+  }
+
+  // Older servers expose only one raw snapshot. Resolve aliases by the header
+  // namespace/explicit id, never by equal percentages, durations or reset times.
+  const groups = new Map<string, CodexObservedQuotaWindow[]>();
+  for (const window of parseQuotaWindows(observation).sort((a, b) => a.group.localeCompare(b.group))) {
+    const explicit = observation.signals[`x-codex-${window.group}-limit-id`];
+    const poolId = normalizePoolId(window.group ? explicit ?? `codex-${window.group}` : observation.signals['x-codex-active-limit'] ?? 'codex');
+    const previous = groups.get(poolId);
+    const decorated = { ...window, poolId, observedAt: observation.observed_at, source: observation.source };
+    if (previous?.[0].group === window.group) previous.push(decorated);
+    else groups.set(poolId, [decorated]);
+  }
+  return [...groups.values()].flat().sort(compareQuotaWindows);
+}
+
+const normalizePoolId = (id: string) => id.trim().toLowerCase() === 'premium' ? 'codex' : id.trim().toLowerCase().replace(/-/g, '_');
+
+function compareQuotaWindows(a: CodexObservedQuotaWindow, b: CodexObservedQuotaWindow): number {
+  const rank = (window: CodexObservedQuotaWindow) => window.poolId === 'codex' || window.group === '' ? 0 : window.group === 'code-review' ? 1 : 2;
+  return rank(a) - rank(b) || a.group.localeCompare(b.group) || a.kind.localeCompare(b.kind);
+}
+
+function parseQuotaWindows(observation: CodexQuotaObservation): CodexObservedQuotaWindow[] {
   const { signals } = observation;
   const windows = new Map<string, CodexObservedQuotaWindow>();
   for (const key of Object.keys(signals)) {
@@ -84,8 +138,5 @@ export function codexObservedQuotaWindows(observation: CodexQuotaObservation): C
       resetAt: absoluteReset ?? relativeReset,
     });
   }
-  return [...windows.values()].sort((a, b) => {
-    const rank = (group: string) => group === '' ? 0 : group === 'code-review' ? 1 : 2;
-    return rank(a.group) - rank(b.group) || a.group.localeCompare(b.group) || a.kind.localeCompare(b.kind);
-  });
+  return [...windows.values()];
 }

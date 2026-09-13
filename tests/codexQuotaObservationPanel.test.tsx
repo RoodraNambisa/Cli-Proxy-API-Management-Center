@@ -128,4 +128,22 @@ describe('Codex passive quota display', () => {
       expect(Object.values(locale.codex_quota_observation).every(Boolean)).toBe(true);
     }
   });
+
+  test('shows retained shared balance and a single named Spark pool, and explains missing shared data', () => {
+    const entry = file({ 'X-Codex-Active-Limit': 'codex_bengalfox' });
+    const oldAt = '2026-09-10T11:00:00Z';
+    entry.quota_observation!.pools = [
+      { id: 'codex', observed_at: oldAt, source: 'http', signals: { 'X-Codex-Primary-Used-Percent': '50', 'X-Codex-Primary-Window-Minutes': '10080' } },
+      { id: 'codex_bengalfox', name: 'GPT-5.3-Codex-Spark', observed_at: entry.quota_observation!.observed_at, source: 'websocket', signals: { 'X-Codex-Secondary-Used-Percent': '2', 'X-Codex-Secondary-Window-Minutes': '10080' } },
+    ];
+    const { container, rerender } = render(panel(entry));
+    expect(screen.getByRole('progressbar', { name: en.codex_quota.secondary_window }).getAttribute('aria-valuenow')).toBe('50');
+    expect(screen.getAllByRole('progressbar', { name: `GPT-5.3-Codex-Spark · ${en.codex_quota.secondary_window}` })).toHaveLength(1);
+    expect(container.querySelector(`time[datetime="${oldAt}"]`)).toBeTruthy();
+    expect(screen.getByText(en.codex_quota_observation.retained_observed)).toBeTruthy();
+    expect(screen.queryByText(en.codex_quota_observation.shared_missing)).toBeNull();
+    rerender(panel({ ...entry, quota_observation: { ...entry.quota_observation!, pools: [entry.quota_observation!.pools[1]] } }));
+    expect(screen.queryByText('50% remaining')).toBeNull();
+    expect(screen.getByText(en.codex_quota_observation.shared_missing)).toBeTruthy();
+  });
 });
