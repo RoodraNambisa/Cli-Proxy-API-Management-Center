@@ -2,6 +2,7 @@ import { isAlias, isMap, type Document } from 'yaml';
 import { DEFAULT_GROK_CONFIG, GROK_DEFAULT_KEYS, type GrokVisualConfig } from '@/types/grok';
 import type { VisualConfigValidationErrors } from '@/types/visualConfig';
 import { detachErrorRuleAliases, readMergedYamlField } from './requestScopedErrorsYaml';
+import { GROK_UPSTREAM_MODES, type GrokUpstreamMode } from './grokUpstream';
 
 const record = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' && !Array.isArray(value)
@@ -49,6 +50,7 @@ export function readGrokConfig(raw: unknown): GrokVisualConfig {
   for (const [key, field] of Object.entries(profiles))
     out[key as keyof typeof profiles] = text(profile[field]);
   out.poolSize = text(data['session-identity-pool-size'] ?? 4);
+  out.upstreamMode = text(data['default-base-url-mode']).trim().toLowerCase() || 'cli';
   for (const key of GROK_DEFAULT_KEYS)
     out.defaults[key] = text(
       key === 'reasoning.effort' ? record(defaults.reasoning).effort : defaults[key]
@@ -58,6 +60,8 @@ export function readGrokConfig(raw: unknown): GrokVisualConfig {
 
 export function grokConfigErrors(values: GrokVisualConfig): VisualConfigValidationErrors {
   const errors: VisualConfigValidationErrors = {};
+  if (!GROK_UPSTREAM_MODES.includes(values.upstreamMode as GrokUpstreamMode))
+    errors['grok.upstreamMode'] = 'grok_upstream_mode';
   if (!/^\d+$/.test(values.poolSize) || Number(values.poolSize) < 1 || Number(values.poolSize) > 64)
     errors['grok.poolSize'] = 'integer_range_1_64';
   const seen = new Set<string>();
@@ -133,6 +137,8 @@ export function writeGrokConfig(
       write(['xai', 'header-defaults', profiles[key]], values[key].trim() || undefined);
   if (values.poolSize !== baseline.poolSize)
     write(['xai', 'session-identity-pool-size'], Number(values.poolSize));
+  if (values.upstreamMode !== baseline.upstreamMode)
+    write(['xai', 'default-base-url-mode'], values.upstreamMode);
   if (JSON.stringify(values.headers) !== JSON.stringify(baseline.headers))
     write(
       ['xai', 'headers'],

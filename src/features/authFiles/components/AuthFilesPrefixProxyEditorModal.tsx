@@ -5,6 +5,8 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { GROK_UPSTREAM_MODES, normalizeGrokBaseUrl } from '@/utils/grokUpstream';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import type {
   PrefixProxyEditorField,
@@ -37,6 +39,12 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
     }
   };
   const previewText = formatJsonText(updatedText);
+  const invalidBaseUrl = Boolean(
+    editor?.isXaiFile &&
+    editor.baseUrlTouched &&
+    (normalizeGrokBaseUrl(editor.baseUrl) === null ||
+      (editor.grokUpstream === 'custom' && !editor.baseUrl.trim()))
+  );
 
   return (
     <Modal
@@ -74,6 +82,7 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                 !dirty ||
                 !updatedText ||
                 !editor?.json ||
+                invalidBaseUrl ||
                 Boolean(editor?.headersTouched && editor.headersError) ||
                 Boolean(
                   editor?.isChatGptWebFile &&
@@ -124,6 +133,35 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
               </div>
               {!editor.readOnly && (
                 <div className={styles.prefixProxyFields}>
+                  {editor.isXaiFile && (
+                    <>
+                      <div className="form-group">
+                        <label>{t('grok_upstream.account_label')}</label>
+                        <Select
+                          ariaLabel={t('grok_upstream.account_label')}
+                          value={editor.grokUpstream}
+                          disabled={disableControls || editor.saving || !editor.json}
+                          onChange={(value) => onChange('grokUpstream', value)}
+                          options={['inherit', ...GROK_UPSTREAM_MODES, 'custom'].map((mode) => ({
+                            value: mode,
+                            label: t(`grok_upstream.modes.${mode}`),
+                          }))}
+                        />
+                        <div className="hint">{t('grok_upstream.account_hint')}</div>
+                      </div>
+                      {editor.grokUpstream !== 'inherit' && (
+                        <Input
+                          label={t('grok_upstream.base_url_label')}
+                          value={editor.baseUrl}
+                          placeholder="https://gateway.example.com/v1"
+                          readOnly={editor.grokUpstream !== 'custom'}
+                          disabled={disableControls || editor.saving || !editor.json}
+                          error={invalidBaseUrl ? t('grok_upstream.invalid_url') : undefined}
+                          onChange={(event) => onChange('baseUrl', event.target.value)}
+                        />
+                      )}
+                    </>
+                  )}
                   {editor.isChatGptWebFile && (
                     <>
                       <div className="form-group">

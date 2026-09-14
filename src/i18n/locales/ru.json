@@ -800,7 +800,7 @@
     "model_capability_image": "Изображение",
     "model_capability_video": "Видео",
     "using_api_label": "Использовать официальный API xAI",
-    "using_api_hint": "Для текстовых HTTP-запросов используется официальный API xAI; при отключении — Grok CLI chat-proxy. Изображения, видео и WebSocket не затрагиваются.",
+    "using_api_hint": "При включении задаёт base_url официального API xAI, при выключении — Grok CLI. Наследование глобального адреса и выбор региона доступны в настройках учётных данных.",
     "websockets_label": "Включить Grok WebSocket",
     "websockets_hint": "Для запросов Responses WebSocket предпочитать upstream xAI WebSocket. Обычные HTTP-запросы не затрагиваются.",
     "xai_field_saved": "{{field}} сохранено",
@@ -853,7 +853,7 @@
     "batch_settings_priority_placeholder": "Целое число (включая 0) или null",
     "batch_settings_priority_hint": "Оставьте пустым без изменений; введите целое число для приоритета (0 допустим) или null, чтобы очистить его и восстановить приоритет 0 по умолчанию.",
     "batch_settings_using_api_label": "Использовать официальный API xAI",
-    "batch_settings_using_api_hint": "Применяется только к Grok/xAI; неподдерживаемые учётные данные backend вернёт в списке ошибок.",
+    "batch_settings_using_api_hint": "Только Grok/xAI. Закрепляет base_url за официальным API при включении или CLI при выключении; глобальный адрес не наследуется.",
     "batch_settings_websockets_label": "Websockets",
     "batch_settings_websockets_hint": "Применяется только к Codex и Grok/xAI; неподдерживаемые учётные данные backend вернёт в списке ошибок.",
     "batch_settings_websockets_skip": "Не изменять",
@@ -2069,7 +2069,7 @@
       },
       "grok": {
         "title": "Управление Grok",
-        "description": "Управляйте входом Grok, параметрами using_api/websockets и квотами на соответствующих страницах.",
+        "description": "Вход в Grok, адреса учётных данных, WebSocket и квоты настраиваются на соответствующих страницах.",
         "oauth": "Открыть Grok OAuth",
         "auth_files": "Учётные данные Grok",
         "quota": "Квота Grok"
@@ -2861,7 +2861,8 @@
         "resize_filter": "Выберите Catmull-Rom или ApproxBiLinear",
         "payload_invalid_number": "Введите корректное число",
         "payload_invalid_boolean": "Выберите true или false",
-        "payload_invalid_json": "Введите корректный JSON"
+        "payload_invalid_json": "Введите корректный JSON",
+        "grok_upstream_mode": "Общий сервер по умолчанию: cli, api, us-east-1, us-west-2, eu-west-1"
       },
       "common": {
         "summary_providers": "Провайдеры",
@@ -4353,6 +4354,27 @@
       "unhealthy": "Неисправен",
       "unknown": "Неизвестно",
       "not_applicable": "Не применяется"
+    }
+  },
+  "grok_upstream": {
+    "title": "Адрес Grok",
+    "default_label": "Общий сервер по умолчанию",
+    "default_hint": "Учётные данные без base_url используют этот адрес. Адрес отдельного аккаунта имеет приоритет. Изменения применяются со следующего запроса и не предоставляют права доступа.",
+    "account_label": "Сервер запросов",
+    "account_hint": "Оставьте base_url пустым для общего адреса. Выбор узла или своего URL закрепляет адрес за аккаунтом.",
+    "base_url_label": "Адрес сервера (base_url)",
+    "invalid_url": "Введите HTTP(S) URL без имени пользователя, пароля, параметров запроса и фрагмента.",
+    "inherited": "Общий адрес · {{mode}}",
+    "edit": "Настроить",
+    "transport_hint": "Чат, изображения, видео и запросы моделей используют выбранный адрес. CLI не поддерживает WebSocket и сжатие: эти запросы используют официальный API. Региональные и собственные адреса сохраняются для этих протоколов.",
+    "modes": {
+      "inherit": "Общий адрес",
+      "cli": "Шлюз подписки CLI",
+      "api": "Официальный API",
+      "us-east-1": "Восток США",
+      "us-west-2": "Запад США",
+      "eu-west-1": "Запад Европы",
+      "custom": "Свой адрес"
     }
   }
 }

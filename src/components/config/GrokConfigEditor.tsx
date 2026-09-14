@@ -7,6 +7,11 @@ import { HeaderInputList } from '@/components/ui/HeaderInputList';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { GROK_DEFAULT_KEYS, type GrokVisualConfig } from '@/types/grok';
 import { grokConfigErrors } from '@/utils/grokConfig';
+import {
+  GROK_UPSTREAM_MODES,
+  GROK_UPSTREAM_URLS,
+  type GrokUpstreamMode,
+} from '@/utils/grokUpstream';
 import styles from './GrokConfigEditor.module.scss';
 
 export function GrokConfigEditor({
@@ -44,6 +49,36 @@ export function GrokConfigEditor({
   );
   return (
     <>
+      <ConfigSection
+        id="config-grok-upstream"
+        title={t('grok_upstream.title')}
+        description={t('grok_upstream.default_hint')}
+      >
+        <div className={styles.pool}>
+          <div className="form-group">
+            <label>{t('grok_upstream.default_label')}</label>
+            <Select
+              ariaLabel={t('grok_upstream.default_label')}
+              value={value.upstreamMode}
+              disabled={disabled}
+              onChange={(upstreamMode) => patch({ upstreamMode })}
+              options={GROK_UPSTREAM_MODES.map((mode) => ({
+                value: mode,
+                label: t(`grok_upstream.modes.${mode}`),
+              }))}
+            />
+          </div>
+        </div>
+        <code className={styles.upstreamUrl}>
+          {GROK_UPSTREAM_URLS[value.upstreamMode as GrokUpstreamMode] ?? ''}
+        </code>
+        {error('upstreamMode') && (
+          <p role="alert" className={styles.error}>
+            {error('upstreamMode')}
+          </p>
+        )}
+        <ConfigHelp title={t('grok_upstream.title')} text={t('grok_upstream.transport_hint')} />
+      </ConfigSection>
       <ConfigSection
         id="config-grok-headers"
         title={key('headers')}

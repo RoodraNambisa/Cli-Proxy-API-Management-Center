@@ -5,6 +5,28 @@ import { useVisualConfig, getVisualConfigValidationErrors } from './useVisualCon
 import { readGrokConfig, writeGrokConfig } from '@/utils/grokConfig';
 
 describe('Grok global settings', () => {
+  it('round-trips the global upstream without changing policies or unknown fields', () => {
+    const yaml = 'xai:\n  default-base-url-mode: us-east-1\n  future: preserved\n';
+    const { result } = renderHook(() => useVisualConfig());
+    act(() => result.current.loadVisualValuesFromYaml(yaml));
+    expect(result.current.visualValues.grok.upstreamMode).toBe('us-east-1');
+    act(() =>
+      result.current.setVisualValues({
+        grok: { ...result.current.visualValues.grok, upstreamMode: 'eu-west-1' },
+      })
+    );
+    const saved = result.current.applyVisualChangesToYaml(yaml);
+    expect(parse(saved).xai).toEqual({ 'default-base-url-mode': 'eu-west-1', future: 'preserved' });
+    act(() => result.current.loadVisualValuesFromYaml(saved));
+    expect(result.current.visualDirty).toBe(false);
+    expect(
+      getVisualConfigValidationErrors({
+        ...result.current.visualValues,
+        grok: { ...result.current.visualValues.grok, upstreamMode: 'unknown' },
+      })['grok.upstreamMode']
+    ).toBe('grok_upstream_mode');
+  });
+
   it('preserves unknown sibling aliases when replacing a header map', () => {
     const doc = parseDocument(
       'xai:\n  headers: &headers\n    X-Fixture: old\n  future-headers: *headers\n'
@@ -37,6 +59,7 @@ describe('Grok global settings', () => {
       convergence: false,
       confuse: false,
       poolSize: '4',
+      upstreamMode: 'cli',
     });
     act(() => result.current.setVisualValues({ port: '8318' }));
     expect(parse(result.current.applyVisualChangesToYaml(yaml))).not.toHaveProperty('xai');

@@ -798,7 +798,7 @@
     "model_capability_image": "圖片",
     "model_capability_video": "影片",
     "using_api_label": "使用官方 xAI API",
-    "using_api_hint": "開啟後文字 HTTP 請求使用官方 xAI API；關閉時使用 Grok CLI chat-proxy，圖片、影片和 WebSocket 不受影響。",
+    "using_api_hint": "開啟時將 base_url 設為官方 xAI API；關閉時設為 Grok CLI。跟隨全域或選擇區域節點請開啟憑證設定。",
     "websockets_label": "啟用 Grok WebSocket",
     "websockets_hint": "開啟後 Responses WebSocket 請求優先使用 xAI WebSocket 上游；一般 HTTP 請求不受影響。",
     "xai_field_saved": "{{field}} 已儲存",
@@ -851,7 +851,7 @@
     "batch_settings_priority_placeholder": "整數（包括 0）或 null",
     "batch_settings_priority_hint": "留空不修改；輸入整數設定優先級，0 是有效優先級；輸入 null 清空並恢復預設優先級 0。",
     "batch_settings_using_api_label": "使用官方 xAI API",
-    "batch_settings_using_api_hint": "僅套用於 Grok/xAI 憑證；不適用的憑證會由後端回傳失敗詳情。",
+    "batch_settings_using_api_hint": "僅套用於 Grok/xAI；開啟時將 base_url 固定為官方 API，關閉時固定為 CLI，不會跟隨全域。",
     "batch_settings_websockets_label": "Websockets",
     "batch_settings_websockets_hint": "僅套用於 Codex 和 Grok/xAI 憑證；不適用的憑證會由後端回傳失敗詳情。",
     "batch_settings_websockets_skip": "不修改",
@@ -2096,7 +2096,7 @@
       },
       "grok": {
         "title": "Grok 管理入口",
-        "description": "Grok 登入、憑證層級 using_api/websockets 和配額資訊在對應管理頁維護。",
+        "description": "Grok 登入、憑證上游位址、WebSocket 與額度資訊在對應管理頁面維護。",
         "oauth": "開啟 Grok OAuth",
         "auth_files": "檢視 Grok 憑證",
         "quota": "檢視 Grok 配額"
@@ -2888,7 +2888,8 @@
         "resize_filter": "請選擇 Catmull-Rom 或 ApproxBiLinear",
         "payload_invalid_number": "請輸入有效數字",
         "payload_invalid_boolean": "請選擇 true 或 false",
-        "payload_invalid_json": "請輸入有效的 JSON"
+        "payload_invalid_json": "請輸入有效的 JSON",
+        "grok_upstream_mode": "全域預設上游: cli, api, us-east-1, us-west-2, eu-west-1"
       },
       "common": {
         "summary_providers": "提供者",
@@ -4380,6 +4381,27 @@
       "unhealthy": "異常",
       "unknown": "未知",
       "not_applicable": "不適用"
+    }
+  },
+  "grok_upstream": {
+    "title": "Grok 上游位址",
+    "default_label": "全域預設上游",
+    "default_hint": "未填寫 base_url 的憑證使用此入口；單一憑證的位址優先。儲存後從下一請求生效，不會增加帳號的存取權限。",
+    "account_label": "請求上游",
+    "account_hint": "跟隨全域時將 base_url 留空；選擇節點或輸入自訂位址後，優先使用該帳號自己的位址。",
+    "base_url_label": "上游位址（base_url）",
+    "invalid_url": "請輸入有效的 HTTP(S) 基底位址，不含使用者名稱、密碼、查詢參數或片段。",
+    "inherited": "跟隨全域 · {{mode}}",
+    "edit": "設定",
+    "transport_hint": "聊天、圖片、影片和模型查詢使用所選入口。CLI 不支援 WebSocket 與壓縮請求，這兩類請求使用官方 API；選擇區域 API 或自訂位址時保留所選位址。",
+    "modes": {
+      "inherit": "跟隨全域",
+      "cli": "CLI 訂閱入口",
+      "api": "官方 API",
+      "us-east-1": "美國東部",
+      "us-west-2": "美國西部",
+      "eu-west-1": "歐洲西部",
+      "custom": "自訂位址"
     }
   }
 }

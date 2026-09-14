@@ -26,6 +26,7 @@ type AuthFileStatusResponse = { status: string; disabled: boolean };
 type AuthFileEntry = AuthFilesResponse['files'][number];
 export type XaiAuthFileField = 'using_api' | 'websockets';
 export type AuthFileFieldsPatch = {
+  base_url?: string;
   prefix?: string;
   proxy_url?: string;
   headers?: Record<string, string>;

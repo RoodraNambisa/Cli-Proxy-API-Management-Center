@@ -800,7 +800,7 @@
     "model_capability_image": "Image",
     "model_capability_video": "Video",
     "using_api_label": "Use official xAI API",
-    "using_api_hint": "Use the official xAI API for text HTTP requests when enabled; use Grok CLI chat-proxy when disabled. Images, video, and WebSocket are unaffected.",
+    "using_api_hint": "Sets base_url to the official xAI API when enabled, or Grok CLI when disabled. Open credential settings to inherit the global default or select a region.",
     "websockets_label": "Enable Grok WebSocket",
     "websockets_hint": "Prefer the xAI WebSocket upstream for Responses WebSocket requests. Regular HTTP requests are unaffected.",
     "xai_field_saved": "{{field}} saved",
@@ -853,7 +853,7 @@
     "batch_settings_priority_placeholder": "Integer (including 0) or null",
     "batch_settings_priority_hint": "Leave blank to keep unchanged; enter an integer to set priority (0 is valid), or null to clear it and restore the default priority of 0.",
     "batch_settings_using_api_label": "Use official xAI API",
-    "batch_settings_using_api_hint": "Applies only to Grok/xAI credentials; the backend reports unsupported credentials as failures.",
+    "batch_settings_using_api_hint": "Grok/xAI only. Pins base_url to the official API when enabled, or CLI when disabled; this does not inherit the global default.",
     "batch_settings_websockets_label": "Websockets",
     "batch_settings_websockets_hint": "Applies only to Codex and Grok/xAI credentials; the backend reports unsupported credentials as failures.",
     "batch_settings_websockets_skip": "Do not change",
@@ -2072,7 +2072,7 @@
       },
       "grok": {
         "title": "Grok management",
-        "description": "Manage Grok login, credential-level using_api/websockets, and quota data on their dedicated pages.",
+        "description": "Manage Grok login, credential upstream URLs, WebSocket and quota information on their respective pages.",
         "oauth": "Open Grok OAuth",
         "auth_files": "View Grok credentials",
         "quota": "View Grok quota"
@@ -2864,7 +2864,8 @@
         "resize_filter": "Choose Catmull-Rom or ApproxBiLinear",
         "payload_invalid_number": "Enter a valid number",
         "payload_invalid_boolean": "Choose true or false",
-        "payload_invalid_json": "Enter valid JSON"
+        "payload_invalid_json": "Enter valid JSON",
+        "grok_upstream_mode": "Global default upstream: cli, api, us-east-1, us-west-2, eu-west-1"
       },
       "common": {
         "summary_providers": "Providers",
@@ -4356,6 +4357,27 @@
       "unhealthy": "Unhealthy",
       "unknown": "Unknown",
       "not_applicable": "Not applicable"
+    }
+  },
+  "grok_upstream": {
+    "title": "Grok upstream address",
+    "default_label": "Global default upstream",
+    "default_hint": "Credentials without base_url use this endpoint. An account address takes priority. Changes apply to the next request and do not grant account access.",
+    "account_label": "Request upstream",
+    "account_hint": "Leave base_url empty to inherit the global default. Selecting an endpoint or entering a custom URL pins this account to that address.",
+    "base_url_label": "Upstream address (base_url)",
+    "invalid_url": "Enter a valid HTTP(S) base URL without user information, query parameters or a fragment.",
+    "inherited": "Global default · {{mode}}",
+    "edit": "Configure",
+    "transport_hint": "Chat, images, video and model queries use this endpoint. CLI does not support WebSocket or compaction, so those use the official API. Regional API and custom endpoints remain selected for those transports.",
+    "modes": {
+      "inherit": "Global default",
+      "cli": "CLI subscription gateway",
+      "api": "Official API",
+      "us-east-1": "US East",
+      "us-west-2": "US West",
+      "eu-west-1": "Europe West",
+      "custom": "Custom address"
     }
   }
 }

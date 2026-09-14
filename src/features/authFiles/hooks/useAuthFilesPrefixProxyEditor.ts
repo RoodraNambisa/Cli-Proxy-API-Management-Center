@@ -4,8 +4,19 @@ import {
   serializeCredentialWeight,
 } from '@/utils/credentialWeight';
 import { useState } from 'react';
+import {
+  grokAccountUpstream,
+  GROK_UPSTREAM_URLS,
+  normalizeGrokBaseUrl,
+  type GrokAccountUpstream,
+  type GrokUpstreamMode,
+} from '@/utils/grokUpstream';
 import type { RequestScopedErrorRule } from '@/types/requestScopedErrors';
-import { normalizeRequestScopedErrors, serializeRequestScopedErrors, validateRequestScopedErrorRule } from '@/utils/requestScopedErrors';
+import {
+  normalizeRequestScopedErrors,
+  serializeRequestScopedErrors,
+  validateRequestScopedErrorRule,
+} from '@/utils/requestScopedErrors';
 import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
 import type { AuthFileItem, CodexFingerprintMode } from '@/types';
@@ -31,6 +42,8 @@ export type AuthFileHeadersErrorKey =
 export type ChatGptWebLoginMethod = 'auto' | 'passkey' | 'password_totp' | 'api798';
 
 export type PrefixProxyEditorField =
+  | 'grokUpstream'
+  | 'baseUrl'
   | 'prefix'
   | 'proxyUrl'
   | 'priority'
@@ -52,6 +65,10 @@ export type PrefixProxyEditorState = {
   fileInfoText: string;
   isCodexFile: boolean;
   isChatGptWebFile: boolean;
+  isXaiFile: boolean;
+  grokUpstream: GrokAccountUpstream;
+  baseUrl: string;
+  baseUrlTouched: boolean;
   readOnly: boolean;
   loading: boolean;
   saving: boolean;
@@ -120,9 +137,17 @@ export const buildAuthFileFieldsPatch = (
   previous: Record<string, unknown>,
   next: Record<string, unknown>,
   isCodexFile: boolean,
-  isChatGptWebFile: boolean
+  isChatGptWebFile: boolean,
+  isXaiFile = false
 ): AuthFileFieldsPatch => {
   const patch: AuthFileFieldsPatch = {};
+  if (
+    isXaiFile &&
+    (!jsonValuesEqual(previous.base_url, next.base_url) ||
+      !jsonValuesEqual(previous.using_api, next.using_api))
+  ) {
+    patch.base_url = typeof next.base_url === 'string' ? next.base_url : '';
+  }
 
   if (!jsonValuesEqual(previous.prefix, next.prefix)) {
     patch.prefix = typeof next.prefix === 'string' ? next.prefix : '';
@@ -205,6 +230,11 @@ const buildPrefixProxyUpdatedText = (
 ): string => {
   if (!editor?.json) return editor?.rawText ?? '';
   const next: Record<string, unknown> = { ...editor.json };
+  if (editor.isXaiFile && editor.baseUrlTouched) {
+    const baseUrl = normalizeGrokBaseUrl(editor.baseUrl) ?? editor.baseUrl.trim();
+    next.base_url = baseUrl;
+    next.using_api = Boolean(baseUrl && baseUrl !== GROK_UPSTREAM_URLS.cli);
+  }
   if ('prefix' in next || editor.prefix.trim()) {
     next.prefix = editor.prefix;
   }
@@ -299,6 +329,10 @@ export function useAuthFilesPrefixProxyEditor(
   );
   const hasBlockingValidationError = Boolean(
     hasBlockingWeightError ||
+    (prefixProxyEditor?.isXaiFile &&
+      prefixProxyEditor.baseUrlTouched &&
+      (normalizeGrokBaseUrl(prefixProxyEditor.baseUrl) === null ||
+        (prefixProxyEditor.grokUpstream === 'custom' && !prefixProxyEditor.baseUrl.trim()))) ||
     prefixProxyEditor?.requestScopedErrors.some((rule) => validateRequestScopedErrorRule(rule)) ||
     (prefixProxyEditor?.headersTouched && prefixProxyEditor.headersError) ||
     (prefixProxyEditor?.isChatGptWebFile &&
@@ -332,6 +366,9 @@ export function useAuthFilesPrefixProxyEditor(
       resolveCodexAuthModeSummary(file) !== null;
     const isChatGptWebFile =
       normalizedType === 'chatgpt-web' || normalizedProvider === 'chatgpt-web';
+    const isXaiFile = [normalizedType, normalizedProvider].some((value) =>
+      ['xai', 'x-ai', 'grok'].includes(value)
+    );
     const readOnly = normalizedType === 'gemini-cli' || normalizedProvider === 'gemini-cli';
 
     if (disableControls) return;
@@ -345,6 +382,10 @@ export function useAuthFilesPrefixProxyEditor(
       fileInfoText: JSON.stringify(file, null, 2),
       isCodexFile,
       isChatGptWebFile,
+      isXaiFile,
+      grokUpstream: 'inherit',
+      baseUrl: '',
+      baseUrlTouched: false,
       readOnly,
       loading: true,
       saving: false,
@@ -448,6 +489,9 @@ export function useAuthFilesPrefixProxyEditor(
           json,
           prefix,
           proxyUrl,
+          grokUpstream: grokAccountUpstream(json.base_url),
+          baseUrl: typeof json.base_url === 'string' ? json.base_url : '',
+          baseUrlTouched: false,
           priority: priority !== undefined ? String(priority) : '',
           weight: json.weight === undefined ? '' : String(normalizeCredentialWeight(json.weight) ?? ''),
           weightTouched: false,
@@ -485,6 +529,22 @@ export function useAuthFilesPrefixProxyEditor(
   ) => {
     setPrefixProxyEditor((prev) => {
       if (!prev) return prev;
+      if (field === 'grokUpstream') {
+        const mode = String(value) as GrokAccountUpstream;
+        if (!['inherit', 'custom', ...Object.keys(GROK_UPSTREAM_URLS)].includes(mode)) return prev;
+        return {
+          ...prev,
+          grokUpstream: mode,
+          baseUrlTouched: true,
+          baseUrl:
+            mode === 'inherit'
+              ? ''
+              : mode === 'custom'
+                ? prev.baseUrl
+                : GROK_UPSTREAM_URLS[mode as GrokUpstreamMode],
+        };
+      }
+      if (field === 'baseUrl') return { ...prev, baseUrl: String(value), baseUrlTouched: true };
       if (field === 'prefix') return { ...prev, prefix: String(value) };
       if (field === 'requestScopedErrors') return Array.isArray(value)
         ? { ...prev, requestScopedErrors: value, requestScopedErrorsTouched: true } : prev;
@@ -520,7 +580,18 @@ export function useAuthFilesPrefixProxyEditor(
   };
 
   const handlePrefixProxySave = async () => {
-    const ruleIssue = prefixProxyEditor?.requestScopedErrors.map(validateRequestScopedErrorRule).find(Boolean);
+    if (
+      prefixProxyEditor?.isXaiFile &&
+      prefixProxyEditor.baseUrlTouched &&
+      (normalizeGrokBaseUrl(prefixProxyEditor.baseUrl) === null ||
+        (prefixProxyEditor.grokUpstream === 'custom' && !prefixProxyEditor.baseUrl.trim()))
+    ) {
+      showNotification(t('grok_upstream.invalid_url'), 'error');
+      return;
+    }
+    const ruleIssue = prefixProxyEditor?.requestScopedErrors
+      .map(validateRequestScopedErrorRule)
+      .find(Boolean);
     if (ruleIssue) {
       showNotification(t(`request_scoped_errors.invalid_${ruleIssue}`), 'error');
       return;
@@ -553,7 +624,8 @@ export function useAuthFilesPrefixProxyEditor(
         prefixProxyEditor.json,
         nextJson,
         prefixProxyEditor.isCodexFile,
-        prefixProxyEditor.isChatGptWebFile
+        prefixProxyEditor.isChatGptWebFile,
+        prefixProxyEditor.isXaiFile
       );
       const result = await authFilesApi.patchFieldsBatch([name], fieldsPatch);
       if (result.failed.length > 0 || result.updated !== 1) {

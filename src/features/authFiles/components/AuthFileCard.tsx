@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { grokAccountUpstream } from '@/utils/grokUpstream';
 import {
   IconChevronRight,
   IconDownload,
@@ -33,7 +34,6 @@ import {
   normalizeProviderKey,
   parseDisableCoolingValue,
   parsePriorityValue,
-  readXaiAuthFileUsingApi,
   readXaiAuthFileWebsockets,
   resolveCodexAuthModeSummary,
   resolveCodexFingerprintMode,
@@ -293,9 +293,9 @@ export function AuthFileCard(props: AuthFileCardProps) {
       : Number.parseInt(String(cooldownModelCountRaw ?? '0'), 10) || 0;
   const cooldownUntilText = cooldownActive ? formatDateTime(new Date(cooldownUntilMs)) : '';
   const noteValue = typeof file.note === 'string' ? file.note.trim() : '';
-  const xaiUsingApi = readXaiAuthFileUsingApi(file);
+  const xaiUpstream = grokAccountUpstream(file.base_url);
+  const xaiUpstreamMode = file.upstream_mode ?? (xaiUpstream === 'inherit' ? 'cli' : xaiUpstream);
   const xaiWebsockets = readXaiAuthFileWebsockets(file);
-  const xaiUsingApiUpdating = xaiFieldsUpdating[file.name]?.using_api === true;
   const xaiWebsocketsUpdating = xaiFieldsUpdating[file.name]?.websockets === true;
   const chatGptWebReloginBusy = chatGptWebReloginUpdating[file.name] === true;
   const restoreBusy = restoring[file.name] === true;
@@ -607,20 +607,27 @@ export function AuthFileCard(props: AuthFileCardProps) {
               <div className={styles.xaiCredentialSetting}>
                 <div className={styles.xaiCredentialSettingText}>
                   <span className={styles.xaiCredentialSettingLabel}>
-                    {t('auth_files.using_api_label')}
+                    {t('grok_upstream.account_label')}
                   </span>
-                  {!compact && (
-                    <span className={styles.xaiCredentialSettingHint}>
-                      {t('auth_files.using_api_hint')}
-                    </span>
-                  )}
+                  <span className={styles.xaiCredentialSettingHint}>
+                    {xaiUpstream === 'inherit'
+                      ? t('grok_upstream.inherited', {
+                          mode: t(`grok_upstream.modes.${xaiUpstreamMode}`),
+                        })
+                      : t(`grok_upstream.modes.${xaiUpstream}`)}
+                    {!compact && file.upstream_base_url && (
+                      <span className={styles.xaiUpstreamUrl}>{file.upstream_base_url}</span>
+                    )}
+                  </span>
                 </div>
-                <ToggleSwitch
-                  ariaLabel={t('auth_files.using_api_label')}
-                  checked={xaiUsingApi}
-                  disabled={disableControls || xaiUsingApiUpdating}
-                  onChange={(value) => onToggleXaiField(file, 'using_api', value)}
-                />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={disableControls}
+                  onClick={() => onOpenPrefixProxyEditor(file)}
+                >
+                  {t('grok_upstream.edit')}
+                </Button>
               </div>
               <div className={styles.xaiCredentialSetting}>
                 <div className={styles.xaiCredentialSettingText}>

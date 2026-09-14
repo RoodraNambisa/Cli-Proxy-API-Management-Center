@@ -296,30 +296,19 @@ describe('xAI auth file compatibility', () => {
     expect(result.current.modelsFile?.quota_state).toBe('exhausted');
   });
 
-  test('shows xAI-only switches and never exposes them on other provider cards', () => {
-    const onToggleXaiField = vi.fn();
-    const view = render(
-      <AuthFileCard
-        {...createCardProps(
-          { name: 'xai.json', type: 'xai', auth_kind: 'oauth' },
-          onToggleXaiField
-        )}
-      />
-    );
-
-    const usingApiSwitch = screen.getByRole('checkbox', {
-      name: 'auth_files.using_api_label',
-    });
-    expect(screen.getByRole('checkbox', { name: 'auth_files.websockets_label' })).not.toBeNull();
-    fireEvent.click(usingApiSwitch);
-    expect(onToggleXaiField).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'xai.json' }),
-      'using_api',
-      true
-    );
-
+  test('shows Grok upstream configuration and WebSocket controls only on Grok cards', () => {
+    const props = createCardProps({ name: 'xai.json', type: 'xai', auth_kind: 'oauth', base_url: '', upstream_base_url: 'https://us-east-1.api.x.ai/v1', upstream_mode: 'us-east-1', upstream_source: 'global' });
+    const view = render(<AuthFileCard {...props} />);
+    expect(screen.getByText('grok_upstream.inherited')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'grok_upstream.edit' }));
+    expect(props.onOpenPrefixProxyEditor).toHaveBeenCalledWith(props.file);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'auth_files.websockets_label' }));
+    expect(props.onToggleXaiField).toHaveBeenCalledWith(props.file, 'websockets', true);
+    view.rerender(<AuthFileCard {...props} compact={false} file={{ ...props.file, base_url: 'https://us-east-1.api.x.ai/v1' }} />);
+    expect(screen.getByText('grok_upstream.modes.us-east-1')).not.toBeNull();
+    expect(screen.getByText('https://us-east-1.api.x.ai/v1')).not.toBeNull();
     view.rerender(<AuthFileCard {...createCardProps({ name: 'codex.json', type: 'codex' })} />);
-    expect(screen.queryByRole('checkbox', { name: 'auth_files.using_api_label' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'grok_upstream.edit' })).toBeNull();
     expect(screen.queryByRole('checkbox', { name: 'auth_files.websockets_label' })).toBeNull();
   });
 

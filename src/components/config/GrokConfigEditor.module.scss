@@ -35,3 +35,10 @@
   color: var(--error-color);
   font-size: 13px;
 }
+.upstreamUrl {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  margin: 0 0 10px;
+}

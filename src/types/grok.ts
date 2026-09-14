@@ -11,6 +11,7 @@ export const GROK_DEFAULT_KEYS = [
 ] as const;
 export type GrokDefaultKey = (typeof GROK_DEFAULT_KEYS)[number];
 export interface GrokVisualConfig {
+  upstreamMode: string;
   userAgent: string;
   clientVersion: string;
   clientIdentifier: string;
@@ -25,6 +26,7 @@ export interface GrokVisualConfig {
   defaults: Record<GrokDefaultKey, string>;
 }
 export const DEFAULT_GROK_CONFIG: GrokVisualConfig = {
+  upstreamMode: 'cli',
   userAgent: '',
   clientVersion: '',
   clientIdentifier: '',

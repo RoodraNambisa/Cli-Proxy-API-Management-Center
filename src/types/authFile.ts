@@ -124,6 +124,10 @@ export interface CodexObservedQuotaWindow {
 }
 
 export interface AuthFileItem {
+  base_url?: string;
+  upstream_base_url?: string;
+  upstream_mode?: string;
+  upstream_source?: 'global' | 'credential';
   quota_observation_enabled?: boolean;
   quota_observation?: CodexQuotaObservation;
   weight?: number;

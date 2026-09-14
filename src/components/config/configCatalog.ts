@@ -1092,6 +1092,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['usage cache', 'token estimation', 'fallback usage', '计费缓存', 'token 估算'],
   },
   {
+    id: 'config-grok-upstream',
+    pageId: 'provider-grok',
+    labelKey: 'grok_upstream.title',
+    yamlKeys: ['xai.default-base-url-mode', 'base_url'],
+    aliases: ['grok', 'upstream', '上游', '区域节点'],
+  },
+  {
     id: 'config-grok-headers', pageId: 'provider-grok', labelKey: 'config_management.grok.headers', yamlKeys: ['xai.headers', 'xai.header-defaults', 'xai.user-agent', 'xai.client-version', 'xai.client-identifier'], aliases: ['grok'],
   },
   {

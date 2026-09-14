@@ -102,6 +102,7 @@ export type VisualConfigValidationErrorCode =
   | 'error_response_rewrite_result_required'
   | 'grok_headers'
   | 'grok_parameter'
+  | 'grok_upstream_mode'
   | 'json_object'
   | 'auth_model_exclusion_models_required'
   | 'auth_model_exclusion_match_required'
