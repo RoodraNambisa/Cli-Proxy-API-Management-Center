@@ -58,6 +58,20 @@ describe('Sentinel compatibility panel saving', () => {
     expect((screen.getByLabelText(key('enabled')) as HTMLInputElement).checked).toBe(true);
   });
 
+  it('saves remote mode and explicit empty scopes without resetting SDK settings', async () => {
+    current.mode = 'local';
+    current.remote = { scopes: ['images'], nodes: [{ name: 'one', url: 'https://solver.example.com', 'api-key': 'secret' }], 'budget-seconds': 30 };
+    render(<ChatGptWebSentinelPanel />);
+    await openEditor();
+    fireEvent.change(screen.getByLabelText('sentinel_compute.mode'), { target: { value: 'remote' } });
+    fireEvent.click(screen.getByLabelText('sentinel_compute.images'));
+    expect(saveButton().disabled).toBe(false);
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(api.patchSentinel).toHaveBeenCalledWith({ mode: 'remote', remote: { ...current.remote, scopes: [] } }));
+    await waitFor(() => expect(saveButton().disabled).toBe(true));
+    expect(current['sdk-runtime-enabled']).toBe(true);
+  });
+
   it('saves explicit empty lists when fields are deleted', async () => {
     current['go-vm-compatibility']!['writable-window-properties'] = ['__state'];
     current['go-vm-compatibility']!['environment-properties'] = [

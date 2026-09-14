@@ -126,7 +126,8 @@
     }
   }
 
-  input {
+  input,
+  select {
     width: 100%;
     min-height: 40px;
     padding: 8px 10px;
@@ -158,6 +159,28 @@
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 600;
+}
+
+.solverKeyRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+  max-width: 560px;
+}
+
+.remoteEditor {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  fieldset {
+    min-width: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: $spacing-md;
+  }
+  legend { color: var(--text-secondary); font-size: 13px; }
 }
 
 .validationError {

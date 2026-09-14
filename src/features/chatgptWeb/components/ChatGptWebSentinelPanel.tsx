@@ -23,6 +23,9 @@ import type {
 import { getChatGptWebErrorMessage } from '@/utils/chatgptWeb';
 import styles from './ChatGptWebSentinelPanel.module.scss';
 import { SentinelCompatibilityEditor } from './SentinelCompatibilityEditor';
+import { SentinelRemoteEditor } from './SentinelRemoteEditor';
+import { normalizeSentinelRemote, validSentinelRemote } from '../sentinelRemote';
+import type { SentinelRemote } from '@/types/sentinelCompute';
 import {
   toCompatibilityDraft,
   readCompatibilityDraft,
@@ -30,6 +33,8 @@ import {
 } from '../sentinelCompatibility';
 
 type SentinelDraft = {
+  mode: 'local' | 'remote';
+  remote: SentinelRemote;
   compatibility: SentinelCompatibilityDraft;
   runtimeEnabled: boolean;
   workers: string;
@@ -57,6 +62,8 @@ type ChatGptWebSentinelPanelProps = {
 const DISCLOSURE_STORAGE_KEY = 'config-management:chatgpt-web-sentinel-expanded';
 
 const DEFAULT_DRAFT: SentinelDraft = {
+  mode: 'local',
+  remote: normalizeSentinelRemote(),
   compatibility: toCompatibilityDraft(),
   runtimeEnabled: true,
   workers: '0',
@@ -65,6 +72,8 @@ const DEFAULT_DRAFT: SentinelDraft = {
 };
 
 const toDraft = (snapshot: ChatGptWebSentinelSnapshot): SentinelDraft => ({
+  mode: snapshot.mode ?? 'local',
+  remote: normalizeSentinelRemote(snapshot.remote),
   compatibility: toCompatibilityDraft(snapshot['go-vm-compatibility']),
   runtimeEnabled: snapshot['sdk-runtime-enabled'],
   workers: String(snapshot['sdk-workers']),
@@ -84,6 +93,7 @@ const parseInteger = (value: string, min: number, max?: number): number | null =
 const readConfig = (
   draft: SentinelDraft
 ): { config: ChatGptWebSentinelConfig | null; errorKey: string | null } => {
+  if (!validSentinelRemote(draft.mode, draft.remote)) return { config: null, errorKey: 'sentinel_compute.invalid' };
   const compatibility = readCompatibilityDraft(draft.compatibility);
   if (!compatibility)
     return { config: null, errorKey: 'chatgpt_web.sentinel.compatibility.invalid' };
@@ -101,6 +111,8 @@ const readConfig = (
   }
   return {
     config: {
+      mode: draft.mode,
+      remote: draft.remote,
       'go-vm-compatibility': compatibility,
       'sdk-runtime-enabled': draft.runtimeEnabled,
       'sdk-workers': workers,
@@ -115,6 +127,8 @@ const buildPatch = (
   current: ChatGptWebSentinelSnapshot,
   next: ChatGptWebSentinelConfig
 ): ChatGptWebSentinelConfigPatch => ({
+  ...((current.mode ?? 'local') !== next.mode ? { mode: next.mode } : {}),
+  ...(JSON.stringify(normalizeSentinelRemote(current.remote)) !== JSON.stringify(next.remote) ? { remote: next.remote } : {}),
   ...(JSON.stringify(
     readCompatibilityDraft(toCompatibilityDraft(current['go-vm-compatibility']))
   ) !== JSON.stringify(next['go-vm-compatibility'])
@@ -423,6 +437,8 @@ export const ChatGptWebSentinelPanel = forwardRef<
 
   const editorContent = (
     <>
+      <SentinelRemoteEditor mode={draft.mode} remote={draft.remote} disabled={controlsDisabled || snapshot?.mode === undefined} status={snapshot?.remote_nodes}
+        onChange={(mode, remote) => setDraft((current) => ({ ...current, mode, remote }))} />
       <div className={styles.runtimeRow}>
         <div>
           <strong>{t('chatgpt_web.sentinel.runtime_enabled')}</strong>

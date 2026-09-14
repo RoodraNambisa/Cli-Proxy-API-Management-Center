@@ -23,8 +23,11 @@ import { ConfigPage } from '@/pages/ConfigPage';
 import { LogsPage } from '@/pages/LogsPage';
 import { PprofPage } from '@/pages/PprofPage';
 import { SystemPage } from '@/pages/SystemPage';
+import { SentinelSolverPage } from '@/pages/SentinelSolverPage';
+import { useConfigStore } from '@/stores';
 
 const mainRoutes = [
+  { path: '/sentinel-solver', element: <SentinelSolverPage /> },
   { path: '/', element: <DashboardPage /> },
   { path: '/dashboard', element: <DashboardPage /> },
   { path: '/settings', element: <Navigate to="/config" replace /> },
@@ -94,5 +97,9 @@ const mainRoutes = [
 ];
 
 export function MainRoutes({ location }: { location?: Location }) {
-  return useRoutes(mainRoutes, location);
+  const solverOnly = useConfigStore((state) => state.config?.runtimeRole === 'sentinel-solver');
+  return useRoutes(solverOnly ? [
+    { path: '/sentinel-solver', element: <SentinelSolverPage /> },
+    { path: '*', element: <Navigate to="/sentinel-solver" replace /> },
+  ] : mainRoutes, location);
 }

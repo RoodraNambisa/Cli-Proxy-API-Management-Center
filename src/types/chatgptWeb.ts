@@ -405,6 +405,8 @@ export interface ChatGptWebImportSnapshot {
 }
 
 export interface ChatGptWebSentinelConfig {
+  mode?: 'local' | 'remote';
+  remote?: import('./sentinelCompute').SentinelRemote;
   'go-vm-compatibility'?: ChatGptWebSentinelCompatibility;
   'sdk-runtime-enabled': boolean;
   'sdk-workers': number;
@@ -431,6 +433,7 @@ export interface ChatGptWebSentinelCompatibility {
 export type ChatGptWebSentinelConfigPatch = Partial<ChatGptWebSentinelConfig>;
 
 export interface ChatGptWebSentinelSnapshot extends ChatGptWebSentinelConfig {
+  remote_nodes?: import('./sentinelCompute').SentinelNodeStatus[];
   go_vm_rules_hash?: string;
   go_vm_rule_count?: number;
   go_vm_rules_applied_at?: string;

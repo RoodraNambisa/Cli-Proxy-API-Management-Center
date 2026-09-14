@@ -290,6 +290,8 @@ export interface CodexCustomModelConfig {
 }
 
 export interface Config {
+  runtimeRole?: 'proxy' | 'sentinel-solver';
+  sentinelSolver?: import('./sentinelCompute').SentinelSolverConfig;
   xai?: Record<string, unknown>;
   debug?: boolean;
   proxyUrl?: string;

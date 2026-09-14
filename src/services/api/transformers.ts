@@ -827,6 +827,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     return config;
   }
 
+  if (raw['runtime-role'] === 'sentinel-solver' || raw['runtime-role'] === 'proxy') config.runtimeRole = raw['runtime-role'];
+  if (isRecord(raw['sentinel-solver'])) config.sentinelSolver = raw['sentinel-solver'] as unknown as Config['sentinelSolver'];
+
   config.debug = normalizeBoolean(raw.debug);
   const proxyUrl = raw['proxy-url'] ?? raw.proxyUrl;
   config.proxyUrl =

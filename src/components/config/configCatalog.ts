@@ -1032,6 +1032,11 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'chatgpt_web.sentinel.title',
     yamlKeys: [
       'chatgpt-web.sentinel',
+      'chatgpt-web.sentinel.mode',
+      'chatgpt-web.sentinel.remote.scopes',
+      'chatgpt-web.sentinel.remote.nodes',
+      'chatgpt-web.sentinel.remote.budget-seconds',
+      'sentinel-solver',
       'chatgpt-web.sentinel.sdk-runtime-enabled',
       'chatgpt-web.sentinel.sdk-workers',
       'chatgpt-web.sentinel.sdk-queue-size',

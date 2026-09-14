@@ -221,6 +221,7 @@ export function MainLayout() {
   );
 
   const config = useConfigStore((state) => state.config);
+  const solverOnly = config?.runtimeRole === 'sentinel-solver';
   const fetchConfig = useConfigStore((state) => state.fetchConfig);
   const clearCache = useConfigStore((state) => state.clearCache);
 
@@ -395,13 +396,13 @@ export function MainLayout() {
   }, [fetchConfig]);
 
   useEffect(() => {
-    if (connectionStatus !== 'connected') {
+    if (connectionStatus !== 'connected' || solverOnly) {
       resetStartup();
       return undefined;
     }
     void loadStartup(startupConnectionKey);
     return () => resetStartup();
-  }, [connectionStatus, loadStartup, resetStartup, startupConnectionKey]);
+  }, [connectionStatus, loadStartup, resetStartup, startupConnectionKey, solverOnly]);
 
   useEffect(() => {
     if (connectionStatus !== 'connected' || startup?.status !== 'initializing') return undefined;
@@ -411,9 +412,11 @@ export function MainLayout() {
     return () => window.clearInterval(timer);
   }, [connectionStatus, loadStartup, startup?.status, startupConnectionKey]);
 
-  const navItems = [
+  const solverNavigation = { path: '/sentinel-solver', label: t('sentinel_compute.server_title'), icon: sidebarIcons.config, end: false };
+  const navItems: { path: string; label: string; icon: ReactNode; end?: boolean }[] = solverOnly ? [solverNavigation] : [
     { path: '/', label: t('nav.dashboard'), icon: sidebarIcons.dashboard, end: true },
     { path: '/config', label: t('nav.config_management'), icon: sidebarIcons.config },
+    ...(config?.sentinelSolver ? [solverNavigation] : []),
     { path: '/ai-providers', label: t('nav.ai_providers'), icon: sidebarIcons.aiProviders },
     { path: '/auth-files', label: t('nav.auth_files'), icon: sidebarIcons.authFiles },
     { path: '/oauth', label: t('nav.oauth', { defaultValue: 'OAuth' }), icon: sidebarIcons.oauth },

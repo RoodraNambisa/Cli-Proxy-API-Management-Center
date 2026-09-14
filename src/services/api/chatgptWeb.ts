@@ -395,6 +395,16 @@ export const chatGptWebApi = {
     return apiClient.get('/chatgpt-web/sentinel');
   },
 
+  getSentinelSolver(): Promise<import('@/types/sentinelCompute').SentinelSolverSnapshot> {
+    return apiClient.get('/sentinel-solver');
+  },
+  patchSentinelSolver(config: Partial<import('@/types/sentinelCompute').SentinelSolverConfig>): Promise<unknown> {
+    return apiClient.patch('/sentinel-solver', config);
+  },
+  testSentinelNode(node: import('@/types/sentinelCompute').SentinelNode): Promise<unknown> {
+    return apiClient.post('/sentinel-solver/test-node', node);
+  },
+
   putSentinel(config: ChatGptWebSentinelConfig): Promise<unknown> {
     return apiClient.put('/chatgpt-web/sentinel', config);
   },
