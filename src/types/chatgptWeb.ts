@@ -534,6 +534,8 @@ export interface ChatGptWebImageTask {
   last_progress_age_milliseconds: number;
   last_poll_completed_at: string | null;
   polls_in_flight: number;
+  bootstrap_attempt?: number;
+  bootstrap_max_attempts?: number;
   credential_fingerprint: string;
   canceling: boolean;
   cancellation_requested_at: string | null;

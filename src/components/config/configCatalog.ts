@@ -185,6 +185,8 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebImagePollStallBreakerEnabled',
       'chatgptWebImagePollStallSeconds',
       'chatgptWebImageRequestTimeoutSeconds',
+      'chatgptWebImageBootstrapTimeoutSeconds',
+      'chatgptWebImageBootstrapRetries',
       'chatgptWebImageMemoryFinalizerConcurrency',
     ],
   },
@@ -955,6 +957,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.poll-stall-breaker-enabled',
       'images.chatgpt-web.poll-stall-seconds',
       'images.chatgpt-web.request-timeout-seconds',
+      'images.chatgpt-web.bootstrap-timeout-seconds',
+      'images.chatgpt-web.bootstrap-retries',
       'images.chatgpt-web.memory-finalizer-concurrency',
     ],
     fieldTargets: {
@@ -973,11 +977,21 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.poll-stall-seconds': 'config-chatgpt-web-image-poll-stall-seconds',
       'images.chatgpt-web.request-timeout-seconds':
         'config-chatgpt-web-image-request-timeout-seconds',
+      'images.chatgpt-web.bootstrap-timeout-seconds':
+        'config-chatgpt-web-image-bootstrap-timeout-seconds',
+      'images.chatgpt-web.bootstrap-retries': 'config-chatgpt-web-image-bootstrap-retries',
       'images.chatgpt-web.memory-finalizer-concurrency':
         'config-chatgpt-web-image-memory-finalizer-concurrency',
     },
     aliases: [
       'image concurrency',
+      'homepage timeout',
+      'homepage retries',
+      '首页超时',
+      '首页重试',
+      '首頁逾時',
+      '首頁重試',
+      'тайм-аут главной страницы',
       'image capacity',
       'in flight',
       'finalizer',

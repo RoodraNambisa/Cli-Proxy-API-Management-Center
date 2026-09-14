@@ -139,6 +139,9 @@ const IMAGE_PHASE_ORDER = [
   'web_input_upload',
   'web_requirements',
   'web_requirements_bootstrap',
+  'web_requirements_bootstrap_http',
+  'web_requirements_bootstrap_body',
+  'web_requirements_bootstrap_retry_wait',
   'web_requirements_local_prepare',
   'web_requirements_prepare',
   'web_requirements_parse',
@@ -1796,6 +1799,18 @@ export function SystemPage() {
                                           </Button>
                                         </div>
                                         <dl className={styles.imageTaskStats}>
+                                          {task.stage.startsWith('web_requirements_bootstrap') &&
+                                          (task.bootstrap_attempt ?? 0) > 0 ? (
+                                            <div>
+                                              <dt>
+                                                {t('system_info.image_runtime.bootstrap_attempt')}
+                                              </dt>
+                                              <dd>
+                                                {task.bootstrap_attempt} /{' '}
+                                                {task.bootstrap_max_attempts}
+                                              </dd>
+                                            </div>
+                                          ) : null}
                                           <div>
                                             <dt>{t('system_info.image_runtime.task_stage')}</dt>
                                             <dd>
@@ -1913,6 +1928,23 @@ export function SystemPage() {
                               : ''}
                           </span>
                         </summary>
+                        {systemMetrics.chatgpt_web_image_bootstrap ? (
+                          <dl className={styles.imageProtocolGrid}>
+                            {Object.entries(systemMetrics.chatgpt_web_image_bootstrap).map(
+                              ([key, value]) => (
+                                <div key={key}>
+                                  <dt>
+                                    {t(`system_info.image_runtime.bootstrap_counters.${key}`)}
+                                  </dt>
+                                  <dd>{value}</dd>
+                                </div>
+                              )
+                            )}
+                          </dl>
+                        ) : null}
+                        <p className={styles.imagePhaseNote}>
+                          {t('system_info.image_runtime.bootstrap_note')}
+                        </p>
                         {imagePhaseEntries.length === 0 ? (
                           <p className={styles.imageMetricUnavailable}>
                             {t('system_info.image_runtime.no_phase_samples')}

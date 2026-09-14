@@ -68,6 +68,12 @@ const normalizeImageTask = (value: unknown): ChatGptWebImageTask | null => {
     last_progress_age_milliseconds: finiteNumber(source.last_progress_age_milliseconds),
     last_poll_completed_at: nullableStringValue(source.last_poll_completed_at),
     polls_in_flight: finiteNumber(source.polls_in_flight),
+    bootstrap_attempt:
+      source.bootstrap_attempt === undefined ? undefined : finiteNumber(source.bootstrap_attempt),
+    bootstrap_max_attempts:
+      source.bootstrap_max_attempts === undefined
+        ? undefined
+        : finiteNumber(source.bootstrap_max_attempts),
     credential_fingerprint: stringValue(source.credential_fingerprint),
     canceling: source.canceling === true,
     cancellation_requested_at: nullableStringValue(source.cancellation_requested_at),

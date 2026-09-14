@@ -204,6 +204,12 @@ export interface SystemMetricsSnapshot {
   chatgpt_web_image_poll_slots: SystemImagePollSlotsSnapshot;
   chatgpt_web_image_poll_breaker: SystemImagePollStallBreakerSnapshot;
   chatgpt_web_image_protocol: SystemChatGptWebImageProtocolSnapshot;
+  chatgpt_web_image_bootstrap?: {
+    attempts: number;
+    retries: number;
+    timeouts: number;
+    retry_successes: number;
+  };
   image_spool: SystemImageSpoolSnapshot;
   image_request_phases: SystemImageRequestPhasesSnapshot;
 }

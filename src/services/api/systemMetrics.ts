@@ -332,6 +332,14 @@ export const normalizeSystemMetricsSnapshot = (value: unknown): SystemMetricsSna
       source.chatgpt_web_image_poll_breaker
     ),
     chatgpt_web_image_protocol: normalizeChatGptWebImageProtocol(source.chatgpt_web_image_protocol),
+    chatgpt_web_image_bootstrap: isRecord(source.chatgpt_web_image_bootstrap)
+      ? {
+          attempts: toNonNegativeNumber(source.chatgpt_web_image_bootstrap.attempts),
+          retries: toNonNegativeNumber(source.chatgpt_web_image_bootstrap.retries),
+          timeouts: toNonNegativeNumber(source.chatgpt_web_image_bootstrap.timeouts),
+          retry_successes: toNonNegativeNumber(source.chatgpt_web_image_bootstrap.retry_successes),
+        }
+      : undefined,
     image_spool: normalizeImageSpool(source.image_spool),
     image_request_phases: normalizeImageRequestPhases(source.image_request_phases),
   };

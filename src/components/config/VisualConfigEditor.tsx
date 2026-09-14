@@ -1150,6 +1150,14 @@ export function VisualConfigEditor({
     t,
     validationErrors?.chatgptWebImageRequestTimeoutSeconds
   );
+  const chatGptWebImageBootstrapTimeoutError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImageBootstrapTimeoutSeconds
+  );
+  const chatGptWebImageBootstrapRetriesError = getValidationMessage(
+    t,
+    validationErrors?.chatgptWebImageBootstrapRetries
+  );
   const chatGptWebImageMemoryFinalizerConcurrencyError = getValidationMessage(
     t,
     validationErrors?.chatgptWebImageMemoryFinalizerConcurrency
@@ -1262,6 +1270,8 @@ export function VisualConfigEditor({
     'chatgptWebImagePollStallBreakerEnabled',
     'chatgptWebImagePollStallSeconds',
     'chatgptWebImageRequestTimeoutSeconds',
+    'chatgptWebImageBootstrapTimeoutSeconds',
+    'chatgptWebImageBootstrapRetries',
     'chatgptWebImageMemoryFinalizerConcurrency',
   ]);
   const chatGptWebImageCapacityErrorCount = [
@@ -1274,6 +1284,8 @@ export function VisualConfigEditor({
     chatGptWebImagePollConcurrencyError,
     chatGptWebImagePollStallSecondsError,
     chatGptWebImageRequestTimeoutSecondsError,
+    chatGptWebImageBootstrapTimeoutError,
+    chatGptWebImageBootstrapRetriesError,
     chatGptWebImageMemoryFinalizerConcurrencyError,
   ].filter(Boolean).length;
   const retrySettingsErrorCount = [
@@ -1784,6 +1796,8 @@ export function VisualConfigEditor({
           'chatgptWebImagePollConcurrency',
           'chatgptWebImagePollStallSeconds',
           'chatgptWebImageRequestTimeoutSeconds',
+          'chatgptWebImageBootstrapTimeoutSeconds',
+          'chatgptWebImageBootstrapRetries',
           'chatgptWebImageMemoryFinalizerConcurrency',
         ]),
       'provider-grok': 0,
@@ -2689,6 +2703,8 @@ export function VisualConfigEditor({
                   'config-chatgpt-web-image-poll-stall-breaker-enabled',
                   'config-chatgpt-web-image-poll-stall-seconds',
                   'config-chatgpt-web-image-request-timeout-seconds',
+                  'config-chatgpt-web-image-bootstrap-timeout-seconds',
+                  'config-chatgpt-web-image-bootstrap-retries',
                   'config-chatgpt-web-image-memory-finalizer-concurrency',
                 ]}
                 dirty={chatGptWebImageCapacityDirty}
@@ -2802,6 +2818,46 @@ export function VisualConfigEditor({
                       disabled={disabled}
                       onChange={(event) =>
                         onChange({ chatgptWebImageRequestTimeoutSeconds: event.target.value })
+                      }
+                    />
+                    <Input
+                      id="config-chatgpt-web-image-bootstrap-timeout-seconds"
+                      type="number"
+                      min={0}
+                      max={3600}
+                      step={1}
+                      placeholder="0"
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.image_bootstrap_timeout_seconds'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_bootstrap_timeout_seconds_description'
+                      )}
+                      error={chatGptWebImageBootstrapTimeoutError}
+                      value={values.chatgptWebImageBootstrapTimeoutSeconds}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({ chatgptWebImageBootstrapTimeoutSeconds: event.target.value })
+                      }
+                    />
+                    <Input
+                      id="config-chatgpt-web-image-bootstrap-retries"
+                      type="number"
+                      min={0}
+                      max={5}
+                      step={1}
+                      placeholder="0"
+                      label={t(
+                        'config_management.settings_center.chatgpt_web.image_bootstrap_retries'
+                      )}
+                      hint={t(
+                        'config_management.settings_center.chatgpt_web.image_bootstrap_retries_description'
+                      )}
+                      error={chatGptWebImageBootstrapRetriesError}
+                      value={values.chatgptWebImageBootstrapRetries}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange({ chatgptWebImageBootstrapRetries: event.target.value })
                       }
                     />
                     <Input

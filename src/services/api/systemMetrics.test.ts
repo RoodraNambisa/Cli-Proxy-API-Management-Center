@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { normalizeSystemMetricsSnapshot } from './systemMetrics';
 
 describe('normalizeSystemMetricsSnapshot', () => {
+  it('normalizes only safe homepage counters and keeps older responses unavailable', () => {
+    const snapshot = normalizeSystemMetricsSnapshot({
+      chatgpt_web_image_bootstrap: {
+        attempts: 10, retries: '2', timeouts: -1, retry_successes: 1, token: 'do-not-retain',
+      },
+    });
+    expect(snapshot.chatgpt_web_image_bootstrap).toEqual({
+      attempts: 10, retries: 2, timeouts: 0, retry_successes: 1,
+    });
+    expect(normalizeSystemMetricsSnapshot({}).chatgpt_web_image_bootstrap).toBeUndefined();
+  });
   it('normalizes task page diagnostics and keeps unreported diagnostics unavailable', () => {
     const snapshot = normalizeSystemMetricsSnapshot({
       chatgpt_web_image_protocol: {

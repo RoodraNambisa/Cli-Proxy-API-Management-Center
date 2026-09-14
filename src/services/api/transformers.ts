@@ -1204,6 +1204,12 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
             requestTimeoutSeconds: normalizeNumber(
               chatgptWeb['request-timeout-seconds'] ?? chatgptWeb.requestTimeoutSeconds
             ),
+            bootstrapTimeoutSeconds: normalizeNumber(
+              chatgptWeb['bootstrap-timeout-seconds'] ?? chatgptWeb.bootstrapTimeoutSeconds
+            ),
+            bootstrapRetries: normalizeNumber(
+              chatgptWeb['bootstrap-retries'] ?? chatgptWeb.bootstrapRetries
+            ),
           }
         : undefined,
       native:

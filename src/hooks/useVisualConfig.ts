@@ -1699,6 +1699,18 @@ export function getVisualConfigValidationErrors(
       86400,
       'integer_range_0_86400'
     ),
+    chatgptWebImageBootstrapTimeoutSeconds: getIntegerRangeError(
+      values.chatgptWebImageBootstrapTimeoutSeconds,
+      0,
+      3600,
+      'integer_range_0_3600'
+    ),
+    chatgptWebImageBootstrapRetries: getIntegerRangeError(
+      values.chatgptWebImageBootstrapRetries,
+      0,
+      5,
+      'integer_range_0_5'
+    ),
     'images.codexRequestTimeoutSeconds': getIntegerRangeError(
       values.images.codexRequestTimeoutSeconds,
       0,
@@ -2718,6 +2730,14 @@ function getNextDirtyFields(
         baselineValues.chatgptWebImageRequestTimeoutSeconds
     );
   }
+  for (const field of [
+    'chatgptWebImageBootstrapTimeoutSeconds',
+    'chatgptWebImageBootstrapRetries',
+  ] as const) {
+    if (Object.prototype.hasOwnProperty.call(patch, field)) {
+      updateDirty(field, nextValues[field] === baselineValues[field]);
+    }
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageMemoryFinalizerConcurrency')) {
     updateDirty(
       'chatgptWebImageMemoryFinalizerConcurrency',
@@ -3641,6 +3661,14 @@ export function useVisualConfig() {
             imagesChatGPTWeb?.requestTimeoutSeconds ??
             '0'
         ),
+        chatgptWebImageBootstrapTimeoutSeconds: String(
+          imagesChatGPTWeb?.['bootstrap-timeout-seconds'] ??
+            imagesChatGPTWeb?.bootstrapTimeoutSeconds ??
+            '0'
+        ),
+        chatgptWebImageBootstrapRetries: String(
+          imagesChatGPTWeb?.['bootstrap-retries'] ?? imagesChatGPTWeb?.bootstrapRetries ?? '0'
+        ),
         chatgptWebImageMemoryFinalizerConcurrency: String(
           imagesChatGPTWeb?.['memory-finalizer-concurrency'] ??
             imagesChatGPTWeb?.memoryFinalizerConcurrency ??
@@ -4480,6 +4508,8 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallSeconds ||
           values.chatgptWebImageRequestTimeoutSeconds !==
             DEFAULT_VISUAL_VALUES.chatgptWebImageRequestTimeoutSeconds ||
+          values.chatgptWebImageBootstrapTimeoutSeconds !== '0' ||
+          values.chatgptWebImageBootstrapRetries !== '0' ||
           values.chatgptWebImageMemoryFinalizerConcurrency !==
             DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryFinalizerConcurrency ||
           docHas(doc, ['images', 'chatgpt-web']) ||
@@ -4593,6 +4623,8 @@ export function useVisualConfig() {
               DEFAULT_VISUAL_VALUES.chatgptWebImagePollStallSeconds ||
             values.chatgptWebImageRequestTimeoutSeconds !==
               DEFAULT_VISUAL_VALUES.chatgptWebImageRequestTimeoutSeconds ||
+            values.chatgptWebImageBootstrapTimeoutSeconds !== '0' ||
+            values.chatgptWebImageBootstrapRetries !== '0' ||
             values.chatgptWebImageMemoryFinalizerConcurrency !==
               DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryFinalizerConcurrency
           ) {
@@ -4719,6 +4751,16 @@ export function useVisualConfig() {
             );
             setIntFromStringInDoc(
               doc,
+              ['images', 'chatgpt-web', 'bootstrap-timeout-seconds'],
+              values.chatgptWebImageBootstrapTimeoutSeconds
+            );
+            setIntFromStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'bootstrap-retries'],
+              values.chatgptWebImageBootstrapRetries
+            );
+            setIntFromStringInDoc(
+              doc,
               ['images', 'chatgpt-web', 'memory-finalizer-concurrency'],
               values.chatgptWebImageMemoryFinalizerConcurrency
             );
@@ -4733,6 +4775,8 @@ export function useVisualConfig() {
               'pollStallBreakerEnabled',
               'pollStallSeconds',
               'requestTimeoutSeconds',
+              'bootstrapTimeoutSeconds',
+              'bootstrapRetries',
               'memoryFinalizerConcurrency',
               'remoteImageUrlEnabled',
               'remoteImageUrlDownloadMode',

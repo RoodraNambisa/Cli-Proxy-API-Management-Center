@@ -139,6 +139,8 @@ export interface ImagesConfig {
   streamFlushMinBytes?: number;
   chatgptWeb?: {
     requestTimeoutSeconds?: number;
+    bootstrapTimeoutSeconds?: number;
+    bootstrapRetries?: number;
     imageModels?: string[];
     upstreamModel?: string;
     sanitizeErrorResponses?: boolean;
