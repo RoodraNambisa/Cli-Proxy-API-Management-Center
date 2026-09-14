@@ -1,9 +1,67 @@
 import { describe, expect, test, vi } from 'vitest';
 import { normalizeAuthFileEntry } from '@/services/api/authFiles';
 import { codexObservedQuotaWindows, normalizeCodexQuotaObservation } from '@/utils/codexQuotaObservation';
+import reserveObservation from './fixtures/codexQuotaReserve.json';
 
 const observedAt = '2026-09-10T12:00:00Z';
 const observation = (signals: Record<string, string>) => normalizeCodexQuotaObservation({ observed_at: observedAt, source: 'http', signals })!;
+
+describe('Optional Codex reserve quota', () => {
+  test('reads all three observed pools and skips both empty secondary windows', () => {
+    const snapshot = normalizeCodexQuotaObservation(reserveObservation)!;
+    expect(snapshot.signals['x-base-model-inference-limit-name']).toBe('gpt-reserve');
+    const windows = codexObservedQuotaWindows(snapshot);
+    expect(windows).toHaveLength(4);
+    expect(windows.find((window) => window.poolId === 'codex')).toMatchObject({ usedPercent: 13, minutes: 10080 });
+    expect(windows.filter((window) => window.poolId === 'codex_bengalfox')).toMatchObject([
+      { name: 'GPT-5.3-Codex-Spark', usedPercent: 0, minutes: 300 },
+      { name: 'GPT-5.3-Codex-Spark', usedPercent: 0, minutes: 10080 },
+    ]);
+    expect(windows.find((window) => window.poolId === 'base_model_inference')).toMatchObject({
+      name: 'gpt-reserve', usedPercent: 0, minutes: 10080,
+      resetAt: new Date(1790005638000).toISOString(),
+    });
+    expect(windows.every((window) => window.minutes !== null)).toBe(true);
+  });
+
+  test.each([false, true])('does not invent a reserve balance for other accounts (name only: %s)', (nameOnly) => {
+    const signals: Record<string, string> = Object.fromEntries(Object.entries(reserveObservation.signals).filter(([key]) => !key.startsWith('x-base-model-inference-')));
+    if (nameOnly) signals['x-base-model-inference-limit-name'] = 'gpt-reserve';
+    const windows = codexObservedQuotaWindows(observation(signals));
+    expect(windows).toHaveLength(3);
+    expect(windows.some((window) => window.poolId === 'base_model_inference' || window.name === 'gpt-reserve')).toBe(false);
+  });
+
+  test('deduplicates a reserve active alias and keeps the explicit family authoritative', () => {
+    const windows = codexObservedQuotaWindows(observation({
+      ...reserveObservation.signals,
+      'x-codex-active-limit': 'base_model_inference',
+      'x-codex-primary-used-percent': '9',
+    }));
+    expect(windows).toHaveLength(3);
+    expect(windows.filter((window) => window.poolId === 'base_model_inference')).toMatchObject([
+      { name: 'gpt-reserve', usedPercent: 0, minutes: 10080 },
+    ]);
+    expect(windows.some((window) => window.poolId === 'codex')).toBe(false);
+  });
+
+  test('keeps retained reserve data at its own observation time', () => {
+    const snapshot = normalizeCodexQuotaObservation({
+      ...reserveObservation,
+      observed_at: '2026-09-14T15:48:18Z',
+      signals: { 'x-codex-active-limit': 'premium' },
+      pools: [{
+        id: 'base_model_inference', name: 'gpt-reserve', source: 'http',
+        observed_at: reserveObservation.observed_at,
+        signals: { 'x-codex-primary-used-percent': '0', 'x-codex-primary-window-minutes': '10080', 'x-codex-primary-reset-after-seconds': '604800' },
+      }],
+    })!;
+    expect(codexObservedQuotaWindows(snapshot)).toMatchObject([{
+      poolId: 'base_model_inference', name: 'gpt-reserve', usedPercent: 0, minutes: 10080,
+      observedAt: reserveObservation.observed_at, resetAt: '2026-09-21T15:47:18.000Z',
+    }]);
+  });
+});
 
 describe('Passive Codex quota data', () => {
   test('normalizes management data, preserves zero/false, and filters private or malformed signals', () => {

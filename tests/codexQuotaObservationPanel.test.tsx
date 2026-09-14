@@ -10,6 +10,7 @@ import en from '@/i18n/locales/en.json';
 import ru from '@/i18n/locales/ru.json';
 import zhCN from '@/i18n/locales/zh-CN.json';
 import zhTW from '@/i18n/locales/zh-TW.json';
+import reserveObservation from './fixtures/codexQuotaReserve.json';
 
 const i18n = createInstance();
 beforeAll(() => i18n.init({ lng: 'en', fallbackLng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } }));
@@ -20,6 +21,18 @@ const file = (signals: Record<string, string>, enabled = true): AuthFileItem => 
 const panel = (entry: AuthFileItem) => <I18nextProvider i18n={i18n}><CodexQuotaObservationPanel file={entry} compact={false} /></I18nextProvider>;
 
 describe('Codex passive quota display', () => {
+  test('shows reserve only on the account that returned it, without empty windows', () => {
+    const entry = file(reserveObservation.signals);
+    const { rerender } = render(panel(entry));
+    expect(screen.getAllByRole('progressbar')).toHaveLength(4);
+    expect(screen.getByRole('progressbar', { name: `gpt-reserve · ${en.codex_quota.secondary_window}` }).getAttribute('aria-valuenow')).toBe('100');
+    expect(screen.queryByText(/period unknown/)).toBeNull();
+    const withoutReserve = Object.fromEntries(Object.entries(reserveObservation.signals).filter(([key]) => !key.startsWith('x-base-model-inference-')));
+    rerender(panel({ ...file(withoutReserve), name: 'another-account.json' }));
+    expect(screen.getAllByRole('progressbar')).toHaveLength(3);
+    expect(screen.queryByText(/gpt-reserve/)).toBeNull();
+  });
+
   test('keeps the default layout unchanged and does not actively query when enabled', () => {
     const get = vi.spyOn(apiClient, 'get');
     const post = vi.spyOn(apiClient, 'post');

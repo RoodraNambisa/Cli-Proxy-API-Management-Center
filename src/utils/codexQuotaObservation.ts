@@ -16,7 +16,7 @@ const signalName = (key: string): boolean => {
   if (!/^[a-z0-9._-]{1,256}$/.test(key)) return false;
   if (key === 'retry-after' || key.startsWith('x-ratelimit-')) return true;
   if (['x-codex-plan-type', 'x-codex-active-limit', 'x-codex-credits-has-credits', 'x-codex-credits-unlimited', 'x-codex-credits-balance'].includes(key)) return true;
-  return key.startsWith('x-codex-') && /-(allowed|limit-reached|limit-name|limit-id|used-percent|window-minutes|reset-after-seconds|reset-at|over-secondary-limit-percent)$/.test(key);
+  return (key.startsWith('x-codex-') || key.startsWith('x-base-model-inference-')) && /-(allowed|limit-reached|limit-name|limit-id|used-percent|window-minutes|reset-after-seconds|reset-at|over-secondary-limit-percent)$/.test(key);
 };
 
 export function normalizeCodexQuotaObservation(value: unknown): CodexQuotaObservation | undefined {
@@ -87,8 +87,9 @@ export function codexObservedQuotaWindows(observation: CodexQuotaObservation): C
   // namespace/explicit id, never by equal percentages, durations or reset times.
   const groups = new Map<string, CodexObservedQuotaWindow[]>();
   for (const window of parseQuotaWindows(observation).sort((a, b) => a.group.localeCompare(b.group))) {
-    const explicit = observation.signals[`x-codex-${window.group}-limit-id`];
-    const poolId = normalizePoolId(window.group ? explicit ?? `codex-${window.group}` : observation.signals['x-codex-active-limit'] ?? 'codex');
+    const headerPrefix = window.group === 'base-model-inference' ? 'x-base-model-inference' : ['x-codex', window.group].filter(Boolean).join('-');
+    const explicit = observation.signals[`${headerPrefix}-limit-id`];
+    const poolId = normalizePoolId(window.group ? explicit ?? headerPrefix.slice(2) : observation.signals['x-codex-active-limit'] ?? 'codex');
     const previous = groups.get(poolId);
     const decorated = { ...window, poolId, observedAt: observation.observed_at, source: observation.source };
     if (previous?.[0].group === window.group) previous.push(decorated);
@@ -108,12 +109,13 @@ function parseQuotaWindows(observation: CodexQuotaObservation): CodexObservedQuo
   const { signals } = observation;
   const windows = new Map<string, CodexObservedQuotaWindow>();
   for (const key of Object.keys(signals)) {
-    const match = /^x-codex-(.*?)(primary|secondary)-(?:used-percent|window-minutes|reset-after-seconds|reset-at)$/.exec(key);
+    const match = /^(x-codex(?:-.*?)?|x-base-model-inference)-(primary|secondary)-(?:used-percent|window-minutes|reset-after-seconds|reset-at)$/.exec(key);
     if (!match) continue;
     const [, prefix, kind] = match;
-    const id = prefix + kind;
+    const group = prefix === 'x-base-model-inference' ? 'base-model-inference' : prefix.replace(/^x-codex-?/, '');
+    const id = [group, kind].filter(Boolean).join('-');
     if (windows.has(id)) continue;
-    const start = `x-codex-${id}-`;
+    const start = `${prefix}-${kind}-`;
     const used = quotaNumber(signals[`${start}used-percent`]);
     const minutes = quotaNumber(signals[`${start}window-minutes`], true);
     const absolute = quotaNumber(signals[`${start}reset-at`], true);
@@ -128,10 +130,10 @@ function parseQuotaWindows(observation: CodexQuotaObservation): CodexObservedQuo
     const relativeReset = relative !== null ? timestamp(Date.parse(observation.observed_at) + relative * 1000) : null;
     windows.set(id, {
       id,
-      group: prefix.replace(/-$/, ''),
+      group,
       // Unprefixed windows describe this response's active pool, which may change
       // between requests. They are not necessarily the account's premium quota.
-      name: prefix ? signals[`x-codex-${prefix}limit-name`] : signals['x-codex-active-limit'],
+      name: group ? signals[`${prefix}-limit-name`] : signals['x-codex-active-limit'],
       kind: kind as 'primary' | 'secondary',
       usedPercent: used !== null && used <= 100 ? used : null,
       minutes: minutes !== null && minutes > 0 ? minutes : null,
