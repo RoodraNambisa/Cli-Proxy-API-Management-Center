@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import styles from './ConfigHelp.module.scss';
 
 /** Keep settings compact while making the full explanation accessible on every input device. */
-export function ConfigHelp({ title, text }: { title: string; text: string }) {
+export function ConfigHelp({ title, text, compact = false }: { title: string; text: string; compact?: boolean }) {
   const { t } = useTranslation();
   const tooltipId = useId();
   const trigger = useRef<HTMLButtonElement>(null);
@@ -54,7 +54,7 @@ export function ConfigHelp({ title, text }: { title: string; text: string }) {
   return (
     <>
       <div className={styles.help} onMouseEnter={show} onMouseLeave={scheduleClose}>
-        <span className={styles.preview}>{text}</span>
+        {!compact && <span className={styles.preview}>{text}</span>}
         <button
           ref={trigger}
           type="button"

@@ -1,3 +1,4 @@
+import type { GrokCatalogRefreshInfo } from '@/services/api/authFiles';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiClient, authFilesApi } from '@/services/api';
@@ -22,7 +23,7 @@ export type UseAuthFilesModelsResult = {
   showModels: (item: AuthFileItem) => Promise<void>;
   closeModelsModal: () => void;
   refreshGrokModels: () => Promise<void>;
-  modelsCatalogInfo: { source: string; updated_at: string; using_cached: boolean; error?: string } | null;
+  modelsCatalogInfo: GrokCatalogRefreshInfo | null;
 };
 
 export function useAuthFilesModels(

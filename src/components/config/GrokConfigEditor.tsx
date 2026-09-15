@@ -1,3 +1,4 @@
+import { GrokModelRoutingEditor } from './GrokModelRoutingEditor';
 import { useTranslation } from 'react-i18next';
 import { SettingsDisclosure } from './SettingsDisclosure';
 import { ConfigHelp } from './ConfigHelp';
@@ -89,6 +90,16 @@ export function GrokConfigEditor({
           </p>
         )}
         <ConfigHelp title={t('grok_upstream.title')} text={t('grok_upstream.transport_hint')} />
+      </SettingsDisclosure>
+      <SettingsDisclosure
+        id="config-grok-model-routing"
+        title={t('grok_routing.title')}
+        description={t('grok_routing.global_hint')}
+        focusTarget={focusTarget}
+        dirty={changed('routing')}
+        errorCount={errorCount('routing')}
+      >
+        <GrokModelRoutingEditor value={value.routing} disabled={disabled} onChange={(routing) => patch({routing})} />
       </SettingsDisclosure>
       <SettingsDisclosure
         id="config-grok-headers"

@@ -1,3 +1,4 @@
+import { emptyGrokModelRouting, type GrokModelRoutingDraft } from '@/utils/grokModelRouting';
 import type { HeaderEntry } from '@/utils/headers';
 
 export const GROK_DEFAULT_KEYS = [
@@ -12,6 +13,7 @@ export const GROK_DEFAULT_KEYS = [
 export type GrokDefaultKey = (typeof GROK_DEFAULT_KEYS)[number];
 export interface GrokVisualConfig {
   upstreamMode: string;
+  routing: GrokModelRoutingDraft;
   userAgent: string;
   clientVersion: string;
   clientIdentifier: string;
@@ -27,6 +29,7 @@ export interface GrokVisualConfig {
 }
 export const DEFAULT_GROK_CONFIG: GrokVisualConfig = {
   upstreamMode: 'cli',
+  routing: emptyGrokModelRouting(),
   userAgent: '',
   clientVersion: '',
   clientIdentifier: '',

@@ -1,3 +1,4 @@
+import { readGrokModelRouting, grokModelRoutingError, serializeGrokCatalogSources, serializeGrokModelRoutes } from './grokModelRouting';
 import { isAlias, isMap, type Document } from 'yaml';
 import { DEFAULT_GROK_CONFIG, GROK_DEFAULT_KEYS, type GrokVisualConfig } from '@/types/grok';
 import type { VisualConfigValidationErrors } from '@/types/visualConfig';
@@ -39,6 +40,7 @@ export function readGrokConfig(raw: unknown): GrokVisualConfig {
     defaults = record(data['request-defaults']);
   const out = {
     ...DEFAULT_GROK_CONFIG,
+    routing: readGrokModelRouting(data['model-catalog-sources'], data['model-routes']),
     headers: Object.entries(record(data.headers)).map(([key, value]) => ({
       key,
       value: text(value),
@@ -60,6 +62,7 @@ export function readGrokConfig(raw: unknown): GrokVisualConfig {
 
 export function grokConfigErrors(values: GrokVisualConfig): VisualConfigValidationErrors {
   const errors: VisualConfigValidationErrors = {};
+  if (grokModelRoutingError(values.routing)) errors['grok.routing'] = 'grok_model_routing';
   if (!GROK_UPSTREAM_MODES.includes(values.upstreamMode as GrokUpstreamMode))
     errors['grok.upstreamMode'] = 'grok_upstream_mode';
   if (!/^\d+$/.test(values.poolSize) || Number(values.poolSize) < 1 || Number(values.poolSize) > 64)
@@ -137,6 +140,10 @@ export function writeGrokConfig(
       write(['xai', 'header-defaults', profiles[key]], values[key].trim() || undefined);
   if (values.poolSize !== baseline.poolSize)
     write(['xai', 'session-identity-pool-size'], Number(values.poolSize));
+  if (JSON.stringify(values.routing.catalogSources) !== JSON.stringify(baseline.routing.catalogSources))
+    write(['xai', 'model-catalog-sources'], serializeGrokCatalogSources(values.routing));
+  if (JSON.stringify(values.routing.modelRoutes) !== JSON.stringify(baseline.routing.modelRoutes))
+    write(['xai', 'model-routes'], serializeGrokModelRoutes(values.routing));
   if (values.upstreamMode !== baseline.upstreamMode)
     write(['xai', 'default-base-url-mode'], values.upstreamMode);
   if (JSON.stringify(values.headers) !== JSON.stringify(baseline.headers))

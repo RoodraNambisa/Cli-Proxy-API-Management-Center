@@ -1,3 +1,4 @@
+import type { GrokModelRoute } from '@/utils/grokModelRouting';
 /**
  * 认证文件与 OAuth 排除模型相关 API
  */
@@ -20,6 +21,14 @@ import { AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS, AUTH_FILE_UPLOAD_TIMEOUT_MS } from '
 import { mapWithConcurrency } from '@/utils/concurrency';
 import { normalizeRequestScopedErrors, serializeRequestScopedErrors } from '@/utils/requestScopedErrors';
 
+export interface GrokCatalogRefreshInfo {
+  source: string;
+  updated_at: string;
+  using_cached: boolean;
+  error?: string;
+  sources?: Array<{source: string; updated_at: string; using_cached: boolean; model_count: number; error?: string}>;
+}
+
 type StatusError = { status?: number };
 type RawHeaders = Record<string, unknown> | undefined;
 type AuthFileStatusResponse = { status: string; disabled: boolean };
@@ -27,6 +36,8 @@ type AuthFileEntry = AuthFilesResponse['files'][number];
 export type XaiAuthFileField = 'using_api' | 'websockets';
 export type AuthFileFieldsPatch = {
   base_url?: string;
+  xai_model_catalog_sources?: string[];
+  xai_model_routes?: GrokModelRoute[];
   prefix?: string;
   proxy_url?: string;
   headers?: Record<string, string>;
@@ -1265,7 +1276,7 @@ export const authFilesApi = {
 
   // 获取认证凭证支持的模型
   refreshXAIModels(name: string, connection: ApiClientConnectionSnapshot, signal?: AbortSignal) {
-    return apiClient.postAtConnection<{ models: AuthFileModelItem[]; updated_at: string; source: string; using_cached: boolean; error?: string }>(connection, '/auth-files/xai/models/refresh', { name }, { signal });
+    return apiClient.postAtConnection<GrokCatalogRefreshInfo & { models: AuthFileModelItem[] }>(connection, '/auth-files/xai/models/refresh', { name }, { signal });
   },
 
   async getModelsForAuthFile(

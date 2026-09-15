@@ -1113,6 +1113,11 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['grok', 'upstream', '上游', '区域节点'],
   },
   {
+    id: 'config-grok-model-routing', pageId: 'provider-grok', labelKey: 'grok_routing.title',
+    yamlKeys: ['xai.model-catalog-sources', 'xai.model-routes'],
+    aliases: ['grok', '模型路由', '合并模型目录', 'model routing', 'catalog sources'],
+  },
+  {
     id: 'config-grok-headers', pageId: 'provider-grok', labelKey: 'config_management.grok.headers', yamlKeys: ['xai.headers', 'xai.header-defaults', 'xai.user-agent', 'xai.client-version', 'xai.client-identifier'], aliases: ['grok'],
   },
   {

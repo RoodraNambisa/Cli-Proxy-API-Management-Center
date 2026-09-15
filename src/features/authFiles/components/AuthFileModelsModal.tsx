@@ -1,3 +1,6 @@
+import { GROK_UPSTREAM_MODES, GROK_UPSTREAM_URLS } from '@/utils/grokUpstream';
+import type { GrokCatalogRefreshInfo } from '@/services/api/authFiles';
+import routingStyles from '@/components/config/GrokModelRoutingEditor.module.scss';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -16,7 +19,7 @@ import styles from '@/pages/AuthFilesPage.module.scss';
 export type AuthFileModelsModalProps = {
   open: boolean;
   onRefreshGrok?: () => Promise<void>;
-  catalogInfo?: {source: string; updated_at: string; using_cached: boolean; error?: string} | null;
+  catalogInfo?: GrokCatalogRefreshInfo | null;
   fileName: string;
   fileType: string;
   loading: boolean;
@@ -50,6 +53,11 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
     onClose,
     onCopyText,
   } = props;
+  const nodeLabel = (url: string) => {
+    const base = url.replace(/\/models$/, '').replace(/\/$/, '');
+    const mode = GROK_UPSTREAM_MODES.find((key) => GROK_UPSTREAM_URLS[key] === base);
+    return mode ? t(`grok_upstream.modes.${mode}`) : base;
+  };
   const normalizedFileType = fileType.trim().toLowerCase();
   const planType = String(file?.plan_type ?? file?.planType ?? '').trim();
 
@@ -67,10 +75,17 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
         </>
       }
     >
-      {props.catalogInfo && <div className={styles.hint} role="status">
-        {t(props.catalogInfo.using_cached ? 'config_management.grok.models_cached' : 'config_management.grok.models_fresh')}
-        {' · '}{props.catalogInfo.source}{' · '}{props.catalogInfo.source === 'builtin' ? '—' : formatDateTime(props.catalogInfo.updated_at)}
-        {props.catalogInfo.error && <div>{props.catalogInfo.error}</div>}
+      {props.catalogInfo && <div className={routingStyles.hint} role="status">
+        {props.catalogInfo.sources?.length ? props.catalogInfo.sources.map((source) => <div key={source.source} className={routingStyles.sourceStatus}>
+          <strong>{source.source}</strong>
+          <span>{t(source.error ? (source.model_count ? 'grok_routing.source_cached' : 'grok_routing.source_unavailable') : 'grok_routing.source_fresh', {count: source.model_count})}</span>
+          {(!source.error || source.model_count > 0) && <span>{formatDateTime(source.updated_at)}</span>}
+          {source.error && <span className={routingStyles.error}>{source.error}</span>}
+        </div>) : <>
+          {t(props.catalogInfo.using_cached ? 'config_management.grok.models_cached' : 'config_management.grok.models_fresh')}
+          {' · '}{props.catalogInfo.source}{' · '}{props.catalogInfo.source === 'builtin' ? '—' : formatDateTime(props.catalogInfo.updated_at)}
+          {props.catalogInfo.error && <div>{props.catalogInfo.error}</div>}
+        </>}
       </div>}
       {loading ? (
         <div className={styles.hint}>
@@ -238,6 +253,12 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
                   }
                 >
                   <span className={styles.modelId}>{model.id}</span>
+                  {normalizedFileType === 'xai' && model.upstream_url && <div className={routingStyles.modelRoute}>
+                    <span title={model.upstream_url}>{t('grok_routing.effective_node')}: {nodeLabel(model.upstream_url)} · {t(`grok_routing.origin_${model.upstream_source ?? 'global'}`)}</span>
+                    <span title={model.catalog_sources?.join(' · ')}>{t('grok_routing.catalog_origin')}: {model.catalog_sources?.length ? model.catalog_sources.map(nodeLabel).join(' · ') : t('grok_routing.builtin_or_manual')}</span>
+                    {model.websocket_upstream_url && model.websocket_upstream_url !== model.upstream_url && <span title={model.websocket_upstream_url}>WS / Compact: {nodeLabel(model.websocket_upstream_url)}</span>}
+                  </div>}
+                  {normalizedFileType === 'xai' && model.routing_error && <span className={routingStyles.error}>{model.routing_error}</span>}
                   {normalizedFileType === 'xai' && model.upstream_id && model.upstream_id !== model.id && <span className={styles.hint}>→ {model.upstream_id}</span>}
                   {model.display_name && model.display_name !== model.id && (
                     <span className={styles.modelDisplayName}>{model.display_name}</span>

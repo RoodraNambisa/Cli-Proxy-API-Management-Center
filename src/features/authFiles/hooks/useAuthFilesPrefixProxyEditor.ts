@@ -1,3 +1,4 @@
+import { emptyGrokModelRouting, readGrokModelRouting, serializeGrokCatalogSources, serializeGrokModelRoutes, grokModelRoutingError, type GrokModelRoutingDraft, type GrokModelRoute } from '@/utils/grokModelRouting';
 import {
   isValidCredentialWeight,
   normalizeCredentialWeight,
@@ -42,6 +43,7 @@ export type AuthFileHeadersErrorKey =
 export type ChatGptWebLoginMethod = 'auto' | 'passkey' | 'password_totp' | 'api798';
 
 export type PrefixProxyEditorField =
+  | 'grokRouting'
   | 'grokUpstream'
   | 'baseUrl'
   | 'prefix'
@@ -58,7 +60,7 @@ export type PrefixProxyEditorField =
   | 'loginMethod'
   | 'api798Url';
 
-export type PrefixProxyEditorFieldValue = string | boolean | RequestScopedErrorRule[];
+export type PrefixProxyEditorFieldValue = string | boolean | RequestScopedErrorRule[] | GrokModelRoutingDraft;
 
 export type PrefixProxyEditorState = {
   fileName: string;
@@ -67,6 +69,8 @@ export type PrefixProxyEditorState = {
   isChatGptWebFile: boolean;
   isXaiFile: boolean;
   grokUpstream: GrokAccountUpstream;
+  grokRouting?: GrokModelRoutingDraft;
+  grokRoutingTouched?: boolean;
   baseUrl: string;
   baseUrlTouched: boolean;
   readOnly: boolean;
@@ -149,6 +153,12 @@ export const buildAuthFileFieldsPatch = (
     patch.base_url = typeof next.base_url === 'string' ? next.base_url : '';
   }
 
+  if (isXaiFile) {
+    if (!jsonValuesEqual(previous.xai_model_catalog_sources, next.xai_model_catalog_sources))
+      patch.xai_model_catalog_sources = (next.xai_model_catalog_sources as string[] | undefined) ?? [];
+    if (!jsonValuesEqual(previous.xai_model_routes, next.xai_model_routes))
+      patch.xai_model_routes = (next.xai_model_routes as GrokModelRoute[] | undefined) ?? [];
+  }
   if (!jsonValuesEqual(previous.prefix, next.prefix)) {
     patch.prefix = typeof next.prefix === 'string' ? next.prefix : '';
   }
@@ -234,6 +244,13 @@ const buildPrefixProxyUpdatedText = (
     const baseUrl = normalizeGrokBaseUrl(editor.baseUrl) ?? editor.baseUrl.trim();
     next.base_url = baseUrl;
     next.using_api = Boolean(baseUrl && baseUrl !== GROK_UPSTREAM_URLS.cli);
+  }
+  if (editor.isXaiFile && editor.grokRoutingTouched && editor.grokRouting) {
+    const previous = readGrokModelRouting(editor.json.xai_model_catalog_sources, editor.json.xai_model_routes);
+    if (!jsonValuesEqual(previous.catalogSources, editor.grokRouting.catalogSources))
+      next.xai_model_catalog_sources = serializeGrokCatalogSources(editor.grokRouting);
+    if (!jsonValuesEqual(previous.modelRoutes, editor.grokRouting.modelRoutes))
+      next.xai_model_routes = serializeGrokModelRoutes(editor.grokRouting);
   }
   if ('prefix' in next || editor.prefix.trim()) {
     next.prefix = editor.prefix;
@@ -329,6 +346,7 @@ export function useAuthFilesPrefixProxyEditor(
   );
   const hasBlockingValidationError = Boolean(
     hasBlockingWeightError ||
+    (prefixProxyEditor?.grokRoutingTouched && prefixProxyEditor.grokRouting && grokModelRoutingError(prefixProxyEditor.grokRouting)) ||
     (prefixProxyEditor?.isXaiFile &&
       prefixProxyEditor.baseUrlTouched &&
       (normalizeGrokBaseUrl(prefixProxyEditor.baseUrl) === null ||
@@ -384,6 +402,8 @@ export function useAuthFilesPrefixProxyEditor(
       isChatGptWebFile,
       isXaiFile,
       grokUpstream: 'inherit',
+      grokRouting: emptyGrokModelRouting(),
+      grokRoutingTouched: false,
       baseUrl: '',
       baseUrlTouched: false,
       readOnly,
@@ -490,6 +510,8 @@ export function useAuthFilesPrefixProxyEditor(
           prefix,
           proxyUrl,
           grokUpstream: grokAccountUpstream(json.base_url),
+          grokRouting: readGrokModelRouting(json.xai_model_catalog_sources, json.xai_model_routes),
+          grokRoutingTouched: false,
           baseUrl: typeof json.base_url === 'string' ? json.base_url : '',
           baseUrlTouched: false,
           priority: priority !== undefined ? String(priority) : '',
@@ -529,6 +551,7 @@ export function useAuthFilesPrefixProxyEditor(
   ) => {
     setPrefixProxyEditor((prev) => {
       if (!prev) return prev;
+      if (field === 'grokRouting' && typeof value === 'object' && 'catalogSources' in value) return {...prev, grokRouting: value, grokRoutingTouched: true};
       if (field === 'grokUpstream') {
         const mode = String(value) as GrokAccountUpstream;
         if (!['inherit', 'custom', ...Object.keys(GROK_UPSTREAM_URLS)].includes(mode)) return prev;
@@ -580,6 +603,10 @@ export function useAuthFilesPrefixProxyEditor(
   };
 
   const handlePrefixProxySave = async () => {
+    if (prefixProxyEditor?.grokRoutingTouched && prefixProxyEditor.grokRouting) {
+      const issue = grokModelRoutingError(prefixProxyEditor.grokRouting);
+      if (issue) { showNotification(t(`grok_routing.invalid_${issue}`), 'error'); return; }
+    }
     if (
       prefixProxyEditor?.isXaiFile &&
       prefixProxyEditor.baseUrlTouched &&

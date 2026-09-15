@@ -2878,7 +2878,8 @@
         "payload_invalid_number": "请输入有效数字",
         "payload_invalid_boolean": "请选择 true 或 false",
         "payload_invalid_json": "请输入有效的 JSON",
-        "grok_upstream_mode": "全局默认上游: cli, api, us-east-1, us-west-2, eu-west-1"
+        "grok_upstream_mode": "全局默认上游: cli, api, us-east-1, us-west-2, eu-west-1",
+        "grok_model_routing": "最多 64 条路由，每条填写 1–64 个模型名（最长 256 字符）和有效节点；只支持 * 通配符。 目录来源最多 8 个，请选择节点或填写完整 HTTP(S) 基础地址，不得含用户名、密码、查询参数或片段。"
       },
       "common": {
         "summary_providers": "提供者",
@@ -4386,9 +4387,9 @@
   "grok_upstream": {
     "title": "Grok 上游地址",
     "default_label": "全局默认上游",
-    "default_hint": "未填写 base_url 的凭证使用此入口；单个凭证的地址优先。保存后从下一请求生效，不会增加账号的访问权限。",
+    "default_hint": "未命中模型规则时，凭证内明确设置的 base_url 优先；留空的凭证使用此全局默认节点。",
     "account_label": "请求上游",
-    "account_hint": "跟随全局时将 base_url 留空；选择节点或输入自定义地址后，优先使用该账号自己的地址。",
+    "account_hint": "此处设置未命中模型规则时的默认节点。模型规则优先于此地址；留空则继承全局默认地址。",
     "base_url_label": "上游地址（base_url）",
     "invalid_url": "请输入有效的 HTTP(S) 基址，不含用户名、密码、查询参数或片段。",
     "inherited": "跟随全局 · {{mode}}",
@@ -4403,5 +4404,43 @@
       "eu-west-1": "欧洲西部",
       "custom": "自定义地址"
     }
+  },
+  "grok_routing": {
+    "title": "模型目录与路由",
+    "global_hint": "合并多个节点的模型目录，按模型指定请求节点。升级后默认只查询原节点。",
+    "credential_hint": "留空继承全局配置；此处只调整当前凭证的目录和模型路由。账号、额度和会话身份仍共用。",
+    "sources": "模型目录来源",
+    "source": "目录来源",
+    "sources_hint": "最多 8 个来源。按模型 ID 去重，每个来源分别保存目录和时间；刷新失败保留该来源上次成功的结果。配置目录来源不会自动改变模型请求路径。",
+    "merge_cli_api": "合并 CLI 与 API 目录",
+    "default_node": "使用凭证默认节点",
+    "remove_source": "移除目录来源",
+    "add_source": "添加目录来源",
+    "sources_inherit": "继承全局目录来源；全局也未设置时查询当前凭证的默认节点。",
+    "sources_default": "仅查询当前凭证的默认节点。",
+    "routes": "模型请求路由",
+    "routes_hint": "多个模型用逗号分隔，支持 * 通配符。按最终上游模型名匹配，别名先解析。精确模型名可补充注册目录未列出的模型；通配符只路由已注册模型。节点选择不保证该账号有调用权限。",
+    "route_preset": "CLI 文本 / API 其他模板",
+    "model_pattern": "模型或匹配规则",
+    "route_node": "模型请求节点",
+    "remove_route": "移除模型路由",
+    "add_route": "添加模型路由",
+    "routes_inherit": "没有单凭证规则，使用全局规则及当前默认节点。",
+    "routes_default": "没有全局规则，使用当前凭证的默认节点。",
+    "reset_account": "恢复继承全局",
+    "reset_global": "清除目录与路由设置",
+    "priority_hint": "优先级：单凭证模型规则 → 全局模型规则 → 凭证默认地址 → 全局默认地址。同层精确匹配优先于通配符，其余按列表顺序；选择“使用凭证默认节点”可为特定模型绕过全局规则。",
+    "invalid_sources": "目录来源最多 8 个，请选择节点或填写完整 HTTP(S) 基础地址，不得含用户名、密码、查询参数或片段。",
+    "invalid_routes": "最多 64 条路由，每条填写 1–64 个模型名（最长 256 字符）和有效节点；只支持 * 通配符。",
+    "source_fresh": "已刷新 · {{count}} 个模型",
+    "source_cached": "刷新失败，保留旧目录 · {{count}} 个模型",
+    "source_unavailable": "刷新失败，暂无此来源的缓存",
+    "effective_node": "请求节点",
+    "catalog_origin": "目录来源",
+    "builtin_or_manual": "内置或手动配置",
+    "origin_global": "全局默认",
+    "origin_credential": "凭证默认",
+    "origin_global-rule": "全局模型规则",
+    "origin_credential-rule": "凭证模型规则"
   }
 }

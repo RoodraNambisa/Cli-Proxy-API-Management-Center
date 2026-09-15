@@ -2874,7 +2874,8 @@
         "payload_invalid_number": "Enter a valid number",
         "payload_invalid_boolean": "Choose true or false",
         "payload_invalid_json": "Enter valid JSON",
-        "grok_upstream_mode": "Global default upstream: cli, api, us-east-1, us-west-2, eu-west-1"
+        "grok_upstream_mode": "Global default upstream: cli, api, us-east-1, us-west-2, eu-west-1",
+        "grok_model_routing": "Use at most 64 routes, each with 1–64 model names (up to 256 characters) and a valid node. Only * is a wildcard. Use at most 8 node names or complete HTTP(S) base URLs without user information, query parameters or fragments."
       },
       "common": {
         "summary_providers": "Providers",
@@ -4382,9 +4383,9 @@
   "grok_upstream": {
     "title": "Grok upstream address",
     "default_label": "Global default upstream",
-    "default_hint": "Credentials without base_url use this endpoint. An account address takes priority. Changes apply to the next request and do not grant account access.",
+    "default_hint": "When no model rule matches, an explicit credential base_url wins; credentials without one use this global default.",
     "account_label": "Request upstream",
-    "account_hint": "Leave base_url empty to inherit the global default. Selecting an endpoint or entering a custom URL pins this account to that address.",
+    "account_hint": "Default node when no model rule matches. Model rules override this address; leave empty to inherit the global default.",
     "base_url_label": "Upstream address (base_url)",
     "invalid_url": "Enter a valid HTTP(S) base URL without user information, query parameters or a fragment.",
     "inherited": "Global default · {{mode}}",
@@ -4399,5 +4400,43 @@
       "eu-west-1": "Europe West",
       "custom": "Custom address"
     }
+  },
+  "grok_routing": {
+    "title": "Model catalogs and routing",
+    "global_hint": "Merge model catalogs from multiple nodes and choose a destination per model. Existing credentials keep querying their current node by default.",
+    "credential_hint": "Leave empty to inherit global settings. These overrides apply only to this credential; the account, quota and session identity remain shared.",
+    "sources": "Model catalog sources",
+    "source": "Catalog source",
+    "sources_hint": "Up to 8 sources. Deduplicate by model ID and keep each source’s snapshot and timestamp. Failed refreshes retain the last successful snapshot. Catalog sources do not change request destinations.",
+    "merge_cli_api": "Merge CLI and API catalogs",
+    "default_node": "Use credential default node",
+    "remove_source": "Remove catalog source",
+    "add_source": "Add catalog source",
+    "sources_inherit": "Inherit global sources, or query this credential’s default node when none are configured.",
+    "sources_default": "Query only the current credential’s default node.",
+    "routes": "Model request routes",
+    "routes_hint": "Separate models with commas; * is a wildcard. Match upstream model names after alias resolution. Exact IDs can register models omitted by catalogs; wildcards only route registered models. A route does not grant account permissions.",
+    "route_preset": "CLI text / API other preset",
+    "model_pattern": "Model or pattern",
+    "route_node": "Model destination",
+    "remove_route": "Remove model route",
+    "add_route": "Add model route",
+    "routes_inherit": "No credential rules. Use global rules and the credential’s default node.",
+    "routes_default": "No global rules. Use the credential’s default node.",
+    "reset_account": "Inherit global settings",
+    "reset_global": "Clear sources and routes",
+    "priority_hint": "Priority: credential model rule → global model rule → credential default URL → global default URL. Exact matches precede wildcards within each scope; ties use list order. “Use credential default node” bypasses global rules for a matched model.",
+    "invalid_sources": "Use at most 8 node names or complete HTTP(S) base URLs without user information, query parameters or fragments.",
+    "invalid_routes": "Use at most 64 routes, each with 1–64 model names (up to 256 characters) and a valid node. Only * is a wildcard.",
+    "source_fresh": "Refreshed · {{count}} models",
+    "source_cached": "Refresh failed; keeping previous catalog · {{count}} models",
+    "source_unavailable": "Refresh failed; no cached catalog for this source",
+    "effective_node": "Destination",
+    "catalog_origin": "Catalog sources",
+    "builtin_or_manual": "Built-in or manually configured",
+    "origin_global": "Global default",
+    "origin_credential": "Credential default",
+    "origin_global-rule": "Global model rule",
+    "origin_credential-rule": "Credential model rule"
   }
 }

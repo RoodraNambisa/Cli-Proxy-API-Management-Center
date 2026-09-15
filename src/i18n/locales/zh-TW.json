@@ -2898,7 +2898,8 @@
         "payload_invalid_number": "請輸入有效數字",
         "payload_invalid_boolean": "請選擇 true 或 false",
         "payload_invalid_json": "請輸入有效的 JSON",
-        "grok_upstream_mode": "全域預設上游: cli, api, us-east-1, us-west-2, eu-west-1"
+        "grok_upstream_mode": "全域預設上游: cli, api, us-east-1, us-west-2, eu-west-1",
+        "grok_model_routing": "最多 64 條路由，每條填寫 1–64 個模型名稱（最長 256 字元）和有效節點；只支援 * 萬用字元。 目錄來源最多 8 個，請選擇節點或填寫完整 HTTP(S) 基礎位址，不得含使用者資訊、查詢參數或片段。"
       },
       "common": {
         "summary_providers": "提供者",
@@ -4406,9 +4407,9 @@
   "grok_upstream": {
     "title": "Grok 上游位址",
     "default_label": "全域預設上游",
-    "default_hint": "未填寫 base_url 的憑證使用此入口；單一憑證的位址優先。儲存後從下一請求生效，不會增加帳號的存取權限。",
+    "default_hint": "未符合模型規則時，憑證內明確設定的 base_url 優先；留空的憑證使用此全域預設節點。",
     "account_label": "請求上游",
-    "account_hint": "跟隨全域時將 base_url 留空；選擇節點或輸入自訂位址後，優先使用該帳號自己的位址。",
+    "account_hint": "此處設定未符合模型規則時的預設節點。模型規則優先於此位址；留空則繼承全域預設位址。",
     "base_url_label": "上游位址（base_url）",
     "invalid_url": "請輸入有效的 HTTP(S) 基底位址，不含使用者名稱、密碼、查詢參數或片段。",
     "inherited": "跟隨全域 · {{mode}}",
@@ -4423,5 +4424,43 @@
       "eu-west-1": "歐洲西部",
       "custom": "自訂位址"
     }
+  },
+  "grok_routing": {
+    "title": "模型目錄與路由",
+    "global_hint": "合併多個節點的模型目錄，按模型指定請求節點。升級後預設只查詢原節點。",
+    "credential_hint": "留空繼承全域設定；此處只調整目前憑證的目錄和模型路由。帳號、額度和工作階段身分仍共用。",
+    "sources": "模型目錄來源",
+    "source": "目錄來源",
+    "sources_hint": "最多 8 個來源。按模型 ID 去重，每個來源分別儲存目錄和時間；重新整理失敗保留該來源上次成功的結果。設定目錄來源不會自動改變模型請求路徑。",
+    "merge_cli_api": "合併 CLI 與 API 目錄",
+    "default_node": "使用憑證預設節點",
+    "remove_source": "移除目錄來源",
+    "add_source": "新增目錄來源",
+    "sources_inherit": "繼承全域目錄來源；全域也未設定時查詢目前憑證的預設節點。",
+    "sources_default": "僅查詢目前憑證的預設節點。",
+    "routes": "模型請求路由",
+    "routes_hint": "多個模型用逗號分隔，支援 * 萬用字元。按最終上游模型名稱比對，別名先解析。精確模型名稱可補充註冊目錄未列出的模型；萬用字元只路由已註冊模型。節點選擇不保證帳號有呼叫權限。",
+    "route_preset": "CLI 文字 / API 其他範本",
+    "model_pattern": "模型或比對規則",
+    "route_node": "模型請求節點",
+    "remove_route": "移除模型路由",
+    "add_route": "新增模型路由",
+    "routes_inherit": "沒有單憑證規則，使用全域規則及目前預設節點。",
+    "routes_default": "沒有全域規則，使用目前憑證的預設節點。",
+    "reset_account": "恢復繼承全域",
+    "reset_global": "清除目錄與路由設定",
+    "priority_hint": "優先順序：單憑證模型規則 → 全域模型規則 → 憑證預設位址 → 全域預設位址。同層精確比對優先於萬用字元，其餘按清單順序；選擇「使用憑證預設節點」可讓特定模型略過全域規則。",
+    "invalid_sources": "目錄來源最多 8 個，請選擇節點或填寫完整 HTTP(S) 基礎位址，不得含使用者資訊、查詢參數或片段。",
+    "invalid_routes": "最多 64 條路由，每條填寫 1–64 個模型名稱（最長 256 字元）和有效節點；只支援 * 萬用字元。",
+    "source_fresh": "已重新整理 · {{count}} 個模型",
+    "source_cached": "重新整理失敗，保留舊目錄 · {{count}} 個模型",
+    "source_unavailable": "重新整理失敗，暫無此來源的快取",
+    "effective_node": "請求節點",
+    "catalog_origin": "目錄來源",
+    "builtin_or_manual": "內建或手動設定",
+    "origin_global": "全域預設",
+    "origin_credential": "憑證預設",
+    "origin_global-rule": "全域模型規則",
+    "origin_credential-rule": "憑證模型規則"
   }
 }

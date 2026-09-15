@@ -1,3 +1,6 @@
+import { GrokModelRoutingEditor } from '@/components/config/GrokModelRoutingEditor';
+import { SettingsDisclosure } from '@/components/config/SettingsDisclosure';
+import { emptyGrokModelRouting } from '@/utils/grokModelRouting';
 import { CredentialWeightInput } from '@/components/providers/CredentialWeightInput';
 import { CredentialRequestScopedErrorsEditor } from '@/components/providers/RequestScopedErrorsEditor';
 import { useTranslation } from 'react-i18next';
@@ -162,6 +165,9 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                       )}
                     </>
                   )}
+                  {editor.isXaiFile && <SettingsDisclosure id="auth-file-grok-model-routing" title={t('grok_routing.title')} dirty={editor.grokRoutingTouched}>
+                    <GrokModelRoutingEditor credential value={editor.grokRouting ?? emptyGrokModelRouting()} disabled={disableControls || editor.saving || !editor.json} onChange={(value) => onChange('grokRouting', value)} />
+                  </SettingsDisclosure>}
                   {editor.isChatGptWebFile && (
                     <>
                       <div className="form-group">
