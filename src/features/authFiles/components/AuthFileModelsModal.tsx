@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { AuthFileModelProbe } from './AuthFileModelProbe';
+import probeStyles from './AuthFileModelProbe.module.scss';
 import { GROK_UPSTREAM_MODES, GROK_UPSTREAM_URLS } from '@/utils/grokUpstream';
 import type { GrokCatalogRefreshInfo } from '@/services/api/authFiles';
 import routingStyles from '@/components/config/GrokModelRoutingEditor.module.scss';
@@ -17,6 +20,7 @@ import { parseTimestampMs } from '@/utils/timestamp';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
 export type AuthFileModelsModalProps = {
+  connectionGenerationKey?: string;
   open: boolean;
   onRefreshGrok?: () => Promise<void>;
   catalogInfo?: GrokCatalogRefreshInfo | null;
@@ -37,6 +41,11 @@ export type AuthFileModelsModalProps = {
 
 export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
   const { t } = useTranslation();
+  const scope = `${props.open}:${props.fileName}:${props.connectionGenerationKey ?? ''}`;
+  const [view, setView] = useState({ scope, probing: false });
+  if (view.scope !== scope) setView({ scope, probing: false });
+  const probing = view.scope === scope && view.probing;
+  const setProbing = (value: boolean) => setView({ scope, probing: value });
   const {
     open,
     fileName,
@@ -64,17 +73,23 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
   return (
     <Modal
       open={open}
+      width={probing ? 1020 : undefined}
       onClose={onClose}
       title={t('auth_files.models_title', { defaultValue: '支持的模型' }) + ` - ${fileName}`}
       footer={
         <>
-        {normalizedFileType === 'xai' && props.onRefreshGrok && <Button variant="secondary" loading={loading} disabled={!file} onClick={() => void props.onRefreshGrok?.()}>{t('config_management.grok.refresh_models')}</Button>}
+        {!probing && normalizedFileType === 'xai' && props.onRefreshGrok && <Button variant="secondary" loading={loading} disabled={!file} onClick={() => void props.onRefreshGrok?.()}>{t('config_management.grok.refresh_models')}</Button>}
         <Button variant="secondary" onClick={onClose}>
           {t('common.close')}
         </Button>
         </>
       }
     >
+      {(normalizedFileType === 'xai' || normalizedFileType === 'codex') && <div className={probeStyles.tabs}>
+        <Button variant={probing ? 'secondary' : 'primary'} onClick={() => setProbing(false)}>{t('model_probe.catalog')}</Button>
+        <Button variant={probing ? 'primary' : 'secondary'} onClick={() => setProbing(true)}>{t('model_probe.title')}</Button>
+      </div>}
+      {probing && open ? <AuthFileModelProbe key={`${fileName}:${props.connectionGenerationKey ?? ''}`} fileName={fileName} provider={normalizedFileType} models={models} /> : <>
       {props.catalogInfo && <div className={routingStyles.hint} role="status">
         {props.catalogInfo.sources?.length ? props.catalogInfo.sources.map((source) => <div key={source.source} className={routingStyles.sourceStatus}>
           <strong>{source.source}</strong>
@@ -330,6 +345,7 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
           </div>
         </>
       )}
+      </>}
     </Modal>
   );
 }

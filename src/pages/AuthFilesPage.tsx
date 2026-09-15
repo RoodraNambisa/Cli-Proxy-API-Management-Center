@@ -2111,6 +2111,7 @@ export function AuthFilesPage() {
       />
 
       <AuthFileModelsModal
+        connectionGenerationKey={connectionGenerationKey}
         onRefreshGrok={refreshGrokModels}
         catalogInfo={modelsCatalogInfo}
         open={modelsModalOpen}

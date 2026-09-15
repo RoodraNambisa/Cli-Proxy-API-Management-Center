@@ -30,6 +30,8 @@ export interface GrokCatalogRefreshInfo {
 }
 
 type StatusError = { status?: number };
+export type ModelProbeRequest = { name: string; model: string; protocol: string; stream: boolean; upstream?: string };
+export type ModelProbeResult = { success: boolean; name: string; model: string; upstream_model?: string; request_path: string; upstream_url?: string; stream: boolean; latency_ms: number; status_code?: number; request_id?: string; response?: string; error?: string };
 type RawHeaders = Record<string, unknown> | undefined;
 type AuthFileStatusResponse = { status: string; disabled: boolean };
 type AuthFileEntry = AuthFilesResponse['files'][number];
@@ -1294,6 +1296,11 @@ export const authFilesApi = {
       : await apiClient.get<Record<string, unknown>>(path, signal ? { signal } : undefined);
     const models = data.models ?? data['models'];
     return Array.isArray(models) ? (models as AuthFileModelItem[]) : [];
+  },
+
+  // Run one request against the selected credential with cancellable test overrides.
+  probeModel(input: ModelProbeRequest, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+    return apiClient.postAtConnection<ModelProbeResult>({ ...connection, timeout: 0 }, '/auth-files/models/probe', input, { signal, timeout: 0 });
   },
 
   // 获取指定 channel 的模型定义

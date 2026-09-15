@@ -4456,5 +4456,50 @@
     "origin_credential": "凭证默认",
     "origin_global-rule": "全局模型规则",
     "origin_credential-rule": "凭证模型规则"
+  },
+  "model_probe": {
+    "title": "连接检测",
+    "catalog": "模型目录",
+    "hint": "固定使用当前凭证，逐个发送短请求，会产生用量。链路选择仅对本次检测生效，不切换账号，也不修改路由配置。仅检测文字模型。",
+    "protocol": "请求链路",
+    "protocols": {
+      "responses": "Responses（HTTP）",
+      "chat": "Chat（跟随配置）",
+      "chat-direct": "Chat 直连（HTTP）",
+      "chat-responses": "Chat → Responses"
+    },
+    "upstream": "Grok 上游节点",
+    "configured": "跟随模型路由配置",
+    "stream": "流式模式",
+    "non_stream": "非流式",
+    "codex_conversion": "Codex 的 Chat 请求会转换为 Responses；此处检测 HTTP / SSE 链路。",
+    "custom_url": "自定义上游地址",
+    "invalid_url": "请输入不含密钥、查询参数或片段的 HTTP(S) 基础地址。",
+    "test_visible": "检测列表（{{count}}）",
+    "test_selected": "检测已选（{{count}}）",
+    "select_success": "勾选成功模型",
+    "cancel": "停止检测",
+    "filter": "筛选模型…",
+    "select_visible": "选择当前列表",
+    "model": "模型",
+    "status": "状态",
+    "result": "结果",
+    "action": "操作",
+    "select": "选择",
+    "test": "检测",
+    "details": "查看链路与详情",
+    "actual_model": "实际模型",
+    "states": {
+      "idle": "未检测",
+      "queued": "等待中",
+      "running": "检测中",
+      "success": "成功",
+      "failed": "失败",
+      "cancelled": "已停止"
+    },
+    "empty": "没有匹配的文字模型，可手动添加模型进行检测。",
+    "manual_model": "手动输入模型 ID",
+    "add_model": "添加模型",
+    "progress": "已完成 {{count}} / {{total}}"
   }
 }

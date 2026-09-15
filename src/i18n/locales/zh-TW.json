@@ -4476,5 +4476,50 @@
     "origin_credential": "憑證預設",
     "origin_global-rule": "全域模型規則",
     "origin_credential-rule": "憑證模型規則"
+  },
+  "model_probe": {
+    "title": "連線檢測",
+    "catalog": "模型目錄",
+    "hint": "固定使用目前憑證，逐一傳送短請求，會產生用量。鏈路選擇僅對本次檢測生效，不切換帳號，也不修改路由設定。僅檢測文字模型。",
+    "protocol": "請求鏈路",
+    "protocols": {
+      "responses": "Responses（HTTP）",
+      "chat": "Chat（依照設定）",
+      "chat-direct": "Chat 直連（HTTP）",
+      "chat-responses": "Chat → Responses"
+    },
+    "upstream": "Grok 上游節點",
+    "configured": "依照模型路由設定",
+    "stream": "串流模式",
+    "non_stream": "非串流",
+    "codex_conversion": "Codex 的 Chat 請求會轉換為 Responses；此處檢測 HTTP / SSE 鏈路。",
+    "custom_url": "自訂上游位址",
+    "invalid_url": "請輸入不含金鑰、查詢參數或片段的 HTTP(S) 基礎位址。",
+    "test_visible": "檢測清單（{{count}}）",
+    "test_selected": "檢測已選（{{count}}）",
+    "select_success": "勾選成功模型",
+    "cancel": "停止檢測",
+    "filter": "篩選模型…",
+    "select_visible": "選擇目前清單",
+    "model": "模型",
+    "status": "狀態",
+    "result": "結果",
+    "action": "操作",
+    "select": "選擇",
+    "test": "檢測",
+    "details": "查看鏈路與詳情",
+    "actual_model": "實際模型",
+    "states": {
+      "idle": "未檢測",
+      "queued": "等待中",
+      "running": "檢測中",
+      "success": "成功",
+      "failed": "失敗",
+      "cancelled": "已停止"
+    },
+    "empty": "沒有符合的文字模型，可手動新增模型進行檢測。",
+    "manual_model": "手動輸入模型 ID",
+    "add_model": "新增模型",
+    "progress": "已完成 {{count}} / {{total}}"
   }
 }

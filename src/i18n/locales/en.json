@@ -4452,5 +4452,50 @@
     "origin_credential": "Credential default",
     "origin_global-rule": "Global model rule",
     "origin_credential-rule": "Credential model rule"
+  },
+  "model_probe": {
+    "title": "Connection test",
+    "catalog": "Model catalog",
+    "hint": "Sends short requests sequentially using this credential and consumes usage. Test overrides do not change routing or switch accounts. Text models only.",
+    "protocol": "Request route",
+    "protocols": {
+      "responses": "Responses (HTTP)",
+      "chat": "Chat (configured mode)",
+      "chat-direct": "Chat direct (HTTP)",
+      "chat-responses": "Chat → Responses"
+    },
+    "upstream": "Grok upstream",
+    "configured": "Use configured model routing",
+    "stream": "Streaming",
+    "non_stream": "Non-streaming",
+    "codex_conversion": "Codex Chat requests are converted to Responses. This tests HTTP / SSE routes.",
+    "custom_url": "Custom upstream URL",
+    "invalid_url": "Enter an HTTP(S) base URL without credentials, query parameters or fragments.",
+    "test_visible": "Test listed ({{count}})",
+    "test_selected": "Test selected ({{count}})",
+    "select_success": "Select successful models",
+    "cancel": "Stop testing",
+    "filter": "Filter models…",
+    "select_visible": "Select listed models",
+    "model": "Model",
+    "status": "Status",
+    "result": "Result",
+    "action": "Action",
+    "select": "Select",
+    "test": "Test",
+    "details": "Route and details",
+    "actual_model": "Upstream model",
+    "states": {
+      "idle": "Not tested",
+      "queued": "Queued",
+      "running": "Testing",
+      "success": "Success",
+      "failed": "Failed",
+      "cancelled": "Stopped"
+    },
+    "empty": "No matching text models. Add a model ID to test it.",
+    "manual_model": "Enter a model ID",
+    "add_model": "Add model",
+    "progress": "Completed {{count}} / {{total}}"
   }
 }

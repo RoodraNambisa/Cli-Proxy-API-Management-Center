@@ -4449,5 +4449,50 @@
     "origin_credential": "Адрес учётных данных",
     "origin_global-rule": "Глобальное правило",
     "origin_credential-rule": "Правило учётных данных"
+  },
+  "model_probe": {
+    "title": "Проверка подключения",
+    "catalog": "Каталог моделей",
+    "hint": "Короткие запросы отправляются последовательно с выбранными учётными данными и расходуют квоту. Настройки проверки не меняют маршруты или аккаунт. Только текстовые модели.",
+    "protocol": "Маршрут запроса",
+    "protocols": {
+      "responses": "Responses (HTTP)",
+      "chat": "Chat (по настройкам)",
+      "chat-direct": "Chat напрямую (HTTP)",
+      "chat-responses": "Chat → Responses"
+    },
+    "upstream": "Сервер Grok",
+    "configured": "По маршрутизации моделей",
+    "stream": "Потоковый режим",
+    "non_stream": "Без потока",
+    "codex_conversion": "Запросы Chat для Codex преобразуются в Responses. Проверка использует HTTP / SSE.",
+    "custom_url": "Адрес сервера",
+    "invalid_url": "Введите базовый HTTP(S) URL без учётных данных, параметров и фрагмента.",
+    "test_visible": "Проверить список ({{count}})",
+    "test_selected": "Проверить выбранные ({{count}})",
+    "select_success": "Выбрать успешные",
+    "cancel": "Остановить",
+    "filter": "Фильтр моделей…",
+    "select_visible": "Выбрать список",
+    "model": "Модель",
+    "status": "Статус",
+    "result": "Результат",
+    "action": "Действие",
+    "select": "Выбрать",
+    "test": "Проверить",
+    "details": "Маршрут и подробности",
+    "actual_model": "Модель сервера",
+    "states": {
+      "idle": "Не проверена",
+      "queued": "В очереди",
+      "running": "Проверка",
+      "success": "Успешно",
+      "failed": "Ошибка",
+      "cancelled": "Остановлено"
+    },
+    "empty": "Нет подходящих текстовых моделей. Добавьте ID вручную.",
+    "manual_model": "Введите ID модели",
+    "add_model": "Добавить",
+    "progress": "Завершено {{count}} / {{total}}"
   }
 }
