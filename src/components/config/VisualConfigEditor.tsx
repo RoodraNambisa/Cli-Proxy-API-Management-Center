@@ -2391,6 +2391,15 @@ export function VisualConfigEditor({
                   }
                 />
               </div>
+                <div id="config-chatgpt-web-auto-library-cleanup">
+                  <ToggleRow
+                    title={t('config_management.settings_center.chatgpt_web.auto_cleanup_library_on_full')}
+                    description={t('config_management.settings_center.chatgpt_web.auto_cleanup_library_on_full_description')}
+                    checked={values.chatgptWebAutoCleanupLibraryOnFull}
+                    disabled={disabled}
+                    onChange={(chatgptWebAutoCleanupLibraryOnFull) => onChange({ chatgptWebAutoCleanupLibraryOnFull })}
+                  />
+                </div>
               <div id="config-chatgpt-web-normalize-image-mime">
                 <ToggleRow
                   title={t(

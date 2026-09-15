@@ -144,6 +144,7 @@ export interface ImagesConfig {
     imageModels?: string[];
     upstreamModel?: string;
     sanitizeErrorResponses?: boolean;
+    autoCleanupLibraryOnFull?: boolean;
     normalizeMismatchedImageMime?: boolean;
     normalizeRemoteImageMime?: boolean;
     pollStallBreakerEnabled?: boolean;

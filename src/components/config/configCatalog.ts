@@ -165,6 +165,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebImageModels',
       'chatgptWebIgnoreUnsupportedImageParams',
       'chatgptWebSanitizeErrorResponses',
+      'chatgptWebAutoCleanupLibraryOnFull',
       'chatgptWebRemoteImageUrlEnabled',
       'chatgptWebRemoteImageUrlDownloadMode',
       'chatgptWebAdaptSizeToAspectRatio',
@@ -875,6 +876,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.settings_center.chatgpt_web.sanitize_error_responses',
     yamlKeys: ['images.chatgpt-web.sanitize-error-responses'],
     aliases: ['error privacy', 'sanitize errors', '错误脱敏', '渠道隐藏', '錯誤脫敏'],
+  },
+  {
+    id: 'config-chatgpt-web-auto-library-cleanup',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.auto_cleanup_library_on_full',
+    yamlKeys: ['images.chatgpt-web.auto-cleanup-library-on-full'],
+    aliases: ['library storage full', 'automatic cleanup', '资料库清理', '自动排空', '資料庫清理'],
   },
   {
     id: 'config-chatgpt-web-normalize-image-mime',

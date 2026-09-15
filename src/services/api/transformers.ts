@@ -1188,6 +1188,9 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
             sanitizeErrorResponses: normalizeBoolean(
               chatgptWeb['sanitize-error-responses'] ?? chatgptWeb.sanitizeErrorResponses
             ),
+            autoCleanupLibraryOnFull: normalizeBoolean(
+              chatgptWeb['auto-cleanup-library-on-full'] ?? chatgptWeb.autoCleanupLibraryOnFull
+            ),
             normalizeMismatchedImageMime: normalizeBoolean(
               chatgptWeb['normalize-mismatched-image-mime'] ??
                 chatgptWeb.normalizeMismatchedImageMime

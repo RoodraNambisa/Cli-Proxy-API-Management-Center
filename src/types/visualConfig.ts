@@ -367,6 +367,7 @@ export type VisualConfigValues = {
   chatgptWebImageModels: string[];
   chatgptWebIgnoreUnsupportedImageParams: boolean;
   chatgptWebSanitizeErrorResponses: boolean;
+  chatgptWebAutoCleanupLibraryOnFull: boolean;
   chatgptWebNormalizeMismatchedImageMime: boolean;
   chatgptWebRemoteImageUrlEnabled: boolean;
   chatgptWebRemoteImageUrlDownloadMode: 'direct' | 'credential-proxy';
@@ -501,6 +502,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebImageModels: [],
   chatgptWebIgnoreUnsupportedImageParams: false,
   chatgptWebSanitizeErrorResponses: false,
+  chatgptWebAutoCleanupLibraryOnFull: false,
   chatgptWebNormalizeMismatchedImageMime: false,
   chatgptWebRemoteImageUrlEnabled: false,
   chatgptWebRemoteImageUrlDownloadMode: 'direct',

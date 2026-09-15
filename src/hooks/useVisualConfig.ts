@@ -2589,6 +2589,12 @@ function getNextDirtyFields(
         baselineValues.chatgptWebSanitizeErrorResponses
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAutoCleanupLibraryOnFull')) {
+    updateDirty(
+      'chatgptWebAutoCleanupLibraryOnFull',
+      nextValues.chatgptWebAutoCleanupLibraryOnFull === baselineValues.chatgptWebAutoCleanupLibraryOnFull
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebNormalizeMismatchedImageMime')) {
     updateDirty(
       'chatgptWebNormalizeMismatchedImageMime',
@@ -3560,6 +3566,9 @@ export function useVisualConfig() {
         chatgptWebSanitizeErrorResponses: parseBooleanValue(
           imagesChatGPTWeb?.['sanitize-error-responses'] ?? imagesChatGPTWeb?.sanitizeErrorResponses
         ),
+        chatgptWebAutoCleanupLibraryOnFull: parseBooleanValue(
+          imagesChatGPTWeb?.['auto-cleanup-library-on-full'] ?? imagesChatGPTWeb?.autoCleanupLibraryOnFull
+        ),
         chatgptWebNormalizeMismatchedImageMime: parseBooleanValue(
           imagesChatGPTWeb?.['normalize-mismatched-image-mime'] ??
             imagesChatGPTWeb?.normalizeMismatchedImageMime
@@ -4468,6 +4477,7 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
           values.chatgptWebSanitizeErrorResponses !==
             DEFAULT_VISUAL_VALUES.chatgptWebSanitizeErrorResponses ||
+          values.chatgptWebAutoCleanupLibraryOnFull !== DEFAULT_VISUAL_VALUES.chatgptWebAutoCleanupLibraryOnFull ||
           values.chatgptWebNormalizeMismatchedImageMime !==
             DEFAULT_VISUAL_VALUES.chatgptWebNormalizeMismatchedImageMime ||
           values.chatgptWebRemoteImageUrlEnabled !==
@@ -4582,6 +4592,7 @@ export function useVisualConfig() {
               DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
             values.chatgptWebSanitizeErrorResponses !==
               DEFAULT_VISUAL_VALUES.chatgptWebSanitizeErrorResponses ||
+            values.chatgptWebAutoCleanupLibraryOnFull !== DEFAULT_VISUAL_VALUES.chatgptWebAutoCleanupLibraryOnFull ||
             values.chatgptWebNormalizeMismatchedImageMime !==
               DEFAULT_VISUAL_VALUES.chatgptWebNormalizeMismatchedImageMime ||
             values.chatgptWebRemoteImageUrlEnabled !==
@@ -4652,6 +4663,10 @@ export function useVisualConfig() {
             doc.setIn(
               ['images', 'chatgpt-web', 'sanitize-error-responses'],
               values.chatgptWebSanitizeErrorResponses
+            );
+            doc.setIn(
+              ['images', 'chatgpt-web', 'auto-cleanup-library-on-full'],
+              values.chatgptWebAutoCleanupLibraryOnFull
             );
             doc.setIn(
               ['images', 'chatgpt-web', 'normalize-mismatched-image-mime'],
@@ -4781,6 +4796,7 @@ export function useVisualConfig() {
               'remoteImageUrlEnabled',
               'remoteImageUrlDownloadMode',
               'sanitizeErrorResponses',
+              'autoCleanupLibraryOnFull',
               'normalizeMismatchedImageMime',
               'normalizeRemoteImageMime',
             ]) {
