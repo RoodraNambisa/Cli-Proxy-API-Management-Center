@@ -3,9 +3,12 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { parseDocument } from 'yaml';
 import { AiProvidersCodexEditPage } from '@/pages/AiProvidersCodexEditPage';
+import { AiProvidersXaiPage } from '@/pages/AiProvidersXaiPage';
+import { providersApi } from '@/services/api/providers';
+import { configApi } from '@/services/api/config';
 import { apiClient } from '@/services/api/client';
 import { normalizeConfigResponse } from '@/services/api/transformers';
-import { useAuthStore, useConfigStore } from '@/stores';
+import { useAuthStore, useConfigStore, useUsageStatsStore } from '@/stores';
 import { readGrokConfig, writeGrokConfig, grokConfigErrors } from '@/utils/grokConfig';
 
 const mocks = vi.hoisted(() => ({
@@ -21,6 +24,69 @@ beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   useAuthStore.setState({ connectionStatus: 'connected' });
+  useConfigStore.getState().clearCache();
+});
+
+test('Grok key editor loads the refreshed list instead of a stale full-config cache', async () => {
+  const oldConfig = normalizeConfigResponse({
+    'xai-api-key': [{ 'api-key': 'old-key', 'base-url': 'https://api.x.ai/v1' }],
+  });
+  const freshConfig = normalizeConfigResponse({
+    'xai-api-key': [
+      {
+        'api-key': 'fresh-key',
+        'base-url': 'https://api.x.ai/v1',
+        models: [{ name: 'fresh-model' }],
+      },
+    ],
+  });
+  useConfigStore.setState({
+    config: oldConfig,
+    cache: new Map([
+      ['__full__', { data: oldConfig, timestamp: Date.now() }],
+      ['xai-api-key', { data: oldConfig.xaiApiKeys, timestamp: Date.now() }],
+    ]),
+  });
+  vi.spyOn(providersApi, 'getXaiConfigs').mockResolvedValue(freshConfig.xaiApiKeys!);
+  vi.spyOn(configApi, 'getConfig').mockResolvedValue(freshConfig);
+  vi.spyOn(useUsageStatsStore.getState(), 'loadUsageAuths').mockResolvedValue(undefined);
+  render(
+    <MemoryRouter initialEntries={['/ai-providers/xai']}>
+      <Routes>
+        <Route path="/ai-providers/xai" element={<AiProvidersXaiPage />} />
+        <Route
+          path="/ai-providers/xai/:index"
+          element={<AiProvidersCodexEditPage provider="xai" />}
+        />
+      </Routes>
+    </MemoryRouter>
+  );
+  await screen.findByText('fresh-model');
+  fireEvent.click(screen.getByRole('button', { name: 'common.edit' }));
+  await screen.findByDisplayValue('fresh-key');
+  expect(screen.queryByDisplayValue('old-key')).toBeNull();
+});
+
+test('Grok key page loads usage on entry and refreshes it on demand', async () => {
+  vi.spyOn(providersApi, 'getXaiConfigs').mockResolvedValue([]);
+  const loadUsage = vi
+    .spyOn(useUsageStatsStore.getState(), 'loadUsageAuths')
+    .mockResolvedValue(undefined);
+  render(
+    <MemoryRouter>
+      <AiProvidersXaiPage />
+    </MemoryRouter>
+  );
+  await waitFor(() => expect(loadUsage).toHaveBeenCalled());
+  await waitFor(() =>
+    expect(
+      (screen.getByRole('button', { name: 'common.refresh' }) as HTMLButtonElement).disabled
+    ).toBe(false)
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'common.refresh' }));
+  await waitFor(() =>
+    expect(loadUsage).toHaveBeenCalledWith(expect.objectContaining({ force: true }))
+  );
 });
 
 test('image policy and dynamic headers remain opt-in and round-trip without changing other YAML', () => {

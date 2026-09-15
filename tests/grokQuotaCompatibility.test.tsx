@@ -59,6 +59,26 @@ test('does not borrow a monthly percentage or monthly reset for a missing weekly
   expect(merged?.billingPeriodEnd).toBeUndefined();
 });
 
+test('legacy billing keeps its allowance when shared balance metadata is present', () => {
+  const billing = buildXaiBillingSummary({
+    monthlyLimit: {val: 15000}, used: {val: 3000},
+    billingPeriodEnd: '2026-10-01T00:00:00Z',
+    isUnifiedBillingUser: false, prepaidBalance: {val: -1250},
+  })!;
+  expect(billing).toMatchObject({isCreditsConfig:false,periodType:'monthly',usagePercent:20,monthlyLimitCents:15000,prepaidBalanceCents:-1250});
+  display(billing);
+  expect(screen.getByText('月度积分')).toBeTruthy();
+  expect(screen.getByTestId('quota-percent').textContent).toBe('80');
+});
+
+test('prepaid credit accounting signs do not appear as a negative balance', () => {
+  const billing = buildXaiBillingSummary({...credits.config,prepaidBalance:{val:-1250}})!;
+  display(billing);
+  const amount=new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(12.5);
+  expect(screen.getByText(amount)).toBeTruthy();
+  expect(screen.queryByText(new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(-12.5))).toBeNull();
+});
+
 test('keeps dates absent when a typed current period omits them even if deprecated billing dates remain', () => {
   const billing = buildXaiBillingSummary({ currentPeriod: { type: 'weekly' }, creditUsagePercent: 20, billingPeriodStart: '2026-09-01T00:00:00Z', billingPeriodEnd: '2026-10-01T00:00:00Z' });
   expect(billing).toMatchObject({ periodType: 'weekly', usagePercent: 20 });

@@ -1535,7 +1535,7 @@ const renderXaiItems = (
     billing.prepaidBalanceCents != null
       ? h('div', { key: 'prepaid-balance', className: styleMap.codexPlan },
           h('span', { className: styleMap.codexPlanLabel }, t('xai_quota.prepaid_balance')),
-          h('span', { className: styleMap.codexPlanValue }, formatUsdFromCents(billing.prepaidBalanceCents)))
+          h('span', { className: styleMap.codexPlanValue }, formatUsdFromCents(Math.abs(billing.prepaidBalanceCents))))
       : null,
     hasMonthlyData
       ? h(

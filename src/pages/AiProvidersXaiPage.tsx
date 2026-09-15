@@ -46,7 +46,10 @@ function XaiKeys() {
   const connected = useAuthStore((state) => state.connectionStatus === 'connected');
   const { showConfirmation } = useNotificationStore();
   const clearCache = useConfigStore((state) => state.clearCache);
-  const { keyStats, usageDetails } = useProviderStats({ enabled: true });
+  const updateConfigValue = useConfigStore((state) => state.updateConfigValue);
+  const { keyStats, usageDetails, loadKeyStats, refreshKeyStats } = useProviderStats({
+    enabled: connected,
+  });
   const bySource = useMemo(() => indexUsageDetailsBySource(usageDetails), [usageDetails]);
   const byIndex = useMemo(() => indexUsageDetailsByAuthIndex(usageDetails), [usageDetails]);
   const load = useCallback(async () => {
@@ -55,14 +58,20 @@ function XaiKeys() {
     setError('');
     try {
       const next = await providersApi.getXaiConfigs();
-      if (mounted.current && revision.current === current) setConfigs(next);
+      if (mounted.current && revision.current === current) {
+        setConfigs(next);
+        updateConfigValue('xai-api-key', next);
+      }
     } catch (err) {
       if (mounted.current && revision.current === current)
         setError(err instanceof Error ? err.message : String(err));
     } finally {
       if (mounted.current && revision.current === current) setLoading(false);
     }
-  }, []);
+  }, [updateConfigValue]);
+  useEffect(() => {
+    if (connected) void loadKeyStats().catch(() => {});
+  }, [connected, loadKeyStats]);
   useEffect(() => {
     mounted.current = true;
     void load();
@@ -79,7 +88,7 @@ function XaiKeys() {
     try {
       await action();
       if (mounted.current) {
-        clearCache();
+        clearCache('xai-api-key');
         await load();
       }
     } catch (err) {
@@ -94,7 +103,14 @@ function XaiKeys() {
       onBack={() => navigate('/ai-providers')}
       backLabel={t('common.back')}
       rightAction={
-        <Button variant="secondary" disabled={loading || saving} onClick={() => void load()}>
+        <Button
+          variant="secondary"
+          disabled={loading || saving}
+          onClick={() => {
+            void load();
+            void refreshKeyStats().catch(() => {});
+          }}
+        >
           {t('common.refresh')}
         </Button>
       }

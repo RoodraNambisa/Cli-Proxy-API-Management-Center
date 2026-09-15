@@ -367,10 +367,16 @@ export function buildXaiBillingSummary(
   const unified = config.isUnifiedBillingUser ?? config.is_unified_billing_user;
   const isUnifiedBillingUser = typeof unified === 'boolean' ? unified : null;
   const prepaidBalanceCents = normalizeXaiCentValue(config.prepaidBalance ?? config.prepaid_balance);
+  const hasLegacyBillingFields =
+    (config.monthlyLimit ?? config.monthly_limit) != null || config.used != null ||
+    Boolean(config.billingPeriodStart ?? config.billing_period_start ?? config.billingPeriodEnd ?? config.billing_period_end);
+  // Balance metadata is shared by both formats. It must not hide a legacy
+  // allowance when there is no current credits period or percentage.
   const isCreditsConfig =
     creditUsagePercent !== null || periodType !== 'unknown' ||
     Boolean(currentPeriod?.start || currentPeriod?.end) || productUsage.length > 0 ||
-    isUnifiedBillingUser !== null || prepaidBalanceCents !== null;
+    isUnifiedBillingUser === true ||
+    (!hasLegacyBillingFields && (isUnifiedBillingUser !== null || prepaidBalanceCents !== null));
 
   // A modern credits snapshot owns its period. Deprecated monthly fields may
   // still be emitted as zero and must not be presented as a second allowance.
