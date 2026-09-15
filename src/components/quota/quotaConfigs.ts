@@ -43,6 +43,7 @@ import {
   XAI_BILLING_MONTHLY_URL,
   XAI_BILLING_WEEKLY_URL,
   XAI_REQUEST_HEADERS,
+  XAI_SETTINGS_URL,
   normalizeNumberValue,
   normalizePlanType,
   normalizeStringValue,
@@ -1300,7 +1301,14 @@ const requestXaiBilling = async (
     throw createStatusError(getApiCallErrorMessage(result), result.statusCode);
   }
   const payload = parseXaiBillingPayload(result.body ?? result.bodyText);
-  return buildXaiBillingSummary(payload?.config);
+  const summary = buildXaiBillingSummary(payload?.config);
+  if (!summary) return null;
+  const enabled = payload?.onDemandEnabled ?? payload?.on_demand_enabled;
+  return {
+    ...summary,
+    subscriptionTier: normalizeStringValue(payload?.subscriptionTier ?? payload?.subscription_tier),
+    onDemandEnabled: typeof enabled === 'boolean' ? enabled : null,
+  };
 };
 
 const fetchXaiQuota = async (file: AuthFileItem, t: TFunction): Promise<XaiBillingSummary> => {
@@ -1312,20 +1320,29 @@ const fetchXaiQuota = async (file: AuthFileItem, t: TFunction): Promise<XaiBilli
 
   const resolvedFile = await resolveXaiQuotaFile(file);
   const requestHeader = buildXaiRequestHeaders(resolvedFile);
-  const [weeklyResult, monthlyResult] = await Promise.allSettled([
+  const [creditsResult, settingsResult] = await Promise.allSettled([
     requestXaiBilling(authIndex, XAI_BILLING_WEEKLY_URL, requestHeader),
-    requestXaiBilling(authIndex, XAI_BILLING_MONTHLY_URL, requestHeader),
+    apiCallApi.request({ authIndex, method: 'GET', url: XAI_SETTINGS_URL, header: requestHeader }),
   ]);
-  const weeklySummary = weeklyResult.status === 'fulfilled' ? weeklyResult.value : null;
-  const monthlySummary = monthlyResult.status === 'fulfilled' ? monthlyResult.value : null;
-  const summary = mergeXaiBillingSummaries(weeklySummary, monthlySummary);
+  let summary = creditsResult.status === 'fulfilled' ? creditsResult.value : null;
   if (!summary) {
-    if (weeklyResult.status === 'rejected' && monthlyResult.status === 'rejected') {
-      throw weeklyResult.reason;
+    try {
+      summary = mergeXaiBillingSummaries(summary, await requestXaiBilling(authIndex, XAI_BILLING_MONTHLY_URL, requestHeader));
+    } catch (error) {
+      throw creditsResult.status === 'rejected' ? creditsResult.reason : error;
     }
-    throw new Error(t('xai_quota.empty_data'));
   }
-  return summary;
+  if (!summary) throw new Error(t('xai_quota.empty_data'));
+  const settingsResponse = settingsResult.status === 'fulfilled' ? settingsResult.value : null;
+  const settings = settingsResponse && settingsResponse.statusCode >= 200 && settingsResponse.statusCode < 300
+    ? toXaiRecord(parseXaiBillingPayload(settingsResponse.body ?? settingsResponse.bodyText))
+    : null;
+  const enabled = summary.onDemandEnabled ?? settings?.on_demand_enabled ?? settings?.onDemandEnabled;
+  return {
+    ...summary,
+    subscriptionTier: summary.subscriptionTier ?? normalizeStringValue(settings?.subscription_tier_display ?? settings?.subscriptionTierDisplay) ?? normalizeStringValue(settings?.subscription_tier ?? settings?.subscriptionTier),
+    onDemandEnabled: typeof enabled === 'boolean' ? enabled : null,
+  };
 };
 
 const formatUsdFromCents = (cents: number | null): string => {
@@ -1389,70 +1406,67 @@ const renderXaiItems = (
   const clampedUsed =
     billing.usedPercent === null ? null : Math.max(0, Math.min(100, billing.usedPercent));
   const remaining = clampedUsed === null ? null : 100 - clampedUsed;
-  const onDemandCap = billing.onDemandCapCents ?? 0;
+  const onDemandCap = billing.onDemandCapCents;
   const clampedOnDemandUsed =
     billing.onDemandUsedPercent === null
       ? null
       : Math.max(0, Math.min(100, billing.onDemandUsedPercent));
   const onDemandRemaining = clampedOnDemandUsed === null ? null : 100 - clampedOnDemandUsed;
   const plan = resolveXaiPlan(billing.monthlyLimitCents);
-  const weeklyUsed =
-    billing.periodType === 'weekly' && billing.usagePercent !== null
+  const periodUsed =
+    billing.isCreditsConfig && billing.usagePercent !== null
       ? Math.max(0, Math.min(100, billing.usagePercent))
       : null;
-  const weeklyRemaining = weeklyUsed === null ? null : 100 - weeklyUsed;
-  const weeklyResetLabel = formatQuotaResetTime(billing.periodEnd);
+  const periodRemaining = periodUsed === null ? null : 100 - periodUsed;
+  const periodResetLabel = formatQuotaResetTime(billing.periodEnd);
   const monthlyResetLabel = formatQuotaResetTime(billing.billingPeriodEnd);
-  const hasWeeklyData =
-    billing.periodType === 'weekly' &&
-    (weeklyUsed !== null || Boolean(billing.periodEnd) || billing.productUsage.length > 0);
+  const hasPeriodData = Boolean(billing.isCreditsConfig);
+  const periodLabel = t(`xai_quota.${billing.periodType === 'weekly' ? 'weekly_limit' : billing.periodType === 'monthly' ? 'monthly_limit' : 'included_quota'}`);
   const hasMonthlyData =
-    billing.monthlyLimitCents !== null ||
-    billing.usedCents !== null ||
-    Boolean(billing.billingPeriodEnd);
+    !billing.isCreditsConfig && billing.monthlyLimitCents !== null && billing.monthlyLimitCents > 0;
 
   return h(
     Fragment,
     null,
-    plan
+    billing.subscriptionTier || plan
       ? h(
           'div',
           { key: 'plan', className: styleMap.codexPlan },
           h('span', { className: styleMap.codexPlanLabel }, t('xai_quota.plan_label')),
           h(
             'span',
-            { className: plan.premium ? styleMap.premiumPlanValue : styleMap.codexPlanValue },
-            t(`xai_quota.${plan.labelKey}`)
+            { className: billing.subscriptionTier?.toLowerCase().includes('heavy') || plan?.premium ? styleMap.premiumPlanValue : styleMap.codexPlanValue },
+            billing.subscriptionTier ?? t(`xai_quota.${plan?.labelKey}`)
           )
         )
       : null,
-    hasWeeklyData
+    hasPeriodData
       ? h(
           'div',
           { key: 'weekly-limit', className: styleMap.quotaRow },
           h(
             'div',
             { className: styleMap.quotaRowHeader },
-            h('span', { className: styleMap.quotaModel }, t('xai_quota.weekly_limit')),
+            h('span', { className: styleMap.quotaModel }, billing.isUnifiedBillingUser ? t('xai_quota.unified_period', { period: periodLabel }) : periodLabel),
             h(
               'div',
               { className: styleMap.quotaMeta },
               h(
                 'span',
                 { className: styleMap.quotaPercent },
-                t('xai_quota.used_percent', { percent: formatXaiPercent(weeklyUsed) })
+                periodUsed === null ? t('xai_quota.usage_not_reported') : t('xai_quota.used_percent', { percent: formatXaiPercent(periodUsed) })
               ),
-              weeklyResetLabel !== '-'
+              periodResetLabel !== '-'
                 ? h(
                     'span',
                     { className: styleMap.quotaReset },
-                    t('xai_quota.reset_at', { time: weeklyResetLabel })
+                    t('xai_quota.reset_at', { time: periodResetLabel })
                   )
                 : null
             )
           ),
           h(QuotaProgressBar, {
-            percent: weeklyRemaining,
+            percent: periodRemaining,
             highThreshold: QUOTA_PROGRESS_HIGH_THRESHOLD,
             mediumThreshold: QUOTA_PROGRESS_MEDIUM_THRESHOLD,
           })
@@ -1490,7 +1504,7 @@ const renderXaiItems = (
         })
       );
     }),
-    onDemandCap > 0
+    onDemandCap !== null && onDemandCap > 0 && billing.onDemandEnabled !== false
       ? h(
           'div',
           { key: 'pay-as-you-go', className: styleMap.quotaRow },
@@ -1515,8 +1529,13 @@ const renderXaiItems = (
           'div',
           { key: 'pay-as-you-go', className: styleMap.codexPlan },
           h('span', { className: styleMap.codexPlanLabel }, t('xai_quota.pay_as_you_go_label')),
-          h('span', { className: styleMap.codexPlanValue }, t('xai_quota.pay_as_you_go_disabled'))
+          h('span', { className: styleMap.codexPlanValue }, t(`xai_quota.${billing.onDemandEnabled === false || onDemandCap === 0 ? 'pay_as_you_go_disabled' : billing.onDemandEnabled === true ? 'pay_as_you_go_enabled' : 'not_reported'}`))
         ),
+    billing.prepaidBalanceCents != null
+      ? h('div', { key: 'prepaid-balance', className: styleMap.codexPlan },
+          h('span', { className: styleMap.codexPlanLabel }, t('xai_quota.prepaid_balance')),
+          h('span', { className: styleMap.codexPlanValue }, formatUsdFromCents(billing.prepaidBalanceCents)))
+      : null,
     hasMonthlyData
       ? h(
           'div',
@@ -1541,7 +1560,9 @@ const renderXaiItems = (
             mediumThreshold: QUOTA_PROGRESS_MEDIUM_THRESHOLD,
           })
         )
-      : null
+      : !hasPeriodData
+        ? h('div', { key: 'legacy-unavailable', className: styleMap.quotaMessage }, t('xai_quota.legacy_quota_unavailable'))
+        : null
   );
 };
 

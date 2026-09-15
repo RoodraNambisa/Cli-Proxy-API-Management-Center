@@ -294,6 +294,8 @@ export function buildKimiQuotaRows(payload: KimiUsagePayload): KimiQuotaRow[] {
 function normalizeXaiCentValue(value: XaiBillingConfig['monthlyLimit']): number | null {
   if (value === undefined || value === null) return null;
   if (typeof value === 'object' && !Array.isArray(value)) {
+    // The billing API uses proto3 JSON: an empty Cent object represents zero.
+    if (Object.keys(value).length === 0) return 0;
     return normalizeNumberValue((value as { val?: unknown }).val);
   }
   return normalizeNumberValue(value);
@@ -323,6 +325,11 @@ function normalizeXaiProductUsage(
 }
 
 const emptyXaiBillingSummary = (): XaiBillingSummary => ({
+  isCreditsConfig: false,
+  isUnifiedBillingUser: null,
+  prepaidBalanceCents: null,
+  subscriptionTier: null,
+  onDemandEnabled: null,
   periodType: 'unknown',
   usagePercent: null,
   productUsage: [],
@@ -348,19 +355,27 @@ export function buildXaiBillingSummary(
   );
   const periodStart =
     normalizeStringValue(currentPeriod?.start) ??
-    normalizeStringValue(config.billingPeriodStart ?? config.billing_period_start) ??
     undefined;
   const periodEnd =
     normalizeStringValue(currentPeriod?.end) ??
-    normalizeStringValue(config.billingPeriodEnd ?? config.billing_period_end) ??
     undefined;
   const productUsage = normalizeXaiProductUsage(
     config.productUsage ?? config.product_usage,
     'Product'
   );
 
-  const monthlyLimitCents = normalizeXaiCentValue(config.monthlyLimit ?? config.monthly_limit);
-  const usedCents = normalizeXaiCentValue(config.used);
+  const unified = config.isUnifiedBillingUser ?? config.is_unified_billing_user;
+  const isUnifiedBillingUser = typeof unified === 'boolean' ? unified : null;
+  const prepaidBalanceCents = normalizeXaiCentValue(config.prepaidBalance ?? config.prepaid_balance);
+  const isCreditsConfig =
+    creditUsagePercent !== null || periodType !== 'unknown' ||
+    Boolean(currentPeriod?.start || currentPeriod?.end) || productUsage.length > 0 ||
+    isUnifiedBillingUser !== null || prepaidBalanceCents !== null;
+
+  // A modern credits snapshot owns its period. Deprecated monthly fields may
+  // still be emitted as zero and must not be presented as a second allowance.
+  const monthlyLimitCents = isCreditsConfig ? null : normalizeXaiCentValue(config.monthlyLimit ?? config.monthly_limit);
+  const usedCents = isCreditsConfig ? null : normalizeXaiCentValue(config.used);
   const onDemandCapCents = normalizeXaiCentValue(config.onDemandCap ?? config.on_demand_cap);
   const explicitOnDemandUsedCents = normalizeXaiCentValue(
     config.onDemandUsed ?? config.on_demand_used
@@ -390,23 +405,20 @@ export function buildXaiBillingSummary(
       ? (onDemandUsedCents / onDemandCapCents) * 100
       : null;
 
-  const hasWeeklyData =
-    creditUsagePercent !== null || periodType === 'weekly' || productUsage.length > 0;
   const hasMonthlyData =
-    monthlyLimitCents !== null ||
+    !isCreditsConfig && (monthlyLimitCents !== null ||
     usedCents !== null ||
-    (!hasWeeklyData && (onDemandCapCents !== null || Boolean(billingPeriodEnd)));
+    onDemandCapCents !== null || Boolean(billingPeriodEnd));
 
-  if (!hasWeeklyData && !hasMonthlyData) return null;
+  if (!isCreditsConfig && !hasMonthlyData) return null;
 
-  summary.periodType = hasWeeklyData
-    ? periodType === 'unknown'
-      ? 'weekly'
-      : periodType
-    : 'monthly';
-  summary.usagePercent = hasWeeklyData ? creditUsagePercent : usedPercent;
-  summary.periodStart = hasWeeklyData ? periodStart : billingPeriodStart;
-  summary.periodEnd = hasWeeklyData ? periodEnd : billingPeriodEnd;
+  summary.isCreditsConfig = isCreditsConfig;
+  summary.isUnifiedBillingUser = isUnifiedBillingUser;
+  summary.prepaidBalanceCents = prepaidBalanceCents;
+  summary.periodType = isCreditsConfig ? periodType : 'monthly';
+  summary.usagePercent = isCreditsConfig ? creditUsagePercent : usedPercent;
+  summary.periodStart = isCreditsConfig ? periodStart : billingPeriodStart;
+  summary.periodEnd = isCreditsConfig ? periodEnd : billingPeriodEnd;
   summary.productUsage = productUsage;
   summary.monthlyLimitCents = monthlyLimitCents;
   summary.usedCents = usedCents;
@@ -425,23 +437,7 @@ export function mergeXaiBillingSummaries(
   primary: XaiBillingSummary | null,
   fallback: XaiBillingSummary | null
 ): XaiBillingSummary | null {
-  if (!primary) return fallback;
-  if (!fallback) return primary;
-
-  return {
-    periodType: primary.periodType !== 'unknown' ? primary.periodType : fallback.periodType,
-    usagePercent: primary.usagePercent ?? fallback.usagePercent,
-    periodStart: primary.periodStart ?? fallback.periodStart,
-    periodEnd: primary.periodEnd ?? fallback.periodEnd,
-    productUsage: primary.productUsage.length > 0 ? primary.productUsage : fallback.productUsage,
-    monthlyLimitCents: primary.monthlyLimitCents ?? fallback.monthlyLimitCents,
-    usedCents: primary.usedCents ?? fallback.usedCents,
-    includedUsedCents: primary.includedUsedCents ?? fallback.includedUsedCents,
-    onDemandCapCents: primary.onDemandCapCents ?? fallback.onDemandCapCents,
-    onDemandUsedCents: primary.onDemandUsedCents ?? fallback.onDemandUsedCents,
-    onDemandUsedPercent: primary.onDemandUsedPercent ?? fallback.onDemandUsedPercent,
-    billingPeriodStart: primary.billingPeriodStart ?? fallback.billingPeriodStart,
-    billingPeriodEnd: primary.billingPeriodEnd ?? fallback.billingPeriodEnd,
-    usedPercent: primary.usedPercent ?? fallback.usedPercent,
-  };
+  // Missing usage in one period must not be filled with a different period's
+  // percentage, amounts or dates. Legacy billing is a whole-response fallback.
+  return primary ?? fallback;
 }

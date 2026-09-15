@@ -384,7 +384,7 @@ describe('xAI auth file compatibility', () => {
     expect(screen.queryByText('auth_files.prefix_label')).toBeNull();
   });
 
-  test('merges weekly usage and monthly credits for Grok quota display', () => {
+  test('prefers current Grok credits without merging deprecated monthly billing', () => {
     const weekly = buildXaiBillingSummary({
       currentPeriod: { type: 'weekly', end: '2026-07-18T00:00:00Z' },
       creditUsagePercent: 25,
@@ -400,8 +400,8 @@ describe('xAI auth file compatibility', () => {
 
     expect(merged?.periodType).toBe('weekly');
     expect(merged?.usagePercent).toBe(25);
-    expect(merged?.monthlyLimitCents).toBe(15000);
-    expect(merged?.usedPercent).toBe(20);
+    expect(merged?.monthlyLimitCents).toBeNull();
+    expect(merged?.usedPercent).toBeNull();
     expect(merged?.productUsage).toEqual([{ product: 'grok-4.5', usagePercent: 10 }]);
   });
 });

@@ -268,6 +268,10 @@ export interface XaiBillingProductUsage {
 }
 
 export interface XaiBillingConfig {
+  isUnifiedBillingUser?: boolean | null;
+  is_unified_billing_user?: boolean | null;
+  prepaidBalance?: XaiBillingCent | number | string | null;
+  prepaid_balance?: XaiBillingCent | number | string | null;
   currentPeriod?: XaiBillingPeriod | null;
   current_period?: XaiBillingPeriod | null;
   creditUsagePercent?: number | string | null;
@@ -289,6 +293,10 @@ export interface XaiBillingConfig {
 
 export interface XaiBillingPayload {
   config?: XaiBillingConfig | null;
+  onDemandEnabled?: boolean | null;
+  on_demand_enabled?: boolean | null;
+  subscriptionTier?: string | null;
+  subscription_tier?: string | null;
 }
 
 export type XaiBillingPeriodType = 'weekly' | 'monthly' | 'unknown';
@@ -299,6 +307,11 @@ export interface XaiProductUsageSummary {
 }
 
 export interface XaiBillingSummary {
+  isCreditsConfig?: boolean;
+  isUnifiedBillingUser?: boolean | null;
+  prepaidBalanceCents?: number | null;
+  subscriptionTier?: string | null;
+  onDemandEnabled?: boolean | null;
   periodType: XaiBillingPeriodType;
   usagePercent: number | null;
   periodStart?: string;
