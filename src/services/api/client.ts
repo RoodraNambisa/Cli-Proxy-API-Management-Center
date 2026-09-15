@@ -263,6 +263,11 @@ class ApiClient {
     return response.data;
   }
 
+  async putAtConnection<T = unknown>(connection: ApiClientConnectionSnapshot, url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.instance.put<T>(url, data, this.scopedConfig(connection, config));
+    return response.data;
+  }
+
   /**
    * PATCH 请求
    */

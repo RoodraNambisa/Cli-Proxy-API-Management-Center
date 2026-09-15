@@ -21,6 +21,7 @@ const invalidHeaderValue = (value: string) =>
     return (code < 32 && code !== 9) || code === 127;
   });
 const flags = {
+  dynamicHeaders: 'dynamic-headers',
   passthrough: 'passthrough-client-identity',
   spoof: 'spoof-session-identity',
   convergence: 'session-identity-convergence',
@@ -53,6 +54,7 @@ export function readGrokConfig(raw: unknown): GrokVisualConfig {
     out[key as keyof typeof profiles] = text(profile[field]);
   out.poolSize = text(data['session-identity-pool-size'] ?? 4);
   out.upstreamMode = text(data['default-base-url-mode']).trim().toLowerCase() || 'cli';
+  out.imageToolPolicy = text(data['image-generation-tool-policy']).trim() || 'remove';
   out.chatMode = text(data['chat-completions-mode']).trim().toLowerCase() || 'responses';
   for (const key of GROK_DEFAULT_KEYS)
     out.defaults[key] = text(
@@ -63,6 +65,7 @@ export function readGrokConfig(raw: unknown): GrokVisualConfig {
 
 export function grokConfigErrors(values: GrokVisualConfig): VisualConfigValidationErrors {
   const errors: VisualConfigValidationErrors = {};
+  if (!['remove', 'error', 'allow'].includes(values.imageToolPolicy)) errors['grok.imageToolPolicy'] = 'grok_image_tool_policy';
   if (!['responses', 'direct'].includes(values.chatMode))
     errors['grok.chatMode'] = 'grok_chat_mode';
   if (grokModelRoutingError(values.routing)) errors['grok.routing'] = 'grok_model_routing';
@@ -149,6 +152,7 @@ export function writeGrokConfig(
     write(['xai', 'model-routes'], serializeGrokModelRoutes(values.routing));
   if (values.upstreamMode !== baseline.upstreamMode)
     write(['xai', 'default-base-url-mode'], values.upstreamMode);
+  if (values.imageToolPolicy !== baseline.imageToolPolicy) write(['xai', 'image-generation-tool-policy'], values.imageToolPolicy);
   if (values.chatMode !== baseline.chatMode)
     write(['xai', 'chat-completions-mode'], values.chatMode);
   if (JSON.stringify(values.headers) !== JSON.stringify(baseline.headers))

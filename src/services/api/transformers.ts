@@ -1328,6 +1328,12 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       .map((item) => normalizeCodexKeyConfig(item))
       .filter(Boolean) as ProviderKeyConfig[];
   }
+  const xaiList = raw['xai-api-key'] ?? raw.xaiApiKey ?? raw.xaiApiKeys;
+  if (Array.isArray(xaiList)) {
+    config.xaiApiKeys = xaiList
+      .map((item) => normalizeCodexKeyConfig(item))
+      .filter(Boolean) as ProviderKeyConfig[];
+  }
 
   const claudeList = raw['claude-api-key'] ?? raw.claudeApiKey ?? raw.claudeApiKeys;
   if (Array.isArray(claudeList)) {

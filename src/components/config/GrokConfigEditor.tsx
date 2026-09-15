@@ -41,7 +41,7 @@ export function GrokConfigEditor({
       ? t(`config_management.visual.validation.${errors[`grok.${name}`]}`)
       : undefined;
   const toggle = (
-    name: 'passthrough' | 'spoof' | 'convergence' | 'confuse' | 'webSearch' | 'xSearch'
+    name: 'passthrough' | 'spoof' | 'convergence' | 'confuse' | 'webSearch' | 'xSearch' | 'dynamicHeaders'
   ) => (
     <div key={name} className={styles.toggle} id={`config-grok-${name}`}>
       <div>
@@ -124,7 +124,8 @@ export function GrokConfigEditor({
         title={key('headers')}
         description={key('global_hint')}
         focusTarget={focusTarget}
-        dirty={changed('userAgent', 'clientVersion', 'clientIdentifier', 'headers')}
+        targetIds={['config-grok-dynamicHeaders']}
+        dirty={changed('userAgent', 'clientVersion', 'clientIdentifier', 'headers', 'dynamicHeaders')}
         errorCount={errorCount('userAgent', 'clientVersion', 'clientIdentifier', 'headers')}
       >
         <div className={styles.grid}>
@@ -147,6 +148,7 @@ export function GrokConfigEditor({
           ))}
         </div>
         <ConfigHelp title={key('headers')} text={key('headers_hint')} />
+        {toggle('dynamicHeaders')}
         <div className={styles.headers}>
           <HeaderInputList
             entries={value.headers}
@@ -204,6 +206,10 @@ export function GrokConfigEditor({
               : 'identity_hint'
           )}
         </p>
+      </SettingsDisclosure>
+      <SettingsDisclosure id="config-grok-image-tool" title={key('imageToolPolicy')} description={key('imageToolPolicy_hint')} dirty={changed('imageToolPolicy')} errorCount={errorCount('imageToolPolicy')} focusTarget={focusTarget}>
+        <Select ariaLabel={key('imageToolPolicy')} value={value.imageToolPolicy} disabled={disabled} onChange={(imageToolPolicy) => patch({imageToolPolicy})} options={['remove','error','allow'].map(mode => ({value:mode,label:key(`imageToolPolicy_${mode}`)}))} />
+        {error('imageToolPolicy') && <p role="alert" className={styles.error}>{error('imageToolPolicy')}</p>}
       </SettingsDisclosure>
       <SettingsDisclosure
         id="config-grok-parameters"

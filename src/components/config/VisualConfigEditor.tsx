@@ -3002,6 +3002,9 @@ export function VisualConfigEditor({
                 focusTarget={focusTarget}
               >
                 <div className={styles.providerHubActions}>
+                  <Button type="button" variant="secondary" onClick={() => navigate('/ai-providers/xai')}>
+                    {t('ai_providers.xai_title')}<IconExternalLink size={15} />
+                  </Button>
                   <Button
                     type="button"
                     variant="secondary"

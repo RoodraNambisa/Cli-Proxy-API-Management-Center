@@ -13,6 +13,8 @@ export const GROK_DEFAULT_KEYS = [
 export type GrokDefaultKey = (typeof GROK_DEFAULT_KEYS)[number];
 export interface GrokVisualConfig {
   chatMode: string;
+  imageToolPolicy: string;
+  dynamicHeaders: boolean;
   upstreamMode: string;
   routing: GrokModelRoutingDraft;
   userAgent: string;
@@ -30,6 +32,8 @@ export interface GrokVisualConfig {
 }
 export const DEFAULT_GROK_CONFIG: GrokVisualConfig = {
   chatMode: 'responses',
+  imageToolPolicy: 'remove',
+  dynamicHeaders: false,
   upstreamMode: 'cli',
   routing: emptyGrokModelRouting(),
   userAgent: '',

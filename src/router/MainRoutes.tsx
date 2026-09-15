@@ -4,6 +4,7 @@ import { AiProvidersPage } from '@/pages/AiProvidersPage';
 import { AiProvidersClaudeEditLayout } from '@/pages/AiProvidersClaudeEditLayout';
 import { AiProvidersClaudeEditPage } from '@/pages/AiProvidersClaudeEditPage';
 import { AiProvidersClaudeModelsPage } from '@/pages/AiProvidersClaudeModelsPage';
+import { AiProvidersXaiPage, AiProvidersXaiEditPage } from '@/pages/AiProvidersXaiPage';
 import { AiProvidersCodexEditPage } from '@/pages/AiProvidersCodexEditPage';
 import { AiProvidersGeminiEditPage } from '@/pages/AiProvidersGeminiEditPage';
 import { AiProvidersOpenAIEditLayout } from '@/pages/AiProvidersOpenAIEditLayout';
@@ -44,6 +45,9 @@ const mainRoutes = [
     path: '/ai-providers/interactions/:index',
     element: <AiProvidersGeminiEditPage providerType="interactions" />,
   },
+  { path: '/ai-providers/xai', element: <AiProvidersXaiPage /> },
+  { path: '/ai-providers/xai/new', element: <AiProvidersXaiEditPage /> },
+  { path: '/ai-providers/xai/:index', element: <AiProvidersXaiEditPage /> },
   { path: '/ai-providers/codex/new', element: <AiProvidersCodexEditPage /> },
   { path: '/ai-providers/codex/:index', element: <AiProvidersCodexEditPage /> },
   {

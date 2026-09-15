@@ -516,6 +516,10 @@ export function AiProvidersPage() {
           </Button>
         </section>
 
+        <section id="provider-xai" className={styles.chatGptWebEntry}>
+          <div><h2>{t('ai_providers.xai_title')}</h2><p>{t('ai_providers.xai_empty_desc')}</p></div>
+          <Button variant="secondary" onClick={() => openEditor('/ai-providers/xai')} disabled={disableControls}>{t('ai_providers.xai_manage')}<IconExternalLink size={15} /></Button>
+        </section>
         <div id="provider-codex">
           {codexSection && <p className={styles.sectionHint}>
             {t('ai_providers.codex_choose_credential', { setting: t(codexSection === 'models' ? 'ai_providers.codex_models_label' : 'ai_providers.codex_alpha_search_label') })}

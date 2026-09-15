@@ -307,6 +307,26 @@ export const providersApi = {
   deleteCodexConfig: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/codex-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
 
+  async getXaiConfigs(): Promise<ProviderKeyConfig[]> {
+    const data = await apiClient.getAtConnection(apiClient.captureConnection(), '/xai-api-key');
+    const list = extractArrayPayload(data, 'xai-api-key');
+    return list
+      .map((item) => normalizeCodexKeyConfig(item))
+      .filter(Boolean) as ProviderKeyConfig[];
+  },
+
+  saveXaiConfigs: (configs: ProviderKeyConfig[]) =>
+    apiClient.putAtConnection(
+      apiClient.captureConnection(), '/xai-api-key',
+      configs.map((item) => serializeCodexKey({ ...item, alphaSearch: false }))
+    ),
+
+  updateXaiConfig: (index: number, value: ProviderKeyConfig) =>
+    apiClient.patchAtConnection(apiClient.captureConnection(), '/xai-api-key', { index, value: serializeCodexKey({ ...value, alphaSearch: false }, true) }),
+
+  deleteXaiConfig: (apiKey: string, baseUrl?: string) =>
+    apiClient.deleteAtConnection(apiClient.captureConnection(), `/xai-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
+
   async getClaudeConfigs(): Promise<ProviderKeyConfig[]> {
     const data = await apiClient.get('/claude-api-key');
     const list = extractArrayPayload(data, 'claude-api-key');

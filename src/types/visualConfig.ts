@@ -106,6 +106,7 @@ export type VisualConfigValidationErrorCode =
   | 'grok_parameter'
   | 'grok_upstream_mode'
   | 'grok_chat_mode'
+  | 'grok_image_tool_policy'
   | 'grok_model_routing'
   | 'json_object'
   | 'auth_model_exclusion_models_required'

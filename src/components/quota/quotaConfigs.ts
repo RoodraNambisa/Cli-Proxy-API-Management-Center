@@ -1293,6 +1293,7 @@ const requestXaiBilling = async (
 ): Promise<XaiBillingSummary | null> => {
   const result = await apiCallApi.request({
     authIndex,
+    provider_headers: true,
     method: 'GET',
     url,
     header,
@@ -1322,7 +1323,7 @@ const fetchXaiQuota = async (file: AuthFileItem, t: TFunction): Promise<XaiBilli
   const requestHeader = buildXaiRequestHeaders(resolvedFile);
   const [creditsResult, settingsResult] = await Promise.allSettled([
     requestXaiBilling(authIndex, XAI_BILLING_WEEKLY_URL, requestHeader),
-    apiCallApi.request({ authIndex, method: 'GET', url: XAI_SETTINGS_URL, header: requestHeader }),
+    apiCallApi.request({ authIndex, provider_headers: true, method: 'GET', url: XAI_SETTINGS_URL, header: requestHeader }),
   ]);
   let summary = creditsResult.status === 'fulfilled' ? creditsResult.value : null;
   if (!summary) {
