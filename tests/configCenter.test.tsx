@@ -203,6 +203,21 @@ describe('configuration settings center', () => {
     expect(onChange).toHaveBeenCalledWith({ codexTurnStatePolicy: 'strip' });
   });
 
+  test('opens Grok fields from search and keeps the login links behind a disclosure', () => {
+    renderEditor('/config?section=provider-grok');
+    const search = screen.getByRole('searchbox', { name: 'Search configuration' });
+    expect(screen.queryByRole('textbox', { name: 'max_output_tokens' })).toBeNull();
+    fireEvent.change(search, { target: { value: 'xai.request-defaults' } });
+    fireEvent.click(within(search.parentElement!).getByRole('button', { name: /config_management.grok.parameters/ }));
+    expect(screen.getByRole('textbox', { name: 'max_output_tokens' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /config_management.settings_center.grok.oauth/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /config_management.grok.login_diagnostics/ }));
+    fireEvent.click(screen.getByRole('button', { name: /config_management.settings_center.grok.oauth/ }));
+    const destination = new URL(screen.getByTestId('location').textContent!, 'http://localhost');
+    expect(destination.pathname).toBe('/oauth');
+    expect(destination.searchParams.get('provider')).toBe('xai');
+  });
+
   test('uses local memory when the URL has no section', () => {
     localStorage.setItem('config-management:visual-page', 'provider-antigravity');
     renderEditor();

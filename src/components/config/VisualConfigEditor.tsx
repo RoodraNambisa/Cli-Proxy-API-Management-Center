@@ -2981,49 +2981,54 @@ export function VisualConfigEditor({
               })}
             </div>
 
-            {activePageId === 'provider-grok' && <GrokConfigEditor value={values.grok} onChange={(grok) => onChange({ grok })} disabled={disabled} />}
+            {activePageId === 'provider-grok' && (
+              <GrokConfigEditor
+                value={values.grok}
+                baselineValue={baselineValues.grok}
+                focusTarget={focusTarget}
+                onChange={(grok) => onChange({ grok })}
+                disabled={disabled}
+              />
+            )}
 
-            <section
-              id="config-grok-auth"
+            <div
               className={styles.providerHub}
               hidden={activePageId !== 'provider-grok'}
-              aria-labelledby="grok-provider-hub-title"
             >
-              <div className={styles.providerHubHeader}>
-                <div>
-                  <h3 id="grok-provider-hub-title">
-                    {t('config_management.grok.login_diagnostics')}
-                  </h3>
-                  <p>{t('config_management.settings_center.grok.description')}</p>
+              <SettingsDisclosure
+                id="config-grok-auth"
+                title={t('config_management.grok.login_diagnostics')}
+                description={t('config_management.settings_center.grok.description')}
+                focusTarget={focusTarget}
+              >
+                <div className={styles.providerHubActions}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => navigate('/oauth?provider=xai')}
+                  >
+                    {t('config_management.settings_center.grok.oauth')}
+                    <IconExternalLink size={15} />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => navigate('/auth-files?provider=xai')}
+                  >
+                    {t('config_management.settings_center.grok.auth_files')}
+                    <IconExternalLink size={15} />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => navigate('/quota?provider=xai')}
+                  >
+                    {t('config_management.settings_center.grok.quota')}
+                    <IconExternalLink size={15} />
+                  </Button>
                 </div>
-              </div>
-              <div className={styles.providerHubActions}>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => navigate('/oauth?provider=xai')}
-                >
-                  {t('config_management.settings_center.grok.oauth')}
-                  <IconExternalLink size={15} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => navigate('/auth-files?provider=xai')}
-                >
-                  {t('config_management.settings_center.grok.auth_files')}
-                  <IconExternalLink size={15} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => navigate('/quota?provider=xai')}
-                >
-                  {t('config_management.settings_center.grok.quota')}
-                  <IconExternalLink size={15} />
-                </Button>
-              </div>
-            </section>
+              </SettingsDisclosure>
+            </div>
 
             <ConfigSection
               id="server"

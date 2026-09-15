@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ConfigSection } from './ConfigSection';
+import { SettingsDisclosure } from './SettingsDisclosure';
 import { ConfigHelp } from './ConfigHelp';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -16,10 +16,14 @@ import styles from './GrokConfigEditor.module.scss';
 
 export function GrokConfigEditor({
   value,
+  baselineValue,
+  focusTarget,
   disabled,
   onChange,
 }: {
   value: GrokVisualConfig;
+  baselineValue: GrokVisualConfig;
+  focusTarget?: string;
   disabled?: boolean;
   onChange: (value: GrokVisualConfig) => void;
 }) {
@@ -27,6 +31,10 @@ export function GrokConfigEditor({
   const key = (name: string) => t(`config_management.grok.${name}`);
   const patch = (next: Partial<GrokVisualConfig>) => onChange({ ...value, ...next });
   const errors = grokConfigErrors(value);
+  const changed = (...fields: Array<keyof GrokVisualConfig>) =>
+    fields.some((field) => JSON.stringify(value[field]) !== JSON.stringify(baselineValue[field]));
+  const errorCount = (...fields: string[]) =>
+    fields.filter((field) => errors[`grok.${field}`]).length;
   const error = (name: string) =>
     errors[`grok.${name}`]
       ? t(`config_management.visual.validation.${errors[`grok.${name}`]}`)
@@ -48,11 +56,14 @@ export function GrokConfigEditor({
     </div>
   );
   return (
-    <>
-      <ConfigSection
+    <div className={styles.sections}>
+      <SettingsDisclosure
         id="config-grok-upstream"
         title={t('grok_upstream.title')}
         description={t('grok_upstream.default_hint')}
+        focusTarget={focusTarget}
+        dirty={changed('upstreamMode')}
+        errorCount={errorCount('upstreamMode')}
       >
         <div className={styles.pool}>
           <div className="form-group">
@@ -78,11 +89,14 @@ export function GrokConfigEditor({
           </p>
         )}
         <ConfigHelp title={t('grok_upstream.title')} text={t('grok_upstream.transport_hint')} />
-      </ConfigSection>
-      <ConfigSection
+      </SettingsDisclosure>
+      <SettingsDisclosure
         id="config-grok-headers"
         title={key('headers')}
         description={key('global_hint')}
+        focusTarget={focusTarget}
+        dirty={changed('userAgent', 'clientVersion', 'clientIdentifier', 'headers')}
+        errorCount={errorCount('userAgent', 'clientVersion', 'clientIdentifier', 'headers')}
       >
         <div className={styles.grid}>
           {(['userAgent', 'clientVersion', 'clientIdentifier'] as const).map((name) => (
@@ -121,8 +135,20 @@ export function GrokConfigEditor({
             {error('headers')}
           </p>
         )}
-      </ConfigSection>
-      <ConfigSection id="config-grok-identity" title={key('identity')}>
+      </SettingsDisclosure>
+      <SettingsDisclosure
+        id="config-grok-identity"
+        title={key('identity')}
+        focusTarget={focusTarget}
+        targetIds={[
+          'config-grok-passthrough',
+          'config-grok-spoof',
+          'config-grok-convergence',
+          'config-grok-confuse',
+        ]}
+        dirty={changed('passthrough', 'spoof', 'convergence', 'confuse', 'poolSize')}
+        errorCount={errorCount('poolSize')}
+      >
         <div className={styles.grid}>
           {toggle('passthrough')}
           {toggle('spoof')}
@@ -149,11 +175,15 @@ export function GrokConfigEditor({
               : 'identity_hint'
           )}
         </p>
-      </ConfigSection>
-      <ConfigSection
+      </SettingsDisclosure>
+      <SettingsDisclosure
         id="config-grok-parameters"
         title={key('parameters')}
         description={key('defaults_hint')}
+        focusTarget={focusTarget}
+        targetIds={['config-grok-webSearch', 'config-grok-xSearch']}
+        dirty={changed('defaults', 'webSearch', 'xSearch')}
+        errorCount={errorCount(...GROK_DEFAULT_KEYS)}
       >
         <div className={styles.grid}>
           {GROK_DEFAULT_KEYS.map((name) => (
@@ -194,7 +224,7 @@ export function GrokConfigEditor({
           {toggle('webSearch')}
           {toggle('xSearch')}
         </div>
-      </ConfigSection>
-    </>
+      </SettingsDisclosure>
+    </div>
   );
 }
