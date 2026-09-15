@@ -416,7 +416,6 @@ export function MainLayout() {
   const navItems: { path: string; label: string; icon: ReactNode; end?: boolean }[] = solverOnly ? [solverNavigation] : [
     { path: '/', label: t('nav.dashboard'), icon: sidebarIcons.dashboard, end: true },
     { path: '/config', label: t('nav.config_management'), icon: sidebarIcons.config },
-    ...(config?.sentinelSolver ? [solverNavigation] : []),
     { path: '/ai-providers', label: t('nav.ai_providers'), icon: sidebarIcons.aiProviders },
     { path: '/auth-files', label: t('nav.auth_files'), icon: sidebarIcons.authFiles },
     { path: '/oauth', label: t('nav.oauth', { defaultValue: 'OAuth' }), icon: sidebarIcons.oauth },
@@ -434,6 +433,7 @@ export function MainLayout() {
       ? [{ path: '/pprof', label: t('nav.pprof'), icon: sidebarIcons.pprof }]
       : []),
     { path: '/system', label: t('nav.system_info'), icon: sidebarIcons.system },
+    ...(config?.sentinelSolver ? [solverNavigation] : []),
   ];
   const navOrder = navItems.map((item) => item.path);
   const getRouteOrder = (pathname: string) => {
@@ -690,7 +690,7 @@ export function MainLayout() {
                 key={item.path}
                 to={item.path}
                 end={item.end}
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                className={({ isActive }) => `nav-item ${!solverOnly && item.path === '/sentinel-solver' ? 'nav-item-bottom' : ''} ${isActive ? 'active' : ''}`}
                 onClick={() => setSidebarOpen(false)}
                 title={showSidebarLabels ? undefined : item.label}
               >

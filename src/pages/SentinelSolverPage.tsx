@@ -5,6 +5,8 @@ import { Card } from '@/components/ui/Card';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { chatGptWebApi } from '@/services/api';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
+import { useAuthStore } from '@/stores';
+import { sentinelEndpointURL, validSentinelAccessPath } from '@/features/chatgptWeb/sentinelRemote';
 import type { SentinelSolverConfig, SentinelSolverSnapshot } from '@/types/sentinelCompute';
 import { SentinelCompatibilityEditor } from '@/features/chatgptWeb/components/SentinelCompatibilityEditor';
 import {
@@ -27,13 +29,13 @@ const numericFields = [
 const normalize = (config: SentinelSolverConfig): SentinelSolverConfig => ({
   ...Object.fromEntries(numericFields.map(([key, fallback]) => [key, config[key] ?? fallback])),
   ...config,
-  listen: config.listen ?? '127.0.0.1:8318',
+  'access-path': config['access-path'] || '/v1/sentinel',
   'api-keys': config['api-keys'] ?? [],
-  tls: config.tls ?? { enable: false, cert: '', key: '' },
 });
 
 export function SentinelSolverPage() {
   const { t } = useTranslation();
+  const apiBase = useAuthStore((state) => state.apiBase);
   const [snapshot, setSnapshot] = useState<SentinelSolverSnapshot | null>(null);
   const [draft, setDraft] = useState<SentinelSolverConfig | null>(null);
   const [saved, setSaved] = useState('');
@@ -72,7 +74,7 @@ export function SentinelSolverPage() {
     ) &&
     (!draft.enabled ||
       (draft['api-keys']?.length && draft['api-keys'].every((key) => key.trim()))) &&
-    (!draft.tls?.enable || (draft.tls.cert.trim() && draft.tls.key.trim()));
+    validSentinelAccessPath(draft['access-path'] ?? '');
   const update = (patch: Partial<SentinelSolverConfig>) =>
     setDraft((current) => (current ? { ...current, ...patch } : current));
   const status = snapshot?.status;
@@ -100,14 +102,23 @@ export function SentinelSolverPage() {
             </div>
             <div className={styles.settingsGrid}>
               <label>
-                {t('sentinel_compute.listen')}
+                {t('sentinel_compute.access_path')}
                 <input
-                  value={draft.listen}
+                  value={draft['access-path']}
+                  placeholder="/v1/sentinel"
+                  spellCheck={false}
+                  autoComplete="off"
                   disabled={busy}
-                  onChange={(event) => update({ listen: event.target.value })}
+                  onChange={(event) => update({ 'access-path': event.target.value })}
                 />
               </label>
             </div>
+            <p className="text-secondary">{t('sentinel_compute.access_path_hint')}</p>
+            <p className="text-secondary" style={{ overflowWrap: 'anywhere' }}>
+              {t('sentinel_compute.endpoint')}:{' '}
+              <code>{sentinelEndpointURL(apiBase, draft['access-path'])}</code>
+            </p>
+            <p className="text-secondary">{t('sentinel_compute.shared_listener_hint')}</p>
             <p className="text-secondary">{t('sentinel_compute.keys_hint')}</p>
             {(draft['api-keys'] ?? []).map((key, index) => (
               <div className={`${styles.settingsGrid} ${styles.solverKeyRow}`} key={index}>
@@ -145,37 +156,6 @@ export function SentinelSolverPage() {
             >
               {t('sentinel_compute.add_key')}
             </Button>
-            <div className={styles.runtimeRow}>
-              <strong>TLS</strong>
-              <ToggleSwitch
-                checked={draft.tls?.enable ?? false}
-                disabled={busy}
-                onChange={(enable) => update({ tls: { cert: '', key: '', ...draft.tls, enable } })}
-                ariaLabel="TLS"
-              />
-            </div>
-            <div className={styles.settingsGrid}>
-              {(['cert', 'key'] as const).map((field) => (
-                <label key={field}>
-                  {t(`sentinel_compute.tls_${field}`)}
-                  <input
-                    value={draft.tls?.[field] ?? ''}
-                    disabled={busy || !draft.tls?.enable}
-                    onChange={(event) =>
-                      update({
-                        tls: {
-                          enable: false,
-                          cert: '',
-                          key: '',
-                          ...draft.tls,
-                          [field]: event.target.value,
-                        },
-                      })
-                    }
-                  />
-                </label>
-              ))}
-            </div>
           </Card>
           <Card title={t('sentinel_compute.resources')}>
             <div className={styles.runtimeRow}>
@@ -278,8 +258,10 @@ export function SentinelSolverPage() {
         {status && (
           <dl className={styles.statusGrid}>
             <div>
-              <dt>{t('sentinel_compute.listen')}</dt>
-              <dd>{status.address || '-'}</dd>
+              <dt>{t('sentinel_compute.active_endpoint')}</dt>
+              <dd style={{ overflowWrap: 'anywhere' }}>
+                {sentinelEndpointURL(apiBase, status.access_path)}
+              </dd>
             </div>
             <div>
               <dt>{t('sentinel_compute.running')}</dt>

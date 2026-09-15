@@ -1,8 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeSentinelRemote, validSentinelRemote } from './sentinelRemote';
+import {
+  normalizeSentinelRemote,
+  validSentinelRemote,
+  validSentinelAccessPath,
+  sentinelEndpointURL,
+} from './sentinelRemote';
 import { normalizeConfigResponse } from '@/services/api/transformers';
 
 describe('Sentinel remote configuration', () => {
+  it('keeps custom paths intact and supports default endpoints', () => {
+    expect(sentinelEndpointURL('https://proxy.test/', '/afhkajf/Sentinel')).toBe(
+      'https://proxy.test/afhkajf/Sentinel'
+    );
+    expect(sentinelEndpointURL('http://127.0.0.1:8317')).toBe('http://127.0.0.1:8317/v1/sentinel');
+    expect(validSentinelAccessPath('/afhkajf/Sentinel')).toBe(true);
+    expect(validSentinelAccessPath('')).toBe(true);
+    for (const path of ['/', '/a//b', '/a/../b', '/a/%2f', '/a?key=b', '/a#fragment'])
+      expect(validSentinelAccessPath(path)).toBe(false);
+    expect(
+      validSentinelRemote('remote', {
+        nodes: [{ name: 'custom', url: 'https://proxy.test/afhkajf/Sentinel', 'api-key': 'key' }],
+      })
+    ).toBe(true);
+  });
   it('defaults to images without treating an explicit empty list as omitted', () => {
     expect(normalizeSentinelRemote().scopes).toEqual(['images']);
     expect(normalizeSentinelRemote({ scopes: [] }).scopes).toEqual([]);

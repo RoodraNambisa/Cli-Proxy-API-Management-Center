@@ -55,6 +55,7 @@ export function SentinelRemoteEditor({
         </label>
       </div>
       <p className="text-secondary">{t('sentinel_compute.remote_hint')}</p>
+      <p className="text-secondary">{t('sentinel_compute.node_url_hint')}</p>
       <fieldset disabled={disabled}>
         <legend>{t('sentinel_compute.scopes')}</legend>
         {(['images', 'chat', 'login'] as SentinelScope[]).map((scope) => (

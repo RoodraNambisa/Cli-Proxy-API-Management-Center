@@ -1,5 +1,17 @@
 import type { SentinelRemote } from '@/types/sentinelCompute';
 
+export const validSentinelAccessPath = (value: string): boolean => {
+  if (value === '') return true;
+  if (value.length > 256 || !value.startsWith('/') || value.endsWith('/')) return false;
+  return value
+    .slice(1)
+    .split('/')
+    .every((part) => part !== '.' && part !== '..' && /^[a-zA-Z0-9_.-]+$/.test(part));
+};
+
+export const sentinelEndpointURL = (base: string, accessPath = ''): string =>
+  `${base.replace(/\/+$/, '')}${accessPath || '/v1/sentinel'}`;
+
 export const normalizeSentinelRemote = (remote?: SentinelRemote): Required<SentinelRemote> => ({
   scopes: remote?.scopes ?? ['images'],
   nodes: (remote?.nodes ?? []).map((node) => ({ ...node })),
@@ -29,7 +41,8 @@ export const validSentinelRemote = (mode: string, remote: SentinelRemote): boole
         !url.username &&
         !url.password &&
         !url.search &&
-        !url.hash
+        !url.hash &&
+        (url.pathname === '/' || validSentinelAccessPath(url.pathname.replace(/\/+$/, '')))
       );
     } catch {
       return false;

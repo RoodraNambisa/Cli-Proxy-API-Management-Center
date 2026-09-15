@@ -29,9 +29,8 @@ export interface SentinelNodeStatus {
 }
 export interface SentinelSolverConfig {
   enabled: boolean;
-  listen?: string;
+  'access-path'?: string;
   'api-keys'?: string[];
-  tls?: { enable: boolean; cert: string; key: string };
   'sdk-fallback-enabled': boolean;
   'go-vm-compatibility'?: ChatGptWebSentinelCompatibility;
   'go-workers'?: number;
@@ -49,8 +48,8 @@ export interface SentinelSolverSnapshot {
   status: {
     running: boolean;
     address: string;
+    access_path: string;
     restart_required: boolean;
-    last_error: string;
     runtime: {
       enabled: boolean;
       draining: boolean;
