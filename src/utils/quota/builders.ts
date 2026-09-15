@@ -358,6 +358,7 @@ export function buildXaiBillingSummary(
     undefined;
   const periodEnd =
     normalizeStringValue(currentPeriod?.end) ??
+    normalizeStringValue(config.billingPeriodEnd ?? config.billing_period_end) ??
     undefined;
   const productUsage = normalizeXaiProductUsage(
     config.productUsage ?? config.product_usage,
@@ -378,10 +379,19 @@ export function buildXaiBillingSummary(
     isUnifiedBillingUser === true ||
     (!hasLegacyBillingFields && (isUnifiedBillingUser !== null || prepaidBalanceCents !== null));
 
-  // A modern credits snapshot owns its period. Deprecated monthly fields may
-  // still be emitted as zero and must not be presented as a second allowance.
-  const monthlyLimitCents = isCreditsConfig ? null : normalizeXaiCentValue(config.monthlyLimit ?? config.monthly_limit);
-  const usedCents = isCreditsConfig ? null : normalizeXaiCentValue(config.used);
+  // Match Grok Build: prefer the credits percentage, then the amounts from
+  // this response, then zero. Do not fetch or merge another billing period.
+  const rawMonthlyLimitCents = normalizeXaiCentValue(config.monthlyLimit ?? config.monthly_limit);
+  const rawUsedCents = normalizeXaiCentValue(config.used);
+  const usagePercent = creditUsagePercent !== null
+    ? Math.max(0, Math.min(100, creditUsagePercent))
+    : rawMonthlyLimitCents !== null && rawMonthlyLimitCents > 0
+      ? Math.min(100, ((rawUsedCents ?? 0) / rawMonthlyLimitCents) * 100)
+      : 0;
+  // Deprecated amounts can supply the fallback calculation without creating
+  // a second monthly allowance beneath a modern credits period.
+  const monthlyLimitCents = isCreditsConfig ? null : rawMonthlyLimitCents;
+  const usedCents = isCreditsConfig ? null : rawUsedCents;
   const onDemandCapCents = normalizeXaiCentValue(config.onDemandCap ?? config.on_demand_cap);
   const explicitOnDemandUsedCents = normalizeXaiCentValue(
     config.onDemandUsed ?? config.on_demand_used
@@ -402,10 +412,7 @@ export function buildXaiBillingSummary(
       ? Math.max(0, usedCents - monthlyLimitCents)
       : null;
   const onDemandUsedCents = explicitOnDemandUsedCents ?? derivedOnDemandUsedCents;
-  const usedPercent =
-    monthlyLimitCents !== null && monthlyLimitCents > 0 && includedUsedCents !== null
-      ? (includedUsedCents / monthlyLimitCents) * 100
-      : null;
+  const usedPercent = isCreditsConfig ? null : usagePercent;
   const onDemandUsedPercent =
     onDemandCapCents !== null && onDemandCapCents > 0 && onDemandUsedCents !== null
       ? (onDemandUsedCents / onDemandCapCents) * 100
@@ -422,7 +429,7 @@ export function buildXaiBillingSummary(
   summary.isUnifiedBillingUser = isUnifiedBillingUser;
   summary.prepaidBalanceCents = prepaidBalanceCents;
   summary.periodType = isCreditsConfig ? periodType : 'monthly';
-  summary.usagePercent = isCreditsConfig ? creditUsagePercent : usedPercent;
+  summary.usagePercent = usagePercent;
   summary.periodStart = isCreditsConfig ? periodStart : billingPeriodStart;
   summary.periodEnd = isCreditsConfig ? periodEnd : billingPeriodEnd;
   summary.productUsage = productUsage;

@@ -30,7 +30,7 @@ const display = (billing: XaiBillingSummary) => render(<>{XAI_CONFIG.renderQuota
 
 beforeEach(() => vi.restoreAllMocks());
 
-test('replays missing percentage from unified billing without inventing zero or a legacy monthly allowance', async () => {
+test('matches Grok Build zero-usage fallback without adding a second monthly allowance', async () => {
   const request = vi.spyOn(apiCallApi, 'request').mockImplementation(async (input) => {
     expect(input.method).toBe('GET');
     expect(input.header).toMatchObject({ 'x-grok-client-version': '0.2.120', 'x-grok-client-mode': 'cli', 'x-userid': 'fixture-user' });
@@ -40,22 +40,23 @@ test('replays missing percentage from unified billing without inventing zero or 
   });
   const billing = await XAI_CONFIG.fetchQuota(file, t);
   expect(request).toHaveBeenCalledTimes(2);
-  expect(billing).toMatchObject({ isCreditsConfig: true, isUnifiedBillingUser: true, usagePercent: null, monthlyLimitCents: null, prepaidBalanceCents: 0, subscriptionTier: 'SuperGrok Heavy' });
+  expect(billing).toMatchObject({ isCreditsConfig: true, isUnifiedBillingUser: true, usagePercent: 0, monthlyLimitCents: null, prepaidBalanceCents: 0, subscriptionTier: 'SuperGrok Heavy' });
   display(billing);
   expect(screen.getByText('SuperGrok Heavy')).toBeTruthy();
   expect(screen.getByText('统一周限额')).toBeTruthy();
-  expect(screen.getByText('上游未返回比例')).toBeTruthy();
+  expect(screen.getByText('已用 0%')).toBeTruthy();
+  expect(screen.queryByText('上游未返回比例')).toBeNull();
   expect(screen.getByText('充值余额')).toBeTruthy();
   expect(screen.getByText('未启用')).toBeTruthy();
   expect(screen.queryByText('月度积分')).toBeNull();
-  expect(screen.getByTestId('quota-percent').textContent).toBe('unknown');
+  expect(screen.getByTestId('quota-percent').textContent).toBe('100');
 });
 
 test('does not borrow a monthly percentage or monthly reset for a missing weekly percentage', () => {
   const weekly = buildXaiBillingSummary(credits.config);
   const monthly = buildXaiBillingSummary({ monthlyLimit: { val: 100 }, used: { val: 50 }, billingPeriodEnd: '2026-10-01T00:00:00Z' });
   const merged = mergeXaiBillingSummaries(weekly, monthly);
-  expect(merged).toMatchObject({ periodType: 'weekly', usagePercent: null, periodEnd: '2026-09-14T12:00:00Z', monthlyLimitCents: null });
+  expect(merged).toMatchObject({ periodType: 'weekly', usagePercent: 0, periodEnd: '2026-09-14T12:00:00Z', monthlyLimitCents: null });
   expect(merged?.billingPeriodEnd).toBeUndefined();
 });
 
@@ -79,14 +80,14 @@ test('prepaid credit accounting signs do not appear as a negative balance', () =
   expect(screen.queryByText(new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(-12.5))).toBeNull();
 });
 
-test('keeps dates absent when a typed current period omits them even if deprecated billing dates remain', () => {
+test('matches Grok Build reset fallback within the same billing response', () => {
   const billing = buildXaiBillingSummary({ currentPeriod: { type: 'weekly' }, creditUsagePercent: 20, billingPeriodStart: '2026-09-01T00:00:00Z', billingPeriodEnd: '2026-10-01T00:00:00Z' });
   expect(billing).toMatchObject({ periodType: 'weekly', usagePercent: 20 });
   expect(billing?.periodStart).toBeUndefined();
-  expect(billing?.periodEnd).toBeUndefined();
+  expect(billing?.periodEnd).toBe('2026-10-01T00:00:00Z');
 });
 
-test('distinguishes explicit zero usage from an omitted percentage and ignores deprecated fields in modern snapshots', () => {
+test('prefers explicit zero usage and hides deprecated allowance rows in modern snapshots', () => {
   const billing = buildXaiBillingSummary({ ...credits.config, creditUsagePercent: 0, monthlyLimit: { val: 0 }, used: { val: 0 } })!;
   expect(billing.usagePercent).toBe(0);
   display(billing);
@@ -143,7 +144,25 @@ test('does not treat a settings failure as a quota failure', async () => {
     return result(200, { ...credits, onDemandEnabled: false, subscriptionTier: 'SuperGrok Heavy' });
   });
   const billing = await XAI_CONFIG.fetchQuota(file, t);
-  expect(billing).toMatchObject({ usagePercent: null, onDemandEnabled: false, subscriptionTier: 'SuperGrok Heavy' });
+  expect(billing).toMatchObject({ usagePercent: 0, onDemandEnabled: false, subscriptionTier: 'SuperGrok Heavy' });
+});
+
+test.each([
+  [{ creditUsagePercent: 35, monthlyLimit: { val: 100 }, used: { val: 90 } }, 35],
+  [{ creditUsagePercent: 0, monthlyLimit: { val: 100 }, used: { val: 90 } }, 0],
+  [{ creditUsagePercent: 120 }, 100],
+  [{ credit_usage_percent: '-5' }, 0],
+  [{ monthlyLimit: { val: 200 }, used: { val: 50 } }, 25],
+  [{ monthly_limit: { val: '200' }, used: { val: '80' } }, 40],
+  [{ monthlyLimit: { val: 100 }, used: { val: 130 } }, 100],
+  [{ monthlyLimit: { val: 100 } }, 0],
+  [{ monthlyLimit: {}, used: { val: 10 } }, 0],
+  [{}, 0],
+])('uses the official percentage, amount, then zero fallback for %j', (fields, expected) => {
+  const billing = buildXaiBillingSummary({ ...credits.config, ...fields })!;
+  expect(billing.usagePercent).toBe(expected);
+  expect(billing.monthlyLimitCents).toBeNull();
+  expect(billing.periodEnd).toBe(credits.config.currentPeriod.end);
 });
 
 test('does not infer a weekly period from a percentage alone or show a zero legacy allowance', () => {
