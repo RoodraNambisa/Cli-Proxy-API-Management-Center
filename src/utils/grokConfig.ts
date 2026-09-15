@@ -53,6 +53,7 @@ export function readGrokConfig(raw: unknown): GrokVisualConfig {
     out[key as keyof typeof profiles] = text(profile[field]);
   out.poolSize = text(data['session-identity-pool-size'] ?? 4);
   out.upstreamMode = text(data['default-base-url-mode']).trim().toLowerCase() || 'cli';
+  out.chatMode = text(data['chat-completions-mode']).trim().toLowerCase() || 'responses';
   for (const key of GROK_DEFAULT_KEYS)
     out.defaults[key] = text(
       key === 'reasoning.effort' ? record(defaults.reasoning).effort : defaults[key]
@@ -62,6 +63,8 @@ export function readGrokConfig(raw: unknown): GrokVisualConfig {
 
 export function grokConfigErrors(values: GrokVisualConfig): VisualConfigValidationErrors {
   const errors: VisualConfigValidationErrors = {};
+  if (!['responses', 'direct'].includes(values.chatMode))
+    errors['grok.chatMode'] = 'grok_chat_mode';
   if (grokModelRoutingError(values.routing)) errors['grok.routing'] = 'grok_model_routing';
   if (!GROK_UPSTREAM_MODES.includes(values.upstreamMode as GrokUpstreamMode))
     errors['grok.upstreamMode'] = 'grok_upstream_mode';
@@ -146,6 +149,8 @@ export function writeGrokConfig(
     write(['xai', 'model-routes'], serializeGrokModelRoutes(values.routing));
   if (values.upstreamMode !== baseline.upstreamMode)
     write(['xai', 'default-base-url-mode'], values.upstreamMode);
+  if (values.chatMode !== baseline.chatMode)
+    write(['xai', 'chat-completions-mode'], values.chatMode);
   if (JSON.stringify(values.headers) !== JSON.stringify(baseline.headers))
     write(
       ['xai', 'headers'],

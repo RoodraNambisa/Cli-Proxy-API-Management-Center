@@ -63,8 +63,9 @@ export function GrokConfigEditor({
         title={t('grok_upstream.title')}
         description={t('grok_upstream.default_hint')}
         focusTarget={focusTarget}
-        dirty={changed('upstreamMode')}
-        errorCount={errorCount('upstreamMode')}
+        targetIds={['config-grok-chat-mode']}
+        dirty={changed('upstreamMode', 'chatMode')}
+        errorCount={errorCount('upstreamMode', 'chatMode')}
       >
         <div className={styles.pool}>
           <div className="form-group">
@@ -90,6 +91,23 @@ export function GrokConfigEditor({
           </p>
         )}
         <ConfigHelp title={t('grok_upstream.title')} text={t('grok_upstream.transport_hint')} />
+        <div className={styles.pool} id="config-grok-chat-mode">
+          <div className="form-group">
+            <label>{key('chat_mode')}</label>
+            <Select
+              ariaLabel={key('chat_mode')}
+              value={value.chatMode}
+              disabled={disabled}
+              onChange={(chatMode) => patch({ chatMode })}
+              options={[
+                { value: 'responses', label: key('chat_mode_responses') },
+                { value: 'direct', label: key('chat_mode_direct') },
+              ]}
+            />
+          </div>
+        </div>
+        {error('chatMode') && <p role="alert" className={styles.error}>{error('chatMode')}</p>}
+        <ConfigHelp title={key('chat_mode')} text={key('chat_mode_hint')} />
       </SettingsDisclosure>
       <SettingsDisclosure
         id="config-grok-model-routing"
@@ -235,6 +253,7 @@ export function GrokConfigEditor({
           {toggle('webSearch')}
           {toggle('xSearch')}
         </div>
+        {value.chatMode === 'direct' && <p className={styles.notice}>{key('direct_search_hint')}</p>}
       </SettingsDisclosure>
     </div>
   );

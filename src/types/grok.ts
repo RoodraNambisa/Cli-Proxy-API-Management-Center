@@ -12,6 +12,7 @@ export const GROK_DEFAULT_KEYS = [
 ] as const;
 export type GrokDefaultKey = (typeof GROK_DEFAULT_KEYS)[number];
 export interface GrokVisualConfig {
+  chatMode: string;
   upstreamMode: string;
   routing: GrokModelRoutingDraft;
   userAgent: string;
@@ -28,6 +29,7 @@ export interface GrokVisualConfig {
   defaults: Record<GrokDefaultKey, string>;
 }
 export const DEFAULT_GROK_CONFIG: GrokVisualConfig = {
+  chatMode: 'responses',
   upstreamMode: 'cli',
   routing: emptyGrokModelRouting(),
   userAgent: '',

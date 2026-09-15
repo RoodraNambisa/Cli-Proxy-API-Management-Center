@@ -5,6 +5,18 @@ import { useVisualConfig, getVisualConfigValidationErrors } from './useVisualCon
 import { readGrokConfig, writeGrokConfig } from '@/utils/grokConfig';
 
 describe('Grok global settings', () => {
+  it('round-trips Chat mode while retaining optional defaults and unrelated settings', () => {
+    const doc = parseDocument('xai:\n  request-defaults:\n    reasoning: {effort: high}\n    parallel_tool_calls: false\n  future: retained\n');
+    const baseline = readGrokConfig(doc.toJS().xai);
+    expect(baseline.chatMode).toBe('responses');
+    writeGrokConfig(doc, { ...baseline, chatMode: 'direct' }, baseline);
+    expect(doc.toJS().xai).toEqual({
+      'chat-completions-mode': 'direct',
+      'request-defaults': { reasoning: { effort: 'high' }, parallel_tool_calls: false },
+      future: 'retained',
+    });
+    expect(readGrokConfig(doc.toJS().xai).chatMode).toBe('direct');
+  });
   it('round-trips the global upstream without changing policies or unknown fields', () => {
     const yaml = 'xai:\n  default-base-url-mode: us-east-1\n  future: preserved\n';
     const { result } = renderHook(() => useVisualConfig());

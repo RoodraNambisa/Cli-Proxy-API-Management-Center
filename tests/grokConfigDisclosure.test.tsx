@@ -81,3 +81,19 @@ test('reveals validation errors even if the invalid group was saved collapsed', 
       .getAttribute('aria-expanded')
   ).toBe('false');
 });
+
+test('changes Chat protocol without resetting optional defaults or opening them automatically', () => {
+  render(<Harness />);
+  const defaults = screen.getByRole('button', { name: /config_management.grok.parameters/ });
+  expect(defaults.getAttribute('aria-expanded')).toBe('false');
+  fireEvent.click(screen.getByRole('button', { name: /grok_upstream.title/ }));
+  const protocol = screen.getByRole('button', { name: 'config_management.grok.chat_mode' });
+  expect(protocol.textContent).toContain('config_management.grok.chat_mode_responses');
+  fireEvent.click(protocol);
+  fireEvent.click(screen.getByRole('option', { name: 'config_management.grok.chat_mode_direct' }));
+  expect(protocol.textContent).toContain('config_management.grok.chat_mode_direct');
+  expect(defaults.getAttribute('aria-expanded')).toBe('false');
+  fireEvent.click(defaults);
+  expect((screen.getByRole('textbox', { name: 'reasoning.effort' }) as HTMLInputElement).value).toBe('');
+  expect(screen.getByText('config_management.grok.direct_search_hint')).toBeTruthy();
+});

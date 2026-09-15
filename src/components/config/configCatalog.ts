@@ -1113,6 +1113,10 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['grok', 'upstream', '上游', '区域节点'],
   },
   {
+    id: 'config-grok-chat-mode', pageId: 'provider-grok', labelKey: 'config_management.grok.chat_mode',
+    yamlKeys: ['xai.chat-completions-mode'], aliases: ['grok', 'chat', 'direct', '直连', '转换', 'responses'],
+  },
+  {
     id: 'config-grok-model-routing', pageId: 'provider-grok', labelKey: 'grok_routing.title',
     yamlKeys: ['xai.model-catalog-sources', 'xai.model-routes'],
     aliases: ['grok', '模型路由', '合并模型目录', 'model routing', 'catalog sources'],
