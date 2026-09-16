@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { ChatGptWebLibraryCleanup } from '@/features/authFiles/components/ChatGptWebLibraryCleanup';
+import { ChatGptWebLibraryCleanup } from '@/components/config/ChatGptWebLibraryCleanup';
 import {
   chatGptWebLibraryApi,
   isLibraryCleanupActive,
@@ -8,6 +8,7 @@ import {
   readLibraryCleanupResponse,
   type LibraryCleanupTask,
 } from '@/services/api/chatgptWebLibrary';
+import { authFilesApi } from '@/services/api/authFiles';
 import { apiClient } from '@/services/api/client';
 import en from '@/i18n/locales/en.json';
 import cn from '@/i18n/locales/zh-CN.json';
@@ -41,6 +42,7 @@ const running: LibraryCleanupTask = {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.spyOn(authFilesApi, 'listPaged').mockResolvedValue({ files: [{name:'web.json',provider:'chatgpt-web'}, {name:'codex.json',provider:'codex'}, {name:'grok.json',provider:'xai'}] });
   vi.spyOn(chatGptWebLibraryApi, 'get').mockResolvedValue({ task: null });
   vi.spyOn(chatGptWebLibraryApi, 'start').mockResolvedValue({ task: running });
   vi.spyOn(chatGptWebLibraryApi, 'cancel').mockResolvedValue({
@@ -62,16 +64,20 @@ describe('library cleanup', () => {
   });
 
   test('requires explicit confirmation and sends only selected credentials', async () => {
-    render(<ChatGptWebLibraryCleanup selectedNames={['web.json']} />);
+    render(<ChatGptWebLibraryCleanup />);
     fireEvent.click(screen.getByText('library_cleanup.title'));
     await waitFor(() => expect(chatGptWebLibraryApi.get).toHaveBeenCalled());
     const start = await screen.findByRole('button', { name: 'library_cleanup.start' });
     expect((start as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'web.json' }));
+    expect(screen.queryByRole('checkbox', {name: 'codex.json'})).toBeNull();
+    expect(screen.queryByRole('checkbox', {name: 'grok.json'})).toBeNull();
     fireEvent.click(screen.getByRole('checkbox', { name: 'library_cleanup.confirm' }));
     await waitFor(() => expect((start as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(start);
     fireEvent.click(start);
     await waitFor(() => expect(chatGptWebLibraryApi.start).toHaveBeenCalledTimes(1));
+    expect(authFilesApi.listPaged).toHaveBeenCalledWith({ provider: 'chatgpt-web', page: 1, pageSize: 25 }, expect.any(Object), expect.any(AbortSignal));
     expect(chatGptWebLibraryApi.start).toHaveBeenCalledWith(
       expect.any(Object),
       { names: ['web.json'] },
@@ -81,7 +87,7 @@ describe('library cleanup', () => {
 
   test('reloads an active background task and prevents another start', async () => {
     vi.mocked(chatGptWebLibraryApi.get).mockResolvedValue({ task: running });
-    render(<ChatGptWebLibraryCleanup selectedNames={['web.json']} />);
+    render(<ChatGptWebLibraryCleanup />);
     fireEvent.click(screen.getByText('library_cleanup.title'));
     const cancel = await screen.findByRole('button', { name: 'library_cleanup.cancel' });
     expect(screen.queryByRole('button', { name: 'library_cleanup.start' })).toBeNull();
@@ -93,26 +99,20 @@ describe('library cleanup', () => {
     expect(chatGptWebLibraryApi.start).not.toHaveBeenCalled();
   });
 
-  test('does not expand a confirmed selection after background props change', async () => {
-    const { rerender } = render(<ChatGptWebLibraryCleanup selectedNames={['original.json']} />);
+  test('changing the credential selection requires a new confirmation', async () => {
+    render(<ChatGptWebLibraryCleanup />);
     fireEvent.click(screen.getByText('library_cleanup.title'));
-    await waitFor(() => expect(chatGptWebLibraryApi.get).toHaveBeenCalled());
+    const credential = await screen.findByRole('checkbox', { name: 'web.json' });
+    fireEvent.click(credential);
     fireEvent.click(screen.getByRole('checkbox', { name: 'library_cleanup.confirm' }));
-    rerender(<ChatGptWebLibraryCleanup selectedNames={['unconfirmed.json']} />);
-    const start = screen.getByRole('button', { name: 'library_cleanup.start' });
-    await waitFor(() => expect((start as HTMLButtonElement).disabled).toBe(false));
-    fireEvent.click(start);
-    await waitFor(() =>
-      expect(chatGptWebLibraryApi.start).toHaveBeenCalledWith(
-        expect.any(Object),
-        { names: ['original.json'] },
-        4
-      )
-    );
+    fireEvent.click(credential);
+    expect((screen.getByRole('checkbox', { name: 'library_cleanup.confirm' }) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByRole('button', { name: 'library_cleanup.start' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(chatGptWebLibraryApi.start).not.toHaveBeenCalled();
   });
 
   test('does not turn an empty selection into all accounts', async () => {
-    render(<ChatGptWebLibraryCleanup selectedNames={[]} />);
+    render(<ChatGptWebLibraryCleanup />);
     fireEvent.click(screen.getByText('library_cleanup.title'));
     await waitFor(() => expect(chatGptWebLibraryApi.get).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('checkbox', { name: 'library_cleanup.confirm' }));
@@ -120,7 +120,7 @@ describe('library cleanup', () => {
       (screen.getByRole('button', { name: 'library_cleanup.start' }) as HTMLButtonElement).disabled
     ).toBe(true);
     fireEvent.click(screen.getByRole('radio', { name: 'library_cleanup.all' }));
-    expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByRole('checkbox', { name: 'library_cleanup.confirm' }) as HTMLInputElement).checked).toBe(false);
   });
 
   test('transport retains confirmation and the captured connection', async () => {

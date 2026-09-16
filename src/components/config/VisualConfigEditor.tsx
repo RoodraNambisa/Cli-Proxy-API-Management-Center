@@ -1,3 +1,4 @@
+import { ChatGptWebLibraryCleanup } from './ChatGptWebLibraryCleanup';
 import { GrokConfigEditor } from './GrokConfigEditor';
 import {
   useCallback,
@@ -2391,15 +2392,29 @@ export function VisualConfigEditor({
                   }
                 />
               </div>
-                <div id="config-chatgpt-web-auto-library-cleanup">
-                  <ToggleRow
-                    title={t('config_management.settings_center.chatgpt_web.auto_cleanup_library_on_full')}
-                    description={t('config_management.settings_center.chatgpt_web.auto_cleanup_library_on_full_description')}
-                    checked={values.chatgptWebAutoCleanupLibraryOnFull}
-                    disabled={disabled}
-                    onChange={(chatgptWebAutoCleanupLibraryOnFull) => onChange({ chatgptWebAutoCleanupLibraryOnFull })}
-                  />
-                </div>
+              <SettingsDisclosure
+                id="config-chatgpt-web-library-cleanup"
+                title={t('library_cleanup.title')}
+                description={t('library_cleanup.description')}
+                focusTarget={focusTarget}
+                targetIds={['config-chatgpt-web-auto-library-cleanup']}
+                dirty={values.chatgptWebAutoCleanupLibraryOnFull !== baselineValues.chatgptWebAutoCleanupLibraryOnFull}
+              >
+                <SectionStack>
+                  <div id="config-chatgpt-web-auto-library-cleanup">
+                    <ToggleRow
+                      title={t('config_management.settings_center.chatgpt_web.auto_cleanup_library_on_full')}
+                      description={t('config_management.settings_center.chatgpt_web.auto_cleanup_library_on_full_description')}
+                      checked={values.chatgptWebAutoCleanupLibraryOnFull}
+                      disabled={disabled}
+                      onChange={(chatgptWebAutoCleanupLibraryOnFull) => onChange({ chatgptWebAutoCleanupLibraryOnFull })}
+                    />
+                  </div>
+                  {activePageId === 'provider-chatgpt-web' && <ChatGptWebLibraryCleanup
+                    key={chatGptWebConnectionGenerationKey} disabled={disabled}
+                  />}
+                </SectionStack>
+              </SettingsDisclosure>
               <div id="config-chatgpt-web-normalize-image-mime">
                 <ToggleRow
                   title={t(

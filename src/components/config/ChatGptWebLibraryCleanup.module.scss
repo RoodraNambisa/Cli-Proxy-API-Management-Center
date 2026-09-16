@@ -82,3 +82,22 @@
   margin-top: 6px;
   color: var(--text-secondary);
 }
+
+.targets {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.targetList {
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+}
+.targetList label {
+  min-width: 0;
+  padding: 4px;
+}
+.targetList span {
+  overflow-wrap: anywhere;
+}

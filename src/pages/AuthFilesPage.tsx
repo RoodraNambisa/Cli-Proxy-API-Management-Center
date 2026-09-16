@@ -53,7 +53,6 @@ import { AuthFilesDependencyDeleteModal } from '@/features/authFiles/components/
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { AuthFilesPrefixProxyEditorModal } from '@/features/authFiles/components/AuthFilesPrefixProxyEditorModal';
 import { ChatGptWebRoutingCapacityCard } from '@/features/authFiles/components/ChatGptWebRoutingCapacityCard';
-import { ChatGptWebLibraryCleanup } from '@/features/authFiles/components/ChatGptWebLibraryCleanup';
 import { OAuthExcludedCard } from '@/features/authFiles/components/OAuthExcludedCard';
 import { OAuthModelAliasCard } from '@/features/authFiles/components/OAuthModelAliasCard';
 import { useAuthFilesBatchSettings } from '@/features/authFiles/hooks/useAuthFilesBatchSettings';
@@ -1639,7 +1638,6 @@ export function AuthFilesPage() {
         title={titleNode}
         extra={
           <div className={styles.headerActions}>
-            <ChatGptWebLibraryCleanup key={connectionGenerationKey} selectedNames={selectedContextFiles.filter((file) => (file.provider ?? file.type) === 'chatgpt-web').map((file) => file.name)} disabled={disableControls} />
             <Button variant="secondary" size="sm" onClick={handleHeaderRefresh} disabled={loading}>
               {t('common.refresh')}
             </Button>

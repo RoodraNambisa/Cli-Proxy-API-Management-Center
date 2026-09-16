@@ -167,6 +167,17 @@ function renderEditor(
 }
 
 describe('configuration settings center', () => {
+  test('keeps library cleanup inside the ChatGPT Web configuration group', () => {
+    const { container, unmount } = renderEditor('/config?section=config-chatgpt-web-library-cleanup');
+    const group = container.querySelector('#config-chatgpt-web-library-cleanup');
+    expect(group).toBeTruthy();
+    expect(group?.closest('#config-chatgpt-web-auto-relogin')?.getAttribute('hidden')).toBeNull();
+    expect(group?.querySelector('#config-chatgpt-web-auto-library-cleanup')).toBeTruthy();
+    unmount();
+    const view = renderEditor('/config?section=provider-codex');
+    expect(view.container.querySelector('#config-chatgpt-web-auto-relogin')?.hasAttribute('hidden')).toBe(true);
+  });
+
   beforeEach(() => {
     vi.restoreAllMocks();
     useFrontendFeatureStore.setState({

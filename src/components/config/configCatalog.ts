@@ -878,6 +878,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['error privacy', 'sanitize errors', '错误脱敏', '渠道隐藏', '錯誤脫敏'],
   },
   {
+    id: 'config-chatgpt-web-library-cleanup',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'library_cleanup.title',
+    yamlKeys: [],
+    aliases: ['library cleanup', '资料库清理', '資料庫清理'],
+  },
+  {
     id: 'config-chatgpt-web-auto-library-cleanup',
     pageId: 'provider-chatgpt-web',
     labelKey: 'config_management.settings_center.chatgpt_web.auto_cleanup_library_on_full',

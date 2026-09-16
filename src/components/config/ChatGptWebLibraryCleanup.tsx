@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { authFilesApi } from '@/services/api/authFiles';
 import { apiClient } from '@/services/api/client';
 import {
   chatGptWebLibraryApi,
@@ -14,20 +15,19 @@ import styles from './ChatGptWebLibraryCleanup.module.scss';
 
 const PAGE_SIZE = 25;
 
-export function ChatGptWebLibraryCleanup({
-  selectedNames,
-  disabled = false,
-}: {
-  selectedNames: string[];
-  disabled?: boolean;
-}) {
+export function ChatGptWebLibraryCleanup({ disabled = false }: { disabled?: boolean }) {
   const { t } = useTranslation();
   const [connection] = useState(() => apiClient.captureConnection());
   const [open, setOpen] = useState(false);
   const [selection, setSelection] = useState<'selected' | 'all'>('selected');
   const [concurrency, setConcurrency] = useState('4');
   const [confirmed, setConfirmed] = useState(false);
-  const [frozenNames, setFrozenNames] = useState<string[]>([]);
+  const [selectedNames, setSelectedNames] = useState<string[]>([]);
+  const [targetNames, setTargetNames] = useState<string[]>([]);
+  const [targetPage, setTargetPage] = useState(1);
+  const [targetPages, setTargetPages] = useState(1);
+  const [targetsLoaded, setTargetsLoaded] = useState(false);
+  const [targetsError, setTargetsError] = useState(false);
   const [task, setTask] = useState<LibraryCleanupTask | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [pending, setPending] = useState(false);
@@ -79,11 +79,58 @@ export function ChatGptWebLibraryCleanup({
     };
   }, [open, disabled, connection, refresh, page, t]);
 
+  useEffect(() => {
+    if (!open || disabled || selection !== 'selected') return;
+    let disposed = false;
+    const abort = new AbortController();
+    setTargetsLoaded(false);
+    setTargetsError(false);
+    authFilesApi
+      .listPaged(
+        { provider: 'chatgpt-web', page: targetPage, pageSize: PAGE_SIZE },
+        connection,
+        abort.signal
+      )
+      .then((response) => {
+        if (disposed) return;
+        // Filter again for older servers that ignore provider or paging queries.
+        const names = [
+          ...new Set(
+            response.files
+              .filter(
+                (file) =>
+                  String(file.provider ?? file.type ?? '')
+                    .trim()
+                    .toLowerCase() === 'chatgpt-web'
+              )
+              .map((file) => file.name)
+          ),
+        ];
+        const paged = response.pagination?.enabled === true;
+        const total = paged ? (response.total ?? names.length) : names.length;
+        setTargetNames(
+          paged ? names : names.slice((targetPage - 1) * PAGE_SIZE, targetPage * PAGE_SIZE)
+        );
+        setTargetPages(Math.max(1, Math.ceil(total / PAGE_SIZE)));
+        setTargetsLoaded(true);
+      })
+      .catch(() => {
+        if (!disposed) setTargetsError(true);
+      });
+    return () => {
+      disposed = true;
+      abort.abort();
+    };
+  }, [open, disabled, selection, targetPage, connection]);
+
   const mutate = async (cancel: boolean) => {
     if (operation.current || disabled || !loaded) return;
     if (
       !cancel &&
-      (!confirmed || active || limit === null || (selection === 'selected' && !frozenNames.length))
+      (!confirmed ||
+        active ||
+        limit === null ||
+        (selection === 'selected' && !selectedNames.length))
     )
       return;
     if (cancel && (!task || !active || task.state === 'canceling')) return;
@@ -96,7 +143,7 @@ export function ChatGptWebLibraryCleanup({
         ? await chatGptWebLibraryApi.cancel(connection, task!.id)
         : await chatGptWebLibraryApi.start(
             connection,
-            selection === 'all' ? { all: true } : { names: [...frozenNames] },
+            selection === 'all' ? { all: true } : { names: [...selectedNames] },
             limit!
           );
       if (mounted.current) {
@@ -137,7 +184,8 @@ export function ChatGptWebLibraryCleanup({
         onClick={() => {
           setLoaded(false);
           setConfirmed(false);
-          setFrozenNames([...selectedNames]);
+          setSelectedNames([]);
+          setTargetPage(1);
           setOpen(true);
         }}
       >
@@ -171,7 +219,7 @@ export function ChatGptWebLibraryCleanup({
                   !loaded ||
                   !confirmed ||
                   limit === null ||
-                  (selection === 'selected' && frozenNames.length === 0)
+                  (selection === 'selected' && selectedNames.length === 0)
                 }
                 onClick={() => void mutate(false)}
               >
@@ -196,7 +244,7 @@ export function ChatGptWebLibraryCleanup({
                   setConfirmed(false);
                 }}
               />
-              {t('library_cleanup.selected', { count: frozenNames.length })}
+              {t('library_cleanup.selected', { count: selectedNames.length })}
             </label>
             <label>
               <input
@@ -210,6 +258,62 @@ export function ChatGptWebLibraryCleanup({
               />
               {t('library_cleanup.all')}
             </label>
+            {selection === 'selected' && (
+              <div className={styles.targets}>
+                {targetsError ? (
+                  <p role="alert">{t('library_cleanup.targets_failed')}</p>
+                ) : !targetsLoaded ? (
+                  <p role="status">{t('common.loading')}</p>
+                ) : (
+                  <>
+                    {targetNames.length === 0 && <p>{t('library_cleanup.no_targets')}</p>}
+                    <div className={styles.targetList}>
+                      {targetNames.map((name) => (
+                        <label key={name}>
+                          <input
+                            type="checkbox"
+                            checked={selectedNames.includes(name)}
+                            onChange={(event) => {
+                              const checked = event.target.checked;
+                              setSelectedNames((previous) =>
+                                checked
+                                  ? [...previous, name]
+                                  : previous.filter((value) => value !== name)
+                              );
+                              setConfirmed(false);
+                            }}
+                          />
+                          <span>{name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {targetPages > 1 && (
+                  <div className={styles.pagination}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={!targetsLoaded || targetPage === 1}
+                      onClick={() => setTargetPage((value) => value - 1)}
+                    >
+                      {t('auth_files.pagination_prev')}
+                    </Button>
+                    <span>
+                      {targetPage} / {targetPages}
+                    </span>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={!targetsLoaded || targetPage >= targetPages}
+                      onClick={() => setTargetPage((value) => value + 1)}
+                    >
+                      {t('auth_files.pagination_next')}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
             <Input
               label={t('library_cleanup.concurrency')}
               type="number"

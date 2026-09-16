@@ -7,8 +7,8 @@
     "warning": "将删除所选凭证资料库中本轮列出的全部自有文件，包括手动上传的文件。不删除聊天、第三方挂载、共享文件、文件夹或已有回收站。CPA 不提供撤销，请先备份需要保留的文件。",
     "background": "每个凭证清理前停止分配新请求，等待在途请求结束。任务在后台运行，关闭弹窗不停止；取消只停止后续操作。进度保留至下次任务或服务重启，同账号重复凭证只清理一次。",
     "scope": "清理范围",
-    "selected": "已选 Web 凭证（{{count}}）",
-    "all": "全部 Web 凭证（不受页面筛选限制）",
+    "selected": "指定 ChatGPT Web 凭证（已选 {{count}}）",
+    "all": "全部 ChatGPT Web 凭证",
     "concurrency": "同时清理的凭证数（1–32）",
     "invalid_concurrency": "请输入 1–32 的整数",
     "confirm": "我确认清空此范围内的全部自有资料库文件，已备份需要保留的内容。",
@@ -51,7 +51,10 @@
     "request_failed": "请求失败",
     "conflict_or_in_progress": "文件仍在处理中或状态冲突",
     "invalid_request": "删除参数不被接受",
-    "upstream_rejected": "上游拒绝删除"
+    "upstream_rejected": "上游拒绝删除",
+    "description": "清理 ChatGPT Web 账号的资料库，可指定凭证或选择全部 ChatGPT Web 凭证。",
+    "targets_failed": "无法读取 ChatGPT Web 凭证，请重新打开弹窗重试。",
+    "no_targets": "当前没有 ChatGPT Web 凭证。"
   },
   "sentinel_compute": {
     "mode": "计算方式",
@@ -2222,7 +2225,7 @@
         "ignore_unsupported_image_params_description": "开启后，ChatGPT Web 无法处理的图片参数不再排除 Web 路由；兼容的 JPEG 和 WebP 输出可在本地编码。未启用远程 URL 时，远程图片仍会拒绝；file_id、非法 mask 和资源限制始终拒绝。",
         "sanitize_error_responses": "脱敏图片错误响应",
         "auto_cleanup_library_on_full": "资料库满时自动清理",
-        "auto_cleanup_library_on_full_description": "危险操作，默认关闭。仅图片上传收到存储类错误后触发，再次检查容量；不足时暂停该凭证分配，等待在途请求结束，后台删除其全部自有、第一方、可删除文件。不删除聊天、共享或外部文件、文件夹及已有回收站，不自动重发图片请求。与手动清理互斥；同一凭证 10 分钟内最多触发一次。进度见认证文件的资料库清理。",
+        "auto_cleanup_library_on_full_description": "危险操作，默认关闭。仅图片上传收到存储类错误后触发，再次检查容量；不足时暂停该凭证分配，等待在途请求结束，后台删除其全部自有、第一方、可删除文件。不删除聊天、共享或外部文件、文件夹及已有回收站，不自动重发图片请求。与手动清理互斥；同一凭证 10 分钟内最多触发一次。进度见本页的 Web 资料库清理。",
         "sanitize_error_responses_description": "开启后，隐藏 ChatGPT Web 渠道、轮询、任务阶段和内部错误码，但不改变最终状态码或现有错误改写规则。尺寸、数量、MIME、Base64、格式、引用和 mask 等可修正输入错误仍返回安全、具体的要求；默认关闭。",
         "normalize_mismatched_image_mime": "按真实内容纠正图片 MIME",
         "normalize_mismatched_image_mime_description": "开启后，multipart 与 Data URL 中错误声明为 JPEG、PNG、GIF 或 WebP 的图片会按实际可解码格式纠正。只修改 MIME 和上传文件扩展名，不转码图片；默认关闭。",
