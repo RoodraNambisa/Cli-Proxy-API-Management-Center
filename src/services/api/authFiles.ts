@@ -30,8 +30,22 @@ export interface GrokCatalogRefreshInfo {
 }
 
 type StatusError = { status?: number };
-export type ModelProbeRequest = { name: string; model: string; protocol: string; stream: boolean; upstream?: string };
-export type ModelProbeResult = { success: boolean; name: string; model: string; upstream_model?: string; request_path: string; upstream_url?: string; stream: boolean; latency_ms: number; status_code?: number; request_id?: string; response?: string; error?: string };
+export type ModelProbeRequest = {
+  name: string; model: string; protocol: string; stream: boolean; upstream?: string;
+  prompt?: string; max_output_tokens?: number; request_body?: Record<string, unknown>;
+};
+export type ModelProbeUsage = {
+  input_tokens?: number; output_tokens?: number; total_tokens?: number;
+  cached_tokens?: number; reasoning_tokens?: number; cache_creation_tokens?: number;
+};
+export type ModelProbeResult = {
+  success: boolean; name: string; provider?: string; model: string; upstream_model?: string;
+  returned_model?: string; request_path: string; upstream_url?: string; stream: boolean;
+  latency_ms: number; status_code?: number; request_id?: string; response_id?: string;
+  finish_reason?: string; response?: string; error?: string; usage?: ModelProbeUsage;
+  request_body?: string; upstream_request_body?: string; response_body?: string;
+  details_truncated?: boolean;
+};
 type RawHeaders = Record<string, unknown> | undefined;
 type AuthFileStatusResponse = { status: string; disabled: boolean };
 type AuthFileEntry = AuthFilesResponse['files'][number];

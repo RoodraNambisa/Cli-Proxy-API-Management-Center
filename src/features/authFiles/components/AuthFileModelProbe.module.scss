@@ -71,16 +71,6 @@
 .table td:nth-child(3) {
   min-width: 76px;
 }
-.table details {
-  max-width: 340px;
-  overflow-wrap: anywhere;
-  margin-top: 6px;
-  line-height: 1.6;
-}
-.table summary {
-  cursor: pointer;
-  color: var(--text-secondary);
-}
 .table tr:last-child td {
   border-bottom: 0;
 }
@@ -107,5 +97,107 @@
   }
   .table {
     min-width: 600px;
+  }
+}
+.requestEditor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 16px;
+}
+.requestEditor label {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  font-size: 13px;
+  font-weight: 600;
+}
+.requestEditor textarea,
+.jsonInput {
+  resize: vertical;
+  min-height: 80px;
+}
+.advancedRequest {
+  display: grid;
+  gap: 10px;
+}
+.advancedRequest summary,
+.rawDetails summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+.advancedRequest .hint {
+  margin: 8px 0;
+}
+.jsonInput {
+  font-family: monospace;
+  font-size: 12px;
+}
+.detailBody {
+  display: grid;
+  gap: 18px;
+}
+.detailMetadata {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 24px;
+}
+.detailMetadata dt,
+.usageGrid span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.detailMetadata dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.usageGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.usageGrid > div {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+}
+.usageGrid strong {
+  font-size: 16px;
+}
+.detailHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.answer,
+.rawDetails pre {
+  margin: 10px 0 0;
+  padding: 14px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  max-height: 360px;
+  overflow: auto;
+}
+.answer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+}
+.rawDetails pre {
+  font-size: 12px;
+}
+@media (max-width: 680px) {
+  .requestEditor,
+  .detailMetadata {
+    grid-template-columns: 1fr;
+  }
+  .usageGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

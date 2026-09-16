@@ -1,3 +1,4 @@
+import { isRetiredNativeProvider } from '@/utils/providers';
 import { useState } from 'react';
 import { AuthFileModelProbe } from './AuthFileModelProbe';
 import probeStyles from './AuthFileModelProbe.module.scss';
@@ -67,7 +68,8 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
     const mode = GROK_UPSTREAM_MODES.find((key) => GROK_UPSTREAM_URLS[key] === base);
     return mode ? t(`grok_upstream.modes.${mode}`) : base;
   };
-  const normalizedFileType = fileType.trim().toLowerCase();
+  const normalizedFileType = (file?.provider || fileType).trim().toLowerCase();
+  const canProbe = normalizedFileType !== '' && normalizedFileType !== 'unknown' && !isRetiredNativeProvider(normalizedFileType);
   const planType = String(file?.plan_type ?? file?.planType ?? '').trim();
 
   return (
@@ -85,7 +87,7 @@ export function AuthFileModelsModal(props: AuthFileModelsModalProps) {
         </>
       }
     >
-      {(normalizedFileType === 'xai' || normalizedFileType === 'codex') && <div className={probeStyles.tabs}>
+      {canProbe && <div className={probeStyles.tabs}>
         <Button variant={probing ? 'secondary' : 'primary'} onClick={() => setProbing(false)}>{t('model_probe.catalog')}</Button>
         <Button variant={probing ? 'primary' : 'secondary'} onClick={() => setProbing(true)}>{t('model_probe.title')}</Button>
       </div>}

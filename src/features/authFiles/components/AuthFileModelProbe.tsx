@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ModelProbeDetailsModal } from './ModelProbeDetailsModal';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
@@ -25,7 +26,13 @@ export function AuthFileModelProbe({
   models: AuthFileModelItem[];
 }) {
   const { t } = useTranslation();
-  const [protocol, setProtocol] = useState('responses');
+  const [protocol, setProtocol] = useState(
+    provider === 'codex' || provider === 'xai' ? 'responses' : 'chat'
+  );
+  const [prompt, setPrompt] = useState('');
+  const [requestBody, setRequestBody] = useState('');
+  const [maxTokens, setMaxTokens] = useState('');
+  const [detailModel, setDetailModel] = useState<string | null>(null);
   const [stream, setStream] = useState(false);
   const [upstream, setUpstream] = useState('configured');
   const [customURL, setCustomURL] = useState('');
@@ -41,7 +48,11 @@ export function AuthFileModelProbe({
     () => [
       ...new Set([
         ...models
-          .filter((model) => (getAuthFileModelCapability(model, provider) ?? (/image|video/i.test(model.id) ? 'image' : 'text')) === 'text')
+          .filter(
+            (model) =>
+              (getAuthFileModelCapability(model, provider) ??
+                (/image|video/i.test(model.id) ? 'image' : 'text')) === 'text'
+          )
           .map((model) => model.id),
         ...extraModels,
       ]),
@@ -53,6 +64,28 @@ export function AuthFileModelProbe({
   );
   const normalizedURL = normalizeGrokBaseUrl(customURL);
   const invalidURL = provider === 'xai' && upstream === 'custom' && !normalizedURL;
+  const temporary = useMemo(() => {
+    if (!requestBody.trim()) return { body: undefined, invalid: false };
+    try {
+      const body: unknown = JSON.parse(requestBody);
+      if (
+        !body ||
+        typeof body !== 'object' ||
+        Array.isArray(body) ||
+        new TextEncoder().encode(requestBody).length > 65536
+      )
+        return { body: undefined, invalid: true };
+      return { body: body as Record<string, unknown>, invalid: false };
+    } catch {
+      return { body: undefined, invalid: true };
+    }
+  }, [requestBody]);
+  const outputLimit = maxTokens.trim() ? Number(maxTokens) : undefined;
+  const invalidLimit =
+    outputLimit !== undefined &&
+    (!/^\d+$/.test(maxTokens.trim()) || outputLimit < 1 || outputLimit > 32768);
+  const invalidPrompt = new TextEncoder().encode(prompt).length > 16384;
+  const invalidRequest = invalidURL || temporary.invalid || invalidLimit || invalidPrompt;
 
   useEffect(
     () => () => {
@@ -79,14 +112,16 @@ export function AuthFileModelProbe({
   const resetOptions = (change: () => void) => {
     change();
     setResults({});
+    setDetailModel(null);
   };
   const run = async (targets: string[]) => {
-    if (controller.current || !targets.length || invalidURL) return;
+    if (controller.current || !targets.length || invalidRequest) return;
     const abort = new AbortController();
     controller.current = abort;
     const currentGeneration = ++generation.current;
     const connection = apiClient.captureConnection();
     setRunning(true);
+    setDetailModel(null);
     setResults((current) => ({
       ...current,
       ...Object.fromEntries(targets.map((model) => [model, { state: 'queued' as const }])),
@@ -102,6 +137,9 @@ export function AuthFileModelProbe({
               model,
               protocol,
               stream,
+              ...(prompt.trim() ? { prompt } : {}),
+              ...(outputLimit !== undefined ? { max_output_tokens: outputLimit } : {}),
+              ...(temporary.body ? { request_body: temporary.body } : {}),
               ...(provider === 'xai'
                 ? { upstream: upstream === 'custom' ? normalizedURL! : upstream }
                 : {}),
@@ -211,16 +249,69 @@ export function AuthFileModelProbe({
           )}
         </label>
       )}
+      <div className={styles.requestEditor}>
+        <label>
+          <span>{t('model_probe.prompt')}</span>
+          <textarea
+            className="input"
+            rows={3}
+            value={prompt}
+            disabled={running}
+            placeholder={t('model_probe.prompt_placeholder')}
+            aria-invalid={invalidPrompt}
+            onChange={(event) => resetOptions(() => setPrompt(event.target.value))}
+          />
+        </label>
+        <label>
+          <span>{t('model_probe.output_limit')}</span>
+          <input
+            className="input"
+            type="number"
+            min={1}
+            max={32768}
+            step={1}
+            placeholder="1024"
+            value={maxTokens}
+            disabled={running}
+            aria-invalid={invalidLimit}
+            onChange={(event) => resetOptions(() => setMaxTokens(event.target.value))}
+          />
+        </label>
+      </div>
+      {(invalidPrompt || invalidLimit) && (
+        <div role="alert" className={styles.failed}>
+          {t(invalidPrompt ? 'model_probe.prompt_too_large' : 'model_probe.invalid_limit')}
+        </div>
+      )}
+      <details className={styles.advancedRequest}>
+        <summary>{t('model_probe.temporary_json')}</summary>
+        <div className={styles.hint}>{t('model_probe.temporary_json_hint')}</div>
+        <textarea
+          className={`input ${styles.jsonInput}`}
+          rows={5}
+          aria-label={t('model_probe.temporary_json')}
+          placeholder={'{ "temperature": 0 }'}
+          value={requestBody}
+          disabled={running}
+          aria-invalid={temporary.invalid}
+          onChange={(event) => resetOptions(() => setRequestBody(event.target.value))}
+        />
+        {temporary.invalid && (
+          <div role="alert" className={styles.failed}>
+            {t('model_probe.invalid_json')}
+          </div>
+        )}
+      </details>
       <div className={styles.toolbar}>
         <Button
-          disabled={running || !visibleModels.length || invalidURL}
+          disabled={running || !visibleModels.length || invalidRequest}
           onClick={() => void run(visibleModels)}
         >
           {t('model_probe.test_visible', { count: visibleModels.length })}
         </Button>
         <Button
           variant="secondary"
-          disabled={running || !allModels.some((model) => selected.has(model)) || invalidURL}
+          disabled={running || !allModels.some((model) => selected.has(model)) || invalidRequest}
           onClick={() => void run(allModels.filter((model) => selected.has(model)))}
         >
           {t('model_probe.test_selected', { count: selected.size })}
@@ -312,31 +403,21 @@ export function AuthFileModelProbe({
                       </span>
                     )}
                     {(result || entry?.error) && (
-                      <details>
-                        <summary>{t('model_probe.details')}</summary>
-                        {result?.upstream_model && (
-                          <div>
-                            {t('model_probe.actual_model')}: {result.upstream_model}
-                          </div>
-                        )}
-                        {result?.upstream_url && (
-                          <div>
-                            {result.request_path} → {result.upstream_url}
-                          </div>
-                        )}
-                        {result?.request_id && <div>ID: {result.request_id}</div>}
-                        {result?.response && <div>{result.response}</div>}
-                        {(result?.error || entry?.error) && (
-                          <div className={styles.failed}>{result?.error || entry?.error}</div>
-                        )}
-                      </details>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDetailModel(model)}
+                        aria-label={`${t('model_probe.details')} ${model}`}
+                      >
+                        {t('model_probe.details')}
+                      </Button>
                     )}
                     {!result && !entry?.error && '—'}
                   </td>
                   <td>
                     <Button
                       variant="secondary"
-                      disabled={running || invalidURL}
+                      disabled={running || invalidRequest}
                       onClick={() => void run([model])}
                       aria-label={`${t('model_probe.test')} ${model}`}
                     >
@@ -350,6 +431,14 @@ export function AuthFileModelProbe({
         </table>
         {!visibleModels.length && <div className={styles.hint}>{t('model_probe.empty')}</div>}
       </div>
+      {detailModel && (
+        <ModelProbeDetailsModal
+          model={detailModel}
+          result={results[detailModel]?.result}
+          error={results[detailModel]?.error}
+          onClose={() => setDetailModel(null)}
+        />
+      )}
       <form
         className={styles.toolbar}
         onSubmit={(event) => {

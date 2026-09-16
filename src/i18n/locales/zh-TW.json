@@ -4550,7 +4550,7 @@
   "model_probe": {
     "title": "連線檢測",
     "catalog": "模型目錄",
-    "hint": "固定使用目前憑證，逐一傳送短請求，會產生用量。鏈路選擇僅對本次檢測生效，不切換帳號，也不修改路由設定。僅檢測文字模型。",
+    "hint": "固定使用目前憑證，每個模型只請求一次。臨時問題與 JSON 僅對本次檢測生效；會產生用量，不重試、不換帳號、不修改已儲存的路由設定。僅檢測文字模型。",
     "protocol": "請求鏈路",
     "protocols": {
       "responses": "Responses（HTTP）",
@@ -4577,7 +4577,7 @@
     "action": "操作",
     "select": "選擇",
     "test": "檢測",
-    "details": "查看鏈路與詳情",
+    "details": "查看詳情",
     "actual_model": "實際模型",
     "states": {
       "idle": "未檢測",
@@ -4590,7 +4590,36 @@
     "empty": "沒有符合的文字模型，可手動新增模型進行檢測。",
     "manual_model": "手動輸入模型 ID",
     "add_model": "新增模型",
-    "progress": "已完成 {{count}} / {{total}}"
+    "progress": "已完成 {{count}} / {{total}}",
+    "prompt": "臨時測試問題",
+    "prompt_placeholder": "留空時傳送：Reply with exactly OK.",
+    "output_limit": "最大輸出 token（選填）",
+    "temporary_json": "進階：臨時請求 JSON",
+    "temporary_json_hint": "僅影響本次檢測，不儲存設定。JSON 欄位覆蓋測試請求；model、stream 由目前檢測選項決定。填寫 messages 或 input 會取代上方問題。",
+    "invalid_json": "請輸入不超過 64 KiB 的 JSON 物件。",
+    "invalid_limit": "輸出 token 上限應為 1–32768 的整數。",
+    "prompt_too_large": "測試問題不能超過 16 KiB。",
+    "returned_model": "回應中的模型",
+    "finish_reason": "結束原因",
+    "response_id": "回應 ID",
+    "request_id": "請求 ID",
+    "upstream_url": "實際上游位址",
+    "not_reported": "未回傳",
+    "input_tokens": "輸入 token",
+    "output_tokens": "輸出 token",
+    "total_tokens": "總 token",
+    "cached_tokens": "快取讀取 token",
+    "reasoning_tokens": "推理 token",
+    "cache_creation_tokens": "快取寫入 token",
+    "answer": "回答",
+    "copy_answer": "複製回答",
+    "no_text": "回應中沒有文字回答，可查看回應 JSON。",
+    "request_body": "本次用戶端請求 JSON",
+    "upstream_request_body": "實際傳送的請求 JSON",
+    "response_body": "回應 JSON / 串流事件（依所選介面）",
+    "truncated": "詳情超過 128 KiB，已截斷顯示。",
+    "copied": "已複製",
+    "copy_failed": "複製失敗"
   },
   "credential_target": {
     "title": "固定憑證測試",
@@ -4607,6 +4636,8 @@
     "copied": "已複製測試金鑰",
     "failed": "操作失敗",
     "unsupported": "請更新後端以使用固定憑證測試。",
-    "no_keys": "請先在設定中新增用戶端金鑰。"
+    "no_keys": "請先在設定中新增用戶端金鑰。",
+    "enabled_keys_hint": "僅顯示已開啟固定憑證測試的金鑰。權限開關位於用戶端金鑰設定。",
+    "no_enabled_keys": "沒有已開啟固定憑證測試的金鑰，請先到金鑰設定開啟權限。"
   }
 }

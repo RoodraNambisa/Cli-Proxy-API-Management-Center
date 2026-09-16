@@ -4554,7 +4554,7 @@
   "model_probe": {
     "title": "Connection test",
     "catalog": "Model catalog",
-    "hint": "Sends short requests sequentially using this credential and consumes usage. Test overrides do not change routing or switch accounts. Text models only.",
+    "hint": "Uses this credential for one attempt per model. A temporary question or JSON applies only to this run. Requests consume quota; no retries, account switching or saved route changes. Text models only.",
     "protocol": "Request route",
     "protocols": {
       "responses": "Responses (HTTP)",
@@ -4581,7 +4581,7 @@
     "action": "Action",
     "select": "Select",
     "test": "Test",
-    "details": "Route and details",
+    "details": "View details",
     "actual_model": "Upstream model",
     "states": {
       "idle": "Not tested",
@@ -4594,7 +4594,36 @@
     "empty": "No matching text models. Add a model ID to test it.",
     "manual_model": "Enter a model ID",
     "add_model": "Add model",
-    "progress": "Completed {{count}} / {{total}}"
+    "progress": "Completed {{count}} / {{total}}",
+    "prompt": "Temporary test question",
+    "prompt_placeholder": "Leave blank to send: Reply with exactly OK.",
+    "output_limit": "Max output tokens (optional)",
+    "temporary_json": "Advanced: temporary request JSON",
+    "temporary_json_hint": "Only affects this test; never saved to configuration. JSON fields override the test body; model and stream follow the selected test options. messages or input replaces the question above.",
+    "invalid_json": "Enter a JSON object no larger than 64 KiB.",
+    "invalid_limit": "Output token limit must be an integer from 1 to 32768.",
+    "prompt_too_large": "The question must be no larger than 16 KiB.",
+    "returned_model": "Model in response",
+    "finish_reason": "Finish reason",
+    "response_id": "Response ID",
+    "request_id": "Request ID",
+    "upstream_url": "Actual upstream URL",
+    "not_reported": "Not reported",
+    "input_tokens": "Input tokens",
+    "output_tokens": "Output tokens",
+    "total_tokens": "Total tokens",
+    "cached_tokens": "Cache read tokens",
+    "reasoning_tokens": "Reasoning tokens",
+    "cache_creation_tokens": "Cache write tokens",
+    "answer": "Answer",
+    "copy_answer": "Copy answer",
+    "no_text": "No text answer was returned; inspect the response JSON.",
+    "request_body": "Client request JSON",
+    "upstream_request_body": "Actual outbound request JSON",
+    "response_body": "Response JSON / stream events (selected API format)",
+    "truncated": "Details exceeded 128 KiB and were truncated.",
+    "copied": "Copied",
+    "copy_failed": "Copy failed"
   },
   "credential_target": {
     "title": "Fixed credential test",
@@ -4611,6 +4640,8 @@
     "copied": "Test key copied",
     "failed": "Operation failed",
     "unsupported": "Update the backend to enable fixed credential tests.",
-    "no_keys": "Create a client API key in configuration first."
+    "no_keys": "Create a client API key in configuration first.",
+    "enabled_keys_hint": "Only keys with fixed credential tests enabled are listed. Manage this permission in client API key settings.",
+    "no_enabled_keys": "No eligible keys. Enable fixed credential tests in client API key settings first."
   }
 }

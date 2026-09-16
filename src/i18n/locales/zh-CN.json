@@ -4558,7 +4558,7 @@
   "model_probe": {
     "title": "连接检测",
     "catalog": "模型目录",
-    "hint": "固定使用当前凭证，逐个发送短请求，会产生用量。链路选择仅对本次检测生效，不切换账号，也不修改路由配置。仅检测文字模型。",
+    "hint": "固定使用当前凭证，每个模型只请求一次。临时问题和 JSON 仅对本次检测生效；会产生用量，不重试、不换号、不修改已保存的路由配置。仅检测文字模型。",
     "protocol": "请求链路",
     "protocols": {
       "responses": "Responses（HTTP）",
@@ -4585,7 +4585,7 @@
     "action": "操作",
     "select": "选择",
     "test": "检测",
-    "details": "查看链路与详情",
+    "details": "查看详情",
     "actual_model": "实际模型",
     "states": {
       "idle": "未检测",
@@ -4598,7 +4598,36 @@
     "empty": "没有匹配的文字模型，可手动添加模型进行检测。",
     "manual_model": "手动输入模型 ID",
     "add_model": "添加模型",
-    "progress": "已完成 {{count}} / {{total}}"
+    "progress": "已完成 {{count}} / {{total}}",
+    "prompt": "临时测试问题",
+    "prompt_placeholder": "留空时发送：Reply with exactly OK.",
+    "output_limit": "最大输出 token（可选）",
+    "temporary_json": "高级：临时请求 JSON",
+    "temporary_json_hint": "只影响本次检测，不保存配置。JSON 字段覆盖测试请求；model、stream 由当前检测选项决定。填写 messages 或 input 会替代上方问题。",
+    "invalid_json": "请输入不超过 64 KiB 的 JSON 对象。",
+    "invalid_limit": "输出 token 上限应为 1–32768 的整数。",
+    "prompt_too_large": "测试问题不能超过 16 KiB。",
+    "returned_model": "响应中的模型",
+    "finish_reason": "结束原因",
+    "response_id": "响应 ID",
+    "request_id": "请求 ID",
+    "upstream_url": "实际上游地址",
+    "not_reported": "未返回",
+    "input_tokens": "输入 token",
+    "output_tokens": "输出 token",
+    "total_tokens": "总 token",
+    "cached_tokens": "缓存读取 token",
+    "reasoning_tokens": "推理 token",
+    "cache_creation_tokens": "缓存写入 token",
+    "answer": "回答",
+    "copy_answer": "复制回答",
+    "no_text": "响应中没有文本回答，可查看返回 JSON。",
+    "request_body": "本次客户端请求 JSON",
+    "upstream_request_body": "实际发送的请求 JSON",
+    "response_body": "返回 JSON / 流事件（按所选接口）",
+    "truncated": "详情超过 128 KiB，已截断显示。",
+    "copied": "已复制",
+    "copy_failed": "复制失败"
   },
   "credential_target": {
     "title": "固定凭证测试",
@@ -4615,6 +4644,8 @@
     "copied": "测试密钥已复制",
     "failed": "操作失败",
     "unsupported": "请更新后端以使用固定凭证测试。",
-    "no_keys": "请先在配置中添加客户端密钥。"
+    "no_keys": "请先在配置中添加客户端密钥。",
+    "enabled_keys_hint": "这里只显示已开启固定凭证测试的密钥。权限开关在客户端密钥配置中设置。",
+    "no_enabled_keys": "没有已开启固定凭证测试的密钥，请先到密钥配置中开启权限。"
   }
 }
