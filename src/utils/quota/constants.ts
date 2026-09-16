@@ -6,10 +6,6 @@ import type { AntigravityQuotaGroupDefinition, TypeColorSet } from '@/types';
 
 // Theme colors for type badges — 与 authFiles/constants.ts 保持同步
 export const TYPE_COLORS: Record<string, TypeColorSet> = {
-  qwen: {
-    light: { bg: '#ede5fd', text: '#5530c7' },
-    dark: { bg: '#36208a', text: '#b5a3f0' },
-  },
   gemini: {
     light: { bg: '#e3f2fd', text: '#1565c0' },
     dark: { bg: '#0d47a1', text: '#64b5f6' },
@@ -37,10 +33,6 @@ export const TYPE_COLORS: Record<string, TypeColorSet> = {
   xai: {
     light: { bg: '#f3f4f6', text: '#111827', border: '1px solid #d1d5db' },
     dark: { bg: '#111827', text: '#f9fafb', border: '1px solid #374151' },
-  },
-  iflow: {
-    light: { bg: '#f5e3fc', text: '#9025c8' },
-    dark: { bg: '#521490', text: '#d49cf5' },
   },
   vertex: {
     light: { bg: '#e4edfd', text: '#2b5fbc' },

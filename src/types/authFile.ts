@@ -4,7 +4,6 @@
  */
 
 export type AuthFileType =
-  | 'qwen'
   | 'kimi'
   | 'gemini'
   | 'gemini-cli'
@@ -14,7 +13,6 @@ export type AuthFileType =
   | 'antigravity'
   | 'xai'
   | 'chatgpt-web'
-  | 'iflow'
   | 'vertex'
   | 'empty'
   | 'unknown';

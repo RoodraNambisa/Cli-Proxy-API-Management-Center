@@ -214,6 +214,20 @@ describe('structured proxy health management page', () => {
     expect(nameInput.value).toBe('codex-route');
   });
 
+  test('rule provider choices exclude retired presets while keeping configured custom providers', async () => {
+    vi.mocked(proxyPoolsApi.getRulesConfig).mockResolvedValue({
+      schemaVersion: 2,
+      rules: [{ name: '', targets: [{ pool: pool.name, priority: 0 }], providers: ['custom-route'] }],
+    });
+    renderPage();
+    await screen.findByText(pool.name);
+    fireEvent.click(screen.getByRole('tab', { name: 'proxy_pools.tabs.rules' }));
+    expect(screen.queryByRole('checkbox', { name: 'qwen' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'iflow' })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'xai' })).toBeTruthy();
+    expect((screen.getByRole('checkbox', { name: 'custom-route' }) as HTMLInputElement).checked).toBe(true);
+  });
+
   test('allows a v2 direct-only rule when no physical proxy pools exist', async () => {
     vi.mocked(proxyPoolsApi.getPools).mockResolvedValue([]);
     vi.mocked(proxyPoolsApi.getRulesConfig).mockResolvedValue({ schemaVersion: 2, rules: [] });

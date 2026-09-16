@@ -48,7 +48,7 @@ import {
 import { formatDateTime, maskApiKey } from '@/utils/format';
 import { isValidApiKeyCharset } from '@/utils/validation';
 import { apiKeysApi } from '@/services/api/apiKeys';
-import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
+import { RUNTIME_PROVIDER_OPTIONS } from '@/utils/providers';
 import { ApiKeyPriorityFields, type ApiKeyPriorityField } from './ApiKeyPriorityFields';
 import type { ClientApiKeyGroup } from '@/types/config';
 import { API_KEY_NAME_LIMIT, normalizeApiKeyName } from '@/utils/apiKeyGroups';

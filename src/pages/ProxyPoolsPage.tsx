@@ -34,6 +34,7 @@ import type {
   ProxyRuleTarget,
 } from '@/types';
 import { formatDateTime } from '@/utils/format';
+import { RUNTIME_PROVIDER_OPTIONS } from '@/utils/providers';
 import styles from './ProxyPoolsPage.module.scss';
 
 type ViewId = 'pools' | 'rules' | 'bindings';
@@ -51,21 +52,7 @@ type ProxyRuleDraft = Omit<ProxyRule, 'targets'> & {
 let nextRuleDraftId = 0;
 const createRuleDraftId = (): string => `proxy-rule-${++nextRuleDraftId}`;
 
-const PROVIDER_OPTIONS = [
-  'chatgpt-web',
-  'codex',
-  'xai',
-  'claude',
-  'antigravity',
-  'gemini',
-  'gemini-interactions',
-  'aistudio',
-  'vertex',
-  'kimi',
-  'iflow',
-  'qwen',
-  'openai-compatibility',
-] as const;
+const PROVIDER_OPTIONS = RUNTIME_PROVIDER_OPTIONS.map((provider) => provider.value);
 
 const createEntry = (): ProxyPoolEntry => ({ id: '', 'url-template': '', ports: '' });
 const createPool = (): ProxyPool => ({

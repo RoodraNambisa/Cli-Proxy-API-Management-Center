@@ -3,12 +3,10 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { RequestScopedErrorsEditor } from '@/components/providers/RequestScopedErrorsEditor';
 import type { OAuthRequestScopedErrors } from '@/types/requestScopedErrors';
-import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
+import { OAUTH_PROVIDER_OPTIONS } from '@/utils/providers';
 import { ConfigTable, ConfigTableRow } from './ConfigTable';
 import { validateRequestScopedErrorRule } from '@/utils/requestScopedErrors';
 import styles from './VisualConfigEditor.module.scss';
-
-const channels = new Set(['vertex', 'aistudio', 'antigravity', 'claude', 'codex', 'kimi', 'xai']);
 
 export function OAuthRequestScopedErrorsEditor({ value, onChange, disabled }: {
   value: OAuthRequestScopedErrors;
@@ -17,7 +15,7 @@ export function OAuthRequestScopedErrorsEditor({ value, onChange, disabled }: {
 }) {
   const { t } = useTranslation();
   const used = new Set(Object.keys(value).map((provider) => provider.trim().toLowerCase()));
-  const options = RUNTIME_PROVIDER_OPTIONS.filter((provider) => channels.has(provider.value) && !used.has(provider.value));
+  const options = OAUTH_PROVIDER_OPTIONS.filter((provider) => !used.has(provider.value));
   return (
     <div className={styles.blockStack}>
       {Object.keys(value).length > 0 && <ConfigTable label={`${t('request_scoped_errors.provider')} · ${t('request_scoped_errors.title')}`} columns={[

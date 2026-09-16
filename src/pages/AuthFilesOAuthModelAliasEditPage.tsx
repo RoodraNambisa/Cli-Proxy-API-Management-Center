@@ -13,8 +13,9 @@ import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useAuthStore, useNotificationStore } from '@/stores';
 import { authFilesApi } from '@/services/api';
-import type { AuthFileItem, OAuthModelAliasEntry } from '@/types';
+import type { OAuthModelAliasEntry } from '@/types';
 import { generateId } from '@/utils/helpers';
+import { OAUTH_PROVIDER_OPTIONS } from '@/utils/providers';
 import styles from './AuthFilesOAuthModelAliasEditPage.module.scss';
 
 type AuthFileModelItem = { id: string; display_name?: string; type?: string; owned_by?: string };
@@ -23,18 +24,7 @@ type LocationState = { fromAuthFiles?: boolean } | null;
 
 type OAuthModelMappingFormEntry = OAuthModelAliasEntry & { id: string };
 
-const OAUTH_PROVIDER_PRESETS = [
-  'vertex',
-  'aistudio',
-  'antigravity',
-  'claude',
-  'codex',
-  'qwen',
-  'kimi',
-  'iflow',
-];
-
-const OAUTH_PROVIDER_EXCLUDES = new Set(['all', 'unknown', 'empty']);
+const providerOptions = OAUTH_PROVIDER_OPTIONS.map((provider) => provider.value);
 
 const normalizeProviderKey = (value: string) => value.trim().toLowerCase();
 
@@ -77,8 +67,6 @@ export function AuthFilesOAuthModelAliasEditPage() {
   const providerFromParams = searchParams.get('provider') ?? '';
 
   const [provider, setProvider] = useState(providerFromParams);
-  const [files, setFiles] = useState<AuthFileItem[]>([]);
-  const [excluded, setExcluded] = useState<Record<string, string[]>>({});
   const [modelAlias, setModelAlias] = useState<Record<string, OAuthModelAliasEntry[]>>({});
   const [initialLoading, setInitialLoading] = useState(true);
   const [modelAliasUnsupported, setModelAliasUnsupported] = useState(false);
@@ -95,37 +83,13 @@ export function AuthFilesOAuthModelAliasEditPage() {
     setProvider(providerFromParams);
   }, [providerFromParams]);
 
-  const providerOptions = useMemo(() => {
-    const extraProviders = new Set<string>();
-    Object.keys(excluded).forEach((value) => extraProviders.add(value));
-    Object.keys(modelAlias).forEach((value) => extraProviders.add(value));
-    files.forEach((file) => {
-      if (typeof file.type === 'string') {
-        extraProviders.add(file.type);
-      }
-      if (typeof file.provider === 'string') {
-        extraProviders.add(file.provider);
-      }
-    });
-
-    const normalizedExtras = Array.from(extraProviders)
-      .map((value) => value.trim())
-      .filter((value) => value && !OAUTH_PROVIDER_EXCLUDES.has(value.toLowerCase()));
-
-    const baseSet = new Set(OAUTH_PROVIDER_PRESETS.map((value) => value.toLowerCase()));
-    const extraList = normalizedExtras
-      .filter((value) => !baseSet.has(value.toLowerCase()))
-      .sort((a, b) => a.localeCompare(b));
-
-    return [...OAUTH_PROVIDER_PRESETS, ...extraList];
-  }, [excluded, files, modelAlias]);
-
   const getTypeLabel = useCallback(
     (type: string): string => {
       const key = `auth_files.filter_${type}`;
       const translated = t(key);
       if (translated !== key) return translated;
-      if (type.toLowerCase() === 'iflow') return 'iFlow';
+      const preset = OAUTH_PROVIDER_OPTIONS.find((option) => option.value === normalizeProviderKey(type));
+      if (preset) return preset.label;
       return type.charAt(0).toUpperCase() + type.slice(1);
     },
     [t]
@@ -183,21 +147,11 @@ export function AuthFilesOAuthModelAliasEditPage() {
       setInitialLoading(true);
       setModelAliasUnsupported(false);
       try {
-        const [filesResult, excludedResult, aliasResult] = await Promise.allSettled([
-          authFilesApi.list(),
-          authFilesApi.getOauthExcludedModels(),
+        const [aliasResult] = await Promise.allSettled([
           authFilesApi.getOauthModelAlias(),
         ]);
 
         if (cancelled) return;
-
-        if (filesResult.status === 'fulfilled') {
-          setFiles(filesResult.value?.files ?? []);
-        }
-
-        if (excludedResult.status === 'fulfilled') {
-          setExcluded(excludedResult.value ?? {});
-        }
 
         if (aliasResult.status === 'fulfilled') {
           setModelAlias(aliasResult.value ?? {});

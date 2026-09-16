@@ -92,7 +92,7 @@ import {
   StringListEditor,
   TagListEditor,
 } from './VisualConfigEditorBlocks';
-import { RUNTIME_PROVIDER_OPTIONS } from './runtimeProviderOptions';
+import { RUNTIME_PROVIDER_OPTIONS } from '@/utils/providers';
 import styles from './VisualConfigEditor.module.scss';
 
 const ERROR_RESPONSE_REWRITE_SOURCE_OPTIONS = [

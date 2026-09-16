@@ -12,6 +12,7 @@ import { SecondaryScreenShell } from '@/components/common/SecondaryScreenShell';
 import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useAuthStore, useNotificationStore } from '@/stores';
 import { authFilesApi } from '@/services/api';
+import { isRetiredNativeProvider, OAUTH_PROVIDER_OPTIONS } from '@/utils/providers';
 import type { AuthFileItem, OAuthModelAliasEntry } from '@/types';
 import styles from './AuthFilesOAuthExcludedEditPage.module.scss';
 
@@ -19,16 +20,7 @@ type AuthFileModelItem = { id: string; display_name?: string; type?: string; own
 
 type LocationState = { fromAuthFiles?: boolean } | null;
 
-const OAUTH_PROVIDER_PRESETS = [
-  'vertex',
-  'aistudio',
-  'antigravity',
-  'claude',
-  'codex',
-  'qwen',
-  'kimi',
-  'iflow',
-];
+const OAUTH_PROVIDER_PRESETS = OAUTH_PROVIDER_OPTIONS.map((provider) => provider.value);
 
 const OAUTH_PROVIDER_EXCLUDES = new Set(['all', 'unknown', 'empty']);
 
@@ -77,7 +69,7 @@ export function AuthFilesOAuthExcludedEditPage() {
 
     const normalizedExtras = Array.from(extraProviders)
       .map((value) => value.trim())
-      .filter((value) => value && !OAUTH_PROVIDER_EXCLUDES.has(value.toLowerCase()));
+      .filter((value) => value && !OAUTH_PROVIDER_EXCLUDES.has(value.toLowerCase()) && !isRetiredNativeProvider(value));
 
     const baseSet = new Set(OAUTH_PROVIDER_PRESETS.map((value) => value.toLowerCase()));
     const extraList = normalizedExtras
@@ -92,7 +84,8 @@ export function AuthFilesOAuthExcludedEditPage() {
       const key = `auth_files.filter_${type}`;
       const translated = t(key);
       if (translated !== key) return translated;
-      if (type.toLowerCase() === 'iflow') return 'iFlow';
+      const preset = OAUTH_PROVIDER_OPTIONS.find((option) => option.value === normalizeProviderKey(type));
+      if (preset) return preset.label;
       return type.charAt(0).toUpperCase() + type.slice(1);
     },
     [t]

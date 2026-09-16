@@ -79,7 +79,7 @@ npm run build
   - Gemini/Google Interactions/Codex/Claude/Vertex 配置（Base URL、Headers、代理、模型别名、排除模型、Prefix）。
   - OpenAI 兼容提供商（多 Key、Header、自助从 `/v1/models` 拉取并导入模型别名、可选浏览器侧 `chat/completions` 测试）。
 - **认证文件**：上传/下载/删除 JSON 凭据，筛选/搜索/分页，标记 runtime-only；查看单个凭据可用模型（依赖后端支持）；管理 OAuth 排除模型（支持 `*` 通配符）；配置 OAuth 模型别名映射。
-- **OAuth**：对支持的提供商发起 OAuth/设备码流程，轮询状态；可选提交回调 `redirect_url`；包含 iFlow Cookie 导入。
+- **OAuth**：对支持的提供商发起 OAuth/设备码流程，轮询状态；可选提交回调 `redirect_url`；Grok 还支持 PKCE 浏览器登录和手动提交回调。
 - **配额管理**：管理 Claude、Antigravity、Codex 等受支持提供商的配额上限与使用情况。
 - **使用统计**：后端轻量汇总、服务端分页明细、健康/RPM/TPM/Token 图表，以及共享模型定价和费用统计。
 - **配置文件**：浏览器内编辑 `/config.yaml`（YAML 高亮 + 搜索），保存/重载。

@@ -80,7 +80,7 @@ See `api.md` for the full authentication rules, server-side limits, and edge cas
   - Gemini/Google Interactions/Codex/Claude/Vertex key entries (base URL, headers, proxy, model aliases, excluded models, prefix).
   - OpenAI-compatible providers (multiple API keys, custom headers, model alias import via `/v1/models`, optional browser-side "chat/completions" test).
 - **Auth Files**: upload/download/delete JSON credentials, filter/search/pagination, runtime-only indicators, view supported models per credential (when the server supports it), manage OAuth excluded models (supports `*` wildcards), configure OAuth model alias mappings.
-- **OAuth**: start OAuth/device flows for supported providers, poll status, optionally submit callback `redirect_url`; includes iFlow cookie import.
+- **OAuth**: start OAuth/device flows for supported providers, poll status, optionally submit callback `redirect_url`; Grok also supports PKCE browser login and manual callback submission.
 - **Quota Management**: manage quota limits and usage for Claude, Antigravity, Codex, and other supported providers.
 - **Usage**: lightweight server-side summaries, paginated request details, health/RPM/TPM/token charts, and shared server-side model pricing and cost reports.
 - **Config**: edit `/config.yaml` in-browser with YAML highlighting + search, then save/reload.
