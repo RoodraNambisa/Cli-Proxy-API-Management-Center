@@ -79,6 +79,7 @@ export type AuthFileCardProps = {
   statusBarCache: Map<string, AuthFileStatusBarData>;
   usageSummaryCache: Map<string, AuthFileUsageSummary>;
   usageLoading: boolean;
+  onTargetCredential?: (file: AuthFileItem) => void;
   onShowModels: (file: AuthFileItem) => void;
   onDownload: (name: string) => void;
   onOpenPrefixProxyEditor: (file: AuthFileItem) => void;
@@ -123,6 +124,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     usageSummaryCache,
     usageLoading,
     onShowModels,
+    onTargetCredential,
     onDownload,
     onOpenPrefixProxyEditor,
     onDelete,
@@ -510,6 +512,12 @@ export function AuthFileCard(props: AuthFileCardProps) {
               )}
             </div>
           </div>
+
+          {onTargetCredential && authIndexKey && !isRetiredGeminiCli && <button type="button"
+            className={styles.credentialTargetLink} onClick={() => onTargetCredential(file)} disabled={disableControls}
+            title={t('credential_target.title')} aria-label={`${t('credential_target.title')}: ${file.name}`}>
+            <span>ID</span><code>{authIndexKey}</code>{file.routing_alias && <strong>{String(file.routing_alias)}</strong>}
+          </button>}
 
           <div className={`${styles.cardMeta} ${compact ? styles.cardMetaCompact : ''}`}>
             <div className={styles.metaItem}>

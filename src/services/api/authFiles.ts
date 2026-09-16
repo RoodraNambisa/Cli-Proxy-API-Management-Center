@@ -37,6 +37,7 @@ type AuthFileStatusResponse = { status: string; disabled: boolean };
 type AuthFileEntry = AuthFilesResponse['files'][number];
 export type XaiAuthFileField = 'using_api' | 'websockets';
 export type AuthFileFieldsPatch = {
+  routing_alias?: string;
   base_url?: string;
   xai_model_catalog_sources?: string[];
   xai_model_routes?: GrokModelRoute[];

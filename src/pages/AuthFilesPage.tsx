@@ -45,6 +45,7 @@ import {
   type ResolvedTheme,
 } from '@/features/authFiles/constants';
 import { resolveCodexPlanType } from '@/utils/quota';
+import { CredentialTargetModal } from '@/features/authFiles/components/CredentialTargetModal';
 import { AuthFileCard } from '@/features/authFiles/components/AuthFileCard';
 import { AuthFilesBatchSettingsModal } from '@/features/authFiles/components/AuthFilesBatchSettingsModal';
 import { CodexAgentIdentityConversionModal } from '@/features/authFiles/components/CodexAgentIdentityConversionModal';
@@ -322,6 +323,7 @@ export function AuthFilesPage() {
   const [searchParams] = useSearchParams();
   const providerParam = searchParams.get('provider');
 
+  const [targetCredential, setTargetCredential] = useState<AuthFileItem | null>(null);
   const [filter, setFilter] = useState<'all' | string>('all');
   const [planFilter, setPlanFilter] = useState(ALL_PLAN_FILTER);
   const [priorityFilter, setPriorityFilter] = useState(ALL_PRIORITY_FILTER);
@@ -625,6 +627,7 @@ export function AuthFilesPage() {
     setPaginationMode('unknown');
     setSelectionDetails([]);
     setSelectingFiltered(false);
+    setTargetCredential(null);
   }, [connectionGenerationKey]);
 
   useEffect(() => {
@@ -2033,6 +2036,7 @@ export function AuthFilesPage() {
                     usageSummaryCache={usageSummaryCache}
                     usageLoading={usageLoading}
                     onShowModels={showModels}
+                    onTargetCredential={setTargetCredential}
                     onDownload={handleDownload}
                     onOpenPrefixProxyEditor={openPrefixProxyEditor}
                     onDelete={handleDelete}
@@ -2112,6 +2116,8 @@ export function AuthFilesPage() {
         onDeleteAlias={handleDeleteAlias}
       />
 
+      {targetCredential && <CredentialTargetModal key={`${targetCredential.name}:${connectionGenerationKey}`} file={targetCredential}
+        onClose={() => setTargetCredential(null)} onSaved={refreshFilesInBackground} />}
       <AuthFileModelsModal
         connectionGenerationKey={connectionGenerationKey}
         onRefreshGrok={refreshGrokModels}

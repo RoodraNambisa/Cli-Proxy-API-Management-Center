@@ -127,6 +127,7 @@ export interface CodexObservedQuotaWindow {
 }
 
 export interface AuthFileItem {
+  routing_alias?: string;
   base_url?: string;
   upstream_base_url?: string;
   upstream_mode?: string;

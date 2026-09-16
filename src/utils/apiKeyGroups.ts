@@ -39,6 +39,9 @@ export function normalizeClientApiKeyGroups(value: unknown): ClientApiKeyGroup[]
         ? [...new Set(record.providers.map((provider) => String(provider ?? '').trim().toLowerCase()).filter(Boolean))]
         : [],
     };
+    if ('allow-credential-targeting' in record || 'allowCredentialTargeting' in record) {
+      group.allowCredentialTargeting = (record['allow-credential-targeting'] ?? record.allowCredentialTargeting) === true;
+    }
     if ('name' in record) group.name = normalizeApiKeyName(record.name);
     if ('allowed-priorities' in record || 'allowedPriorities' in record) {
       group.allowedPriorities = normalizeApiKeyPriorities(Object.prototype.hasOwnProperty.call(record, 'allowed-priorities') ? record['allowed-priorities'] : record.allowedPriorities);

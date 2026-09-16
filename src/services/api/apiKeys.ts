@@ -14,6 +14,7 @@ export type ApiKeyAccessSnapshot = {
   lastUsed?: Record<string, string>;
   availablePriorities?: number[];
   namesSupported?: boolean;
+  credentialTargetingSupported?: boolean;
 };
 
 const normalizeProviders = (value: unknown): string[] => {
@@ -74,14 +75,15 @@ export const apiKeysApi = {
     return (await apiKeysApi.listGroupDetails()).groups;
   },
 
-  async listGroupDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported'>> {
+  async listGroupDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported' | 'credentialTargetingSupported'>> {
     const data = await apiClient.get<Record<string, unknown>>('/api-key-groups');
-    const result: Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported'> = {
+    const result: Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported' | 'credentialTargetingSupported'> = {
       groups: normalizeClientApiKeyGroups(data['api-key-groups'] ?? data.apiKeyGroups),
     };
     if ('available-priorities' in data) {
       result.availablePriorities = normalizeApiKeyPriorities(data['available-priorities']);
     }
+    if ('credential-targeting-supported' in data) result.credentialTargetingSupported = data['credential-targeting-supported'] === true;
     if ('names-supported' in data) result.namesSupported = data['names-supported'] === true;
     return result;
   },
@@ -101,6 +103,12 @@ export const apiKeysApi = {
     trackGroupUpdate(apiClient.patch('/api-key-groups', {
       'api-key': apiKey,
       [field === 'allowedPriorities' ? 'allowed-priorities' : 'excluded-priorities']: normalizeApiKeyPriorities(values),
+    })),
+
+  updateCredentialTargeting: (apiKey: string, enabled: boolean) =>
+    trackGroupUpdate(apiClient.patch('/api-key-groups', {
+      'api-key': apiKey,
+      'allow-credential-targeting': enabled,
     })),
 
   deleteGroup: (apiKey: string) =>

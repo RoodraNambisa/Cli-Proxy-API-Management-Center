@@ -228,6 +228,7 @@ export const normalizeCodexTurnStatePolicy = (value: unknown): CodexTurnStatePol
 };
 
 export interface ClientApiKeyGroup {
+  allowCredentialTargeting?: boolean;
   apiKey: string;
   name?: string;
   providers: string[];

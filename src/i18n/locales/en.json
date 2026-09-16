@@ -4592,5 +4592,22 @@
     "manual_model": "Enter a model ID",
     "add_model": "Add model",
     "progress": "Completed {{count}} / {{total}}"
+  },
+  "credential_target": {
+    "title": "Fixed credential test",
+    "id": "Credential ID",
+    "id_hint": "Stable across restarts and token refreshes. Renaming the credential file changes this ID; use an alias when renaming files.",
+    "alias": "Routing alias",
+    "alias_hint": "Optional: 1–64 letters, digits, - or _. Case-insensitive. Clear to use the ID. Save before copying.",
+    "invalid": "Use 1–64 ASCII letters, digits, hyphens or underscores.",
+    "key": "Client API key",
+    "allow": "Allow fixed credential tests",
+    "allow_hint": "Select a credential by ID or alias within this key's provider and priority permissions. Disabled by default. Changes save immediately.",
+    "once": "One attempt: no retries, account switching or custom error rewriting. Use the copied key for Chat / Responses requests. Realtime sessions are not supported.",
+    "copy": "Copy test key",
+    "copied": "Test key copied",
+    "failed": "Operation failed",
+    "unsupported": "Update the backend to enable fixed credential tests.",
+    "no_keys": "Create a client API key in configuration first."
   }
 }

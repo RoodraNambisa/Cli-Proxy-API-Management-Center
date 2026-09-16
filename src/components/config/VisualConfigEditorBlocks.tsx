@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { Select } from '@/components/ui/Select';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import {
@@ -247,6 +248,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const [serverKeys, setServerKeys] = useState<Set<string>>(new Set());
   const [lastUsed, setLastUsed] = useState<Record<string, string>>();
   const [priorityGroups, setPriorityGroups] = useState<Record<string, ClientApiKeyGroup>>({});
+  const [targetingSupported, setTargetingSupported] = useState(false);
   const [availablePriorities, setAvailablePriorities] = useState<number[]>();
   const [providerGroups, setProviderGroups] = useState<Record<string, string[]>>({});
   const [providerGroupsLoading, setProviderGroupsLoading] = useState(false);
@@ -279,6 +281,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       setServerKeys(new Set(snapshot.keys));
       setLastUsed(snapshot.lastUsed);
       setNamesSupported(snapshot.namesSupported === true);
+      setTargetingSupported(snapshot.credentialTargetingSupported === true);
       setPriorityGroups(Object.fromEntries(snapshot.groups.map((group) => [group.apiKey, group])));
       setAvailablePriorities(snapshot.availablePriorities);
       setProviderGroups(
@@ -294,6 +297,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       setProviderGroupsUnsupported(status === 404);
       setLastUsed(undefined);
       setNamesSupported(false);
+      setTargetingSupported(false);
       setAvailablePriorities(undefined);
       setProviderGroupsError(error instanceof Error ? error.message : '');
       setProviderGroupsLoaded(true);
@@ -427,6 +431,22 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     }
   };
 
+  const handleTargetingChange = async (apiKey: string, enabled: boolean) => {
+    if (providerGroupUpdating || !serverKeys.has(apiKey) || !targetingSupported) return;
+    setProviderGroupUpdating(apiKey);
+    try {
+      await apiKeysApi.updateCredentialTargeting(apiKey, enabled);
+      setPriorityGroups((previous) => ({ ...previous, [apiKey]: {
+        ...(apiKeyStateValue(previous, apiKey) ?? { apiKey, providers: [] }),
+        allowCredentialTargeting: enabled,
+      } }));
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : t('credential_target.failed'), 'error');
+    } finally {
+      setProviderGroupUpdating(null);
+    }
+  };
+
   const handlePriorityChange = async (apiKey: string, field: ApiKeyPriorityField, values: number[]) => {
     if (providerGroupsLoading || providerGroupUpdating || availablePriorities === undefined || !serverKeys.has(apiKey)) return false;
     setProviderGroupUpdating(apiKey);
@@ -542,6 +562,11 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                       </div>
                       <ConfigHelp title={t('config_management.visual.api_keys.provider_column')} text={t('config_management.visual.api_keys.provider_hint')} />
                     </div>
+                    {targetingSupported && <div>
+                      <ToggleSwitch label={t('credential_target.allow')} checked={keyPriorities?.allowCredentialTargeting === true}
+                        disabled={disabled || providerGroupUpdating !== null} onChange={(enabled) => void handleTargetingChange(key, enabled)} />
+                      <div className="hint">{t('credential_target.allow_hint')}</div>
+                    </div>}
                     {availablePriorities === undefined ? (
                       <div className="hint">{t('config_management.visual.api_keys.priority_unsupported')}</div>
                     ) : <div>
