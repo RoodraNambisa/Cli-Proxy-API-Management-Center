@@ -1439,7 +1439,7 @@ export function getVisualConfigValidationErrors(
       rule.subscriptionOverrides.forEach((subscriptionRule, subscriptionIndex) => {
         const pathPrefix = `routingPriorityOverrides.${rule.clientId}.subscriptionOverrides.${subscriptionRule.clientId}`;
         const planTypes = normalizeRoutingPlanTypes(subscriptionRule.planTypes);
-        if (planTypes.length === 0) {
+        if (planTypes.length === 0 && subscriptionRule.providers.every((provider) => !provider.trim())) {
           result[`${pathPrefix}.planTypes`] = 'routing_subscription_plan_required';
         }
         const subscriptionLimitError = subscriptionRule.perAuthRequestLimit.trim()
@@ -1469,7 +1469,7 @@ export function getVisualConfigValidationErrors(
               return false;
             }
             const previousPlanTypes = new Set(normalizeRoutingPlanTypes(previousRule.planTypes));
-            return planTypes.some((planType) => previousPlanTypes.has(planType));
+            return planTypes.length === 0 || previousPlanTypes.size === 0 || planTypes.some((planType) => previousPlanTypes.has(planType));
           });
         if (overlapsPreviousRule) {
           result[`${pathPrefix}.planTypes`] = 'routing_subscription_overlap';

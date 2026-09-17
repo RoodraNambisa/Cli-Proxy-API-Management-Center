@@ -1,0 +1,40 @@
+.root {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-items: center;
+}
+.label,
+.timestamp {
+  color: var(--text-secondary);
+}
+.source {
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  padding: 0 5px;
+}
+.address {
+  overflow-wrap: anywhere;
+}
+.value {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.failed {
+  color: var(--danger-color, #c14747);
+  overflow-wrap: anywhere;
+}
+.timestamp {
+  font-size: 11px;
+}
+.line button {
+  margin-left: auto;
+  font-size: 12px;
+}

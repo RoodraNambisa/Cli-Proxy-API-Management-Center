@@ -1318,6 +1318,12 @@ export const authFilesApi = {
     return apiClient.postAtConnection<ModelProbeResult>({ ...connection, timeout: 0 }, '/auth-files/models/probe', input, { signal, timeout: 0 });
   },
 
+  checkProxy(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+    return apiClient.postAtConnection<{ proxy_route: import('@/types/authFile').AuthFileProxyRoute }>(
+      { ...connection, timeout: 0 }, '/auth-files/proxy/check', { name }, { signal, timeout: 0 }
+    );
+  },
+
   // 获取指定 channel 的模型定义
   async getModelDefinitions(
     channel: string

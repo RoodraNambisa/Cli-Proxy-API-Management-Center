@@ -349,7 +349,7 @@ const normalizeRoutingPriorityOverrides = (value: unknown): RoutingPriorityOverr
         const planTypes = normalizeStringList(
           subscriptionSource['plan-types'] ?? subscriptionSource.planTypes
         );
-        if (planTypes.length === 0) return subscriptionResult;
+        if (planTypes.length === 0 && normalizeStringList(subscriptionSource.providers).length === 0) return subscriptionResult;
 
         const subscriptionEntry: NonNullable<
           RoutingPriorityOverrideConfig['subscriptionOverrides']

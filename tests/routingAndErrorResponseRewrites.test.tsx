@@ -312,6 +312,32 @@ describe('routing request limits and error response rewrites', () => {
     ]);
   });
 
+  test.each(['codex', 'chatgpt-web', 'xai', 'claude', 'gemini', 'gemini-interactions', 'antigravity', 'vertex', 'aistudio', 'kimi', 'custom-compat'])('accepts empty plans for provider %s', (provider) => {
+    const {result}=renderHook(()=>useVisualConfig());
+    act(()=>result.current.loadVisualValuesFromYaml(`routing:\n  priority-overrides:\n    - priority: 0\n      subscription-overrides:\n        - providers: [${provider}]\n          per-auth-request-limit: 10\n`));
+    expect(getVisualConfigValidationErrors(result.current.visualValues)).toEqual({});
+    expect(result.current.visualValues.routingPriorityOverrides[0].subscriptionOverrides[0]).toMatchObject({providers:[provider],planTypes:[],perAuthRequestLimit:'10'});
+  });
+
+  test('preserves provider-only limits through validation, YAML and both config response paths', async () => {
+    const yaml = 'routing:\n  priority-overrides:\n    - priority: 3\n      subscription-overrides:\n        - providers: [xai]\n          per-auth-request-limit: 10\n          per-auth-request-window-minutes: 1\n';
+    const {result}=renderHook(()=>useVisualConfig());
+    act(()=>result.current.loadVisualValuesFromYaml(yaml));
+    expect(getVisualConfigValidationErrors(result.current.visualValues)).toEqual({});
+    const saved=parse(result.current.applyVisualChangesToYaml(yaml));
+    expect(saved.routing['priority-overrides'][0]['subscription-overrides'][0]).toMatchObject({providers:['xai'],'per-auth-request-limit':10});
+    const expected={providers:['xai'],planTypes:[],perAuthRequestLimit:10,perAuthRequestWindowMinutes:1};
+    expect(normalizeConfigResponse(parse(yaml)).routingPriorityOverrides?.[0].subscriptionOverrides).toEqual([expected]);
+    vi.spyOn(apiClient,'get').mockResolvedValue({'priority-overrides':saved.routing['priority-overrides']});
+    const response=await configApi.getRoutingPriorityOverrides();
+    expect(response[0].subscriptionOverrides).toEqual([expected]);
+    const values=result.current.visualValues;
+    const rule=values.routingPriorityOverrides[0];
+    const first=rule.subscriptionOverrides[0];
+    const conflicts=getVisualConfigValidationErrors({...values,routingPriorityOverrides:[{...rule,subscriptionOverrides:[first,{...first,clientId:'narrower',planTypes:['supergrok']}]}]});
+    expect(conflicts[`routingPriorityOverrides.${rule.clientId}.subscriptionOverrides.narrower.planTypes`]).toBe('routing_subscription_overlap');
+  });
+
   test('selects common plan types and providers without dropping custom values', async () => {
     const initialValues = cloneValues();
     initialValues.routingPriorityOverrides = [

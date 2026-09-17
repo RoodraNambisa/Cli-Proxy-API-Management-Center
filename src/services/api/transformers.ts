@@ -292,10 +292,10 @@ const normalizeRoutingPriorityOverrides = (
           const planTypes = normalizeStringArray(
             subscriptionItem['plan-types'] ?? subscriptionItem.planTypes
           );
-          if (!planTypes?.length) return subscriptionResult;
+          if (!planTypes?.length && !normalizeStringArray(subscriptionItem.providers)?.length) return subscriptionResult;
 
           const subscriptionEntry: NonNullable<typeof entry.subscriptionOverrides>[number] = {
-            planTypes,
+            planTypes: planTypes ?? [],
           };
           const providers = normalizeStringArray(subscriptionItem.providers);
           if (providers?.length) {

@@ -4460,7 +4460,7 @@ export function VisualConfigEditor({
                                             cells={[
                                               <strong>#{subscriptionIndex + 1}</strong>,
                                               <ConfigSummary entries={[
-                                                ['providers', subscriptionRule.providers.join(', ')], ['plan-types', subscriptionRule.planTypes.join(', ')],
+                                                ['providers', subscriptionRule.providers.join(', ')], ['plan-types', subscriptionRule.planTypes.join(', ') || t('config_management.visual.sections.network.priority_subscription_overrides_plan_types_empty')],
                                               ]} />,
                                               <ConfigSummary entries={[
                                                 ['per-auth-request-limit', subscriptionRule.perAuthRequestLimit],

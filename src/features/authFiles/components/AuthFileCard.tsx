@@ -46,6 +46,7 @@ import type { AuthFileUsageSummary } from '@/features/authFiles/hooks/useAuthFil
 import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
 import { CodexQuotaObservationPanel } from '@/features/authFiles/components/CodexQuotaObservationPanel';
 import { AuthFileUsageStatsPanel } from '@/features/authFiles/components/AuthFileUsageStatsPanel';
+import { AuthFileProxyStatus } from '@/features/authFiles/components/AuthFileProxyStatus';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
 const CHATGPT_WEB_CRITICAL_LIFECYCLE_STATES = new Set([
@@ -301,7 +302,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const xaiWebsocketsUpdating = xaiFieldsUpdating[file.name]?.websockets === true;
   const chatGptWebReloginBusy = chatGptWebReloginUpdating[file.name] === true;
   const restoreBusy = restoring[file.name] === true;
-  const proxyBinding = file.proxy_binding;
+  const proxyBinding = file.proxy_route ? undefined : file.proxy_binding;
   const metadataTime = (value: unknown) => {
     const timestamp = parseTimestampMs(value);
     return Number.isFinite(timestamp) ? formatDateTime(new Date(timestamp)) : '-';
@@ -537,6 +538,8 @@ export function AuthFileCard(props: AuthFileCardProps) {
               </span>
             </div>
           </div>
+
+          <AuthFileProxyStatus file={file} disabled={disableControls || isRetiredGeminiCli} />
 
           {codexPlanDisplay && (
             <div className={styles.codexPlan}>

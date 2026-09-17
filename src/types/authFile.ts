@@ -68,6 +68,21 @@ export interface AuthFileProxyBinding {
   error_message?: string;
 }
 
+export interface AuthFileProxyRoute {
+  id: string;
+  source: string;
+  mode: 'proxy' | 'direct' | 'inherit' | 'invalid';
+  address?: string;
+  pending?: boolean;
+  linked?: boolean;
+  pool?: string;
+  ip?: string;
+  loc?: string;
+  checked_at?: string;
+  ok?: boolean;
+  error?: string;
+}
+
 export interface AuthErrorDiagnostic {
   provider?: string;
   auth_index?: string;
@@ -196,6 +211,14 @@ export interface AuthFileItem {
   dependent_names?: string[];
   deletion_requested_at?: string;
   proxy_binding?: AuthFileProxyBinding;
+  proxy_route?: AuthFileProxyRoute;
+  request_limit?: {
+    limit: number;
+    window_minutes: number;
+    source: string;
+    priority: number;
+    rule?: number;
+  };
   last_error?: AuthErrorSummary;
   last_diagnostic?: AuthErrorDiagnostic;
   auth_mode?: CodexAuthMode | string;
