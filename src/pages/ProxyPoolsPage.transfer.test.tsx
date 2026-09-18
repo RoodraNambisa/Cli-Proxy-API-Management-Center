@@ -42,9 +42,6 @@ describe('proxy pool import integration', () => {
     fireEvent.change(within(dialog).getByLabelText(i18n.t('proxy_pools.pool_name')), {
       target: { value: 'imported' },
     });
-    fireEvent.click(
-      within(dialog).getByRole('checkbox', { name: 'Remember proxy node in credentials' })
-    );
     fireEvent.click(within(dialog).getByRole('button', { name: 'Bulk import' }));
     fireEvent.change(within(dialog).getByRole('textbox', { name: 'Proxy list to import' }), {
       target: { value: '192.0.2.10:1080:user:pw\n192.0.2.11:1080:user:pw' },
@@ -61,7 +58,6 @@ describe('proxy pool import integration', () => {
       expect(proxyPoolsApi.createPool).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'imported',
-          'remember-credential-binding': true,
           entries: [
             {
               id: 'proxy-001',

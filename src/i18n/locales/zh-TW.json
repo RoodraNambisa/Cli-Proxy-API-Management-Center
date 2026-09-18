@@ -1,8 +1,5 @@
 {
   "proxy_transfer": {
-    "remember_binding": "記住憑證代理節點",
-    "remember_binding_hint": "將節點指紋、連接埠及產生的會話標識存入憑證 proxy_binding 欄位，隨下載遷移，不含代理位址、帳號、密碼或出口 IP。只要目前規則仍允許，憑證內的綁定優先於伺服器本地綁定；首次選取依穩定帳號身分決定。固定節點異常時報錯，不自動切換 IP，可用「重新綁定」更換。動態出口仍取決於服務商；既有綁定下次使用時補寫。",
-    "remember_binding_active": "已開啟憑證代理記憶",
     "import": "批次匯入",
     "copy": "批次複製",
     "format": "格式",

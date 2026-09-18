@@ -1,8 +1,5 @@
 {
   "proxy_transfer": {
-    "remember_binding": "记住凭证代理节点",
-    "remember_binding_hint": "把节点指纹、端口及生成的会话标识存入凭证 proxy_binding 字段，随下载迁移，不含代理地址、账号、密码或出口 IP。只要当前规则仍允许，凭证内的绑定优先于服务器本地绑定；首次选取按稳定账号身份确定。固定节点异常时报错，不自动跳 IP，可用“重新绑定”更换。动态出口仍取决于服务商；已有绑定下次使用时补写。",
-    "remember_binding_active": "已开启凭证代理记忆",
     "import": "批量导入",
     "copy": "批量复制",
     "format": "格式",
