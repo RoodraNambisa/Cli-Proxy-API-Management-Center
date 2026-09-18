@@ -65,6 +65,7 @@ const createPool = (): ProxyPool => ({
   'check-interval-seconds': 300,
   'bind-attempts': 3,
   'spread-bindings': false,
+  'remember-credential-binding': false,
   entries: [createEntry()],
 });
 
@@ -813,6 +814,7 @@ export function ProxyPoolsPage() {
           'check-interval-seconds': draft['check-interval-seconds'] ?? 0,
           'bind-attempts': draft['bind-attempts'] ?? 0,
           'spread-bindings': Boolean(draft['spread-bindings']),
+          'remember-credential-binding': Boolean(draft['remember-credential-binding']),
           entries: draft.entries,
           'delete-entry-ids': editor.original.entries
             .filter((entry) => !nextIds.has(entry.id.toLowerCase()))
@@ -1405,6 +1407,7 @@ export function ProxyPoolsPage() {
                           count: normalizeCheckSample(checkSamples[pool.name]),
                         })}
                       </span>
+                      {pool['remember-credential-binding'] && <span className={styles.healthGood}>{t('proxy_transfer.remember_binding_active')}</span>}
                       {pool['spread-bindings'] ? (
                         <span className={styles.spreadBindingsBadge}>
                           {t('proxy_pools.spread_bindings_enabled')}
@@ -1762,6 +1765,15 @@ export function ProxyPoolsPage() {
                   })
                 }
               />
+              <div className={styles.toggleField}>
+                <div>
+                  <strong>{t('proxy_transfer.remember_binding')}</strong>
+                  <p>{t('proxy_transfer.remember_binding_hint')}</p>
+                </div>
+                <ToggleSwitch checked={Boolean(editor.draft['remember-credential-binding'])}
+                  disabled={savingPool} ariaLabel={t('proxy_transfer.remember_binding')}
+                  onChange={remember => updatePoolDraft({ 'remember-credential-binding': remember })} />
+              </div>
               <div className={styles.toggleField}>
                 <div>
                   <strong>{t('proxy_pools.spread_bindings')}</strong>

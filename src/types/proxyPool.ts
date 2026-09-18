@@ -10,6 +10,7 @@ export interface ProxyPool {
   'check-interval-seconds'?: number;
   'bind-attempts'?: number;
   'spread-bindings'?: boolean;
+  'remember-credential-binding'?: boolean;
   entries: ProxyPoolEntry[];
 }
 
@@ -19,6 +20,7 @@ export interface ProxyPoolPatch {
   'check-interval-seconds'?: number;
   'bind-attempts'?: number;
   'spread-bindings'?: boolean;
+  'remember-credential-binding'?: boolean;
   entries?: ProxyPoolEntry[];
   'delete-entry-ids'?: string[];
 }

@@ -1,5 +1,8 @@
 {
   "proxy_transfer": {
+    "remember_binding": "Remember proxy node in credentials",
+    "remember_binding_hint": "Store a proxy_binding field in the credential: node fingerprint, port and generated session IDs, without a proxy address, login, password or exit IP. It travels with downloads and overrides a different local binding if the node is still allowed. New selections use a stable account identity across replicas. Unhealthy pinned nodes fail instead of switching IP; use Rebind to change them. Dynamic exits still depend on the provider.",
+    "remember_binding_active": "Binding travels with credential",
     "import": "Bulk import",
     "copy": "Bulk copy",
     "format": "Format",
