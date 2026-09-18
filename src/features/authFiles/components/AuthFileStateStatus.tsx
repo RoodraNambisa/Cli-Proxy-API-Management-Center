@@ -19,41 +19,116 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(Date.now());
+  const mutation = useRef(0);
+  const actionRequest = useRef<AbortController | null>(null);
+  const state = file.codex_state;
+  const models = updated?.scope === scope ? updated.models : (state?.models ?? []);
+  const waiting = models.some(
+    (model) =>
+      ['queued', 'acquiring'].includes(model.status) ||
+      Boolean(
+        model.next_attempt && !model.exhausted && !model.manual_only && model.status !== 'paused'
+      )
+  );
+  const live = useRef({ busy, waiting });
+  live.current = { busy, waiting };
   useEffect(() => {
+    active.current = scope;
     setUpdated(undefined);
     setError('');
     setBusy(false);
-  }, [file.codex_state, scope]);
+    return () => {
+      actionRequest.current?.abort();
+      active.current = '';
+    };
+  }, [scope]);
+  useEffect(() => {
+    if (!live.current.busy && !live.current.waiting) setUpdated(undefined);
+  }, [file.codex_state]);
   useEffect(() => {
     if (!file.codex_state?.enabled) return;
     const timer = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(timer);
   }, [file.codex_state?.enabled]);
-  const state = file.codex_state;
-  if (!state?.enabled) return null;
-  const models = updated?.scope === scope ? updated.models : state.models;
+  useEffect(() => {
+    if (!state?.enabled || !waiting || disabled || busy) return;
+    const controller = new AbortController();
+    const connection = apiClient.captureConnection();
+    let timer: ReturnType<typeof setTimeout>;
+    let failures = 0;
+    const poll = async () => {
+      const version = mutation.current;
+      try {
+        const response = await apiClient.getAtConnection<{ models: CodexStateSnapshot[] }>(
+          connection,
+          `/auth-files/codex/state?name=${encodeURIComponent(file.name)}`,
+          { signal: controller.signal }
+        );
+        if (
+          !controller.signal.aborted &&
+          active.current === scope &&
+          version === mutation.current &&
+          !live.current.busy
+        ) {
+          setUpdated({ scope, models: response.models });
+          setNow(Date.now());
+          setError('');
+          failures = 0;
+        }
+      } catch {
+        if (!controller.signal.aborted && active.current === scope) {
+          failures += 1;
+          if (failures >= 3) setError(t('codex_state.poll_error'));
+        }
+      }
+      if (!controller.signal.aborted && failures < 3) timer = setTimeout(() => void poll(), 1500);
+    };
+    timer = setTimeout(() => void poll(), 1500);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [state?.enabled, waiting, disabled, busy, file.name, scope, t]);
+
   const action = async (operation: string, model = '') => {
     if (busy || disabled) return;
+    mutation.current += 1;
+    const controller = new AbortController();
+    actionRequest.current?.abort();
+    actionRequest.current = controller;
+    const connection = apiClient.captureConnection();
+    const current = () => !controller.signal.aborted && active.current === scope;
     setBusy(true);
     setError('');
     try {
       const response =
         operation === 'refresh'
-          ? await apiClient.get<{ models: CodexStateSnapshot[] }>(
-              `/auth-files/codex/state?name=${encodeURIComponent(file.name)}`
+          ? await apiClient.getAtConnection<{ models: CodexStateSnapshot[] }>(
+              connection,
+              `/auth-files/codex/state?name=${encodeURIComponent(file.name)}`,
+              { signal: controller.signal }
             )
-          : await apiClient.post<{ models: CodexStateSnapshot[] }>('/auth-files/codex/state', {
-              name: file.name,
-              model,
-              action: operation,
-            });
-      if (active.current === scope) setUpdated({ scope, models: response.models });
+          : await apiClient.postAtConnection<{ models: CodexStateSnapshot[] }>(
+              connection,
+              '/auth-files/codex/state',
+              {
+                name: file.name,
+                model,
+                action: operation,
+              },
+              { signal: controller.signal }
+            );
+      if (current()) {
+        setUpdated({ scope, models: response.models });
+        setNow(Date.now());
+      }
     } catch (err) {
-      if (active.current === scope) setError(err instanceof Error ? err.message : String(err));
+      if (current()) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      if (active.current === scope) setBusy(false);
+      if (current()) setBusy(false);
     }
   };
+  if (!state?.enabled) return null;
   const valid = models.filter(
     (m) => m.expires_at && Date.parse(m.expires_at) > now && m.status !== 'paused'
   ).length;
@@ -107,6 +182,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
                   <strong>{m.model}</strong>
                   <span>{text(`status_${m.status}`)}</span>
                 </div>
+                {m.manual_only && <div className={styles.counts}>{text('manual_only')}</div>}
                 <div>
                   {m.length > 0 ? `${m.length} · ${m.digest ?? ''}` : '—'}{' '}
                   {m.expires_at &&

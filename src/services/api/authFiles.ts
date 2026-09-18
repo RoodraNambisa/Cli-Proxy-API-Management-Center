@@ -31,6 +31,13 @@ export interface GrokCatalogRefreshInfo {
 }
 
 type StatusError = { status?: number };
+export type CodexStateOptions = {
+  credentials: Array<{id: string; name: string; alias?: string; priority: number; plan: string; disabled: boolean}>;
+  models: Array<{id: string; upstream_id: string}>;
+  priorities: number[];
+  plans: string[];
+};
+export type CodexStateProxyResult = { ok: boolean; ip?: string; loc?: string; elapsed_ms?: number; error?: string; message?: string };
 export type ModelProbeRequest = {
   name: string; model: string; protocol: string; stream: boolean; upstream?: string;
   prompt?: string; max_output_tokens?: number; request_body?: Record<string, unknown>;
@@ -1344,6 +1351,14 @@ export const authFilesApi = {
     return apiClient.getAtConnection<{ models: import('@/types/authFile').CodexStateSnapshot[] }>(
       connection, `/auth-files/codex/state?name=${encodeURIComponent(name)}`, { signal }
     );
+  },
+
+  getCodexStateOptions(connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+    return apiClient.getAtConnection<CodexStateOptions>(connection, '/auth-files/codex/state/options', {signal});
+  },
+
+  checkCodexStateProxy(proxyUrl: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+    return apiClient.postAtConnection<CodexStateProxyResult>({ ...connection, timeout: 0 }, '/auth-files/codex/state/proxy/check', { 'proxy-url': proxyUrl }, { signal, timeout: 0 });
   },
 
   checkProxy(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {

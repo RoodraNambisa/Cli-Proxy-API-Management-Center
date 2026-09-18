@@ -24,6 +24,14 @@
   flex-wrap: wrap;
   gap: 6px;
   margin: 8px 0;
+  .root & > button {
+    min-height: 28px;
+    height: auto;
+    padding: 4px 8px;
+    font-size: 12px;
+    line-height: 1.4;
+    border-radius: 6px;
+  }
 }
 .model {
   border-top: 1px solid var(--border-color);

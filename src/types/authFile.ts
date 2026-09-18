@@ -18,6 +18,7 @@ export interface CodexStateSnapshot {
   last_status?: number;
   invalidations?: number;
   last_invalidation?: string;
+  manual_only?: boolean;
 }
 /**
  * 认证文件相关类型

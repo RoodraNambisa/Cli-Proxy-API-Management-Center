@@ -66,7 +66,8 @@
 }
 .table th:last-child,
 .table td:last-child {
-  width: 80px;
+  width: 1%;
+  white-space: nowrap;
 }
 .table td:nth-child(3) {
   min-width: 76px;
@@ -81,10 +82,17 @@
 }
 .modelActions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 6px;
-  align-items: flex-start;
-  min-width: 100px;
+  align-items: center;
+  .root & > button {
+    min-height: 28px;
+    height: auto;
+    padding: 4px 9px;
+    font-size: 12px;
+    line-height: 1.4;
+    border-radius: 6px;
+  }
 }
 .success {
   color: var(--success-color, #23885c);

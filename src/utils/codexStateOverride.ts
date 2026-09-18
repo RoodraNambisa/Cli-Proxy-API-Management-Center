@@ -51,6 +51,39 @@ export const splitStateList = (value: string) => [
       .filter(Boolean)
   ),
 ];
+
+export type StateListKind = 'priority' | 'credential' | 'model' | 'plan' | 'length';
+export function stateListItemError(value: string, kind: StateListKind): string | undefined {
+  if (kind === 'priority') {
+    return /^-?\d+$/.test(value) &&
+      Number.isSafeInteger(Number(value)) &&
+      Math.abs(Number(value)) <= API_KEY_PRIORITY_LIMIT
+      ? undefined
+      : 'picker_invalid_priority';
+  }
+  if (kind === 'length') {
+    return /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 8192
+      ? undefined
+      : 'picker_invalid_length';
+  }
+  return value.trim() &&
+    new TextEncoder().encode(value).length <= (kind === 'credential' ? 512 : 256) &&
+    !/[,，\r\n\0]/.test(value)
+    ? undefined
+    : 'picker_invalid_identifier';
+}
+
+export function readStateModelOverrides(value: string): Record<string, unknown>[] | undefined {
+  try {
+    const entries: unknown = JSON.parse(value || '[]');
+    return Array.isArray(entries) &&
+      entries.every((item) => item && typeof item === 'object' && !Array.isArray(item))
+      ? entries
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
 export function readCodexState(raw: unknown): CodexStateOverride {
   const s = record(raw);
   const text = (key: string, fallback: string) =>

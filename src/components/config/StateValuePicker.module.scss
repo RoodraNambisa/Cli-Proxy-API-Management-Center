@@ -1,0 +1,116 @@
+.root {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 48px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-primary);
+}
+.empty {
+  color: var(--text-secondary);
+  font-size: 13px;
+  align-self: center;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+  button {
+    flex: none;
+    display: grid;
+    place-items: center;
+    align-self: stretch;
+    width: 30px;
+    border: 0;
+    border-left: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    background: transparent;
+    cursor: pointer;
+    &:hover:not(:disabled) {
+      color: var(--danger-color);
+    }
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+}
+.entry {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  > :first-child {
+    flex: 1 1 120px;
+    min-width: 0;
+    margin: 0;
+  }
+}
+.count {
+  margin-right: auto;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.loadRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.option {
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  min-width: 0;
+}
+.optionLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-wrap: anywhere;
+  strong {
+    font-size: 14px;
+  }
+  code,
+  small {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+}
+@media (max-width: 600px) {
+  .options {
+    grid-template-columns: 1fr;
+  }
+}
