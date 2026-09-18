@@ -707,3 +707,9 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.entryActions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

@@ -1,3 +1,6 @@
+import { ProxyEntriesTransfer } from '@/components/proxyPools/ProxyEntriesTransfer';
+import { exportProxyEntries } from '@/utils/proxyTransfer';
+import { copyToClipboard } from '@/utils/clipboard';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +12,7 @@ import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { ConfigTable, ConfigTableRow, ConfigSummary } from '@/components/config/ConfigTable';
 import {
   IconCheck,
+  IconCopy,
   IconChevronDown,
   IconChevronUp,
   IconPlus,
@@ -380,6 +384,8 @@ export function ProxyPoolsPage() {
   const [checkingPool, setCheckingPool] = useState('');
   const [checkSamples, setCheckSamples] = useState<Record<string, string>>({});
   const [editor, setEditor] = useState<PoolEditorState | null>(null);
+  const [transferMode, setTransferMode] = useState<'import' | 'copy' | null>(null);
+  const [copyPool, setCopyPool] = useState<ProxyPool | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingPool, setSavingPool] = useState(false);
   const [savingRules, setSavingRules] = useState(false);
@@ -696,9 +702,28 @@ export function ProxyPoolsPage() {
     }
   };
 
-  const openCreatePool = () => setEditor({ original: null, draft: createPool() });
-  const openEditPool = (pool: ProxyPool) =>
+  const openCreatePool = () => {
+    setTransferMode(null);
+    setEditor({ original: null, draft: createPool() });
+  };
+  const openEditPool = (pool: ProxyPool) => {
+    setTransferMode(null);
     setEditor({ original: clonePool(pool), draft: clonePool(pool) });
+  };
+
+  const copyEntry = async (entry: ProxyPoolEntry) => {
+    const result = exportProxyEntries([entry]);
+    if (result.issues.length) {
+      showNotification(t(`proxy_transfer.errors.${result.issues[0].code}`), 'error');
+      return;
+    }
+    if (!result.count) return;
+    const copied = await copyToClipboard(result.text);
+    showNotification(
+      t(`proxy_transfer.${copied ? 'copied' : 'copy_failed'}`),
+      copied ? 'success' : 'error'
+    );
+  };
 
   const updatePoolDraft = (patch: Partial<ProxyPool>) => {
     setEditor((current) =>
@@ -1274,6 +1299,15 @@ export function ProxyPoolsPage() {
                         </span>
                       </div>
                       <div className={styles.rowActions}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={disabled}
+                          onClick={() => setCopyPool(clonePool(pool))}
+                        >
+                          <IconCopy size={14} />
+                          {t('proxy_transfer.copy')}
+                        </Button>
                         <div className={styles.checkSampleField}>
                           <label htmlFor={`proxy-check-sample-${pool.name}`}>
                             {t('proxy_pools.unbound_sample_label')}
@@ -1747,17 +1781,62 @@ export function ProxyPoolsPage() {
                 <h3>{t('proxy_pools.entries_title')}</h3>
                 <p>{t('proxy_pools.entries_description')}</p>
               </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  updatePoolDraft({ entries: [...editor.draft.entries, createEntry()] })
-                }
-              >
-                <IconPlus size={14} />
-                {t('proxy_pools.add_entry')}
-              </Button>
+              <div className={styles.rowActions}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={savingPool}
+                  onClick={() => setTransferMode('import')}
+                >
+                  {t('proxy_transfer.import')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={savingPool}
+                  onClick={() => setTransferMode('copy')}
+                >
+                  <IconCopy size={14} />
+                  {t('proxy_transfer.copy')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={savingPool}
+                  onClick={() =>
+                    updatePoolDraft({ entries: [...editor.draft.entries, createEntry()] })
+                  }
+                >
+                  <IconPlus size={14} />
+                  {t('proxy_pools.add_entry')}
+                </Button>
+              </div>
             </div>
+            {transferMode && (
+              <ProxyEntriesTransfer
+                key={transferMode}
+                mode={transferMode}
+                entries={editor.draft.entries}
+                disabled={savingPool}
+                onClose={() => setTransferMode(null)}
+                onImport={(added) => {
+                  updatePoolDraft({
+                    entries: [
+                      ...editor.draft.entries.filter(
+                        (entry) =>
+                          entry.id.trim() || entry['url-template'].trim() || entry.ports?.trim()
+                      ),
+                      ...added,
+                    ],
+                  });
+                  setTransferMode(null);
+                  showNotification(
+                    t('proxy_transfer.imported', { count: added.length }),
+                    'success'
+                  );
+                }}
+              />
+            )}
             <div className={styles.entryList}>
               {editor.draft.entries.map((entry, index) => (
                 <div key={index} className={styles.entryItem}>
@@ -1789,26 +1868,48 @@ export function ProxyPoolsPage() {
                     onChange={(event) => updatePoolEntry(index, { ports: event.target.value })}
                     hint={t('proxy_pools.ports_hint')}
                   />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      updatePoolDraft({
-                        entries: editor.draft.entries.filter(
-                          (_, entryIndex) => entryIndex !== index
-                        ),
-                      })
-                    }
-                    title={t('common.delete')}
-                    aria-label={t('common.delete')}
-                  >
-                    <IconTrash2 size={15} />
-                  </Button>
+                  <div className={styles.entryActions}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={savingPool || !entry['url-template'].trim()}
+                      onClick={() => void copyEntry(entry)}
+                      title={t('proxy_transfer.copy_url')}
+                      aria-label={t('proxy_transfer.copy_url')}
+                    >
+                      <IconCopy size={15} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        updatePoolDraft({
+                          entries: editor.draft.entries.filter(
+                            (_, entryIndex) => entryIndex !== index
+                          ),
+                        })
+                      }
+                      title={t('common.delete')}
+                      aria-label={t('common.delete')}
+                    >
+                      <IconTrash2 size={15} />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         ) : null}
+      </Modal>
+      <Modal
+        open={Boolean(copyPool)}
+        title={
+          copyPool ? `${t('proxy_transfer.copy')} · ${copyPool.name}` : t('proxy_transfer.copy')
+        }
+        onClose={() => setCopyPool(null)}
+        width={760}
+      >
+        {copyPool && <ProxyEntriesTransfer mode="copy" entries={copyPool.entries} />}
       </Modal>
     </div>
   );
