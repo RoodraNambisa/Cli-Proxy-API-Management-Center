@@ -1,3 +1,4 @@
+import { DEFAULT_CODEX_QUOTA_AUTO_DISABLE, type CodexQuotaAutoDisableConfig } from '@/utils/codexQuotaAutoDisable';
 import { DEFAULT_GROK_CONFIG, type GrokVisualConfig } from './grok';
 import { DEFAULT_RESPONSE_MODEL_REWRITE, type ResponseModelRewriteConfig } from '@/utils/responseModelRewrite';
 import type {
@@ -63,6 +64,7 @@ export type VisualConfigFieldPath =
   | 'fixedErrorCooldowns'
   | 'errorResponseRewrites'
   | 'responseModelRewrite'
+  | 'codexQuotaAutoDisable'
   | 'nonRetryableErrors'
   | 'oauthRequestScopedErrors'
   | 'authModelExclusions'
@@ -114,6 +116,7 @@ export type VisualConfigValidationErrorCode =
   | 'auth_model_exclusion_models_required'
   | 'auth_model_exclusion_match_required'
   | 'integer_list'
+  | 'codex_quota_auto_disable'
   | 'http_status_list'
   | 'codex_custom_model_id_required'
   | 'codex_custom_model_id_duplicate'
@@ -342,6 +345,7 @@ export type VisualConfigValues = {
   codexStreamBootstrapBuffering: boolean;
   codexEstimateClaudeInputTokens: boolean;
   codexObserveQuota: boolean;
+  codexQuotaAutoDisable: CodexQuotaAutoDisableConfig;
   codexOrphanDelegationCompatibility: boolean;
   codexOptimizeMultiAgentV2: boolean;
   codexSpoofSessionIdentity: boolean;
@@ -478,6 +482,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexStreamBootstrapBuffering: false,
   codexEstimateClaudeInputTokens: false,
   codexObserveQuota: false,
+  codexQuotaAutoDisable: DEFAULT_CODEX_QUOTA_AUTO_DISABLE,
   codexOrphanDelegationCompatibility: false,
   codexOptimizeMultiAgentV2: false,
   codexSpoofSessionIdentity: false,

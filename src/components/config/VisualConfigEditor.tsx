@@ -1,3 +1,4 @@
+import { CodexQuotaAutoDisableEditor } from './CodexQuotaAutoDisableEditor';
 import { ChatGptWebLibraryCleanup } from './ChatGptWebLibraryCleanup';
 import { GrokConfigEditor } from './GrokConfigEditor';
 import {
@@ -1769,6 +1770,7 @@ export function VisualConfigEditor({
       'provider-codex':
         authSectionErrorCount +
         countErrors([
+          'codexQuotaAutoDisable',
           'codexFingerprintSessionIdentityPoolSize',
           'disabledImageGenerationToolError.statusCode',
           'images.unsupportedStatusCode',
@@ -5217,8 +5219,9 @@ export function VisualConfigEditor({
                   <SettingsDisclosure id="config-codex-request-policies"
                     title={t('config_management.settings_center.codex_groups.requests')}
                     description={t('config_management.settings_center.codex_groups.requests_desc')}
-                    focusTarget={focusTarget} targetIds={['config-codex-prompt-cache', 'config-codex-stream-bootstrap', 'config-codex-input-token-estimate', 'config-codex-quota-observation']}
-                    dirty={hasDirtyConfigField(dirtyFields, ['codexPassthroughPromptCacheKey', 'codexStreamBootstrapBuffering', 'codexEstimateClaudeInputTokens', 'codexObserveQuota'])}
+                    focusTarget={focusTarget} targetIds={['config-codex-prompt-cache', 'config-codex-stream-bootstrap', 'config-codex-input-token-estimate', 'config-codex-quota-observation', 'config-codex-quota-auto-disable']}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexPassthroughPromptCacheKey', 'codexStreamBootstrapBuffering', 'codexEstimateClaudeInputTokens', 'codexObserveQuota', 'codexQuotaAutoDisable'])}
+                    errorCount={countErrors(['codexQuotaAutoDisable'])}
                   >
                     <SectionGrid>
                 <div id="config-codex-prompt-cache">
@@ -5268,6 +5271,13 @@ export function VisualConfigEditor({
                 </div>
 
                     </SectionGrid>
+                    <CodexQuotaAutoDisableEditor
+                      value={values.codexQuotaAutoDisable}
+                      observing={values.codexObserveQuota}
+                      onChange={codexQuotaAutoDisable => onChange({ codexQuotaAutoDisable })}
+                      disabled={disabled} focusTarget={focusTarget}
+                      dirty={hasDirtyConfigField(dirtyFields, ['codexQuotaAutoDisable'])}
+                    />
                   </SettingsDisclosure>
                 </PageGroup>
 

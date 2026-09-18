@@ -1,0 +1,28 @@
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.fields,
+.thresholds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.thresholds {
+  margin-top: 16px;
+}
+.field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+@media (max-width: 720px) {
+  .fields,
+  .thresholds {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

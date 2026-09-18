@@ -1,3 +1,4 @@
+import { readCodexQuotaAutoDisable, codexQuotaAutoDisableEqual, codexQuotaAutoDisableError, writeCodexQuotaAutoDisable } from '@/utils/codexQuotaAutoDisable';
 import { grokConfigErrors, readGrokConfig, writeGrokConfig } from '@/utils/grokConfig';
 import { readResponseModelRewrite, responseModelRewriteEqual, responseModelRewriteError, writeResponseModelRewrite } from '@/utils/responseModelRewrite';
 import { useCallback, useMemo, useReducer } from 'react';
@@ -1731,6 +1732,7 @@ export function getVisualConfigValidationErrors(
     ...errorResponseRewriteErrors,
     ...codexLiveMediaErrors(values.codexLiveMediaRelay),
     ...grokConfigErrors(values.grok),
+    codexQuotaAutoDisable: codexQuotaAutoDisableError(values.codexQuotaAutoDisable) ? 'codex_quota_auto_disable' : undefined,
     responseModelRewrite: responseModelRewriteError(values.responseModelRewrite) ? 'integer_list' : undefined,
     ...nonRetryableErrorErrors,
     ...oauthRequestScopedErrorErrors,
@@ -2792,6 +2794,9 @@ function getNextDirtyFields(
       )
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexQuotaAutoDisable')) {
+    updateDirty('codexQuotaAutoDisable', codexQuotaAutoDisableEqual(nextValues.codexQuotaAutoDisable, baselineValues.codexQuotaAutoDisable));
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'responseModelRewrite')) {
     updateDirty('responseModelRewrite', responseModelRewriteEqual(nextValues.responseModelRewrite, baselineValues.responseModelRewrite));
   }
@@ -3485,6 +3490,7 @@ export function useVisualConfig() {
         codexStreamBootstrapBuffering: codexStreamBootstrapBuffering ?? false,
         codexEstimateClaudeInputTokens: codexEstimateClaudeInputTokens ?? false,
         codexObserveQuota: codexObserveQuota ?? false,
+        codexQuotaAutoDisable: readCodexQuotaAutoDisable(codex?.['quota-auto-disable']),
         codexOrphanDelegationCompatibility: codexOrphanDelegationCompatibility ?? false,
         codexOptimizeMultiAgentV2: codexOptimizeMultiAgentV2 ?? false,
         codexSpoofSessionIdentity: Boolean(
@@ -4068,12 +4074,14 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
         const inheritedCodex = asRecord(readMergedYamlField(doc, ['codex']));
+        const quotaDisableChanged = !codexQuotaAutoDisableEqual(values.codexQuotaAutoDisable, baselineValues.codexQuotaAutoDisable);
         const mediaChanged = !codexLiveMediaEqual(values.codexLiveMediaRelay, baselineValues.codexLiveMediaRelay);
         if (
           docHas(doc, ['codex']) ||
           inheritedCodex ||
           values.codexLiveEnabled ||
           mediaChanged ||
+          quotaDisableChanged ||
           values.codexIdentityConfuse ||
           values.codexPassthroughPromptCacheKey ||
           values.codexStreamBootstrapBuffering ||
@@ -4093,6 +4101,7 @@ export function useVisualConfig() {
           ensureMapInDoc(doc, ['codex']);
           doc.setIn(['codex', 'live-enabled'], values.codexLiveEnabled);
           doc.deleteIn(['codex', 'liveEnabled']);
+          if (quotaDisableChanged) writeCodexQuotaAutoDisable(doc, values.codexQuotaAutoDisable);
           if (mediaChanged) writeCodexLiveMediaYaml(doc, values.codexLiveMediaRelay);
           doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
           doc.setIn(['codex', 'passthrough-prompt-cache-key'], values.codexPassthroughPromptCacheKey);
@@ -5066,7 +5075,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [state.dirtyFields, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [state.dirtyFields, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {

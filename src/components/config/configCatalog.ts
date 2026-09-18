@@ -131,6 +131,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'codexStreamBootstrapBuffering',
       'codexEstimateClaudeInputTokens',
       'codexObserveQuota',
+      'codexQuotaAutoDisable',
       'codexOrphanDelegationCompatibility',
       'codexOptimizeMultiAgentV2',
       'codexSpoofSessionIdentity',
@@ -660,6 +661,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.codex_estimate_claude_input_tokens',
     yamlKeys: ['codex.estimate-claude-input-tokens'],
     aliases: ['message_start', 'input_tokens', 'token estimate', 'token 估算', 'token 估計', 'оценка токенов'],
+  },
+  {
+    id: 'config-codex-quota-auto-disable',
+    pageId: 'provider-codex',
+    labelKey: 'codex_quota_auto_disable.title',
+    yamlKeys: ['codex.quota-auto-disable'],
+    aliases: ['weekly quota', 'five hour', '自动禁用', '自動停用', '周额度', '5小时', '300', '10080'],
   },
   {
     id: 'config-codex-quota-observation',
