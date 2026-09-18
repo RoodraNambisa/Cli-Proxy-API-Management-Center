@@ -1,6 +1,6 @@
 import type { GrokModelRoute } from '@/utils/grokModelRouting';
 /**
- * 认证文件与 OAuth 排除模型相关 API
+ * Credential files and OAuth model-exclusion APIs.
  */
 
 import { apiClient, type ApiClientConnectionSnapshot } from './client';
@@ -19,6 +19,7 @@ import { normalizeCodexQuotaObservation } from '@/utils/codexQuotaObservation';
 import { parseTimestampMs } from '@/utils/timestamp';
 import { AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS, AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
 import { mapWithConcurrency } from '@/utils/concurrency';
+import type { CredentialProxyBinding } from '@/utils/proxyBinding';
 import { normalizeRequestScopedErrors, serializeRequestScopedErrors } from '@/utils/requestScopedErrors';
 
 export interface GrokCatalogRefreshInfo {
@@ -33,6 +34,7 @@ type StatusError = { status?: number };
 export type ModelProbeRequest = {
   name: string; model: string; protocol: string; stream: boolean; upstream?: string;
   prompt?: string; max_output_tokens?: number; request_body?: Record<string, unknown>;
+  codex_state?: { mode: 'configured' | 'none' | 'custom' | 'managed'; 'x-codex-turn-state'?: string };
 };
 export type ModelProbeUsage = {
   input_tokens?: number; output_tokens?: number; total_tokens?: number;
@@ -45,6 +47,10 @@ export type ModelProbeResult = {
   finish_reason?: string; response?: string; error?: string; usage?: ModelProbeUsage;
   request_body?: string; upstream_request_body?: string; response_body?: string;
   details_truncated?: boolean;
+  codex_state?: {
+    mode: string; source: string; sent_length: number; sent_digest?: string;
+    returned_length: number; returned_digest?: string; 'x-codex-turn-state'?: string;
+  };
 };
 type RawHeaders = Record<string, unknown> | undefined;
 type AuthFileStatusResponse = { status: string; disabled: boolean };
@@ -57,6 +63,7 @@ export type AuthFileFieldsPatch = {
   xai_model_routes?: GrokModelRoute[];
   prefix?: string;
   proxy_url?: string;
+  proxy_binding?: CredentialProxyBinding | null;
   headers?: Record<string, string>;
   priority?: number | null;
   weight?: number | null;
@@ -1231,10 +1238,19 @@ export const authFilesApi = {
 
   saveText: (name: string, text: string) => saveAuthFileText(name, text),
 
+  replaceContent: (
+    name: string,
+    original: Record<string, unknown>,
+    content: Record<string, unknown>,
+    connection: ApiClientConnectionSnapshot
+  ) => apiClient.putAtConnection<{ status: string }>(connection, '/auth-files/content', {
+    name, original, content,
+  }),
+
   saveJsonObject: (name: string, json: Record<string, unknown>) =>
     saveAuthFileText(name, JSON.stringify(json)),
 
-  // OAuth 排除模型
+  // OAuth model exclusions
   async getOauthExcludedModels(): Promise<Record<string, string[]>> {
     const data = await apiClient.get('/oauth-excluded-models');
     return normalizeOauthExcludedModels(data);
@@ -1249,7 +1265,7 @@ export const authFilesApi = {
   replaceOauthExcludedModels: (map: Record<string, string[]>) =>
     apiClient.put('/oauth-excluded-models', normalizeOauthExcludedModels(map)),
 
-  // OAuth 模型别名
+  // OAuth model aliases
   async getOauthModelAlias(): Promise<Record<string, OAuthModelAliasEntry[]>> {
     const data = await apiClient.get(OAUTH_MODEL_ALIAS_ENDPOINT);
     return normalizeOauthModelAlias(data);
@@ -1291,7 +1307,7 @@ export const authFilesApi = {
     }
   },
 
-  // 获取认证凭证支持的模型
+  // Fetch models supported by a credential
   refreshXAIModels(name: string, connection: ApiClientConnectionSnapshot, signal?: AbortSignal) {
     return apiClient.postAtConnection<GrokCatalogRefreshInfo & { models: AuthFileModelItem[] }>(connection, '/auth-files/xai/models/refresh', { name }, { signal });
   },
@@ -1330,7 +1346,7 @@ export const authFilesApi = {
     );
   },
 
-  // 获取指定 channel 的模型定义
+  // Fetch model definitions for a channel
   async getModelDefinitions(
     channel: string
   ): Promise<{ id: string; display_name?: string; type?: string; owned_by?: string }[]> {

@@ -2409,6 +2409,10 @@
 }
 
 .prefixProxyFields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
   display: grid;
   grid-template-columns: 1fr;
   gap: $spacing-sm;

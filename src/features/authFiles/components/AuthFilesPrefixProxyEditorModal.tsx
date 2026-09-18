@@ -41,7 +41,10 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
       return text;
     }
   };
-  const previewText = formatJsonText(updatedText);
+  const previewText =
+    editor?.jsonError || (editor?.sourceEdited && !editor.touchedFields?.length)
+      ? editor.rawText
+      : formatJsonText(updatedText);
   const invalidBaseUrl = Boolean(
     editor?.isXaiFile &&
     editor.baseUrlTouched &&
@@ -86,6 +89,7 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                 !updatedText ||
                 !editor?.json ||
                 invalidBaseUrl ||
+                Boolean(editor?.jsonError || editor?.proxyBindingError) ||
                 Boolean(editor?.headersTouched && editor.headersError) ||
                 Boolean(
                   editor?.isChatGptWebFile &&
@@ -129,13 +133,24 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                 <textarea
                   className={styles.prefixProxyTextarea}
                   rows={10}
-                  readOnly
+                  readOnly={editor.readOnly}
+                  disabled={disableControls || editor.saving}
+                  spellCheck={false}
+                  autoComplete="off"
+                  aria-invalid={Boolean(editor.jsonError)}
                   aria-label={t('auth_files.prefix_proxy_source_label')}
                   value={previewText}
+                  onChange={(event) => onChange('rawText', event.target.value)}
                 />
+                {editor.jsonError && (
+                  <div className="error-box" role="alert">
+                    {editor.jsonError}
+                  </div>
+                )}
+                {!editor.readOnly && <div className="hint">{t('auth_files.json_edit_hint')}</div>}
               </div>
               {!editor.readOnly && (
-                <div className={styles.prefixProxyFields}>
+                <fieldset className={styles.prefixProxyFields} disabled={Boolean(editor.jsonError)}>
                   {editor.isXaiFile && (
                     <>
                       <div className="form-group">
@@ -165,9 +180,20 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                       )}
                     </>
                   )}
-                  {editor.isXaiFile && <SettingsDisclosure id="auth-file-grok-model-routing" title={t('grok_routing.title')} dirty={editor.grokRoutingTouched}>
-                    <GrokModelRoutingEditor credential value={editor.grokRouting ?? emptyGrokModelRouting()} disabled={disableControls || editor.saving || !editor.json} onChange={(value) => onChange('grokRouting', value)} />
-                  </SettingsDisclosure>}
+                  {editor.isXaiFile && (
+                    <SettingsDisclosure
+                      id="auth-file-grok-model-routing"
+                      title={t('grok_routing.title')}
+                      dirty={editor.grokRoutingTouched}
+                    >
+                      <GrokModelRoutingEditor
+                        credential
+                        value={editor.grokRouting ?? emptyGrokModelRouting()}
+                        disabled={disableControls || editor.saving || !editor.json}
+                        onChange={(value) => onChange('grokRouting', value)}
+                      />
+                    </SettingsDisclosure>
+                  )}
                   {editor.isChatGptWebFile && (
                     <>
                       <div className="form-group">
@@ -224,9 +250,34 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                     disabled={disableControls || editor.saving || !editor.json}
                     onChange={(e) => onChange('proxyUrl', e.target.value)}
                   />
+                  <div className="form-group">
+                    <label htmlFor="auth-file-proxy-binding">
+                      {t('auth_files.proxy_binding_label')}
+                    </label>
+                    <textarea
+                      id="auth-file-proxy-binding"
+                      className={`${styles.prefixProxyTextarea} ${editor.proxyBindingError ? styles.prefixProxyTextareaInvalid : ''}`}
+                      rows={6}
+                      value={editor.proxyBindingText ?? ''}
+                      disabled={disableControls || editor.saving || !editor.json}
+                      spellCheck={false}
+                      autoComplete="off"
+                      aria-invalid={Boolean(editor.proxyBindingError)}
+                      placeholder={'{"version":1,"node_id":"…","port":1080,"placeholders":[]}'}
+                      onChange={(event) => onChange('proxyBindingText', event.target.value)}
+                    />
+                    {editor.proxyBindingError && (
+                      <div className="error-box" role="alert">
+                        {editor.proxyBindingError}
+                      </div>
+                    )}
+                    <div className="hint">{t('auth_files.proxy_binding_hint')}</div>
+                  </div>
                   <CredentialWeightInput
                     value={editor.weight.trim() === '' ? undefined : Number(editor.weight)}
-                    onChange={(weight) => onChange('weight', weight === undefined ? '' : String(weight))}
+                    onChange={(weight) =>
+                      onChange('weight', weight === undefined ? '' : String(weight))
+                    }
                     disabled={disableControls || editor.saving || !editor.json}
                   />
                   <Input
@@ -271,9 +322,11 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                     disabled={disableControls || editor.saving || !editor.json}
                     onChange={(e) => onChange('disableCooling', e.target.value)}
                   />
-                  <CredentialRequestScopedErrorsEditor value={editor.requestScopedErrors}
+                  <CredentialRequestScopedErrorsEditor
+                    value={editor.requestScopedErrors}
                     onChange={(rules) => onChange('requestScopedErrors', rules)}
-                    disabled={disableControls || editor.saving || !editor.json} />
+                    disabled={disableControls || editor.saving || !editor.json}
+                  />
                   <Input
                     label={t('auth_files.note_label')}
                     value={editor.note}
@@ -321,7 +374,7 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                       </div>
                     </>
                   )}
-                </div>
+                </fieldset>
               )}
             </>
           )}
