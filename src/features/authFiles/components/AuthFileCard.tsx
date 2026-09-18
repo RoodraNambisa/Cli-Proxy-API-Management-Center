@@ -47,6 +47,7 @@ import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQu
 import { CodexQuotaObservationPanel } from '@/features/authFiles/components/CodexQuotaObservationPanel';
 import { AuthFileUsageStatsPanel } from '@/features/authFiles/components/AuthFileUsageStatsPanel';
 import { AuthFileProxyStatus } from '@/features/authFiles/components/AuthFileProxyStatus';
+import { AuthFileResponseModelStatus } from '@/features/authFiles/components/AuthFileResponseModelStatus';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
 const CHATGPT_WEB_CRITICAL_LIFECYCLE_STATES = new Set([
@@ -540,6 +541,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
           </div>
 
           <AuthFileProxyStatus file={file} disabled={disableControls || isRetiredGeminiCli} />
+          <AuthFileResponseModelStatus file={file} disabled={disableControls || isRetiredGeminiCli} />
 
           {codexPlanDisplay && (
             <div className={styles.codexPlan}>

@@ -89,6 +89,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'nonRetryableErrors',
       'oauthRequestScopedErrors',
       'errorResponseRewrites',
+      'responseModelRewrite',
       'fixedErrorCooldowns',
       'noCooldownStatusCodes',
     ],
@@ -212,6 +213,7 @@ export const CONFIG_PAGE_IDS = new Set<ConfigPageId>(
 );
 
 export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
+  { id: 'config-response-model-rewrite', pageId: 'global-request', labelKey: 'response_model_rewrite.title', yamlKeys: ['response-model-rewrite', 'response-model-rewrite.enabled', 'response-model-rewrite.rules'], aliases: ['model name', '返回模型', '响应模型', '转换'] },
   {
     id: 'config-frontend-features',
     pageId: 'global-interface',

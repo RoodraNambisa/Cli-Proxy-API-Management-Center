@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ResponseModelRewriteEditor } from './ResponseModelRewriteEditor';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -1739,6 +1740,7 @@ export function VisualConfigEditor({
           'routingPerAuthRequestWindowMinutes',
         ]) + routingPriorityOverridesErrorCount,
       'global-request':
+        countErrors(['responseModelRewrite']) +
         nonRetryableErrorsErrorCount +
         oauthRequestScopedErrorsErrorCount +
         errorResponseRewritesErrorCount +
@@ -4779,6 +4781,8 @@ export function VisualConfigEditor({
                 </PageGroup>
 
                 <PageGroup active={activePageId === 'global-request'}>
+                  <ResponseModelRewriteEditor value={values.responseModelRewrite} onChange={responseModelRewrite => onChange({ responseModelRewrite })}
+                    disabled={disabled} focusTarget={focusTarget} dirty={hasDirtyConfigField(dirtyFields, ['responseModelRewrite'])} />
                   <SettingsDisclosure
                     id="config-error-response-rewrites"
                     title={t('config_management.visual.sections.network.error_response_rewrites')}

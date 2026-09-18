@@ -1,4 +1,5 @@
 import { DEFAULT_GROK_CONFIG, type GrokVisualConfig } from './grok';
+import { DEFAULT_RESPONSE_MODEL_REWRITE, type ResponseModelRewriteConfig } from '@/utils/responseModelRewrite';
 import type {
   CodexCustomModelGroup,
   CodexFingerprintDefaultMode,
@@ -61,6 +62,7 @@ export type VisualConfigFieldPath =
   | 'routingPerAuthRequestWindowMinutes'
   | 'fixedErrorCooldowns'
   | 'errorResponseRewrites'
+  | 'responseModelRewrite'
   | 'nonRetryableErrors'
   | 'oauthRequestScopedErrors'
   | 'authModelExclusions'
@@ -399,6 +401,7 @@ export type VisualConfigValues = {
   noCooldownStatusCodes: string;
   fixedErrorCooldowns: FixedErrorCooldownVisualEntry[];
   errorResponseRewrites: ErrorResponseRewriteVisualEntry[];
+  responseModelRewrite: ResponseModelRewriteConfig;
   nonRetryableErrors: NonRetryableErrorVisualEntry[];
   oauthRequestScopedErrors: OAuthRequestScopedErrors;
   authModelExclusions: AuthModelExclusionVisualEntry[];
@@ -534,6 +537,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   noCooldownStatusCodes: '',
   fixedErrorCooldowns: [],
   errorResponseRewrites: [],
+  responseModelRewrite: DEFAULT_RESPONSE_MODEL_REWRITE,
   oauthRequestScopedErrors: {},
   nonRetryableErrors: [
     {

@@ -1,4 +1,13 @@
 {
+  "response_model_rewrite": {
+    "title": "回應模型名稱", "card_title": "模型名稱轉換", "enabled": "已啟用", "disabled": "未啟用", "conditional": "條件啟用",
+    "help": "僅將回應中的模型名稱改為用戶端請求值，不改變實際執行模型。不同條件之間為 AND，同一條件內為 OR；留空表示不限。無規則時不轉換。固定憑證測試及管理頁檢測保留原值。",
+    "add": "新增規則", "rule": "規則", "scope": "憑證範圍", "models": "請求模型", "providers": "提供方", "priorities": "憑證優先級", "credentials": "憑證短 ID", "all": "全部", "choose": "選擇提供方",
+    "invalid": "請檢查規則：優先級必須是安全範圍內的整數，各條件最多 128 項，識別字串不超過 256 位元組且不能包含換行。", "no_rules": "暫無轉換規則",
+    "details": "模型名稱轉換詳情", "count": "已轉換 {{count}} 次", "status": "目前狀態", "total": "累計轉換請求", "since": "統計起點", "effective_rules": "生效規則與請求模型", "no_match": "目前無生效規則",
+    "history_scope": "本次服務執行期間統計，重新啟動歸零；每個轉換請求計一次，保留最近 20 筆。原始模型欄位取自改寫前的回應，不代表對實際執行模型的獨立驗證。",
+    "time": "時間", "requested": "請求模型", "original": "原始回應模型", "returned": "對外回應模型", "mode": "模式", "stream": "串流", "nonstream": "非串流", "empty": "暫無轉換紀錄", "loading": "正在載入"
+  },
   "library_cleanup": {
     "source_manual": "手動清理",
     "source_automatic": "儲存不足觸發的自動清理",

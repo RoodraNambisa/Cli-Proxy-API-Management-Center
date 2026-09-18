@@ -142,6 +142,7 @@ export interface CodexObservedQuotaWindow {
 }
 
 export interface AuthFileItem {
+  response_model_rewrite?: import('@/utils/responseModelRewrite').ResponseModelRewriteSummary;
   routing_alias?: string;
   base_url?: string;
   upstream_base_url?: string;

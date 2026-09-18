@@ -1,4 +1,5 @@
 import { grokConfigErrors, readGrokConfig, writeGrokConfig } from '@/utils/grokConfig';
+import { readResponseModelRewrite, responseModelRewriteEqual, responseModelRewriteError, writeResponseModelRewrite } from '@/utils/responseModelRewrite';
 import { useCallback, useMemo, useReducer } from 'react';
 import { apiKeyNamesEqual, normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
 import { writeApiKeyNamesYaml } from '@/utils/apiKeyNamesYaml';
@@ -1730,6 +1731,7 @@ export function getVisualConfigValidationErrors(
     ...errorResponseRewriteErrors,
     ...codexLiveMediaErrors(values.codexLiveMediaRelay),
     ...grokConfigErrors(values.grok),
+    responseModelRewrite: responseModelRewriteError(values.responseModelRewrite) ? 'integer_list' : undefined,
     ...nonRetryableErrorErrors,
     ...oauthRequestScopedErrorErrors,
     ...authModelExclusionErrors,
@@ -2790,6 +2792,9 @@ function getNextDirtyFields(
       )
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'responseModelRewrite')) {
+    updateDirty('responseModelRewrite', responseModelRewriteEqual(nextValues.responseModelRewrite, baselineValues.responseModelRewrite));
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'nonRetryableErrors')) {
     updateDirty(
       'nonRetryableErrors',
@@ -3696,6 +3701,7 @@ export function useVisualConfig() {
         errorResponseRewrites: parseErrorResponseRewrites(
           preciseParsed['error-response-rewrites'] ?? preciseParsed.errorResponseRewrites
         ),
+        responseModelRewrite: readResponseModelRewrite(preciseParsed['response-model-rewrite']),
         nonRetryableErrors: Object.prototype.hasOwnProperty.call(parsed, 'non-retryable-errors')
           ? parseNonRetryableErrors(parsed['non-retryable-errors'])
           : Object.prototype.hasOwnProperty.call(parsed, 'nonRetryableErrors')
@@ -4316,6 +4322,9 @@ export function useVisualConfig() {
             ['non-retryable-errors'],
             serializeNonRetryableErrorsForYaml(values.nonRetryableErrors)
           );
+        }
+        if (!responseModelRewriteEqual(values.responseModelRewrite, baselineValues.responseModelRewrite)) {
+          writeResponseModelRewrite(doc, values.responseModelRewrite);
         }
         if (docHas(doc, ['auth-model-exclusions']) || values.authModelExclusions.length > 0) {
           doc.setIn(
@@ -5057,7 +5066,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [state.dirtyFields, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [state.dirtyFields, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {

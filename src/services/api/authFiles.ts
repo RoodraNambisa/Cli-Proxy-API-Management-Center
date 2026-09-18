@@ -1324,6 +1324,12 @@ export const authFilesApi = {
     );
   },
 
+  responseModelRewrite(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+    return apiClient.getAtConnection<import('@/utils/responseModelRewrite').ResponseModelRewriteSummary>(
+      connection, `/auth-files/response-model-rewrite?name=${encodeURIComponent(name)}`, { signal }
+    );
+  },
+
   // 获取指定 channel 的模型定义
   async getModelDefinitions(
     channel: string

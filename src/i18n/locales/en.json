@@ -1,4 +1,13 @@
 {
+  "response_model_rewrite": {
+    "title": "Response Model Name", "card_title": "Model name rewrite", "enabled": "Enabled", "disabled": "Disabled", "conditional": "Conditional",
+    "help": "Replaces response model names with the client-requested name without changing the executed model. Conditions use AND; values within a condition use OR. Empty conditions match all. No rules means no rewriting. Credential tests retain original values.",
+    "add": "Add rule", "rule": "Rule", "scope": "Credential scope", "models": "Request models", "providers": "Providers", "priorities": "Credential priorities", "credentials": "Credential short IDs", "all": "All", "choose": "Choose providers",
+    "invalid": "Check rules: priorities must be safe integers; each condition supports 128 entries, with identifiers up to 256 bytes and no line breaks.", "no_rules": "No rewrite rules",
+    "details": "Model Name Rewrite Details", "count": "{{count}} rewritten", "status": "Current status", "total": "Rewritten requests", "since": "Tracking since", "effective_rules": "Active rules and request models", "no_match": "No active rules",
+    "history_scope": "Counters reset on server restart. Each rewritten request counts once; the latest 20 records are retained. Original model names come from the response before rewriting and are not independent verification of the executed model.",
+    "time": "Time", "requested": "Requested model", "original": "Original response model", "returned": "Client response model", "mode": "Mode", "stream": "Streaming", "nonstream": "Non-streaming", "empty": "No rewrite records", "loading": "Loading"
+  },
   "library_cleanup": {
     "source_manual": "Manual cleanup",
     "source_automatic": "Automatic cleanup after storage rejection",
