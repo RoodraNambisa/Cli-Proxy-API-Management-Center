@@ -218,6 +218,77 @@ describe('credential model connection tests', () => {
     expect(screen.getByText('https://api.x.ai/v1/responses')).toBeTruthy();
   });
 
+  it('sets temporary Codex State, exposes its returned value and reuses it on demand', async () => {
+    const returned = 'returned-state';
+    const probe = vi.spyOn(authFilesApi, 'probeModel').mockResolvedValue({
+      ...result,
+      model: 'gpt-test',
+      codex_state: {
+        mode: 'custom',
+        source: 'custom',
+        sent_length: 12,
+        sent_digest: 'sent-digest',
+        returned_length: returned.length,
+        returned_digest: 'returned-digest',
+        'x-codex-turn-state': returned,
+      },
+    });
+    const copy = vi.spyOn(clipboard, 'copyToClipboard').mockResolvedValue(true);
+    render(
+      <AuthFileModelProbe fileName="codex.json" provider="codex" models={[{ id: 'gpt-test' }]} />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'model_probe.state_mode' }));
+    fireEvent.click(screen.getByRole('option', { name: 'model_probe.state_modes.custom' }));
+    const button = screen.getByRole('button', {
+      name: 'model_probe.test gpt-test',
+    }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    fireEvent.change(screen.getByRole('textbox', { name: /model_probe.custom_state/ }), {
+      target: { value: 'manual-state' },
+    });
+    fireEvent.click(button);
+    await waitFor(() => expect(screen.getByText('model_probe.states.success')).toBeTruthy());
+    expect(probe.mock.calls[0][0].codex_state).toEqual({
+      mode: 'custom',
+      'x-codex-turn-state': 'manual-state',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'model_probe.details gpt-test' }));
+    const details = within(screen.getByRole('dialog'));
+    expect(details.getByText('model_probe.state_sources.custom')).toBeTruthy();
+    expect(details.getByText('sent-digest')).toBeTruthy();
+    fireEvent.click(details.getByText('model_probe.returned_state', { selector: 'summary' }));
+    expect(details.getByText(returned)).toBeTruthy();
+    fireEvent.click(details.getByRole('button', { name: 'model_probe.copy_state' }));
+    await waitFor(() => expect(copy).toHaveBeenLastCalledWith(returned));
+    fireEvent.click(details.getByRole('button', { name: 'model_probe.use_state' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(
+      (screen.getByRole('textbox', { name: /model_probe.custom_state/ }) as HTMLTextAreaElement)
+        .value
+    ).toBe(returned);
+    fireEvent.click(screen.getByRole('button', { name: 'model_probe.test gpt-test' }));
+    await waitFor(() => expect(probe).toHaveBeenCalledTimes(2));
+    expect(probe.mock.calls[1][0].codex_state).toEqual({
+      mode: 'custom',
+      'x-codex-turn-state': returned,
+    });
+  });
+
+  it.each(['managed', 'none'])(
+    'selects %s State without carrying temporary input',
+    async (mode) => {
+      const probe = vi.spyOn(authFilesApi, 'probeModel').mockResolvedValue(result);
+      render(
+        <AuthFileModelProbe fileName="codex.json" provider="codex" models={[{ id: 'gpt-test' }]} />
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'model_probe.state_mode' }));
+      fireEvent.click(screen.getByRole('option', { name: `model_probe.state_modes.${mode}` }));
+      fireEvent.click(screen.getByRole('button', { name: 'model_probe.test gpt-test' }));
+      await waitFor(() => expect(probe).toHaveBeenCalledTimes(1));
+      expect(probe.mock.calls[0][0].codex_state).toEqual({ mode });
+    }
+  );
+
   it('tests the chosen Grok node and protocol sequentially and selects successes', async () => {
     const probe = vi
       .spyOn(authFilesApi, 'probeModel')

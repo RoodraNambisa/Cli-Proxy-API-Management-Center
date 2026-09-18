@@ -192,6 +192,10 @@
 .rawDetails pre {
   font-size: 12px;
 }
+.stateValue {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 680px) {
   .requestEditor,
   .detailMetadata {

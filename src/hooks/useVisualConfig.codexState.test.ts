@@ -14,11 +14,11 @@ describe('Codex state settings integration',()=>{
   it('saves settings independently and rejects a conflicting strip policy',()=>{
     const source='codex:\n  turn-state-policy: strip\n  state-override:\n    enabled: false\n    extension: retained\n';
     const {result}=renderHook(()=>useVisualConfig());act(()=>result.current.loadVisualValuesFromYaml(source));
-    act(()=>result.current.setVisualValues({codexStateOverride:{...result.current.visualValues.codexStateOverride,enabled:true,models:'gpt-6-astra',priorities:'0, 3','max-attempts':'3'}}));
+    act(()=>result.current.setVisualValues({codexStateOverride:{...result.current.visualValues.codexStateOverride,enabled:true,models:'gpt-6-astra',priorities:'0, 3','included-credentials':'extra-zero','max-attempts':'3'}}));
     expect(getVisualConfigValidationErrors(result.current.visualValues).codexStateOverride).toBe('codex_state_override');
     act(()=>result.current.setVisualValues({codexTurnStatePolicy:'guard-cross-account'}));
     const output=result.current.applyVisualChangesToYaml(source);
-    expect(parse(output).codex['state-override']).toMatchObject({enabled:true,models:['gpt-6-astra'],priorities:[0,3],'max-attempts':3,extension:'retained'});
+    expect(parse(output).codex['state-override']).toMatchObject({enabled:true,models:['gpt-6-astra'],priorities:[0,3],'included-credentials':['extra-zero'],'max-attempts':3,extension:'retained'});
     act(()=>result.current.loadVisualValuesFromYaml(output));expect(result.current.visualDirty).toBe(false);
   });
 });

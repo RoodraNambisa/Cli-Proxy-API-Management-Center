@@ -14,6 +14,7 @@ export type StateNumberField = keyof typeof STATE_NUMBER_DEFAULTS;
 export type CodexStateOverride = Record<StateNumberField, string> & {
   enabled: boolean;
   priorities: string;
+  'included-credentials': string;
   models: string;
   'excluded-credentials': string;
   mode: string;
@@ -52,6 +53,7 @@ export function readCodexState(raw: unknown): CodexStateOverride {
     'model-overrides': JSON.stringify(s['model-overrides'] ?? [], null, 2),
     enabled: s.enabled === true,
     priorities: listText(s.priorities),
+    'included-credentials': listText(s['included-credentials']),
     models: listText(s.models),
     'excluded-credentials': listText(s['excluded-credentials']),
     mode: text('mode', 'override'),
@@ -172,6 +174,8 @@ export function codexStateError(v: CodexStateOverride): boolean {
     splitStateList(v.models).length > 256 ||
     splitStateList(v.priorities).length > 128 ||
     splitStateList(v.lengths).length > 32 ||
+    splitStateList(v['included-credentials']).length > 1024 ||
+    splitStateList(v['included-credentials']).some((s) => s.length > 512 || /[\r\n\0]/.test(s)) ||
     splitStateList(v['excluded-credentials']).length > 1024
   );
 }
@@ -190,6 +194,7 @@ export function writeCodexState(doc: Document, value: CodexStateOverride) {
     models: splitStateList(value.models),
     priorities: splitStateList(value.priorities).map(Number),
     lengths: splitStateList(value.lengths).map(Number),
+    'included-credentials': splitStateList(value['included-credentials']),
     'excluded-credentials': splitStateList(value['excluded-credentials']),
   });
 }

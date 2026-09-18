@@ -48,6 +48,7 @@ export function CodexStateEditor({
     key:
       | 'models'
       | 'priorities'
+      | 'included-credentials'
       | 'excluded-credentials'
       | 'proxy-url'
       | 'lengths'
@@ -95,9 +96,11 @@ export function CodexStateEditor({
       )}
       <div className={styles.grid}>
         {field('priorities')}
-        {field('models')}
+        {field('included-credentials')}
         {field('excluded-credentials')}
       </div>
+      <p className="hint">{text('credential_scope_hint')}</p>
+      {field('models')}
       <p className="hint">{text('scope_hint')}</p>
       <div className={styles.grid}>
         {select('mode', ['override', 'missing'])}

@@ -47,4 +47,36 @@ describe('managed Codex state configuration', () => {
     value['model-overrides'] = '[{"model":"x"},{"model":"x"}]';
     expect(codexStateError(value)).toBe(true);
   });
+  it('round-trips explicit credentials alongside priorities and exclusions', () => {
+    const value = readCodexState(undefined);
+    expect(value['included-credentials']).toBe('');
+    value.priorities = '3';
+    value['included-credentials'] = 'abc123, codex-fixture.json';
+    value['excluded-credentials'] = 'excluded';
+    expect(codexStateError(value)).toBe(false);
+    const doc = parseDocument('{}');
+    writeCodexState(doc, value);
+    const stored = doc.toJS().codex['state-override'];
+    expect(stored.priorities).toEqual([3]);
+    expect(stored['included-credentials']).toEqual(['abc123', 'codex-fixture.json']);
+    expect(stored['excluded-credentials']).toEqual(['excluded']);
+    expect(readCodexState(stored)).toEqual(value);
+    value.priorities = '';
+    writeCodexState(doc, value);
+    expect(doc.toJS().codex['state-override'].priorities).toEqual([]);
+    expect(readCodexState(doc.toJS().codex['state-override'])['included-credentials']).toBe(
+      value['included-credentials']
+    );
+  });
+  it('rejects oversized and malformed explicit credential selectors', () => {
+    const value = readCodexState(undefined);
+    for (const ids of [
+      'x'.repeat(513),
+      'bad\0id',
+      Array.from({ length: 1025 }, (_, i) => `id-${i}`).join(','),
+    ]) {
+      value['included-credentials'] = ids;
+      expect(codexStateError(value)).toBe(true);
+    }
+  });
 });

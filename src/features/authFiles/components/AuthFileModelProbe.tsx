@@ -34,6 +34,10 @@ export function AuthFileModelProbe({
   const [maxTokens, setMaxTokens] = useState('');
   const [detailModel, setDetailModel] = useState<string | null>(null);
   const [stream, setStream] = useState(false);
+  const [stateMode, setStateMode] = useState<'configured' | 'none' | 'custom' | 'managed'>(
+    'configured'
+  );
+  const [customState, setCustomState] = useState('');
   const [upstream, setUpstream] = useState('configured');
   const [customURL, setCustomURL] = useState('');
   const [search, setSearch] = useState('');
@@ -85,7 +89,12 @@ export function AuthFileModelProbe({
     outputLimit !== undefined &&
     (!/^\d+$/.test(maxTokens.trim()) || outputLimit < 1 || outputLimit > 32768);
   const invalidPrompt = new TextEncoder().encode(prompt).length > 16384;
-  const invalidRequest = invalidURL || temporary.invalid || invalidLimit || invalidPrompt;
+  const invalidState =
+    provider === 'codex' &&
+    stateMode === 'custom' &&
+    !/^[\x21-\x7e]{1,8192}$/.test(customState.trim());
+  const invalidRequest =
+    invalidURL || temporary.invalid || invalidLimit || invalidPrompt || invalidState;
 
   useEffect(
     () => () => {
@@ -140,6 +149,16 @@ export function AuthFileModelProbe({
               ...(prompt.trim() ? { prompt } : {}),
               ...(outputLimit !== undefined ? { max_output_tokens: outputLimit } : {}),
               ...(temporary.body ? { request_body: temporary.body } : {}),
+              ...(provider === 'codex' && stateMode !== 'configured'
+                ? {
+                    codex_state: {
+                      mode: stateMode,
+                      ...(stateMode === 'custom'
+                        ? { 'x-codex-turn-state': customState.trim() }
+                        : {}),
+                    },
+                  }
+                : {}),
               ...(provider === 'xai'
                 ? { upstream: upstream === 'custom' ? normalizedURL! : upstream }
                 : {}),
@@ -230,7 +249,45 @@ export function AuthFileModelProbe({
         </div>
       </div>
       {provider === 'codex' && (
-        <div className={styles.hint}>{t('model_probe.codex_conversion')}</div>
+        <>
+          <div className={styles.hint}>{t('model_probe.codex_conversion')}</div>
+          <div className={styles.options}>
+            <div>
+              <label>{t('model_probe.state_mode')}</label>
+              <Select
+                ariaLabel={t('model_probe.state_mode')}
+                value={stateMode}
+                disabled={running}
+                onChange={(value) => resetOptions(() => setStateMode(value as typeof stateMode))}
+                options={(['configured', 'managed', 'custom', 'none'] as const).map((value) => ({
+                  value,
+                  label: t(`model_probe.state_modes.${value}`),
+                }))}
+              />
+            </div>
+          </div>
+          <div className={styles.hint}>{t('model_probe.state_hint')}</div>
+          {stateMode === 'custom' && (
+            <label className={styles.custom}>
+              {t('model_probe.custom_state')}
+              <textarea
+                className={`input ${styles.jsonInput}`}
+                rows={3}
+                autoComplete="off"
+                spellCheck={false}
+                value={customState}
+                disabled={running}
+                aria-invalid={invalidState}
+                onChange={(event) => resetOptions(() => setCustomState(event.target.value))}
+              />
+              {invalidState && (
+                <span role="alert" className={styles.failed}>
+                  {t('model_probe.invalid_state')}
+                </span>
+              )}
+            </label>
+          )}
+        </>
       )}
       {provider === 'xai' && upstream === 'custom' && (
         <label className={styles.custom}>
@@ -437,6 +494,15 @@ export function AuthFileModelProbe({
           result={results[detailModel]?.result}
           error={results[detailModel]?.error}
           onClose={() => setDetailModel(null)}
+          onUseState={
+            provider === 'codex'
+              ? (value) =>
+                  resetOptions(() => {
+                    setStateMode('custom');
+                    setCustomState(value);
+                  })
+              : undefined
+          }
         />
       )}
       <form

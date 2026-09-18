@@ -19,11 +19,13 @@ export function ModelProbeDetailsModal({
   result,
   error,
   onClose,
+  onUseState,
 }: {
   model: string;
   result?: ModelProbeResult;
   error?: string;
   onClose: () => void;
+  onUseState?: (value: string) => void;
 }) {
   const { t } = useTranslation();
   const notify = useNotificationStore((state) => state.showNotification);
@@ -94,6 +96,57 @@ export function ModelProbeDetailsModal({
             </div>
           ))}
         </dl>
+        {result?.codex_state && (
+          <section>
+            <strong>{t('model_probe.state_details')}</strong>
+            <dl className={styles.detailMetadata}>
+              <div>
+                <dt>{t('model_probe.state_source')}</dt>
+                <dd>{t(`model_probe.state_sources.${result.codex_state.source}`)}</dd>
+              </div>
+              <div>
+                <dt>{t('model_probe.sent_state_length')}</dt>
+                <dd>{result.codex_state.sent_length}</dd>
+              </div>
+              <div>
+                <dt>{t('model_probe.sent_state_digest')}</dt>
+                <dd>{result.codex_state.sent_digest || '—'}</dd>
+              </div>
+              <div>
+                <dt>{t('model_probe.returned_state_length')}</dt>
+                <dd>{result.codex_state.returned_length}</dd>
+              </div>
+              <div>
+                <dt>{t('model_probe.returned_state_digest')}</dt>
+                <dd>{result.codex_state.returned_digest || '—'}</dd>
+              </div>
+            </dl>
+            {result.codex_state['x-codex-turn-state'] ? (
+              <details className={styles.rawDetails}>
+                <summary>{t('model_probe.returned_state')}</summary>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void copy(result.codex_state!['x-codex-turn-state']!)}
+                >
+                  {t('model_probe.copy_state')}
+                </Button>
+                {onUseState && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onUseState(result.codex_state!['x-codex-turn-state']!)}
+                  >
+                    {t('model_probe.use_state')}
+                  </Button>
+                )}
+                <pre className={styles.stateValue}>{result.codex_state['x-codex-turn-state']}</pre>
+              </details>
+            ) : (
+              <div className={styles.hint}>{t('model_probe.state_not_returned')}</div>
+            )}
+          </section>
+        )}
         <div className={styles.usageGrid}>
           {usageFields.map((field) => (
             <div key={field}>
