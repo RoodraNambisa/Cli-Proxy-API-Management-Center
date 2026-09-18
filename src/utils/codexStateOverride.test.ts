@@ -3,14 +3,51 @@ import { parseDocument } from 'yaml';
 import { readCodexState, writeCodexState, codexStateError } from './codexStateOverride';
 
 describe('managed Codex state configuration', () => {
+  it('round-trips subscription length rules with optional models and extension fields', () => {
+    const value = readCodexState({
+      'plan-lengths': [
+        { 'plan-types': ['plus', 'pro'], lengths: [292], extension: 'preserved' },
+        { 'plan-types': ['business'], models: ['gpt-6-astra'], lengths: [332] },
+        { 'plan-types': ['free'], lengths: [] },
+      ],
+    });
+    expect(codexStateError(value)).toBe(false);
+    const doc = parseDocument('{}');
+    writeCodexState(doc, value);
+    expect(doc.toJS().codex['state-override']['plan-lengths'][0]).toMatchObject({
+      'plan-types': ['plus', 'pro'],
+      lengths: [292],
+      extension: 'preserved',
+    });
+    expect(readCodexState(doc.toJS().codex['state-override'])).toEqual(value);
+    value['plan-lengths'][0].planTypes = '';
+    expect(codexStateError(value)).toBe(true);
+    value['plan-lengths'][0].planTypes = 'pro';
+    value['plan-lengths'][0].lengths = '0';
+    expect(codexStateError(value)).toBe(true);
+  });
   it('defaults to memory-only optional acquisition and a hard failure limit', () => {
     const value = readCodexState(undefined);
     expect(value.enabled).toBe(false);
+    expect(value['invalidate-on-state-length-mismatch']).toBe(false);
+    expect(value['invalidate-on-model-mismatch']).toBe(false);
     expect(value['max-attempts']).toBe('3');
     expect(value['missing-policy']).toBe('continue');
     expect(value.models).toBe('');
     expect(value.lengths).toBe('292');
     expect(codexStateError(value)).toBe(false);
+  });
+  it.each([
+    [true, false],
+    [false, true],
+    [true, true],
+  ])('round-trips independent response checks (%s/%s)', (length, model) => {
+    const value = readCodexState(undefined);
+    value['invalidate-on-state-length-mismatch'] = length;
+    value['invalidate-on-model-mismatch'] = model;
+    const doc = parseDocument('{}');
+    writeCodexState(doc, value);
+    expect(readCodexState(doc.toJS().codex['state-override'])).toEqual(value);
   });
   it('preserves extension fields and all-model empty selection on YAML write', () => {
     const doc = parseDocument('codex:\n  state-override:\n    extension: keep\n    lengths: []\n');

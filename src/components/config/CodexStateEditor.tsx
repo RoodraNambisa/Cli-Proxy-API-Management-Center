@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { SettingsDisclosure } from './SettingsDisclosure';
@@ -140,6 +141,58 @@ export function CodexStateEditor({
         {field('response-contains')}
       </div>
       {field('prompt')}
+      <div className={styles.planHeading}>
+        <strong>{text('plan_lengths')}</strong>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={disabled || value['plan-lengths'].length >= 64}
+          onClick={() =>
+            patch({
+              'plan-lengths': [
+                ...value['plan-lengths'],
+                { planTypes: '', models: '', lengths: value.lengths, extra: {} },
+              ],
+            })
+          }
+        >
+          {text('plan_add')}
+        </Button>
+      </div>
+      <p className="hint">{text('plan_lengths_hint')}</p>
+      <div className={styles.planRules}>
+        {value['plan-lengths'].map((rule, index) => (
+          <div className={styles.planRule} key={index}>
+            {(['planTypes', 'models', 'lengths'] as const).map((field) => (
+              <Input
+                key={field}
+                label={text(field === 'lengths' ? 'plan_lengths_field' : `plan_${field}`)}
+                placeholder={text(`plan_${field}_placeholder`)}
+                value={rule[field]}
+                disabled={disabled}
+                onChange={(event) =>
+                  patch({
+                    'plan-lengths': value['plan-lengths'].map((current, i) =>
+                      i === index ? { ...current, [field]: event.target.value } : current
+                    ),
+                  })
+                }
+              />
+            ))}
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={disabled}
+              aria-label={`${text('plan_remove')} ${index + 1}`}
+              onClick={() =>
+                patch({ 'plan-lengths': value['plan-lengths'].filter((_, i) => i !== index) })
+              }
+            >
+              {text('plan_remove')}
+            </Button>
+          </div>
+        ))}
+      </div>
       <details>
         <summary>{text('model_overrides')}</summary>
         <p className="hint">{text('model_overrides_hint')}</p>
@@ -153,6 +206,21 @@ export function CodexStateEditor({
         />
       </details>
       <p className="hint">{text('validation_hint')}</p>
+      <strong>{text('response_watch')}</strong>
+      <div className={styles.grid}>
+        {(['invalidate-on-state-length-mismatch', 'invalidate-on-model-mismatch'] as const).map(
+          (field) => (
+            <ToggleSwitch
+              key={field}
+              label={text(field)}
+              checked={value[field]}
+              disabled={disabled}
+              onChange={(enabled) => patch({ [field]: enabled })}
+            />
+          )
+        )}
+      </div>
+      <p className="hint">{text('response_watch_hint')}</p>
       {value['missing-policy'] === 'error' && (
         <>
           <div className={styles.grid}>

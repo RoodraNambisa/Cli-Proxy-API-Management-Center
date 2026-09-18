@@ -1334,6 +1334,18 @@ export const authFilesApi = {
     return apiClient.postAtConnection<ModelProbeResult>({ ...connection, timeout: 0 }, '/auth-files/models/probe', input, { signal, timeout: 0 });
   },
 
+  acquireCodexState(name: string, model: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+    return apiClient.postAtConnection<{ model: string; previous_acquired: number; models: import('@/types/authFile').CodexStateSnapshot[] }>(
+      connection, '/auth-files/codex/state', { name, model, action: 'acquire' }, { signal }
+    );
+  },
+
+  getCodexState(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+    return apiClient.getAtConnection<{ models: import('@/types/authFile').CodexStateSnapshot[] }>(
+      connection, `/auth-files/codex/state?name=${encodeURIComponent(name)}`, { signal }
+    );
+  },
+
   checkProxy(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
     return apiClient.postAtConnection<{ proxy_route: import('@/types/authFile').AuthFileProxyRoute }>(
       { ...connection, timeout: 0 }, '/auth-files/proxy/check', { name }, { signal, timeout: 0 }

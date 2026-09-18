@@ -17,3 +17,29 @@
   background: var(--bg-primary);
   color: var(--text-primary);
 }
+.planHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.planRules {
+  display: grid;
+  gap: 12px;
+  max-height: 480px;
+  overflow: auto;
+}
+.planRule {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+@media (max-width: 700px) {
+  .planRule {
+    grid-template-columns: 1fr;
+  }
+}

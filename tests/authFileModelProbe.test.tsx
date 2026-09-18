@@ -4,6 +4,7 @@ import { AuthFileModelProbe } from '@/features/authFiles/components/AuthFileMode
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { authFilesApi, type ModelProbeResult } from '@/services/api/authFiles';
 import * as clipboard from '@/utils/clipboard';
+import type { CodexStateSnapshot } from '@/types/authFile';
 
 vi.mock('react-i18next', async (original) => ({
   ...(await original<typeof import('react-i18next')>()),
@@ -23,6 +24,104 @@ const result: ModelProbeResult = {
 const models = [{ id: 'grok-4.6' }, { id: 'grok-4.5' }, { id: 'grok-imagine-image' }];
 
 describe('credential model connection tests', () => {
+  const stateSnapshot = (overrides: Partial<CodexStateSnapshot> = {}): CodexStateSnapshot => ({
+    model: 'upstream-model',
+    status: 'queued',
+    length: 292,
+    digest: 'old-digest',
+    attempts: 1,
+    acquired: 1,
+    uses: 0,
+    current_uses: 0,
+    completed: 0,
+    misses: 0,
+    consecutive_failures: 0,
+    exhausted: false,
+    acquisition_tokens: 20,
+    ...overrides,
+  });
+
+  it('acquires State using backend settings and waits for a new value before selecting reuse', async () => {
+    const acquire = vi.spyOn(authFilesApi, 'acquireCodexState').mockResolvedValue({
+      model: 'upstream-model',
+      previous_acquired: 1,
+      models: [stateSnapshot()],
+    });
+    const poll = vi.spyOn(authFilesApi, 'getCodexState').mockResolvedValue({
+      models: [stateSnapshot({ status: 'valid', acquired: 2, attempts: 2, digest: 'new-digest' })],
+    });
+    const probe = vi.spyOn(authFilesApi, 'probeModel').mockResolvedValue(result);
+    render(
+      <AuthFileModelProbe fileName="codex.json" provider="codex" models={[{ id: 'alias' }]} />
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'model_probe.prompt' }), {
+      target: { value: 'temporary question' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'model_probe.state_acquire alias' }));
+    await waitFor(() =>
+      expect(screen.getByText('model_probe.state_acquire_states.queued')).toBeTruthy()
+    );
+    expect(acquire.mock.calls[0].slice(0, 2)).toEqual(['codex.json', 'alias']);
+    expect(probe).not.toHaveBeenCalled();
+    expect(screen.queryByText('model_probe.state_acquire_states.success')).toBeNull();
+    await waitFor(
+      () => expect(screen.getByText('model_probe.state_acquire_states.success')).toBeTruthy(),
+      { timeout: 3500 }
+    );
+    expect(poll).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'model_probe.state_mode' }).textContent).toBe(
+      'model_probe.state_modes.managed'
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'model_probe.test alias' }));
+    await waitFor(() => expect(probe).toHaveBeenCalledTimes(1));
+    expect(probe.mock.calls[0][0]).toMatchObject({
+      prompt: 'temporary question',
+      codex_state: { mode: 'managed' },
+    });
+  });
+
+  it('does not mistake retained old State for a successful manual renewal', async () => {
+    vi.spyOn(authFilesApi, 'acquireCodexState').mockResolvedValue({
+      model: 'upstream-model',
+      previous_acquired: 1,
+      models: [
+        stateSnapshot({ status: 'valid', attempts: 2, last_error: 'state_length_mismatch' }),
+      ],
+    });
+    render(
+      <AuthFileModelProbe fileName="codex.json" provider="codex" models={[{ id: 'alias' }]} />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'model_probe.state_acquire alias' }));
+    await waitFor(() =>
+      expect(screen.getByText('model_probe.state_acquire_states.failed')).toBeTruthy()
+    );
+    expect(screen.getByRole('button', { name: 'model_probe.state_mode' }).textContent).toBe(
+      'model_probe.state_modes.configured'
+    );
+  });
+
+  it('stops waiting on unmount without sending a backend cancellation', async () => {
+    let finish!: (value: Awaited<ReturnType<typeof authFilesApi.acquireCodexState>>) => void;
+    const acquire = vi.spyOn(authFilesApi, 'acquireCodexState').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    const poll = vi.spyOn(authFilesApi, 'getCodexState');
+    const view = render(
+      <AuthFileModelProbe fileName="codex.json" provider="codex" models={[{ id: 'alias' }]} />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'model_probe.state_acquire alias' }));
+    const signal = acquire.mock.calls[0][3];
+    view.unmount();
+    expect(signal.aborted).toBe(true);
+    await act(async () => {
+      finish({ model: 'upstream-model', previous_acquired: 1, models: [stateSnapshot()] });
+    });
+    expect(poll).not.toHaveBeenCalled();
+    expect(acquire).toHaveBeenCalledTimes(1);
+  });
   it.each([
     'codex',
     'xai',

@@ -11,6 +11,12 @@ export const STATE_NUMBER_DEFAULTS = {
   'max-attempts': 3,
 };
 export type StateNumberField = keyof typeof STATE_NUMBER_DEFAULTS;
+export type StatePlanLengthRule = {
+  planTypes: string;
+  models: string;
+  lengths: string;
+  extra: Record<string, unknown>;
+};
 export type CodexStateOverride = Record<StateNumberField, string> & {
   enabled: boolean;
   priorities: string;
@@ -24,12 +30,15 @@ export type CodexStateOverride = Record<StateNumberField, string> & {
   'proxy-url': string;
   lengths: string;
   'match-model': boolean;
+  'invalidate-on-state-length-mismatch': boolean;
+  'invalidate-on-model-mismatch': boolean;
   prompt: string;
   'response-contains': string;
   'error-type': string;
   'error-code': string;
   'error-message': string;
   'model-overrides': string;
+  'plan-lengths': StatePlanLengthRule[];
 };
 const record = (raw: unknown): Record<string, unknown> =>
   raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
@@ -51,6 +60,17 @@ export function readCodexState(raw: unknown): CodexStateOverride {
       Object.entries(STATE_NUMBER_DEFAULTS).map(([k, v]) => [k, String(s[k] || v)])
     ) as Record<StateNumberField, string>),
     'model-overrides': JSON.stringify(s['model-overrides'] ?? [], null, 2),
+    'plan-lengths': Array.isArray(s['plan-lengths'])
+      ? s['plan-lengths'].map((raw) => {
+          const { 'plan-types': plans, models, lengths, ...extra } = record(raw);
+          return {
+            planTypes: listText(plans),
+            models: listText(models),
+            lengths: listText(lengths),
+            extra,
+          };
+        })
+      : [],
     enabled: s.enabled === true,
     priorities: listText(s.priorities),
     'included-credentials': listText(s['included-credentials']),
@@ -63,6 +83,8 @@ export function readCodexState(raw: unknown): CodexStateOverride {
     'proxy-url': text('proxy-url', ''),
     lengths: s.lengths == null ? '292' : listText(s.lengths),
     'match-model': s['match-model'] !== false,
+    'invalidate-on-state-length-mismatch': s['invalidate-on-state-length-mismatch'] === true,
+    'invalidate-on-model-mismatch': s['invalidate-on-model-mismatch'] === true,
     prompt: text('prompt', 'Reply with exactly OK.'),
     'response-contains': text('response-contains', ''),
     'error-type': text('error-type', 'rate_limit_exceeded'),
@@ -77,6 +99,21 @@ export const DEFAULT_CODEX_STATE = readCodexState(undefined);
 export const codexStateEqual = (a: CodexStateOverride, b: CodexStateOverride) =>
   JSON.stringify(a) === JSON.stringify(b);
 export function codexStateError(v: CodexStateOverride): boolean {
+  if (v['plan-lengths'].length > 64) return true;
+  for (const rule of v['plan-lengths']) {
+    const plans = splitStateList(rule.planTypes),
+      models = splitStateList(rule.models),
+      lengths = splitStateList(rule.lengths);
+    if (
+      !plans.length ||
+      plans.length > 32 ||
+      models.length > 256 ||
+      lengths.length > 32 ||
+      [...plans, ...models].some((value) => value.length > 256 || /[\r\n\0]/.test(value)) ||
+      lengths.some((n) => !/^\d+$/.test(n) || Number(n) < 1 || Number(n) > 8192)
+    )
+      return true;
+  }
   try {
     const overrides: unknown = JSON.parse(v['model-overrides'] || '[]');
     if (!Array.isArray(overrides) || overrides.length > 256) return true;
@@ -188,6 +225,12 @@ export function writeCodexState(doc: Document, value: CodexStateOverride) {
     ...old,
     ...value,
     'model-overrides': JSON.parse(value['model-overrides'] || '[]'),
+    'plan-lengths': value['plan-lengths'].map((rule) => ({
+      ...rule.extra,
+      'plan-types': splitStateList(rule.planTypes),
+      models: splitStateList(rule.models),
+      lengths: splitStateList(rule.lengths).map(Number),
+    })),
     ...Object.fromEntries(
       Object.keys(STATE_NUMBER_DEFAULTS).map((k) => [k, Number(value[k as StateNumberField])])
     ),

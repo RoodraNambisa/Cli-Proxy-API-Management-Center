@@ -79,6 +79,13 @@
   overflow-wrap: anywhere;
   min-width: 140px;
 }
+.modelActions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  min-width: 100px;
+}
 .success {
   color: var(--success-color, #23885c);
 }

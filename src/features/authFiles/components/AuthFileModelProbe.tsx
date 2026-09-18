@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCodexStateAcquisition } from '../hooks/useCodexStateAcquisition';
 import { ModelProbeDetailsModal } from './ModelProbeDetailsModal';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
@@ -26,6 +27,7 @@ export function AuthFileModelProbe({
   models: AuthFileModelItem[];
 }) {
   const { t } = useTranslation();
+  const stateAcquisition = useCodexStateAcquisition(fileName);
   const [protocol, setProtocol] = useState(
     provider === 'codex' || provider === 'xai' ? 'responses' : 'chat'
   );
@@ -46,6 +48,7 @@ export function AuthFileModelProbe({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<Record<string, ProbeState>>({});
   const [running, setRunning] = useState(false);
+  const busy = running || Boolean(stateAcquisition.pending);
   const controller = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const allModels = useMemo(
@@ -123,8 +126,13 @@ export function AuthFileModelProbe({
     setResults({});
     setDetailModel(null);
   };
+  const acquireState = async (model: string) => {
+    if (busy) return;
+    setDetailModel(null);
+    if (await stateAcquisition.acquire(model)) resetOptions(() => setStateMode('managed'));
+  };
   const run = async (targets: string[]) => {
-    if (controller.current || !targets.length || invalidRequest) return;
+    if (controller.current || stateAcquisition.pending || !targets.length || invalidRequest) return;
     const abort = new AbortController();
     controller.current = abort;
     const currentGeneration = ++generation.current;
@@ -209,7 +217,7 @@ export function AuthFileModelProbe({
           <Select
             ariaLabel={t('model_probe.protocol')}
             value={protocol}
-            disabled={running}
+            disabled={busy}
             onChange={(value) => resetOptions(() => setProtocol(value))}
             options={[
               'responses',
@@ -224,7 +232,7 @@ export function AuthFileModelProbe({
             <Select
               ariaLabel={t('model_probe.upstream')}
               value={upstream}
-              disabled={running}
+              disabled={busy}
               onChange={(value) => resetOptions(() => setUpstream(value))}
               options={[
                 { value: 'configured', label: t('model_probe.configured') },
@@ -241,7 +249,7 @@ export function AuthFileModelProbe({
           <label>{t('model_probe.stream')}</label>
           <ToggleSwitch
             checked={stream}
-            disabled={running}
+            disabled={busy}
             onChange={(value) => resetOptions(() => setStream(value))}
             ariaLabel={t('model_probe.stream')}
             label={stream ? 'SSE' : t('model_probe.non_stream')}
@@ -257,7 +265,7 @@ export function AuthFileModelProbe({
               <Select
                 ariaLabel={t('model_probe.state_mode')}
                 value={stateMode}
-                disabled={running}
+                disabled={busy}
                 onChange={(value) => resetOptions(() => setStateMode(value as typeof stateMode))}
                 options={(['configured', 'managed', 'custom', 'none'] as const).map((value) => ({
                   value,
@@ -267,6 +275,7 @@ export function AuthFileModelProbe({
             </div>
           </div>
           <div className={styles.hint}>{t('model_probe.state_hint')}</div>
+          <div className={styles.hint}>{t('model_probe.state_acquire_hint')}</div>
           {stateMode === 'custom' && (
             <label className={styles.custom}>
               {t('model_probe.custom_state')}
@@ -276,7 +285,7 @@ export function AuthFileModelProbe({
                 autoComplete="off"
                 spellCheck={false}
                 value={customState}
-                disabled={running}
+                disabled={busy}
                 aria-invalid={invalidState}
                 onChange={(event) => resetOptions(() => setCustomState(event.target.value))}
               />
@@ -295,7 +304,7 @@ export function AuthFileModelProbe({
           <input
             className="input"
             value={customURL}
-            disabled={running}
+            disabled={busy}
             placeholder="https://relay.example/v1"
             onChange={(event) => resetOptions(() => setCustomURL(event.target.value))}
           />
@@ -313,7 +322,7 @@ export function AuthFileModelProbe({
             className="input"
             rows={3}
             value={prompt}
-            disabled={running}
+            disabled={busy}
             placeholder={t('model_probe.prompt_placeholder')}
             aria-invalid={invalidPrompt}
             onChange={(event) => resetOptions(() => setPrompt(event.target.value))}
@@ -329,7 +338,7 @@ export function AuthFileModelProbe({
             step={1}
             placeholder="1024"
             value={maxTokens}
-            disabled={running}
+            disabled={busy}
             aria-invalid={invalidLimit}
             onChange={(event) => resetOptions(() => setMaxTokens(event.target.value))}
           />
@@ -349,7 +358,7 @@ export function AuthFileModelProbe({
           aria-label={t('model_probe.temporary_json')}
           placeholder={'{ "temperature": 0 }'}
           value={requestBody}
-          disabled={running}
+          disabled={busy}
           aria-invalid={temporary.invalid}
           onChange={(event) => resetOptions(() => setRequestBody(event.target.value))}
         />
@@ -361,21 +370,21 @@ export function AuthFileModelProbe({
       </details>
       <div className={styles.toolbar}>
         <Button
-          disabled={running || !visibleModels.length || invalidRequest}
+          disabled={busy || !visibleModels.length || invalidRequest}
           onClick={() => void run(visibleModels)}
         >
           {t('model_probe.test_visible', { count: visibleModels.length })}
         </Button>
         <Button
           variant="secondary"
-          disabled={running || !allModels.some((model) => selected.has(model)) || invalidRequest}
+          disabled={busy || !allModels.some((model) => selected.has(model)) || invalidRequest}
           onClick={() => void run(allModels.filter((model) => selected.has(model)))}
         >
           {t('model_probe.test_selected', { count: selected.size })}
         </Button>
         <Button
           variant="secondary"
-          disabled={running || !Object.values(results).some((value) => value.state === 'success')}
+          disabled={busy || !Object.values(results).some((value) => value.state === 'success')}
           onClick={() =>
             setSelected(new Set(allModels.filter((model) => results[model]?.state === 'success')))
           }
@@ -385,6 +394,11 @@ export function AuthFileModelProbe({
         {running && (
           <Button variant="danger" onClick={cancel}>
             {t('model_probe.cancel')}
+          </Button>
+        )}
+        {stateAcquisition.pending && (
+          <Button variant="secondary" onClick={stateAcquisition.stop}>
+            {t('model_probe.state_acquire_stop')}
           </Button>
         )}
         <input
@@ -403,7 +417,7 @@ export function AuthFileModelProbe({
                 <input
                   type="checkbox"
                   aria-label={t('model_probe.select_visible')}
-                  disabled={running || !visibleModels.length}
+                  disabled={busy || !visibleModels.length}
                   checked={
                     visibleModels.length > 0 && visibleModels.every((model) => selected.has(model))
                   }
@@ -429,13 +443,14 @@ export function AuthFileModelProbe({
             {visibleModels.map((model) => {
               const entry = results[model];
               const result = entry?.result;
+              const acquisition = stateAcquisition.results[model];
               return (
                 <tr key={model}>
                   <td>
                     <input
                       type="checkbox"
                       aria-label={`${t('model_probe.select')} ${model}`}
-                      disabled={running}
+                      disabled={busy}
                       checked={selected.has(model)}
                       onChange={(event) => select(model, event.target.checked)}
                     />
@@ -469,17 +484,60 @@ export function AuthFileModelProbe({
                         {t('model_probe.details')}
                       </Button>
                     )}
-                    {!result && !entry?.error && '—'}
+                    {acquisition && (
+                      <div
+                        className={
+                          acquisition.status === 'failed'
+                            ? styles.failed
+                            : acquisition.status === 'success'
+                              ? styles.success
+                              : styles.hint
+                        }
+                      >
+                        <span role="status">
+                          {t(`model_probe.state_acquire_states.${acquisition.status}`)}
+                        </span>
+                        {acquisition.status === 'success' && acquisition.snapshot && (
+                          <div>
+                            {acquisition.snapshot.length} · {acquisition.snapshot.digest}
+                          </div>
+                        )}
+                        {acquisition.error && (
+                          <div>
+                            {acquisition.error}
+                            {acquisition.snapshot?.last_status
+                              ? ` · HTTP ${acquisition.snapshot.last_status}`
+                              : ''}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {!result && !entry?.error && !acquisition && '—'}
                   </td>
                   <td>
-                    <Button
-                      variant="secondary"
-                      disabled={running || invalidRequest}
-                      onClick={() => void run([model])}
-                      aria-label={`${t('model_probe.test')} ${model}`}
-                    >
-                      {t('model_probe.test')}
-                    </Button>
+                    <div className={styles.modelActions}>
+                      <Button
+                        variant="secondary"
+                        disabled={busy || invalidRequest}
+                        onClick={() => void run([model])}
+                        aria-label={`${t('model_probe.test')} ${model}`}
+                      >
+                        {t('model_probe.test')}
+                      </Button>
+                      {provider === 'codex' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={busy}
+                          loading={stateAcquisition.pending === model}
+                          onClick={() => void acquireState(model)}
+                          aria-label={`${t('model_probe.state_acquire')} ${model}`}
+                          title={t('model_probe.state_acquire_hint')}
+                        >
+                          {t('model_probe.state_acquire')}
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -510,7 +568,7 @@ export function AuthFileModelProbe({
         onSubmit={(event) => {
           event.preventDefault();
           const model = manualModel.trim();
-          if (model && !running) {
+          if (model && !busy) {
             setExtraModels((current) => [...new Set([...current, model])]);
             setManualModel('');
             setSearch('');
@@ -523,10 +581,10 @@ export function AuthFileModelProbe({
           placeholder={t('model_probe.manual_model')}
           maxLength={256}
           value={manualModel}
-          disabled={running}
+          disabled={busy}
           onChange={(event) => setManualModel(event.target.value)}
         />
-        <Button variant="secondary" type="submit" disabled={running || !manualModel.trim()}>
+        <Button variant="secondary" type="submit" disabled={busy || !manualModel.trim()}>
           {t('model_probe.add_model')}
         </Button>
         <span className={styles.hint} role="status">

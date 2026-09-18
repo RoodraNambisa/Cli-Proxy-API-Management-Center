@@ -130,6 +130,15 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
                   </div>
                 )}
                 {m.exhausted && <div className={styles.warning}>{text('exhausted_hint')}</div>}
+                {Boolean(m.invalidations) && (
+                  <div className={styles.warning}>
+                    {t('codex_state.invalidation_count', { count: m.invalidations })}
+                    {' · '}
+                    {t(`codex_state.reason_${m.last_invalidation}`, {
+                      defaultValue: m.last_invalidation,
+                    })}
+                  </div>
+                )}
                 <div className={styles.actions}>
                   {['acquire', m.status === 'paused' ? 'resume' : 'pause', 'clear'].map((op) => (
                     <Button
