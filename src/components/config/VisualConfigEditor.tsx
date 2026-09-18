@@ -1,3 +1,4 @@
+import { CodexStateEditor } from './CodexStateEditor';
 import { CodexQuotaAutoDisableEditor } from './CodexQuotaAutoDisableEditor';
 import { ChatGptWebLibraryCleanup } from './ChatGptWebLibraryCleanup';
 import { GrokConfigEditor } from './GrokConfigEditor';
@@ -1771,6 +1772,7 @@ export function VisualConfigEditor({
         authSectionErrorCount +
         countErrors([
           'codexQuotaAutoDisable',
+          'codexStateOverride',
           'codexFingerprintSessionIdentityPoolSize',
           'disabledImageGenerationToolError.statusCode',
           'images.unsupportedStatusCode',
@@ -3287,6 +3289,7 @@ export function VisualConfigEditor({
                   </SettingsDisclosure>
                 </PageGroup>
                 <PageGroup active={activePageId === 'provider-codex'}>
+                  <CodexStateEditor value={values.codexStateOverride} onChange={codexStateOverride=>onChange({codexStateOverride})} disabled={disabled} dirty={hasDirtyConfigField(dirtyFields,['codexStateOverride'])} focusTarget={focusTarget} strip={values.codexTurnStatePolicy==='strip'}/>
                   <SettingsDisclosure id="config-model-catalog-fields" title={t('common.model_catalog_label')}
                     description={t('config_management.settings_center.codex_groups.catalog_desc')}
                     focusTarget={focusTarget} targetIds={['config-codex-alpha-search']}

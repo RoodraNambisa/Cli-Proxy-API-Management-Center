@@ -1,0 +1,37 @@
+.root {
+  border-top: 1px dashed var(--border-color);
+  margin-top: 12px;
+  padding-top: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.counts {
+  color: var(--text-secondary);
+}
+.warning {
+  color: var(--danger-color, #bc624c);
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+.model {
+  border-top: 1px solid var(--border-color);
+  padding: 10px 0;
+  overflow-wrap: anywhere;
+}
+.root summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 6px 0;
+}

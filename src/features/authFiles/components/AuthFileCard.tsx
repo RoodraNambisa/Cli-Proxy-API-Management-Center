@@ -1,3 +1,4 @@
+import { AuthFileStateStatus } from './AuthFileStateStatus';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -541,6 +542,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
           </div>
 
           <AuthFileProxyStatus file={file} disabled={disableControls || isRetiredGeminiCli} />
+          <AuthFileStateStatus file={file} disabled={disableControls || isRetiredGeminiCli} />
           <AuthFileResponseModelStatus file={file} disabled={disableControls || isRetiredGeminiCli} />
 
           {codexPlanDisplay && (

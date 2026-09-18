@@ -1,3 +1,8 @@
+export interface CodexStateSnapshot {
+  model: string; status: string; length: number; digest?: string; expires_at?: string; next_attempt?: string;
+  attempts: number; acquired: number; uses: number; current_uses: number; completed: number; misses: number;
+  consecutive_failures: number; exhausted: boolean; acquisition_tokens: number; last_error?: string; last_status?: number;
+}
 /**
  * 认证文件相关类型
  * 基于原项目 src/modules/auth-files.js
@@ -213,6 +218,7 @@ export interface AuthFileItem {
   deletion_requested_at?: string;
   proxy_binding?: AuthFileProxyBinding;
   proxy_route?: AuthFileProxyRoute;
+  codex_state?: {enabled:boolean; models:CodexStateSnapshot[]};
   request_limit?: {
     limit: number;
     window_minutes: number;
