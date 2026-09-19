@@ -83,7 +83,7 @@ export function useCodexStateAcquisition(fileName: string) {
         abort.signal
       );
       if (!current()) return false;
-      if (!response.model || typeof response.previous_acquired !== 'number')
+      if (response.diagnostic !== true || !response.model || typeof response.previous_acquired !== 'number')
         throw new Error(t('model_probe.state_acquire_upgrade'));
       let snapshots = response.models;
       while (current()) {

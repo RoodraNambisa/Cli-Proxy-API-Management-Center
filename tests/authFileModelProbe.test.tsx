@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AuthFileModelProbe } from '@/features/authFiles/components/AuthFileModelProbe';
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { authFilesApi, type ModelProbeResult } from '@/services/api/authFiles';
+import { apiClient } from '@/services/api/client';
 import * as clipboard from '@/utils/clipboard';
 import type { CodexStateSnapshot } from '@/types/authFile';
 
@@ -81,6 +82,7 @@ describe('credential model connection tests', () => {
 
   it('acquires State using backend settings and waits for a new value before selecting reuse', async () => {
     const acquire = vi.spyOn(authFilesApi, 'acquireCodexState').mockResolvedValue({
+      diagnostic: true,
       model: 'upstream-model',
       previous_acquired: 1,
       models: [stateSnapshot()],
@@ -108,18 +110,19 @@ describe('credential model connection tests', () => {
     );
     expect(poll).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'model_probe.state_mode' }).textContent).toBe(
-      'model_probe.state_modes.managed'
+      'model_probe.state_modes.acquired'
     );
     fireEvent.click(screen.getByRole('button', { name: 'model_probe.test alias' }));
     await waitFor(() => expect(probe).toHaveBeenCalledTimes(1));
     expect(probe.mock.calls[0][0]).toMatchObject({
       prompt: 'temporary question',
-      codex_state: { mode: 'managed' },
+      codex_state: { mode: 'acquired' },
     });
   });
 
   it('does not mistake retained old State for a successful manual renewal', async () => {
     vi.spyOn(authFilesApi, 'acquireCodexState').mockResolvedValue({
+      diagnostic: true,
       model: 'upstream-model',
       previous_acquired: 1,
       models: [
@@ -136,6 +139,23 @@ describe('credential model connection tests', () => {
     expect(screen.getByRole('button', { name: 'model_probe.state_mode' }).textContent).toBe(
       'model_probe.state_modes.configured'
     );
+  });
+
+  it('uses the isolated diagnostic API and refuses an older backend acknowledgement', async () => {
+    const post = vi.spyOn(apiClient, 'postAtConnection').mockResolvedValue({
+      model: 'upstream-model', previous_acquired: 0,
+      models: [stateSnapshot({ status: 'valid' })],
+    });
+    const get = vi.spyOn(apiClient, 'getAtConnection').mockResolvedValue({ models: [] });
+    const connection = apiClient.captureConnection();
+    const signal = new AbortController().signal;
+    await authFilesApi.getCodexState('codex test.json', connection, signal);
+    expect(get).toHaveBeenCalledWith(connection, '/auth-files/codex/state?name=codex%20test.json&diagnostic=true', { signal });
+    render(<AuthFileModelProbe fileName="codex.json" provider="codex" models={[{ id: 'alias' }]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'model_probe.state_acquire alias' }));
+    await waitFor(() => expect(screen.getByText('model_probe.state_acquire_upgrade')).toBeTruthy());
+    expect(post.mock.calls[0][2]).toEqual({ name: 'codex.json', model: 'alias', action: 'acquire', diagnostic: true });
+    expect(screen.getByRole('button', { name: 'model_probe.state_mode' }).textContent).toBe('model_probe.state_modes.configured');
   });
 
   it('stops waiting on unmount without sending a backend cancellation', async () => {
@@ -411,7 +431,7 @@ describe('credential model connection tests', () => {
     });
   });
 
-  it.each(['managed', 'none'])(
+  it.each(['managed', 'acquired', 'none'])(
     'selects %s State without carrying temporary input',
     async (mode) => {
       const probe = vi.spyOn(authFilesApi, 'probeModel').mockResolvedValue(result);

@@ -37,7 +37,7 @@ export function AuthFileModelProbe({
   const [reasoningEffort, setReasoningEffort] = useState('');
   const [detailModel, setDetailModel] = useState<string | null>(null);
   const [stream, setStream] = useState(false);
-  const [stateMode, setStateMode] = useState<'configured' | 'none' | 'custom' | 'managed'>(
+  const [stateMode, setStateMode] = useState<'configured' | 'none' | 'custom' | 'managed' | 'acquired'>(
     'configured'
   );
   const [customState, setCustomState] = useState('');
@@ -144,7 +144,7 @@ export function AuthFileModelProbe({
   const acquireState = async (model: string) => {
     if (busy) return;
     setDetailModel(null);
-    if (await stateAcquisition.acquire(model)) resetOptions(() => setStateMode('managed'));
+    if (await stateAcquisition.acquire(model)) resetOptions(() => setStateMode('acquired'));
   };
   const run = async (targets: string[]) => {
     if (controller.current || stateAcquisition.pending || !targets.length || invalidRequest) return;
@@ -282,7 +282,7 @@ export function AuthFileModelProbe({
                 value={stateMode}
                 disabled={busy}
                 onChange={(value) => resetOptions(() => setStateMode(value as typeof stateMode))}
-                options={(['configured', 'managed', 'custom', 'none'] as const).map((value) => ({
+                options={(['configured', 'managed', 'acquired', 'custom', 'none'] as const).map((value) => ({
                   value,
                   label: t(`model_probe.state_modes.${value}`),
                 }))}
