@@ -298,7 +298,7 @@ export function CodexStateEditor({
       )}
       <div className={styles.grid}>
         {select('mode', ['override', 'missing'])}
-        {select('missing-policy', ['continue', 'error'])}
+        {select('missing-policy', ['continue', 'error', 'hide'])}
         {select('acquisition', ['active', 'all', 'manual'])}
       </div>
       <p className="hint">{text('missing_hint')}</p>

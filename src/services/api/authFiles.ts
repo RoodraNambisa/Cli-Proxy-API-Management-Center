@@ -42,7 +42,7 @@ export type CodexStateProxyResult = { ok: boolean; ip?: string; loc?: string; el
 export type ModelProbeRequest = {
   name: string; model: string; protocol: string; stream: boolean; upstream?: string;
   prompt?: string; max_output_tokens?: number; request_body?: Record<string, unknown>;
-  codex_state?: { mode: 'configured' | 'none' | 'custom' | 'managed' | 'acquired'; 'x-codex-turn-state'?: string };
+  codex_state?: { mode: 'auto' | 'configured' | 'none' | 'custom' | 'managed' | 'acquired'; 'x-codex-turn-state'?: string };
 };
 export type ModelProbeUsage = {
   input_tokens?: number; output_tokens?: number; total_tokens?: number;

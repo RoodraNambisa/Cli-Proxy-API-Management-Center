@@ -264,7 +264,7 @@ export function CodexStateRulesEditor({
                   <div className={styles.grid}>
                     {select(r, 'acquisition', ['active', 'all', 'manual'])}
                     {select(r, 'mode', ['override', 'missing'])}
-                    {select(r, 'missing-policy', ['continue', 'error'])}
+                    {select(r, 'missing-policy', ['continue', 'error', 'hide'])}
                     <div>
                       <label>{text('rule_lengths')}</label>
                       <Select

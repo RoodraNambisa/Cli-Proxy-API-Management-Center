@@ -343,7 +343,7 @@ export function codexStateError(v: CodexStateOverride): boolean {
   if (Number(v['refresh-before-minutes']) >= Number(v['ttl-minutes'])) return true;
   if (
     !['override', 'missing'].includes(v.mode) ||
-    !['continue', 'error'].includes(v['missing-policy']) ||
+    !['continue', 'error', 'hide'].includes(v['missing-policy']) ||
     !['all', 'active', 'manual'].includes(v.acquisition) ||
     !['inherit', 'direct', 'custom'].includes(v['proxy-mode'])
   )

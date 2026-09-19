@@ -37,9 +37,9 @@ export function AuthFileModelProbe({
   const [reasoningEffort, setReasoningEffort] = useState('');
   const [detailModel, setDetailModel] = useState<string | null>(null);
   const [stream, setStream] = useState(false);
-  const [stateMode, setStateMode] = useState<'configured' | 'none' | 'custom' | 'managed' | 'acquired'>(
-    'configured'
-  );
+  const [stateMode, setStateMode] = useState<
+    'auto' | 'configured' | 'none' | 'custom' | 'managed' | 'acquired'
+  >('auto');
   const [customState, setCustomState] = useState('');
   const [upstream, setUpstream] = useState('configured');
   const [customURL, setCustomURL] = useState('');
@@ -172,7 +172,7 @@ export function AuthFileModelProbe({
               ...(prompt.trim() ? { prompt } : {}),
               ...(outputLimit !== undefined ? { max_output_tokens: outputLimit } : {}),
               ...(probeBody ? { request_body: probeBody } : {}),
-              ...(provider === 'codex' && stateMode !== 'configured'
+              ...(provider === 'codex'
                 ? {
                     codex_state: {
                       mode: stateMode,
@@ -282,7 +282,9 @@ export function AuthFileModelProbe({
                 value={stateMode}
                 disabled={busy}
                 onChange={(value) => resetOptions(() => setStateMode(value as typeof stateMode))}
-                options={(['configured', 'managed', 'acquired', 'custom', 'none'] as const).map((value) => ({
+                options={(
+                  ['auto', 'configured', 'managed', 'acquired', 'custom', 'none'] as const
+                ).map((value) => ({
                   value,
                   label: t(`model_probe.state_modes.${value}`),
                 }))}

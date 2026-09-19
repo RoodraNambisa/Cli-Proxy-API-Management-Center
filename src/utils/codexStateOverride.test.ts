@@ -3,6 +3,17 @@ import { parseDocument } from 'yaml';
 import { readCodexState, writeCodexState, codexStateError } from './codexStateOverride';
 
 describe('managed Codex state configuration', () => {
+  it('round-trips the hide policy in defaults and rule overrides', () => {
+    const value = readCodexState({
+      'missing-policy': 'hide',
+      rules: [{ id: 'hidden', action: 'manage', settings: { 'missing-policy': 'hide' } }],
+    });
+    expect(codexStateError(value)).toBe(false);
+    const doc = parseDocument('{}');
+    writeCodexState(doc, value);
+    expect(doc.toJS().codex['state-override']['missing-policy']).toBe('hide');
+    expect(doc.toJS().codex['state-override'].rules[0].settings['missing-policy']).toBe('hide');
+  });
   it('round-trips subscription length rules with optional models and extension fields', () => {
     const value = readCodexState({
       'plan-lengths': [

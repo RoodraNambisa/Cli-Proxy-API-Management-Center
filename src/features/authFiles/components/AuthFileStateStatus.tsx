@@ -9,6 +9,22 @@ import styles from './AuthFileStateStatus.module.scss';
 export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; disabled: boolean }) {
   const { t } = useTranslation();
   const text = (k: string) => t(`codex_state.${k}`);
+  const failureDetails = (reason: string, length?: number, model?: string) => {
+    if (
+      [
+        'state_length_mismatch',
+        'invalid_or_missing_state',
+        'response_state_length_mismatch',
+      ].includes(reason) &&
+      length !== undefined
+    ) {
+      return ` · ${t('codex_state.returned_length', { length })}`;
+    }
+    if (reason === 'response_model_mismatch') {
+      return ` · ${t('codex_state.returned_model', { model: model || text('model_not_returned') })}`;
+    }
+    return '';
+  };
   const connection = useAuthStore(
     (s) => `${s.apiBase}:${s.managementAccessPath}:${s.connectionGeneration ?? 0}`
   );
@@ -195,6 +211,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
                   </div>
                 )}
                 {m.manual_only && <div className={styles.counts}>{text('manual_only')}</div>}
+                {m.routing_hidden && <div className={styles.warning}>{text('routing_hidden')}</div>}
                 <div>
                   {m.length > 0 ? `${m.length} · ${m.digest ?? ''}` : '—'}{' '}
                   {m.expires_at &&
@@ -215,6 +232,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
                       ? m.last_error
                       : text(`reason_${m.last_error}`)}{' '}
                     {m.last_status ? ` · HTTP ${m.last_status}` : ''}
+                    {failureDetails(m.last_error, m.last_returned_length, m.last_returned_model)}
                   </div>
                 )}
                 {m.exhausted && <div className={styles.warning}>{text('exhausted_hint')}</div>}
@@ -225,6 +243,11 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
                     {t(`codex_state.reason_${m.last_invalidation}`, {
                       defaultValue: m.last_invalidation,
                     })}
+                    {failureDetails(
+                      m.last_invalidation || '',
+                      m.invalidation_length,
+                      m.invalidation_model
+                    )}
                   </div>
                 )}
                 <div className={styles.actions}>

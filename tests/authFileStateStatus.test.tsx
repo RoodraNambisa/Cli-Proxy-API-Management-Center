@@ -5,7 +5,12 @@ import { apiClient } from '@/services/api/client';
 import { useAuthStore } from '@/stores';
 import type { CodexStateSnapshot } from '@/types/authFile';
 
-const t = (key: string) => key;
+const t = (key: string, options?: Record<string, unknown>) =>
+  key === 'codex_state.returned_length'
+    ? `${key} ${options?.length}`
+    : key === 'codex_state.returned_model'
+      ? `${key} ${options?.model}`
+      : key;
 vi.mock('react-i18next', async (original) => ({
   ...(await original<typeof import('react-i18next')>()),
   useTranslation: () => ({ t }),
@@ -30,6 +35,54 @@ beforeEach(() => {
   useAuthStore.setState({ apiBase: 'http://fixture', connectionGeneration: 1 });
 });
 afterEach(() => vi.useRealTimers());
+
+it.each([
+  {
+    reason: 'state_length_mismatch',
+    length: 312,
+    model: 'gpt-6-astra',
+    detail: 'codex_state.returned_length 312',
+  },
+  {
+    reason: 'invalid_or_missing_state',
+    length: 0,
+    model: '',
+    detail: 'codex_state.returned_length 0',
+  },
+  {
+    reason: 'response_model_mismatch',
+    length: 292,
+    model: 'gpt-5.5',
+    detail: 'codex_state.returned_model gpt-5.5',
+  },
+])('shows the actual failed response metadata: $reason', ({ reason, length, model, detail }) => {
+  render(
+    <AuthFileStateStatus
+      disabled={false}
+      file={{
+        ...file,
+        codex_state: {
+          enabled: true,
+          models: [
+            {
+              ...state('failed'),
+              last_error: reason,
+              last_status: 200,
+              last_returned_length: length,
+              last_returned_model: model,
+              routing_hidden: true,
+            },
+          ],
+        },
+      }}
+    />
+  );
+  fireEvent.click(screen.getByText('codex_state.details'));
+  expect(
+    screen.getByText((_, element) => element?.textContent === `${reason}  · HTTP 200 · ${detail}`)
+  ).toBeTruthy();
+  expect(screen.getByText('codex_state.routing_hidden')).toBeTruthy();
+});
 
 it('automatically follows a card acquisition from queued to acquiring to valid, then stops', async () => {
   vi.spyOn(apiClient, 'postAtConnection').mockResolvedValue({ models: [state('queued')] });

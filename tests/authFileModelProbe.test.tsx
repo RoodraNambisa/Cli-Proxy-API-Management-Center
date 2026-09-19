@@ -137,7 +137,7 @@ describe('credential model connection tests', () => {
       expect(screen.getByText('model_probe.state_acquire_states.failed')).toBeTruthy()
     );
     expect(screen.getByRole('button', { name: 'model_probe.state_mode' }).textContent).toBe(
-      'model_probe.state_modes.configured'
+      'model_probe.state_modes.auto'
     );
   });
 
@@ -155,7 +155,7 @@ describe('credential model connection tests', () => {
     fireEvent.click(screen.getByRole('button', { name: 'model_probe.state_acquire alias' }));
     await waitFor(() => expect(screen.getByText('model_probe.state_acquire_upgrade')).toBeTruthy());
     expect(post.mock.calls[0][2]).toEqual({ name: 'codex.json', model: 'alias', action: 'acquire', diagnostic: true });
-    expect(screen.getByRole('button', { name: 'model_probe.state_mode' }).textContent).toBe('model_probe.state_modes.configured');
+    expect(screen.getByRole('button', { name: 'model_probe.state_mode' }).textContent).toBe('model_probe.state_modes.auto');
   });
 
   it('stops waiting on unmount without sending a backend cancellation', async () => {
@@ -370,6 +370,7 @@ describe('credential model connection tests', () => {
       model: 'gpt-5.5',
       protocol: 'responses',
       stream: false,
+      codex_state: { mode: 'auto' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'model_probe.details gpt-5.5' }));
     expect(screen.getByText('https://api.x.ai/v1/responses')).toBeTruthy();

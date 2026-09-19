@@ -21,8 +21,13 @@ export interface CodexStateSnapshot {
   acquisition_tokens: number;
   last_error?: string;
   last_status?: number;
+  last_returned_length?: number;
+  last_returned_model?: string;
   invalidations?: number;
   last_invalidation?: string;
+  invalidation_length?: number;
+  invalidation_model?: string;
+  routing_hidden?: boolean;
   manual_only?: boolean;
 }
 /**
