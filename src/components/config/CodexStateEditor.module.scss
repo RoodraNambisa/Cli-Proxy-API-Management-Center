@@ -142,6 +142,50 @@
   display: grid;
   gap: 8px;
 }
+.preview {
+  container-type: inline-size;
+}
+.previewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 16px;
+  margin-top: 16px;
+
+  > :global(.form-group) {
+    min-width: 0;
+    margin-bottom: 0;
+  }
+
+  :global(.input),
+  > :global(.btn),
+  .previewCredential button {
+    height: 44px;
+  }
+
+  > :global(.btn) {
+    white-space: nowrap;
+  }
+}
+@container (max-width: 720px) {
+  .previewGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    > :global(.btn) {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+  }
+}
+@container (max-width: 480px) {
+  .previewGrid {
+    grid-template-columns: minmax(0, 1fr);
+
+    > :global(.btn) {
+      justify-self: stretch;
+    }
+  }
+}
 .previewResult {
   margin-top: 16px;
   dl {

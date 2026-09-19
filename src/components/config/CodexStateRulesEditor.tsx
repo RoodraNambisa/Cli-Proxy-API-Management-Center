@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -400,6 +400,7 @@ function StateRulePreview({
 }: Pick<Props, 'value' | 'choices' | 'load' | 'disabled'>) {
   const { t } = useTranslation();
   const text = (key: string) => t(`codex_state.${key}`);
+  const credentialId = useId();
   const scope = useAuthStore(
     (s) => `${s.apiBase}:${s.managementAccessPath}:${s.connectionGeneration}`
   );
@@ -446,17 +447,22 @@ function StateRulePreview({
     >
       <summary>{text('rule_preview')}</summary>
       <p className="hint">{text('rule_preview_hint')}</p>
-      <div className={styles.grid}>
-        <Select
-          ariaLabel={text('rule_preview_credential')}
-          value={credential}
-          disabled={disabled}
-          options={[
-            { value: '', label: text('rule_preview_credential') },
-            ...choices.credentials.map((c) => ({ value: c.value, label: c.label })),
-          ]}
-          onChange={setCredential}
-        />
+      <div className={styles.previewGrid}>
+        <div className="form-group">
+          <label htmlFor={credentialId}>{text('rule_preview_credential')}</label>
+          <Select
+            id={credentialId}
+            className={styles.previewCredential}
+            ariaLabel={text('rule_preview_credential')}
+            value={credential}
+            disabled={disabled}
+            options={[
+              { value: '', label: text('rule_preview_credential') },
+              ...choices.credentials.map((c) => ({ value: c.value, label: c.label })),
+            ]}
+            onChange={setCredential}
+          />
+        </div>
         <Input
           label={text('rule_preview_model')}
           list="state-rule-preview-models"
