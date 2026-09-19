@@ -37,6 +37,7 @@ export type CodexStateOptions = {
   priorities: number[];
   plans: string[];
 };
+export type CodexStatePreview = {managed:boolean;registered:boolean;upstream_model:string;match:{rule_id?:string;rule_name?:string;rule_index:number;action:string;sources?:Record<string,string>};policy:Record<string,string|number|boolean|number[]|null>};
 export type CodexStateProxyResult = { ok: boolean; ip?: string; loc?: string; elapsed_ms?: number; error?: string; message?: string };
 export type ModelProbeRequest = {
   name: string; model: string; protocol: string; stream: boolean; upstream?: string;
@@ -1353,6 +1354,9 @@ export const authFilesApi = {
     );
   },
 
+  previewCodexState(name:string, model:string, config:Record<string,unknown>, connection:ApiClientConnectionSnapshot, signal:AbortSignal) {
+    return apiClient.postAtConnection<CodexStatePreview>(connection, '/auth-files/codex/state/preview', {name,model,config}, {signal});
+  },
   getCodexStateOptions(connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
     return apiClient.getAtConnection<CodexStateOptions>(connection, '/auth-files/codex/state/options', {signal});
   },

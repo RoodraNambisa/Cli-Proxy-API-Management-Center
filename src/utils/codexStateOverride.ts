@@ -1,3 +1,4 @@
+import { generateId } from './helpers';
 import type { Document } from 'yaml';
 import { detachErrorRuleAliases, readMergedYamlField } from './requestScopedErrorsYaml';
 import { API_KEY_PRIORITY_LIMIT } from './apiKeyGroups';
@@ -17,7 +18,21 @@ export type StatePlanLengthRule = {
   lengths: string;
   extra: Record<string, unknown>;
 };
+export type CodexStateRule = {
+  id: string;
+  name: string;
+  enabled?: boolean;
+  action: 'manage' | 'skip';
+  priorities: number[];
+  credentials: string[];
+  'excluded-credentials': string[];
+  'plan-types': string[];
+  models: string[];
+  settings: Record<string, unknown>;
+  [key: string]: unknown;
+};
 export type CodexStateOverride = Record<StateNumberField, string> & {
+  rules?: CodexStateRule[];
   enabled: boolean;
   priorities: string;
   'included-credentials': string;
@@ -104,6 +119,28 @@ export function readCodexState(raw: unknown): CodexStateOverride {
           };
         })
       : [],
+    ...(Array.isArray(s.rules)
+      ? {
+          rules: s.rules.map((raw) => {
+            const r = record(raw);
+            return {
+              ...r,
+              id: String(r.id ?? ''),
+              name: String(r.name ?? ''),
+              enabled: r.enabled !== false,
+              action: String(r.action || 'manage') as CodexStateRule['action'],
+              priorities: Array.isArray(r.priorities) ? r.priorities : [],
+              credentials: Array.isArray(r.credentials) ? r.credentials : [],
+              'excluded-credentials': Array.isArray(r['excluded-credentials'])
+                ? r['excluded-credentials']
+                : [],
+              'plan-types': Array.isArray(r['plan-types']) ? r['plan-types'] : [],
+              models: Array.isArray(r.models) ? r.models : [],
+              settings: record(r.settings),
+            } as CodexStateRule;
+          }),
+        }
+      : {}),
     enabled: s.enabled === true,
     priorities: listText(s.priorities),
     'included-credentials': listText(s['included-credentials']),
@@ -132,6 +169,109 @@ export const DEFAULT_CODEX_STATE = readCodexState(undefined);
 export const codexStateEqual = (a: CodexStateOverride, b: CodexStateOverride) =>
   JSON.stringify(a) === JSON.stringify(b);
 export function codexStateError(v: CodexStateOverride): boolean {
+  if (!readStateModelOverrides(v['model-overrides'])) return true;
+  if (v.rules !== undefined) {
+    if (v.rules.length > 128) return true;
+    const seen = new Set<string>();
+    for (const r of v.rules) {
+      if (
+        !r.id.trim() ||
+        seen.has(r.id) ||
+        r.id.length > 128 ||
+        /[\r\n\0]/.test(r.id) ||
+        r.name.length > 256 ||
+        !['manage', 'skip'].includes(r.action)
+      )
+        return true;
+      seen.add(r.id);
+      const selectors: [unknown[], StateListKind, number][] = [
+        [r.priorities, 'priority', 128],
+        [r.credentials, 'credential', 1024],
+        [r['excluded-credentials'], 'credential', 1024],
+        [r['plan-types'], 'plan', 32],
+        [r.models, 'model', 256],
+      ];
+      if (
+        selectors.some(
+          ([values, kind, max]) =>
+            values.length > max || values.some((x) => stateListItemError(String(x), kind))
+        )
+      )
+        return true;
+      const settings = r.settings;
+      if (
+        [
+          'mode',
+          'missing-policy',
+          'acquisition',
+          'proxy-mode',
+          'prompt',
+          'error-type',
+          'error-code',
+        ].some(
+          (key) =>
+            key in settings && (typeof settings[key] !== 'string' || !String(settings[key]).trim())
+        )
+      )
+        return true;
+      if (
+        ['proxy-url', 'response-contains', 'error-message'].some(
+          (key) => key in settings && typeof settings[key] !== 'string'
+        )
+      )
+        return true;
+
+      const effective = readCodexState({
+        ...serializeCodexState({ ...v, rules: undefined }),
+        ...Object.fromEntries(
+          Object.entries(settings).filter(([key]) =>
+            [
+              ...Object.keys(STATE_NUMBER_DEFAULTS).filter((key) => key !== 'concurrency'),
+              'mode',
+              'missing-policy',
+              'acquisition',
+              'proxy-mode',
+              'proxy-url',
+              'lengths',
+              'match-model',
+              'prompt',
+              'response-contains',
+              'error-type',
+              'error-code',
+              'error-message',
+              'invalidate-on-state-length-mismatch',
+              'invalidate-on-model-mismatch',
+            ].includes(key)
+          )
+        ),
+      });
+      if (
+        Object.entries(STATE_NUMBER_DEFAULTS).some(
+          ([key]) =>
+            key in settings &&
+            (typeof settings[key] !== 'number' ||
+              !Number.isInteger(settings[key]) ||
+              Number(settings[key]) <= 0)
+        )
+      )
+        return true;
+      if (
+        ['match-model', 'invalidate-on-state-length-mismatch', 'invalidate-on-model-mismatch'].some(
+          (key) => key in settings && typeof settings[key] !== 'boolean'
+        )
+      )
+        return true;
+      if (
+        'lengths' in settings &&
+        (!Array.isArray(settings.lengths) ||
+          settings.lengths.some(
+            (x) => typeof x !== 'number' || stateListItemError(String(x), 'length')
+          ))
+      )
+        return true;
+      if (codexStateError(effective)) return true;
+    }
+  }
   if (v['plan-lengths'].length > 64) return true;
   for (const rule of v['plan-lengths']) {
     const plans = splitStateList(rule.planTypes),
@@ -254,8 +394,11 @@ export function writeCodexState(doc: Document, value: CodexStateOverride) {
   const path = ['codex', 'state-override'];
   const old = record(record(readMergedYamlField(doc, ['codex']))['state-override']);
   detachErrorRuleAliases(doc, doc.getIn(path, true));
-  doc.setIn(path, {
-    ...old,
+  doc.setIn(path, { ...old, ...serializeCodexState(value) });
+}
+
+export function serializeCodexState(value: CodexStateOverride): Record<string, unknown> {
+  return {
     ...value,
     'model-overrides': JSON.parse(value['model-overrides'] || '[]'),
     'plan-lengths': value['plan-lengths'].map((rule) => ({
@@ -272,5 +415,39 @@ export function writeCodexState(doc: Document, value: CodexStateOverride) {
     lengths: splitStateList(value.lengths).map(Number),
     'included-credentials': splitStateList(value['included-credentials']),
     'excluded-credentials': splitStateList(value['excluded-credentials']),
-  });
+  };
+}
+
+export function newCodexStateRule(): CodexStateRule {
+  return {
+    id: generateId(),
+    name: '',
+    enabled: true,
+    action: 'manage',
+    priorities: [],
+    credentials: [],
+    'excluded-credentials': [],
+    'plan-types': [],
+    models: [],
+    settings: {},
+  };
+}
+export function migrateCodexStateRules(value: CodexStateOverride): CodexStateOverride {
+  if (value.rules !== undefined) return value;
+  const base = newCodexStateRule();
+  base.models = splitStateList(value.models);
+  base['excluded-credentials'] = splitStateList(value['excluded-credentials']);
+  const priorities = splitStateList(value.priorities).map(Number);
+  const credentials = splitStateList(value['included-credentials']);
+  const rules: CodexStateRule[] = [];
+  if (priorities.length || !credentials.length) rules.push({ ...base, priorities });
+  if (credentials.length) rules.push({ ...base, id: generateId(), credentials });
+  return {
+    ...value,
+    priorities: '',
+    'included-credentials': '',
+    'excluded-credentials': '',
+    models: '',
+    rules,
+  };
 }

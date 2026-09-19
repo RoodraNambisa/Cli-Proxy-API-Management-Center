@@ -182,6 +182,18 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
                   <strong>{m.model}</strong>
                   <span>{text(`status_${m.status}`)}</span>
                 </div>
+                {m.allowed_lengths && (
+                  <div className={styles.counts}>
+                    {t('codex_state.rule_card_policy', {
+                      rule:
+                        m.rule_name && m.rule_name !== 'legacy'
+                          ? m.rule_name
+                          : m.rule_id || text('rule_legacy'),
+                      lengths: m.allowed_lengths.join(', ') || text('picker_any_length'),
+                      seconds: m.retry_seconds,
+                    })}
+                  </div>
+                )}
                 {m.manual_only && <div className={styles.counts}>{text('manual_only')}</div>}
                 <div>
                   {m.length > 0 ? `${m.length} · ${m.digest ?? ''}` : '—'}{' '}

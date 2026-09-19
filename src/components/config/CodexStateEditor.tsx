@@ -1,3 +1,4 @@
+import { CodexStateRulesEditor } from './CodexStateRulesEditor';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/Input';
@@ -11,6 +12,7 @@ import { StateProxyCheck } from './StateProxyCheck';
 import { useCodexStateOptions } from '@/hooks/useCodexStateOptions';
 import {
   codexStateError,
+  migrateCodexStateRules,
   splitStateList,
   stateListItemError,
   STATE_NUMBER_DEFAULTS,
@@ -27,6 +29,7 @@ export function CodexStateEditor({
   dirty,
   focusTarget,
   strip,
+  defaultsOnly = false,
 }: {
   value: CodexStateOverride;
   onChange: (value: CodexStateOverride) => void;
@@ -34,6 +37,7 @@ export function CodexStateEditor({
   dirty?: boolean;
   focusTarget?: string;
   strip: boolean;
+  defaultsOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const text = (key: string) => t(`codex_state.${key}`);
@@ -158,73 +162,140 @@ export function CodexStateEditor({
       autoComplete={key === 'proxy-url' ? 'off' : undefined}
     />
   );
+  if (!defaultsOnly && value.rules !== undefined)
+    return (
+      <SettingsDisclosure
+        id="config-codex-state"
+        title={text('title')}
+        summary={text(value.enabled ? 'enabled' : 'disabled')}
+        focusTarget={focusTarget}
+        dirty={dirty}
+        errorCount={codexStateError(value) || (value.enabled && strip) ? 1 : 0}
+      >
+        <ToggleSwitch
+          label={text('enabled')}
+          checked={value.enabled}
+          disabled={disabled}
+          onChange={(enabled) => patch({ enabled })}
+        />
+        <p className="hint">{text('memory_hint')}</p>
+        <p className="hint">{text('ws_hint')}</p>
+        {value.enabled && strip && (
+          <div role="alert" className="error-box">
+            {text('strip_conflict')}
+          </div>
+        )}
+        {codexStateError(value) && (
+          <div role="alert" className="error-box">
+            {text('invalid')}
+          </div>
+        )}
+        <Input
+          type="number"
+          min={1}
+          max={16}
+          label={text('concurrency')}
+          value={value.concurrency}
+          disabled={disabled}
+          onChange={(e) => patch({ concurrency: e.target.value })}
+        />
+        <CodexStateEditor
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          strip={strip}
+          defaultsOnly
+        />
+        <CodexStateRulesEditor
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          choices={{ priorities, credentials, models, plans, lengths }}
+          load={load}
+          loading={catalog.loading}
+          loadError={catalog.error}
+        />
+      </SettingsDisclosure>
+    );
   return (
     <SettingsDisclosure
-      id="config-codex-state"
-      title={text('title')}
-      summary={text(value.enabled ? 'enabled' : 'disabled')}
+      id={defaultsOnly ? 'config-codex-state-defaults' : 'config-codex-state'}
+      title={text(defaultsOnly ? 'rule_defaults' : 'title')}
+      summary={defaultsOnly ? text('rule_inherit') : text(value.enabled ? 'enabled' : 'disabled')}
       focusTarget={focusTarget}
       dirty={dirty}
       errorCount={codexStateError(value) || (value.enabled && strip) ? 1 : 0}
     >
-      <ToggleSwitch
-        label={text('enabled')}
-        checked={value.enabled}
-        disabled={disabled}
-        onChange={(enabled) => patch({ enabled })}
-      />
-      <p className="hint">{text('memory_hint')}</p>
-      <p className="hint">{text('ws_hint')}</p>
-      {value.enabled && strip && (
-        <div role="alert" className="error-box">
-          {text('strip_conflict')}
-        </div>
+      {!defaultsOnly && (
+        <>
+          <Button
+            variant="secondary"
+            disabled={disabled}
+            onClick={() => onChange(migrateCodexStateRules(value))}
+          >
+            {text('rules_convert')}
+          </Button>
+          <p className="hint">{text('rules_convert_hint')}</p>
+          <ToggleSwitch
+            label={text('enabled')}
+            checked={value.enabled}
+            disabled={disabled}
+            onChange={(enabled) => patch({ enabled })}
+          />
+          <p className="hint">{text('memory_hint')}</p>
+          <p className="hint">{text('ws_hint')}</p>
+          {value.enabled && strip && (
+            <div role="alert" className="error-box">
+              {text('strip_conflict')}
+            </div>
+          )}
+          {codexStateError(value) && (
+            <div role="alert" className="error-box">
+              {text('invalid')}
+            </div>
+          )}
+          <div className={styles.grid}>
+            {list(
+              text('priorities'),
+              value.priorities,
+              (priorities) => patch({ priorities }),
+              'priority',
+              priorities,
+              'picker_no_priority',
+              128
+            )}
+            {list(
+              text('included-credentials'),
+              value['included-credentials'],
+              (v) => patch({ 'included-credentials': v }),
+              'credential',
+              credentials,
+              'picker_no_included',
+              1024
+            )}
+            {list(
+              text('excluded-credentials'),
+              value['excluded-credentials'],
+              (v) => patch({ 'excluded-credentials': v }),
+              'credential',
+              credentials,
+              'picker_no_excluded',
+              1024
+            )}
+          </div>
+          <p className="hint">{text('credential_scope_hint')}</p>
+          {list(
+            text('models'),
+            value.models,
+            (models) => patch({ models }),
+            'model',
+            models,
+            'picker_all_models',
+            256
+          )}
+          <p className="hint">{text('scope_hint')}</p>
+        </>
       )}
-      {codexStateError(value) && (
-        <div role="alert" className="error-box">
-          {text('invalid')}
-        </div>
-      )}
-      <div className={styles.grid}>
-        {list(
-          text('priorities'),
-          value.priorities,
-          (priorities) => patch({ priorities }),
-          'priority',
-          priorities,
-          'picker_no_priority',
-          128
-        )}
-        {list(
-          text('included-credentials'),
-          value['included-credentials'],
-          (v) => patch({ 'included-credentials': v }),
-          'credential',
-          credentials,
-          'picker_no_included',
-          1024
-        )}
-        {list(
-          text('excluded-credentials'),
-          value['excluded-credentials'],
-          (v) => patch({ 'excluded-credentials': v }),
-          'credential',
-          credentials,
-          'picker_no_excluded',
-          1024
-        )}
-      </div>
-      <p className="hint">{text('credential_scope_hint')}</p>
-      {list(
-        text('models'),
-        value.models,
-        (models) => patch({ models }),
-        'model',
-        models,
-        'picker_all_models',
-        256
-      )}
-      <p className="hint">{text('scope_hint')}</p>
       <div className={styles.grid}>
         {select('mode', ['override', 'missing'])}
         {select('missing-policy', ['continue', 'error'])}
@@ -242,19 +313,21 @@ export function CodexStateEditor({
       </div>
       <p className="hint">{text('proxy_hint')}</p>
       <div className={styles.grid}>
-        {Object.keys(STATE_NUMBER_DEFAULTS).map((k) => {
-          const key = k as StateNumberField;
-          return (
-            <Input
-              key={key}
-              label={text(key)}
-              type="number"
-              value={value[key]}
-              disabled={disabled}
-              onChange={(e) => patch({ [key]: e.target.value })}
-            />
-          );
-        })}
+        {Object.keys(STATE_NUMBER_DEFAULTS)
+          .filter((k) => !defaultsOnly || k !== 'concurrency')
+          .map((k) => {
+            const key = k as StateNumberField;
+            return (
+              <Input
+                key={key}
+                label={text(key)}
+                type="number"
+                value={value[key]}
+                disabled={disabled}
+                onChange={(e) => patch({ [key]: e.target.value })}
+              />
+            );
+          })}
       </div>
       <p className="hint">{text('retry_hint')}</p>
       <div className={styles.grid}>
