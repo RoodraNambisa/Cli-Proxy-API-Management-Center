@@ -4964,5 +4964,29 @@
     "reason_response_text_mismatch": "答案不包含指定文本",
     "model_overrides": "高级：每模型获取条件",
     "model_overrides_hint": "選擇實際模型後逐項設定取得條件；未單獨設定的欄位繼承全域。規則不會擴大管理模型範圍，訂閱長度規則仍優先於此處的長度設定。"
+  },
+  "auth_error_history": {
+    "title": "最近錯誤",
+    "details": "錯誤記錄詳情",
+    "card_count": "{{distinct}} 種 · 累計 {{count}} 次",
+    "scope": "僅保存在記憶體，重啟後清空。按失敗嘗試計數，包含重試；最近 {{limit}} 種錯誤按狀態碼、錯誤碼、類型和原因合併。模型計數僅彙總保留記錄，舊記錄淘汰後不再計入模型彙總。",
+    "model": "模型",
+    "count": "次數",
+    "unknown_model": "未記錄模型",
+    "other_models": "其他模型（合併計數）",
+    "loading": "正在載入錯誤記錄…",
+    "total": "本次執行累計錯誤",
+    "retained": "保留記錄累計次數",
+    "since": "統計起點",
+    "by_model": "按模型統計（保留記錄）",
+    "no_status": "無 HTTP 狀態碼",
+    "occurrences": "{{count}} 次",
+    "unknown_error": "未傳回錯誤原因",
+    "last": "最近發生",
+    "last_model": "最近模型",
+    "first": "首次發生",
+    "raw": "錯誤內容（已遮蔽敏感資料）",
+    "truncated": "已截斷",
+    "empty": "暫無錯誤記錄"
   }
 }

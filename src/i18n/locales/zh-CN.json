@@ -4972,5 +4972,29 @@
     "reason_response_text_mismatch": "答案不包含指定文本",
     "model_overrides": "高级：每模型获取条件",
     "model_overrides_hint": "选择实际模型后，逐项设置获取条件；未单独设置的字段继承全局。这些规则不会扩大管理模型范围，订阅长度规则仍优先于这里的长度设置。"
+  },
+  "auth_error_history": {
+    "title": "最近错误",
+    "details": "错误记录详情",
+    "card_count": "{{distinct}} 种 · 累计 {{count}} 次",
+    "scope": "仅保存在内存，重启后清空。按失败尝试计数，包含重试；最近 {{limit}} 种错误按状态码、错误码、类型和原因合并。模型计数仅汇总保留记录，旧记录淘汰后不再计入模型汇总。",
+    "model": "模型",
+    "count": "次数",
+    "unknown_model": "未记录模型",
+    "other_models": "其他模型（合并计数）",
+    "loading": "正在加载错误记录…",
+    "total": "本次运行累计错误",
+    "retained": "保留记录累计次数",
+    "since": "统计起点",
+    "by_model": "按模型统计（保留记录）",
+    "no_status": "无 HTTP 状态码",
+    "occurrences": "{{count}} 次",
+    "unknown_error": "未返回错误原因",
+    "last": "最近发生",
+    "last_model": "最近模型",
+    "first": "首次发生",
+    "raw": "错误内容（已脱敏）",
+    "truncated": "已截断",
+    "empty": "暂无错误记录"
   }
 }

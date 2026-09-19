@@ -169,6 +169,7 @@ export interface CodexObservedQuotaWindow {
 }
 
 export interface AuthFileItem {
+  error_history?: AuthErrorHistorySummary;
   response_model_rewrite?: import('@/utils/responseModelRewrite').ResponseModelRewriteSummary;
   routing_alias?: string;
   base_url?: string;
@@ -333,4 +334,35 @@ export interface CodexPlanTypeRefreshTask {
   currentName?: string;
   summary: CodexPlanTypeRefreshSummary;
   results: CodexPlanTypeRefreshResult[];
+}
+
+export interface AuthErrorModelCount {
+  model: string;
+  count: number;
+  last_at: string;
+}
+export interface AuthErrorHistorySummary {
+  total: number;
+  retained_total: number;
+  distinct: number;
+  limit: number;
+  since?: string;
+  current_model?: string;
+  other_models?: number;
+  models?: AuthErrorModelCount[];
+  recent?: Array<{
+    id: string;
+    http_status?: number;
+    code?: string;
+    type?: string;
+    message: string;
+    details?: string;
+    truncated?: boolean;
+    count: number;
+    first_at: string;
+    last_at: string;
+    last_model?: string;
+    models: AuthErrorModelCount[];
+    other_models?: number;
+  }>;
 }

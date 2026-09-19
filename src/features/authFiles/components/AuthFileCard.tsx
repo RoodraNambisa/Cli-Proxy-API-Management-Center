@@ -48,6 +48,7 @@ import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQu
 import { CodexQuotaObservationPanel } from '@/features/authFiles/components/CodexQuotaObservationPanel';
 import { AuthFileUsageStatsPanel } from '@/features/authFiles/components/AuthFileUsageStatsPanel';
 import { AuthFileProxyStatus } from '@/features/authFiles/components/AuthFileProxyStatus';
+import { AuthFileErrorHistory } from '@/features/authFiles/components/AuthFileErrorHistory';
 import { AuthFileResponseModelStatus } from '@/features/authFiles/components/AuthFileResponseModelStatus';
 import styles from '@/pages/AuthFilesPage.module.scss';
 
@@ -516,11 +517,20 @@ export function AuthFileCard(props: AuthFileCardProps) {
             </div>
           </div>
 
-          {onTargetCredential && authIndexKey && !isRetiredGeminiCli && <button type="button"
-            className={styles.credentialTargetLink} onClick={() => onTargetCredential(file)} disabled={disableControls}
-            title={t('credential_target.title')} aria-label={`${t('credential_target.title')}: ${file.name}`}>
-            <span>ID</span><code>{authIndexKey}</code>{file.routing_alias && <strong>{String(file.routing_alias)}</strong>}
-          </button>}
+          {onTargetCredential && authIndexKey && !isRetiredGeminiCli && (
+            <button
+              type="button"
+              className={styles.credentialTargetLink}
+              onClick={() => onTargetCredential(file)}
+              disabled={disableControls}
+              title={t('credential_target.title')}
+              aria-label={`${t('credential_target.title')}: ${file.name}`}
+            >
+              <span>ID</span>
+              <code>{authIndexKey}</code>
+              {file.routing_alias && <strong>{String(file.routing_alias)}</strong>}
+            </button>
+          )}
 
           <div className={`${styles.cardMeta} ${compact ? styles.cardMetaCompact : ''}`}>
             <div className={styles.metaItem}>
@@ -543,7 +553,10 @@ export function AuthFileCard(props: AuthFileCardProps) {
 
           <AuthFileProxyStatus file={file} disabled={disableControls || isRetiredGeminiCli} />
           <AuthFileStateStatus file={file} disabled={disableControls || isRetiredGeminiCli} />
-          <AuthFileResponseModelStatus file={file} disabled={disableControls || isRetiredGeminiCli} />
+          <AuthFileResponseModelStatus
+            file={file}
+            disabled={disableControls || isRetiredGeminiCli}
+          />
 
           {codexPlanDisplay && (
             <div className={styles.codexPlan}>
@@ -999,10 +1012,17 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 {hasLastErrorStatusCode && (
                   <span className={styles.httpStatusBadge}>HTTP {lastErrorStatusCode}</span>
                 )}
+                {file.error_history?.current_model && (
+                  <span>
+                    {t('auth_error_history.model')}: <code>{file.error_history.current_model}</code>
+                  </span>
+                )}
                 {displayStatusMessage && <span>{displayStatusMessage}</span>}
               </span>
             </div>
           )}
+
+          <AuthFileErrorHistory file={file} disabled={disableControls || isRetiredGeminiCli} />
 
           <div className={`${styles.cardInsights} ${compact ? styles.cardInsightsCompact : ''}`}>
             <div className={`${styles.cardStats} ${compact ? styles.cardStatsCompact : ''}`}>
@@ -1029,7 +1049,9 @@ export function AuthFileCard(props: AuthFileCardProps) {
               compact={compact}
             />
 
-            {providerKey === 'codex' && <CodexQuotaObservationPanel file={file} compact={compact} />}
+            {providerKey === 'codex' && (
+              <CodexQuotaObservationPanel file={file} compact={compact} />
+            )}
 
             {showQuotaLayout && quotaType && (
               <AuthFileQuotaSection

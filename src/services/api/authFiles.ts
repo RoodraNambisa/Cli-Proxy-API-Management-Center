@@ -1371,6 +1371,12 @@ export const authFilesApi = {
     );
   },
 
+  errorHistory(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+    return apiClient.getAtConnection<import('@/types/authFile').AuthErrorHistorySummary>(
+      connection, `/auth-files/errors?name=${encodeURIComponent(name)}`, { signal }
+    );
+  },
+
   responseModelRewrite(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
     return apiClient.getAtConnection<import('@/utils/responseModelRewrite').ResponseModelRewriteSummary>(
       connection, `/auth-files/response-model-rewrite?name=${encodeURIComponent(name)}`, { signal }

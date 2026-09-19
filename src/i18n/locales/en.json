@@ -4968,5 +4968,29 @@
     "reason_response_text_mismatch": "Required response text missing",
     "model_overrides": "Advanced: per-model acquisition rules",
     "model_overrides_hint": "Choose an upstream model and set its acquisition criteria. Unset fields inherit global settings. Rules do not expand model scope; subscription length rules still take precedence."
+  },
+  "auth_error_history": {
+    "title": "Recent errors",
+    "details": "Error history",
+    "card_count": "{{distinct}} types · {{count}} total",
+    "scope": "Stored in memory and cleared on restart. Counts failed attempts, including retries. The latest {{limit}} error types are grouped by HTTP status, code, type and message. Model totals cover retained records only; evicted records no longer contribute.",
+    "model": "Model",
+    "count": "Count",
+    "unknown_model": "Model not recorded",
+    "other_models": "Other models (combined)",
+    "loading": "Loading error history…",
+    "total": "Errors this run",
+    "retained": "Retained occurrences",
+    "since": "Tracking since",
+    "by_model": "By model (retained records)",
+    "no_status": "No HTTP status",
+    "occurrences": "{{count}} occurrences",
+    "unknown_error": "No error message returned",
+    "last": "Last seen",
+    "last_model": "Last model",
+    "first": "First seen",
+    "raw": "Error content (redacted)",
+    "truncated": "Truncated",
+    "empty": "No error history yet"
   }
 }
