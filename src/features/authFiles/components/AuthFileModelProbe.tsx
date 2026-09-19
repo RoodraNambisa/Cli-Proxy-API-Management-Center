@@ -34,6 +34,7 @@ export function AuthFileModelProbe({
   const [prompt, setPrompt] = useState('');
   const [requestBody, setRequestBody] = useState('');
   const [maxTokens, setMaxTokens] = useState('');
+  const [reasoningEffort, setReasoningEffort] = useState('');
   const [detailModel, setDetailModel] = useState<string | null>(null);
   const [stream, setStream] = useState(false);
   const [stateMode, setStateMode] = useState<'configured' | 'none' | 'custom' | 'managed'>(
@@ -87,6 +88,20 @@ export function AuthFileModelProbe({
       return { body: undefined, invalid: true };
     }
   }, [requestBody]);
+  const probeBody = useMemo(() => {
+    if (!reasoningEffort) return temporary.body;
+    const body = { ...temporary.body };
+    if (protocol === 'responses') {
+      const reasoning = body.reasoning;
+      if (reasoning === undefined) body.reasoning = { effort: reasoningEffort };
+      else if (reasoning && typeof reasoning === 'object' && !Array.isArray(reasoning)) {
+        body.reasoning = { effort: reasoningEffort, ...reasoning };
+      }
+    } else if (!Object.prototype.hasOwnProperty.call(body, 'reasoning_effort')) {
+      body.reasoning_effort = reasoningEffort;
+    }
+    return body;
+  }, [temporary.body, reasoningEffort, protocol]);
   const outputLimit = maxTokens.trim() ? Number(maxTokens) : undefined;
   const invalidLimit =
     outputLimit !== undefined &&
@@ -156,7 +171,7 @@ export function AuthFileModelProbe({
               stream,
               ...(prompt.trim() ? { prompt } : {}),
               ...(outputLimit !== undefined ? { max_output_tokens: outputLimit } : {}),
-              ...(temporary.body ? { request_body: temporary.body } : {}),
+              ...(probeBody ? { request_body: probeBody } : {}),
               ...(provider === 'codex' && stateMode !== 'configured'
                 ? {
                     codex_state: {
@@ -344,6 +359,24 @@ export function AuthFileModelProbe({
           />
         </label>
       </div>
+      <div className={styles.options}>
+        <div>
+          <label>{t('model_probe.reasoning_effort')}</label>
+          <Select
+            ariaLabel={t('model_probe.reasoning_effort')}
+            value={reasoningEffort}
+            disabled={busy}
+            onChange={(value) => resetOptions(() => setReasoningEffort(value))}
+            options={[
+              { value: '', label: t('model_probe.reasoning_default') },
+              ...['none', 'auto', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'].map(
+                (value) => ({ value, label: value })
+              ),
+            ]}
+          />
+        </div>
+      </div>
+      <div className={styles.hint}>{t('model_probe.reasoning_hint')}</div>
       {(invalidPrompt || invalidLimit) && (
         <div role="alert" className={styles.failed}>
           {t(invalidPrompt ? 'model_probe.prompt_too_large' : 'model_probe.invalid_limit')}

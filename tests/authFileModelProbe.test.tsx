@@ -24,6 +24,44 @@ const result: ModelProbeResult = {
 const models = [{ id: 'grok-4.6' }, { id: 'grok-4.5' }, { id: 'grok-imagine-image' }];
 
 describe('credential model connection tests', () => {
+  it.each(['responses', 'chat', 'chat-direct', 'chat-responses'])(
+    'sends temporary reasoning effort for %s while preserving advanced JSON',
+    async (protocol) => {
+      const probe = vi.spyOn(authFilesApi, 'probeModel').mockResolvedValue(result);
+      render(<AuthFileModelProbe fileName="chosen.json" provider="xai" models={[models[0]]} />);
+      if (protocol !== 'responses') {
+        fireEvent.click(screen.getByRole('button', { name: 'model_probe.protocol' }));
+        fireEvent.click(screen.getByRole('option', { name: `model_probe.protocols.${protocol}` }));
+      }
+      const run = async (count: number) => {
+        fireEvent.click(screen.getByRole('button', { name: 'model_probe.test grok-4.6' }));
+        await waitFor(() => expect(probe).toHaveBeenCalledTimes(count));
+        await waitFor(() => expect(screen.getByRole('button', { name: 'model_probe.reasoning_effort' }).hasAttribute('disabled')).toBe(false));
+      };
+      await run(1);
+      expect(probe.mock.calls[0][0].request_body).toBeUndefined();
+      fireEvent.click(screen.getByRole('button', { name: 'model_probe.reasoning_effort' }));
+      fireEvent.click(screen.getByRole('option', { name: 'high', exact: true }));
+      await run(2);
+      expect(probe.mock.calls[1][0].request_body).toEqual(
+        protocol === 'responses' ? { reasoning: { effort: 'high' } } : { reasoning_effort: 'high' }
+      );
+      fireEvent.click(screen.getByText('model_probe.temporary_json', { selector: 'summary' }));
+      const explicit = protocol === 'responses'
+        ? { reasoning: { effort: 'low', summary: 'auto' } }
+        : { reasoning_effort: 'low' };
+      fireEvent.change(screen.getByRole('textbox', { name: 'model_probe.temporary_json' }), {
+        target: { value: JSON.stringify(explicit) },
+      });
+      await run(3);
+      expect(probe.mock.calls[2][0].request_body).toEqual(explicit);
+      fireEvent.click(screen.getByRole('button', { name: 'model_probe.reasoning_effort' }));
+      fireEvent.click(screen.getByRole('option', { name: 'model_probe.reasoning_default' }));
+      await run(4);
+      expect(probe.mock.calls[3][0].request_body).toEqual(explicit);
+    }
+  );
+
   const stateSnapshot = (overrides: Partial<CodexStateSnapshot> = {}): CodexStateSnapshot => ({
     model: 'upstream-model',
     status: 'queued',
