@@ -39,6 +39,7 @@ export function CredentialTargetModal({
       snapshot?.groups.find((group) => group.apiKey === key)?.allowCredentialTargeting === true
   );
   const apiKey = enabledKeys[Number(keyIndex)] ?? '';
+  const selectedGroup = snapshot?.groups.find((group) => group.apiKey === apiKey);
   const enabled = apiKey !== '';
   const supported = snapshot?.credentialTargetingSupported === true;
 
@@ -142,6 +143,31 @@ export function CredentialTargetModal({
       </div>
       <p className="hint">{t('credential_target.enabled_keys_hint')}</p>
       <p className="hint">{t('credential_target.once')}</p>
+      {enabled && snapshot?.credentialTargetOptionsSupported && (
+        <div className="hint">
+          <div>
+            {t(
+              selectedGroup?.credentialTargetRespectRequestLimit
+                ? 'credential_target.limit_obey_summary'
+                : 'credential_target.limit_bypass_summary'
+            )}
+          </div>
+          <div>
+            {t(
+              selectedGroup?.credentialTargetRespectStatePolicy
+                ? 'credential_target.state_obey_summary'
+                : 'credential_target.state_bypass_summary'
+            )}
+          </div>
+          <div>
+            {t(
+              selectedGroup?.credentialTargetResponseModelRewrite
+                ? 'credential_target.model_apply_summary'
+                : 'credential_target.model_raw_summary'
+            )}
+          </div>
+        </div>
+      )}
       {snapshot && !supported && <div className="hint">{t('credential_target.unsupported')}</div>}
       {snapshot && supported && !enabledKeys.length && (
         <div className="hint">{t('credential_target.no_enabled_keys')}</div>

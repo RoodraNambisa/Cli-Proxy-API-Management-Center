@@ -1377,6 +1377,19 @@
   padding: 12px 0 10px;
 }
 
+.apiKeyTargetOptions {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+
+  :global(.hint) {
+    margin: 0 0 6px;
+  }
+}
+
 .apiKeyProviderOptionLabel {
   display: flex;
   min-width: 0;

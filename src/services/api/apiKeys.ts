@@ -15,6 +15,7 @@ export type ApiKeyAccessSnapshot = {
   availablePriorities?: number[];
   namesSupported?: boolean;
   credentialTargetingSupported?: boolean;
+  credentialTargetOptionsSupported?: boolean;
 };
 
 const normalizeProviders = (value: unknown): string[] => {
@@ -75,14 +76,15 @@ export const apiKeysApi = {
     return (await apiKeysApi.listGroupDetails()).groups;
   },
 
-  async listGroupDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported' | 'credentialTargetingSupported'>> {
+  async listGroupDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported' | 'credentialTargetingSupported' | 'credentialTargetOptionsSupported'>> {
     const data = await apiClient.get<Record<string, unknown>>('/api-key-groups');
-    const result: Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported' | 'credentialTargetingSupported'> = {
+    const result: Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported' | 'credentialTargetingSupported' | 'credentialTargetOptionsSupported'> = {
       groups: normalizeClientApiKeyGroups(data['api-key-groups'] ?? data.apiKeyGroups),
     };
     if ('available-priorities' in data) {
       result.availablePriorities = normalizeApiKeyPriorities(data['available-priorities']);
     }
+    if ('credential-target-options-supported' in data) result.credentialTargetOptionsSupported = data['credential-target-options-supported'] === true;
     if ('credential-targeting-supported' in data) result.credentialTargetingSupported = data['credential-targeting-supported'] === true;
     if ('names-supported' in data) result.namesSupported = data['names-supported'] === true;
     return result;
@@ -109,6 +111,12 @@ export const apiKeysApi = {
     trackGroupUpdate(apiClient.patch('/api-key-groups', {
       'api-key': apiKey,
       'allow-credential-targeting': enabled,
+    })),
+
+  updateCredentialTargetOption: (apiKey: string, field: 'credentialTargetRespectStatePolicy' | 'credentialTargetRespectRequestLimit' | 'credentialTargetResponseModelRewrite', enabled: boolean) =>
+    trackGroupUpdate(apiClient.patch('/api-key-groups', {
+      'api-key': apiKey,
+      [field === 'credentialTargetRespectStatePolicy' ? 'credential-target-respect-state-policy' : field === 'credentialTargetRespectRequestLimit' ? 'credential-target-respect-request-limit' : 'credential-target-response-model-rewrite']: enabled,
     })),
 
   deleteGroup: (apiKey: string) =>

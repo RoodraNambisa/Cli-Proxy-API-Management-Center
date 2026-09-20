@@ -277,8 +277,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-api-keys',
     pageId: 'global-credentials',
     labelKey: 'config_management.visual.api_keys.label',
-    yamlKeys: ['api-keys', 'api-key-groups[].name', 'api-key-groups[].providers', 'api-key-groups[].allowed-priorities', 'api-key-groups[].excluded-priorities'],
-    aliases: ['last-used', '最近使用', '密钥名称', 'key name', '优先级限制', 'priority allowlist', 'priority exclusions'],
+    yamlKeys: ['api-keys', 'api-key-groups[].name', 'api-key-groups[].providers', 'api-key-groups[].allowed-priorities', 'api-key-groups[].excluded-priorities', 'api-key-groups[].allow-credential-targeting', 'api-key-groups[].credential-target-respect-state-policy', 'api-key-groups[].credential-target-respect-request-limit', 'api-key-groups[].credential-target-response-model-rewrite'],
+    aliases: ['last-used', '最近使用', '密钥名称', 'key name', '优先级限制', 'priority allowlist', 'priority exclusions', '固定凭证测试', 'fixed credential test'],
   },
   {
     id: 'config-auth-model-exclusions',

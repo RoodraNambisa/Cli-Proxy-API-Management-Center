@@ -6,6 +6,7 @@ import { authFilesApi } from '@/services/api/authFiles';
 import { apiClient } from '@/services/api/client';
 import * as clipboard from '@/utils/clipboard';
 import { normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
+import { ApiKeysCardEditor } from '@/components/config/VisualConfigEditorBlocks';
 
 const translate = (key: string) => key;
 vi.mock('react-i18next', async (original) => ({
@@ -94,6 +95,141 @@ describe('fixed credential test keys', () => {
       providers: ['xai'],
       allowedPriorities: [3],
       allowCredentialTargeting: true,
+    });
+  });
+
+  it('saves independent test options under the issuing key and retains disabled options', async () => {
+    vi.spyOn(apiKeysApi, 'getAccessSnapshot').mockResolvedValue({
+      keys: ['sk-test'],
+      groups: [{ apiKey: 'sk-test', providers: ['codex'], allowCredentialTargeting: true }],
+      credentialTargetingSupported: true,
+      credentialTargetOptionsSupported: true,
+    });
+    const patch = vi.spyOn(apiClient, 'patch').mockResolvedValue({ status: 'ok' });
+    render(<ApiKeysCardEditor value="sk-test" active onChange={vi.fn()} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: /^config_management.visual.api_keys.restrictions:/ })
+    );
+    const state = await screen.findByRole('checkbox', { name: 'credential_target.respect_state' });
+    const rewrite = screen.getByRole('checkbox', { name: 'credential_target.rewrite_model' });
+    const limit = screen.getByRole('checkbox', { name: 'credential_target.respect_limit' });
+    expect((limit as HTMLInputElement).checked).toBe(false);
+    expect((state as HTMLInputElement).checked).toBe(false);
+    expect((rewrite as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(state);
+    await waitFor(() => expect((state as HTMLInputElement).checked).toBe(true));
+    expect(patch).toHaveBeenLastCalledWith('/api-key-groups', {
+      'api-key': 'sk-test',
+      'credential-target-respect-state-policy': true,
+    });
+    fireEvent.click(rewrite);
+    await waitFor(() => expect((rewrite as HTMLInputElement).checked).toBe(true));
+    expect(patch).toHaveBeenLastCalledWith('/api-key-groups', {
+      'api-key': 'sk-test',
+      'credential-target-response-model-rewrite': true,
+    });
+    fireEvent.click(limit);
+    await waitFor(() => expect((limit as HTMLInputElement).checked).toBe(true));
+    expect(patch).toHaveBeenLastCalledWith('/api-key-groups', {
+      'api-key': 'sk-test',
+      'credential-target-respect-request-limit': true,
+    });
+    const permission = screen.getByRole('checkbox', { name: 'credential_target.allow' });
+    fireEvent.click(permission);
+    await waitFor(() =>
+      expect(screen.queryByRole('checkbox', { name: 'credential_target.respect_state' })).toBeNull()
+    );
+    fireEvent.click(permission);
+    await waitFor(() =>
+      expect(
+        (
+          screen.getByRole('checkbox', {
+            name: 'credential_target.respect_state',
+          }) as HTMLInputElement
+        ).checked
+      ).toBe(true)
+    );
+    expect(
+      (
+        screen.getByRole('checkbox', {
+          name: 'credential_target.respect_limit',
+        }) as HTMLInputElement
+      ).checked
+    ).toBe(true);
+    expect(
+      (
+        screen.getByRole('checkbox', {
+          name: 'credential_target.rewrite_model',
+        }) as HTMLInputElement
+      ).checked
+    ).toBe(true);
+  });
+
+  it('keeps current options on a failed save and refuses unsupported backends', async () => {
+    const snapshot = {
+      keys: ['sk-test'],
+      groups: [{ apiKey: 'sk-test', providers: [], allowCredentialTargeting: true }],
+      credentialTargetingSupported: true,
+      credentialTargetOptionsSupported: true,
+    };
+    vi.spyOn(apiKeysApi, 'getAccessSnapshot').mockResolvedValue(snapshot);
+    vi.spyOn(apiClient, 'patch').mockRejectedValue(new Error('save failed'));
+    const view = render(<ApiKeysCardEditor value="sk-test" active onChange={vi.fn()} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: /^config_management.visual.api_keys.restrictions:/ })
+    );
+    const state = await screen.findByRole('checkbox', { name: 'credential_target.respect_state' });
+    fireEvent.click(state);
+    await waitFor(() => expect((state as HTMLInputElement).disabled).toBe(false));
+    expect((state as HTMLInputElement).checked).toBe(false);
+    view.unmount();
+    vi.mocked(apiKeysApi.getAccessSnapshot).mockResolvedValue({
+      ...snapshot,
+      credentialTargetOptionsSupported: false,
+    });
+    render(<ApiKeysCardEditor value="sk-test" active onChange={vi.fn()} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: /^config_management.visual.api_keys.restrictions:/ })
+    );
+    await screen.findByText('credential_target.options_upgrade');
+    expect(screen.queryByRole('checkbox', { name: 'credential_target.respect_state' })).toBeNull();
+  });
+
+  it('shows selected-key behavior without placing policy switches in the credential modal', async () => {
+    vi.spyOn(apiKeysApi, 'getAccessSnapshot').mockResolvedValue({
+      keys: ['sk-test'],
+      groups: [
+        {
+          apiKey: 'sk-test',
+          providers: [],
+          allowCredentialTargeting: true,
+          credentialTargetRespectStatePolicy: true,
+          credentialTargetRespectRequestLimit: true,
+          credentialTargetResponseModelRewrite: true,
+        },
+      ],
+      credentialTargetingSupported: true,
+      credentialTargetOptionsSupported: true,
+    });
+    show();
+    await screen.findByText('credential_target.state_obey_summary');
+    expect(screen.getByText('credential_target.limit_obey_summary')).toBeTruthy();
+    expect(screen.getByText('credential_target.model_apply_summary')).toBeTruthy();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(
+      normalizeClientApiKeyGroups([
+        {
+          'api-key': 'sk-test',
+          providers: [],
+          'credential-target-respect-state-policy': true,
+          'credential-target-respect-request-limit': true,
+          'credential-target-response-model-rewrite': false,
+        },
+      ])[0]
+    ).toMatchObject({
+      credentialTargetRespectStatePolicy: true,
+      credentialTargetRespectRequestLimit: true,
+      credentialTargetResponseModelRewrite: false,
     });
   });
 });

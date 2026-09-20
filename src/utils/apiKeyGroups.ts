@@ -42,6 +42,15 @@ export function normalizeClientApiKeyGroups(value: unknown): ClientApiKeyGroup[]
     if ('allow-credential-targeting' in record || 'allowCredentialTargeting' in record) {
       group.allowCredentialTargeting = (record['allow-credential-targeting'] ?? record.allowCredentialTargeting) === true;
     }
+    if ('credential-target-respect-state-policy' in record || 'credentialTargetRespectStatePolicy' in record) {
+      group.credentialTargetRespectStatePolicy = (record['credential-target-respect-state-policy'] ?? record.credentialTargetRespectStatePolicy) === true;
+    }
+    if ('credential-target-respect-request-limit' in record || 'credentialTargetRespectRequestLimit' in record) {
+      group.credentialTargetRespectRequestLimit = (record['credential-target-respect-request-limit'] ?? record.credentialTargetRespectRequestLimit) === true;
+    }
+    if ('credential-target-response-model-rewrite' in record || 'credentialTargetResponseModelRewrite' in record) {
+      group.credentialTargetResponseModelRewrite = (record['credential-target-response-model-rewrite'] ?? record.credentialTargetResponseModelRewrite) === true;
+    }
     if ('name' in record) group.name = normalizeApiKeyName(record.name);
     if ('allowed-priorities' in record || 'allowedPriorities' in record) {
       group.allowedPriorities = normalizeApiKeyPriorities(Object.prototype.hasOwnProperty.call(record, 'allowed-priorities') ? record['allowed-priorities'] : record.allowedPriorities);

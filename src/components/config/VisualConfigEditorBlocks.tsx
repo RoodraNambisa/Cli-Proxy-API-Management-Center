@@ -249,6 +249,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const [lastUsed, setLastUsed] = useState<Record<string, string>>();
   const [priorityGroups, setPriorityGroups] = useState<Record<string, ClientApiKeyGroup>>({});
   const [targetingSupported, setTargetingSupported] = useState(false);
+  const [targetOptionsSupported, setTargetOptionsSupported] = useState(false);
   const [availablePriorities, setAvailablePriorities] = useState<number[]>();
   const [providerGroups, setProviderGroups] = useState<Record<string, string[]>>({});
   const [providerGroupsLoading, setProviderGroupsLoading] = useState(false);
@@ -282,6 +283,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       setLastUsed(snapshot.lastUsed);
       setNamesSupported(snapshot.namesSupported === true);
       setTargetingSupported(snapshot.credentialTargetingSupported === true);
+      setTargetOptionsSupported(snapshot.credentialTargetOptionsSupported === true);
       setPriorityGroups(Object.fromEntries(snapshot.groups.map((group) => [group.apiKey, group])));
       setAvailablePriorities(snapshot.availablePriorities);
       setProviderGroups(
@@ -298,6 +300,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       setLastUsed(undefined);
       setNamesSupported(false);
       setTargetingSupported(false);
+      setTargetOptionsSupported(false);
       setAvailablePriorities(undefined);
       setProviderGroupsError(error instanceof Error ? error.message : '');
       setProviderGroupsLoaded(true);
@@ -432,13 +435,33 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   };
 
   const handleTargetingChange = async (apiKey: string, enabled: boolean) => {
-    if (providerGroupUpdating || !serverKeys.has(apiKey) || !targetingSupported) return;
+    if (providerGroupsLoading || providerGroupUpdating || !serverKeys.has(apiKey) || !targetingSupported) return;
     setProviderGroupUpdating(apiKey);
     try {
       await apiKeysApi.updateCredentialTargeting(apiKey, enabled);
       setPriorityGroups((previous) => ({ ...previous, [apiKey]: {
         ...(apiKeyStateValue(previous, apiKey) ?? { apiKey, providers: [] }),
         allowCredentialTargeting: enabled,
+      } }));
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : t('credential_target.failed'), 'error');
+    } finally {
+      setProviderGroupUpdating(null);
+    }
+  };
+
+  const handleTargetOptionChange = async (
+    apiKey: string,
+    field: 'credentialTargetRespectStatePolicy' | 'credentialTargetRespectRequestLimit' | 'credentialTargetResponseModelRewrite',
+    enabled: boolean
+  ) => {
+    if (providerGroupsLoading || providerGroupUpdating || !serverKeys.has(apiKey) || !targetOptionsSupported) return;
+    setProviderGroupUpdating(apiKey);
+    try {
+      await apiKeysApi.updateCredentialTargetOption(apiKey, field, enabled);
+      setPriorityGroups((previous) => ({ ...previous, [apiKey]: {
+        ...(apiKeyStateValue(previous, apiKey) ?? { apiKey, providers: [] }),
+        [field]: enabled,
       } }));
     } catch (error) {
       showNotification(error instanceof Error ? error.message : t('credential_target.failed'), 'error');
@@ -564,8 +587,28 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                     </div>
                     {targetingSupported && <div>
                       <ToggleSwitch label={t('credential_target.allow')} checked={keyPriorities?.allowCredentialTargeting === true}
-                        disabled={disabled || providerGroupUpdating !== null} onChange={(enabled) => void handleTargetingChange(key, enabled)} />
+                        disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null} onChange={(enabled) => void handleTargetingChange(key, enabled)} />
                       <div className="hint">{t('credential_target.allow_hint')}</div>
+                      {keyPriorities?.allowCredentialTargeting && (targetOptionsSupported ? (
+                        <div className={styles.apiKeyTargetOptions}>
+                          <strong>{t('credential_target.test_options')}</strong>
+                          <ToggleSwitch label={t('credential_target.respect_limit')}
+                            checked={keyPriorities.credentialTargetRespectRequestLimit === true}
+                            disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null}
+                            onChange={(enabled) => void handleTargetOptionChange(key, 'credentialTargetRespectRequestLimit', enabled)} />
+                          <div className="hint">{t('credential_target.respect_limit_hint')}</div>
+                          <ToggleSwitch label={t('credential_target.respect_state')}
+                            checked={keyPriorities.credentialTargetRespectStatePolicy === true}
+                            disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null}
+                            onChange={(enabled) => void handleTargetOptionChange(key, 'credentialTargetRespectStatePolicy', enabled)} />
+                          <div className="hint">{t('credential_target.respect_state_hint')}</div>
+                          <ToggleSwitch label={t('credential_target.rewrite_model')}
+                            checked={keyPriorities.credentialTargetResponseModelRewrite === true}
+                            disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null}
+                            onChange={(enabled) => void handleTargetOptionChange(key, 'credentialTargetResponseModelRewrite', enabled)} />
+                          <div className="hint">{t('credential_target.rewrite_model_hint')}</div>
+                        </div>
+                      ) : <div className="hint">{t('credential_target.options_upgrade')}</div>)}
                     </div>}
                     {availablePriorities === undefined ? (
                       <div className="hint">{t('config_management.visual.api_keys.priority_unsupported')}</div>

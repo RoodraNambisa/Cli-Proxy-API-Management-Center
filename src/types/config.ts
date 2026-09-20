@@ -229,6 +229,9 @@ export const normalizeCodexTurnStatePolicy = (value: unknown): CodexTurnStatePol
 
 export interface ClientApiKeyGroup {
   allowCredentialTargeting?: boolean;
+  credentialTargetRespectStatePolicy?: boolean;
+  credentialTargetRespectRequestLimit?: boolean;
+  credentialTargetResponseModelRewrite?: boolean;
   apiKey: string;
   name?: string;
   providers: string[];
