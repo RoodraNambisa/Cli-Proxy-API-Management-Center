@@ -16,6 +16,8 @@ export const STATE_SETTING_KEYS = [
   'refresh-before-minutes',
   'retry-seconds',
   'max-attempts',
+  'retry-round-interval-minutes',
+  'max-retry-rounds',
   'proxy-mode',
   'proxy-url',
   'lengths',

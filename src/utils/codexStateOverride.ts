@@ -10,6 +10,8 @@ export const STATE_NUMBER_DEFAULTS = {
   concurrency: 1,
   'retry-seconds': 60,
   'max-attempts': 3,
+  'retry-round-interval-minutes': 30,
+  'max-retry-rounds': 0,
 };
 export type StateNumberField = keyof typeof STATE_NUMBER_DEFAULTS;
 export type StatePlanLengthRule = {
@@ -272,7 +274,7 @@ export function codexStateError(v: CodexStateOverride): boolean {
             key in settings &&
             (typeof settings[key] !== 'number' ||
               !Number.isInteger(settings[key]) ||
-              Number(settings[key]) <= 0)
+              Number(settings[key]) < (key === 'max-retry-rounds' ? 0 : 1))
         )
       )
         return true;
@@ -399,6 +401,8 @@ export function codexStateError(v: CodexStateOverride): boolean {
     concurrency: [1, 16],
     'retry-seconds': [1, 3600],
     'max-attempts': [1, 10],
+    'retry-round-interval-minutes': [1, 1440],
+    'max-retry-rounds': [0, 10],
   };
   if (
     Object.entries(bounds).some(

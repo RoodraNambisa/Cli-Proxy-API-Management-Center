@@ -32,7 +32,7 @@ export interface GrokCatalogRefreshInfo {
 
 type StatusError = { status?: number };
 export type CodexStateOptions = {
-  features?: {rule_model_overrides?: boolean};
+  features?: {rule_model_overrides?: boolean; state_retry_rounds?: boolean};
   credentials: Array<{id: string; name: string; alias?: string; priority: number; plan: string; disabled: boolean}>;
   models: Array<{id: string; upstream_id: string}>;
   priorities: number[];

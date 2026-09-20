@@ -155,7 +155,14 @@ export function StateRuleSettingsEditor({
               <Input
                 key={key}
                 type="number"
-                min={1}
+                min={key === 'max-retry-rounds' ? 0 : 1}
+                max={
+                  key === 'max-retry-rounds'
+                    ? 10
+                    : key === 'retry-round-interval-minutes'
+                      ? 1440
+                      : undefined
+                }
                 label={text(key)}
                 placeholder={`${inheritText} (${value[key as keyof typeof STATE_NUMBER_DEFAULTS]})`}
                 value={r.settings[key] === undefined ? '' : String(r.settings[key])}

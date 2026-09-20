@@ -4,6 +4,10 @@ export interface CodexStateSnapshot {
   allowed_lengths?: number[];
   retry_seconds?: number;
   max_attempts?: number;
+  retry_round_interval_minutes?: number;
+  max_retry_rounds?: number;
+  retry_rounds_used?: number;
+  round_waiting?: boolean;
   model: string;
   status: string;
   length: number;

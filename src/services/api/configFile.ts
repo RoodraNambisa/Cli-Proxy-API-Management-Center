@@ -19,18 +19,28 @@ export const configFileApi = {
   },
 
   async saveConfigYaml(content: string): Promise<void> {
-    const rules = parseDocument(content).toJS()?.codex?.['state-override']?.rules;
-    if (
-      Array.isArray(rules) &&
-      rules.some(
-        (rule) => Array.isArray(rule?.['model-overrides']) && rule['model-overrides'].length
-      )
-    ) {
-      const options = await apiClient.get<{ features?: { rule_model_overrides?: boolean } }>(
-        '/auth-files/codex/state/options'
-      );
-      if (options.features?.rule_model_overrides !== true)
+    const state = parseDocument(content).toJS()?.codex?.['state-override'];
+    const rules: Array<Record<string, unknown>> = Array.isArray(state?.rules) ? state.rules : [];
+    const modelOverrides = rules.some(
+      (rule) => Array.isArray(rule?.['model-overrides']) && rule['model-overrides'].length
+    );
+    const retryRounds = [
+      state,
+      ...rules.flatMap((rule) => [
+        rule?.settings,
+        ...(Array.isArray(rule?.['model-overrides'])
+          ? rule['model-overrides'].map((item: { settings?: unknown }) => item?.settings)
+          : []),
+      ]),
+    ].some((settings) => Number(settings?.['max-retry-rounds']) > 0);
+    if (modelOverrides || retryRounds) {
+      const options = await apiClient.get<{
+        features?: { rule_model_overrides?: boolean; state_retry_rounds?: boolean };
+      }>('/auth-files/codex/state/options');
+      if (modelOverrides && options.features?.rule_model_overrides !== true)
         throw new Error(i18n.t('codex_state.model_special_upgrade'));
+      if (retryRounds && options.features?.state_retry_rounds !== true)
+        throw new Error(i18n.t('codex_state.retry_round_upgrade'));
     }
     await apiClient.put('/config.yaml', content, {
       headers: {

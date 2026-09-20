@@ -155,3 +155,41 @@ it('does not let a stale polling result overwrite a pause operation', async () =
   expect(screen.getByText('codex_state.status_paused')).toBeTruthy();
   expect((get.mock.calls[0][2] as { signal: AbortSignal }).signal.aborted).toBe(true);
 });
+
+it('shows round cooldown and polls long waits slowly, then resumes fast polling', async () => {
+  const model = {
+    ...state('retry_wait'),
+    round_waiting: true,
+    retry_rounds_used: 0,
+    max_retry_rounds: 2,
+    max_attempts: 10,
+    consecutive_failures: 10,
+    next_attempt: new Date(Date.now() + 30 * 60000).toISOString(),
+  };
+  const get = vi.spyOn(apiClient, 'getAtConnection').mockResolvedValue({ models: [model] });
+  render(
+    <AuthFileStateStatus
+      file={{ ...file, codex_state: { enabled: true, models: [model] } }}
+      disabled={false}
+    />
+  );
+  fireEvent.click(screen.getByText('codex_state.details'));
+  expect(screen.getByText('codex_state.status_retry_wait')).toBeTruthy();
+  expect(screen.getByText('codex_state.retry_round_progress')).toBeTruthy();
+  expect(screen.getByText('codex_state.retry_round_wait')).toBeTruthy();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(29999);
+  });
+  expect(get).not.toHaveBeenCalled();
+  get.mockResolvedValue({
+    models: [{ ...model, status: 'acquiring', round_waiting: false, retry_rounds_used: 1 }],
+  });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(get).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1500);
+  });
+  expect(get).toHaveBeenCalledTimes(2);
+});

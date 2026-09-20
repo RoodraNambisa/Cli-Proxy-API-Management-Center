@@ -46,8 +46,8 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
         model.next_attempt && !model.exhausted && !model.manual_only && model.status !== 'paused'
       )
   );
-  const live = useRef({ busy, waiting });
-  live.current = { busy, waiting };
+  const live = useRef({ busy, waiting, models });
+  live.current = { busy, waiting, models };
   useEffect(() => {
     active.current = scope;
     setUpdated(undefined);
@@ -74,6 +74,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
     let failures = 0;
     const poll = async () => {
       const version = mutation.current;
+      let delay = statePollDelay(live.current.models);
       try {
         const response = await apiClient.getAtConnection<{ models: CodexStateSnapshot[] }>(
           connection,
@@ -86,6 +87,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
           version === mutation.current &&
           !live.current.busy
         ) {
+          delay = statePollDelay(response.models);
           setUpdated({ scope, models: response.models });
           setNow(Date.now());
           setError('');
@@ -97,9 +99,9 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
           if (failures >= 3) setError(t('codex_state.poll_error'));
         }
       }
-      if (!controller.signal.aborted && failures < 3) timer = setTimeout(() => void poll(), 1500);
+      if (!controller.signal.aborted && failures < 3) timer = setTimeout(() => void poll(), delay);
     };
-    timer = setTimeout(() => void poll(), 1500);
+    timer = setTimeout(() => void poll(), statePollDelay(live.current.models));
     return () => {
       controller.abort();
       clearTimeout(timer);
@@ -235,6 +237,25 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
                     {failureDetails(m.last_error, m.last_returned_length, m.last_returned_model)}
                   </div>
                 )}
+                {Boolean(m.max_retry_rounds) && !m.manual_only && (
+                  <div className={styles.counts}>
+                    {t('codex_state.retry_round_progress', {
+                      round: (m.retry_rounds_used ?? 0) + 1,
+                      total: (m.max_retry_rounds ?? 0) + 1,
+                      failures: m.consecutive_failures,
+                      limit: m.max_attempts,
+                    })}
+                  </div>
+                )}
+                {m.round_waiting && m.next_attempt && m.status !== 'paused' && (
+                  <div className={styles.warning}>
+                    {t('codex_state.retry_round_wait', {
+                      round: (m.retry_rounds_used ?? 0) + 2,
+                      minutes: Math.max(0, Math.ceil((Date.parse(m.next_attempt) - now) / 60000)),
+                      time: new Date(m.next_attempt).toLocaleString(),
+                    })}
+                  </div>
+                )}
                 {m.exhausted && <div className={styles.warning}>{text('exhausted_hint')}</div>}
                 {Boolean(m.invalidations) && (
                   <div className={styles.warning}>
@@ -275,4 +296,25 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
       )}
     </div>
   );
+}
+
+// Long round cooldowns do not need the fast acquisition polling rate.
+function statePollDelay(models: CodexStateSnapshot[]): number {
+  if (models.some((m) => ['queued', 'acquiring'].includes(m.status))) return 1500;
+  const deadlines = models
+    .filter((m) => m.round_waiting && m.next_attempt && !m.exhausted && m.status !== 'paused')
+    .map((m) => Date.parse(m.next_attempt!) - Date.now());
+  if (
+    !deadlines.length ||
+    models.some(
+      (m) =>
+        m.next_attempt &&
+        !m.round_waiting &&
+        !m.exhausted &&
+        !m.manual_only &&
+        m.status !== 'paused'
+    )
+  )
+    return 1500;
+  return Math.max(1500, Math.min(30000, ...deadlines.filter(Number.isFinite)));
 }

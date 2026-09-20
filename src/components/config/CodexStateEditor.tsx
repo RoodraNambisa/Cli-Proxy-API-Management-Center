@@ -324,6 +324,14 @@ export function CodexStateEditor({
                 key={key}
                 label={text(key)}
                 type="number"
+                min={key === 'max-retry-rounds' ? 0 : 1}
+                max={
+                  key === 'max-retry-rounds'
+                    ? 10
+                    : key === 'retry-round-interval-minutes'
+                      ? 1440
+                      : undefined
+                }
                 value={value[key]}
                 disabled={disabled}
                 onChange={(e) => patch({ [key]: e.target.value })}
