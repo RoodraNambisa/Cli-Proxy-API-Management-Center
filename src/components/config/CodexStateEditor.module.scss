@@ -202,3 +202,41 @@
     margin: 4px 0 0;
   }
 }
+
+.modelOverrides {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  min-width: 0;
+}
+.settingsSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+  small {
+    opacity: 0.8;
+  }
+}
+.modelTable {
+  overflow-x: auto;
+  margin-top: 16px;
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    text-align: left;
+    padding: 12px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border-color);
+    min-width: 160px;
+  }
+  th {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+}

@@ -32,12 +32,13 @@ export interface GrokCatalogRefreshInfo {
 
 type StatusError = { status?: number };
 export type CodexStateOptions = {
+  features?: {rule_model_overrides?: boolean};
   credentials: Array<{id: string; name: string; alias?: string; priority: number; plan: string; disabled: boolean}>;
   models: Array<{id: string; upstream_id: string}>;
   priorities: number[];
   plans: string[];
 };
-export type CodexStatePreview = {managed:boolean;registered:boolean;upstream_model:string;match:{rule_id?:string;rule_name?:string;rule_index:number;action:string;sources?:Record<string,string>};policy:Record<string,string|number|boolean|number[]|null>};
+export type CodexStatePreview = {managed:boolean;registered:boolean;upstream_model:string;match:{rule_id?:string;rule_name?:string;rule_index:number;action:string;model_override_id?:string;conflicts?:string[];sources?:Record<string,string>};policy:Record<string,string|number|boolean|number[]|null>};
 export type CodexStateProxyResult = { ok: boolean; ip?: string; loc?: string; elapsed_ms?: number; error?: string; message?: string };
 export type ModelProbeRequest = {
   name: string; model: string; protocol: string; stream: boolean; upstream?: string;

@@ -18,11 +18,19 @@ export type StatePlanLengthRule = {
   lengths: string;
   extra: Record<string, unknown>;
 };
+export type CodexStateRuleModelOverride = {
+  id: string;
+  enabled?: boolean;
+  models: string[];
+  settings: Record<string, unknown>;
+  [key: string]: unknown;
+};
 export type CodexStateRule = {
   id: string;
   name: string;
   enabled?: boolean;
   action: 'manage' | 'skip';
+  'model-overrides'?: CodexStateRuleModelOverride[];
   priorities: number[];
   credentials: string[];
   'excluded-credentials': string[];
@@ -270,6 +278,54 @@ export function codexStateError(v: CodexStateOverride): boolean {
       )
         return true;
       if (codexStateError(effective)) return true;
+      if (r['model-overrides'] !== undefined) {
+        if (!Array.isArray(r['model-overrides']) || r['model-overrides'].length > 256) return true;
+        const ids = new Set<string>(),
+          models = new Set<string>();
+        for (const item of r['model-overrides']) {
+          if (
+            !item ||
+            typeof item.id !== 'string' ||
+            !item.id.trim() ||
+            ids.has(item.id) ||
+            item.id.length > 128 ||
+            /[\r\n\0]/.test(item.id) ||
+            (item.enabled !== undefined && typeof item.enabled !== 'boolean')
+          )
+            return true;
+          ids.add(item.id);
+          if (
+            !Array.isArray(item.models) ||
+            !item.models.length ||
+            item.models.length > 256 ||
+            new Set(item.models).size !== item.models.length ||
+            item.models.some(
+              (m) => typeof m !== 'string' || stateListItemError(m, 'model') || /[*?]/.test(m)
+            )
+          )
+            return true;
+          for (const model of item.models) {
+            if (item.enabled === false) continue;
+            if (models.has(model)) return true;
+            models.add(model);
+          }
+          if (!item.settings || typeof item.settings !== 'object' || Array.isArray(item.settings))
+            return true;
+          if (
+            codexStateError({
+              ...v,
+              rules: [
+                {
+                  ...r,
+                  'model-overrides': undefined,
+                  settings: { ...r.settings, ...item.settings },
+                },
+              ],
+            })
+          )
+            return true;
+        }
+      }
     }
   }
   if (v['plan-lengths'].length > 64) return true;

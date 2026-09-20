@@ -211,6 +211,8 @@ export function CodexStateEditor({
           onChange={onChange}
           disabled={disabled}
           choices={{ priorities, credentials, models, plans, lengths }}
+          modelOverridesSupported={catalog.data.features?.rule_model_overrides === true}
+          modelAliases={catalog.data.models}
           load={load}
           loading={catalog.loading}
           loadError={catalog.error}
