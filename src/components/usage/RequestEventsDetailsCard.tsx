@@ -45,6 +45,8 @@ type RequestEventRow = {
   timestampMs: number;
   timestampLabel: string;
   model: string;
+  requestMethod: string;
+  requestPath: string;
   sourceKey: string;
   sourceRaw: string;
   sourceFilterKey: string;
@@ -127,6 +129,8 @@ export function RequestEventsDetailsCard({
   const [detailsUnsupported, setDetailsUnsupported] = useState(false);
   const [detailsPage, setDetailsPage] = useState<UsageDetailsPage | null>(null);
   const [modelFilter, setModelFilter] = useState(ALL_FILTER);
+  const [pathSearch, setPathSearch] = useState('');
+  const [pathFilter, setPathFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState(ALL_FILTER);
   const [sourceSearch, setSourceSearch] = useState('');
   const [remoteSources, setRemoteSources] = useState<string[]>([]);
@@ -207,6 +211,8 @@ export function RequestEventsDetailsCard({
         timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
         timestampLabel: date ? date.toLocaleString(i18n.language) : timestamp || '-',
         model,
+        requestMethod: detail.request_method ?? '',
+        requestPath: detail.request_path ?? '',
         sourceKey,
         sourceRaw: sourceRaw || '-',
         sourceFilterKey,
@@ -338,12 +344,13 @@ export function RequestEventsDetailsCard({
 
   const currentFilters = useMemo(
     () => ({
+      ...(pathFilter ? { requestPath: pathFilter } : {}),
       model: modelFilter,
       source: sourceFilter,
       authIndex: authIndexFilter,
       result: resultFilter,
     }),
-    [authIndexFilter, modelFilter, resultFilter, sourceFilter]
+    [authIndexFilter, modelFilter, pathFilter, resultFilter, sourceFilter]
   );
 
   const loadDetailsPage = useCallback(
@@ -432,6 +439,12 @@ export function RequestEventsDetailsCard({
   }, [detailsOpened, range, sourceFacetsUnsupported, sourceSearch]);
 
   useEffect(() => {
+    if (!detailsPage?.requestPathSupported) return;
+    const timer = window.setTimeout(() => setPathFilter(pathSearch.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [detailsPage?.requestPathSupported, pathSearch]);
+
+  useEffect(() => {
     const canLoad = availabilityStatus === 'ready' || availabilityStatus === 'empty';
     if (!detailsOpened || !canLoad || detailsUnsupported) return;
     void Promise.resolve()
@@ -462,12 +475,15 @@ export function RequestEventsDetailsCard({
   const renderedRows = useMemo(() => rows.slice(0, MAX_RENDERED_EVENTS), [rows]);
 
   const hasActiveFilters =
+    pathSearch !== '' || pathFilter !== '' ||
     modelFilter !== ALL_FILTER ||
     sourceFilter !== ALL_FILTER ||
     authIndexFilter !== ALL_FILTER ||
     resultFilter !== ALL_FILTER;
 
   const handleClearFilters = () => {
+    setPathSearch('');
+    setPathFilter('');
     setModelFilter(ALL_FILTER);
     setSourceFilter(ALL_FILTER);
     setSourceSearch('');
@@ -481,6 +497,8 @@ export function RequestEventsDetailsCard({
 
     const csvHeader = [
       'timestamp',
+      'request_method',
+      'request_path',
       'model',
       'source',
       'source_raw',
@@ -504,6 +522,8 @@ export function RequestEventsDetailsCard({
     const csvRows = rows.map((row) =>
       [
         row.timestamp,
+        row.requestMethod,
+        row.requestPath,
         row.model,
         row.source,
         row.sourceRaw,
@@ -540,6 +560,8 @@ export function RequestEventsDetailsCard({
 
     const payload = rows.map((row) => ({
       timestamp: row.timestamp,
+      ...(row.requestMethod ? { request_method: row.requestMethod } : {}),
+      ...(row.requestPath ? { request_path: row.requestPath } : {}),
       model: row.model,
       source: row.source,
       source_raw: row.sourceRaw,
@@ -643,6 +665,21 @@ export function RequestEventsDetailsCard({
       ) : (
         <>
           <div className={styles.requestEventsToolbar}>
+            <div className={`${styles.requestEventsFilterItem} ${styles.requestEventsPathFilter}`}>
+              <span className={styles.requestEventsFilterLabel}>{t('usage_stats.request_path_filter')}</span>
+              <Input
+                aria-label={t('usage_stats.request_path_filter')}
+                value={pathSearch}
+                onChange={(event) => setPathSearch(event.target.value)}
+                placeholder={t('usage_stats.request_path_placeholder')}
+                disabled={!detailsPage?.requestPathSupported}
+              />
+              {detailsPage && !detailsPage.requestPathSupported && (
+                <span className={styles.requestEventsFilterHint}>
+                  {t('usage_stats.request_path_unsupported')}
+                </span>
+              )}
+            </div>
             <div className={styles.requestEventsFilterItem}>
               <span className={styles.requestEventsFilterLabel}>
                 {t('usage_stats.request_events_filter_model')}
@@ -725,6 +762,7 @@ export function RequestEventsDetailsCard({
                     total: totalMatched ?? loadedCount,
                   })}
                 </span>
+                <span className={styles.requestEventsLimitHint}>{t('usage_stats.request_path_hint')}</span>
                 {hasLatencyData && (
                   <span className={styles.requestEventsLimitHint}>{latencyHint}</span>
                 )}
@@ -748,6 +786,7 @@ export function RequestEventsDetailsCard({
                   <thead>
                     <tr>
                       <th>{t('usage_stats.request_events_timestamp')}</th>
+                      <th>{t('usage_stats.request_path')}</th>
                       <th>{t('usage_stats.model_name')}</th>
                       <th>{t('usage_stats.request_events_source')}</th>
                       <th>{t('usage_stats.request_events_auth_index')}</th>
@@ -780,6 +819,11 @@ export function RequestEventsDetailsCard({
                       <tr key={row.id}>
                         <td title={row.timestamp} className={styles.requestEventsTimestamp}>
                           {row.timestampLabel}
+                        </td>
+                        <td className={styles.requestEventsRouteCell}
+                          title={[row.requestMethod, row.requestPath].filter(Boolean).join(' ')}>
+                          {row.requestMethod && <span className={styles.requestEventsMethod}>{row.requestMethod}</span>}
+                          <span>{row.requestPath || t('usage_stats.request_path_unknown')}</span>
                         </td>
                         <td className={styles.modelCell}>{row.model}</td>
                         <td className={styles.requestEventsSourceCell} title={row.source}>

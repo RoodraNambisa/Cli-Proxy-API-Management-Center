@@ -1181,6 +1181,11 @@
   font-weight: 600;
 }
 
+.requestEventsPathFilter {
+  flex: 0 1 280px;
+  min-width: 0;
+}
+
 .requestEventsSelect {
   min-width: 180px;
 }
@@ -1225,6 +1230,35 @@
 .requestEventsTimestamp {
   white-space: nowrap;
   min-width: 160px;
+}
+
+.requestEventsRouteCell {
+  min-width: 190px;
+  max-width: 260px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.requestEventsTableWrapper .modelCell {
+  min-width: 90px;
+}
+
+.requestEventsSourceCell {
+  min-width: 160px;
+}
+
+.requestEventsAuthIndex {
+  min-width: 130px;
+  white-space: nowrap;
+}
+
+.requestEventsMethod {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .requestEventsSourceCell,

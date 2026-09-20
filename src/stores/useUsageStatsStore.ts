@@ -11,6 +11,7 @@ import type {
 import { parseTimestampMs } from '@/utils/timestamp';
 import { normalizeUsageResponseMetrics } from '@/utils/usage/responseMetrics';
 import { normalizeUsageFailureDetails } from '@/utils/usage/failureDetails';
+import { normalizeUsageRequestRoute } from '@/utils/usage/requestRoute';
 import {
   buildUsageRangeKey,
   extractLatencyMs,
@@ -48,6 +49,7 @@ export type LoadUsageAuthsOptions = {
 type UsageStatsSnapshot = Record<string, unknown>;
 
 export type UsageDetailsPage = {
+  requestPathSupported?: boolean;
   details: UsageDetail[];
   offset: number;
   limit: number;
@@ -247,19 +249,7 @@ export const normalizeUsageDetail = (detail: unknown, index: number): UsageDetai
         : typeof record.__endpoint === 'string'
           ? record.__endpoint
           : '';
-  const endpointMatch = endpoint.match(/^(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(\S+)/i);
-  const endpointMethod =
-    typeof record.method === 'string'
-      ? record.method.toUpperCase()
-      : typeof record.__endpointMethod === 'string'
-        ? record.__endpointMethod
-        : endpointMatch?.[1]?.toUpperCase();
-  const endpointPath =
-    typeof record.path === 'string'
-      ? record.path
-      : typeof record.__endpointPath === 'string'
-        ? record.__endpointPath
-        : endpointMatch?.[2];
+  const route = normalizeUsageRequestRoute(record, endpoint);
   const latencyMs = extractLatencyMs(record);
   const statusCode = toNumber(record.status ?? record.status_code);
   const failed =
@@ -277,6 +267,7 @@ export const normalizeUsageDetail = (detail: unknown, index: number): UsageDetai
     latency_ms: latencyMs ?? undefined,
     ...normalizeUsageResponseMetrics(record),
     ...normalizeUsageFailureDetails(record),
+    ...route,
     tokens: {
       input_tokens: normalizeTokenNumber(tokensRecord.input_tokens),
       output_tokens: normalizeTokenNumber(tokensRecord.output_tokens),
@@ -301,9 +292,9 @@ export const normalizeUsageDetail = (detail: unknown, index: number): UsageDetai
     __sourceFilterValue: sourceFilterValue || undefined,
     __modelName: modelName || undefined,
     __timestampMs: Number.isNaN(timestampMs) ? index : timestampMs,
-    __endpoint: endpoint,
-    __endpointMethod: endpointMethod,
-    __endpointPath: endpointPath,
+    __endpoint: route.request_path ? [route.request_method, route.request_path].filter(Boolean).join(' ') : endpoint,
+    __endpointMethod: route.request_method,
+    __endpointPath: route.request_path,
   } as UsageDetail;
 };
 
@@ -311,6 +302,7 @@ const buildDetailsPage = (
   response: UsageDetailsResponse,
   details: UsageDetail[]
 ): UsageDetailsPage => ({
+  ...(response.request_path_supported === true ? { requestPathSupported: true } : {}),
   details,
   offset: Math.max(toNumber(response.offset), 0),
   limit: Math.max(toNumber(response.limit), details.length),

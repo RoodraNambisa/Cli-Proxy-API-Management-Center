@@ -125,6 +125,7 @@ export interface UsageSummaryQuery extends UsageRangeQuery {
 }
 
 export interface UsageDetailsQuery extends UsageRangeQuery {
+  request_path?: string;
   api?: string;
   model?: string;
   auth_index?: string | number;
@@ -138,6 +139,7 @@ export interface UsageDetailsQuery extends UsageRangeQuery {
 }
 
 export interface UsageDetailsResponse {
+  request_path_supported?: boolean;
   items?: unknown[];
   total?: number;
   details?: unknown[];

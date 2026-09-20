@@ -7,6 +7,7 @@ import type { ScriptableContext } from 'chart.js';
 import type { LatencyAccumulator, LatencyStats } from './usage/latency';
 import { normalizeUsageResponseMetrics, type UsageResponseMetrics } from './usage/responseMetrics';
 import { normalizeUsageFailureDetails, type UsageFailureDetails } from './usage/failureDetails';
+import { normalizeUsageRequestRoute, type UsageRequestRoute } from './usage/requestRoute';
 import {
   addLatencySample,
   calculateLatencyStatsFromDetails,
@@ -56,7 +57,7 @@ export interface ModelPrice {
   cache: number;
 }
 
-export interface UsageDetail extends UsageResponseMetrics, UsageFailureDetails {
+export interface UsageDetail extends UsageResponseMetrics, UsageFailureDetails, UsageRequestRoute {
   timestamp: string;
   source: string;
   auth_index: string | number | null;
@@ -126,7 +127,6 @@ export interface UsageRangeQuery {
 
 const TOKENS_PER_PRICE_UNIT = 1_000_000;
 const MODEL_PRICE_STORAGE_KEY = 'cli-proxy-model-prices-v2';
-const USAGE_ENDPOINT_METHOD_REGEX = /^(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(\S+)/i;
 const USAGE_TIME_RANGE_MS: Record<Exclude<UsageTimeRange, 'all'>, number> = {
   '7h': 7 * 60 * 60 * 1000,
   '24h': 24 * 60 * 60 * 1000,
@@ -680,10 +680,6 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
     const models = isRecord(modelsRaw) ? modelsRaw : null;
     if (!models) return;
 
-    const endpointMatch = endpoint.match(USAGE_ENDPOINT_METHOD_REGEX);
-    const endpointMethod = endpointMatch?.[1]?.toUpperCase();
-    const endpointPath = endpointMatch?.[2];
-
     Object.entries(models).forEach(([modelName, modelEntry]) => {
       if (!isRecord(modelEntry)) return;
       const modelDetailsRaw = modelEntry.details;
@@ -695,6 +691,7 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
         const timestampMs = parseTimestampMs(timestamp);
         const tokensRaw = isRecord(detailRaw.tokens) ? detailRaw.tokens : {};
         const latencyMs = extractLatencyMs(detailRaw);
+        const route = normalizeUsageRequestRoute(detailRaw, endpoint);
         details.push({
           timestamp,
           source: normalizeSource(detailRaw.source),
@@ -705,12 +702,13 @@ export function collectUsageDetailsWithEndpoint(usageData: unknown): UsageDetail
           latency_ms: latencyMs ?? undefined,
           ...normalizeUsageResponseMetrics(detailRaw),
           ...normalizeUsageFailureDetails(detailRaw),
+          ...route,
           tokens: tokensRaw as unknown as UsageDetail['tokens'],
           failed: detailRaw.failed === true,
           __modelName: modelName,
-          __endpoint: endpoint,
-          __endpointMethod: endpointMethod,
-          __endpointPath: endpointPath,
+          __endpoint: route.request_path ? [route.request_method, route.request_path].filter(Boolean).join(' ') : endpoint,
+          __endpointMethod: route.request_method,
+          __endpointPath: route.request_path,
           __timestampMs: Number.isNaN(timestampMs) ? 0 : timestampMs,
         });
       });
