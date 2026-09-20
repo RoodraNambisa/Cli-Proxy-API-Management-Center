@@ -1,3 +1,4 @@
+import { normalizeRoutingCredentials, validRoutingCredential } from '@/utils/routingCredentials';
 import { readCodexState, writeCodexState, codexStateEqual, codexStateError } from '@/utils/codexStateOverride';
 import { readCodexQuotaAutoDisable, codexQuotaAutoDisableEqual, codexQuotaAutoDisableError, writeCodexQuotaAutoDisable } from '@/utils/codexQuotaAutoDisable';
 import { grokConfigErrors, readGrokConfig, writeGrokConfig } from '@/utils/grokConfig';
@@ -887,6 +888,7 @@ function parseRoutingSubscriptionOverrides(raw: unknown): RoutingSubscriptionOve
     result.push({
       clientId: makeClientId(),
       providers: normalizeRoutingProviders(parseStringList(record.providers)),
+      ...(record.credentials !== undefined ? { credentials: normalizeRoutingCredentials(parseStringList(record.credentials)) } : {}),
       planTypes: normalizeRoutingPlanTypes(
         parseStringList(record['plan-types'] ?? record.planTypes)
       ),
@@ -978,6 +980,7 @@ function areRoutingPriorityOverridesEqual(
         return (
           Boolean(otherSubscription) &&
           areStringArraysEqual(subscription.providers, otherSubscription.providers) &&
+          areStringArraysEqual(subscription.credentials ?? [], otherSubscription.credentials ?? []) &&
           areStringArraysEqual(subscription.planTypes, otherSubscription.planTypes) &&
           subscription.perAuthRequestLimit === otherSubscription.perAuthRequestLimit &&
           subscription.perAuthRequestWindowMinutes === otherSubscription.perAuthRequestWindowMinutes
@@ -1178,6 +1181,8 @@ function serializeRoutingPriorityOverridesForYaml(
         const subscriptionEntry: Record<string, unknown> = {
           'plan-types': planTypes,
         };
+        const credentials = normalizeRoutingCredentials(subscriptionRule.credentials ?? []);
+        if (credentials.length > 0) subscriptionEntry.credentials = credentials;
         const providers = normalizeRoutingProviders(subscriptionRule.providers);
         if (providers.length > 0) {
           subscriptionEntry.providers = providers;
@@ -1442,7 +1447,11 @@ export function getVisualConfigValidationErrors(
       rule.subscriptionOverrides.forEach((subscriptionRule, subscriptionIndex) => {
         const pathPrefix = `routingPriorityOverrides.${rule.clientId}.subscriptionOverrides.${subscriptionRule.clientId}`;
         const planTypes = normalizeRoutingPlanTypes(subscriptionRule.planTypes);
-        if (planTypes.length === 0 && subscriptionRule.providers.every((provider) => !provider.trim())) {
+        const credentials = normalizeRoutingCredentials(subscriptionRule.credentials ?? []);
+        if (credentials.length > 1024 || credentials.some((value) => !validRoutingCredential(value))) {
+          result[`${pathPrefix}.credentials`] = 'routing_credentials_invalid';
+        }
+        if (planTypes.length === 0 && subscriptionRule.providers.every((provider) => !provider.trim()) && credentials.length === 0) {
           result[`${pathPrefix}.planTypes`] = 'routing_subscription_plan_required';
         }
         const subscriptionLimitError = subscriptionRule.perAuthRequestLimit.trim()
@@ -1468,6 +1477,8 @@ export function getVisualConfigValidationErrors(
         const overlapsPreviousRule = rule.subscriptionOverrides
           .slice(0, subscriptionIndex)
           .some((previousRule) => {
+            const previousCredentials = normalizeRoutingCredentials(previousRule.credentials ?? []);
+            if (Boolean(previousCredentials.length) !== Boolean(credentials.length) || (credentials.length > 0 && !credentials.some((value) => previousCredentials.includes(value)))) return false;
             if (!routingProviderScopesOverlap(previousRule.providers, subscriptionRule.providers)) {
               return false;
             }
@@ -4908,7 +4919,7 @@ export function useVisualConfig() {
                 serializeRoutingPriorityOverridesForYaml(baselineValues.routingPriorityOverrides),
                 (raw) => {
                   const [entry] = parseRoutingSubscriptionOverrides([raw]);
-                  return entry ? JSON.stringify([entry.providers.slice().sort(), entry.planTypes.slice().sort()]) : '';
+                  return entry ? JSON.stringify([entry.providers.slice().sort(), entry.planTypes.slice().sort(), (entry.credentials ?? []).slice().sort()]) : '';
                 }
               )
             );

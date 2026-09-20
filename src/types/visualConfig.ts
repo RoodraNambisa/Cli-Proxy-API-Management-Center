@@ -101,6 +101,7 @@ export type VisualConfigValidationErrorCode =
   | 'routing_subscription_plan_required'
   | 'routing_subscription_limit_required'
   | 'routing_subscription_overlap'
+  | 'routing_credentials_invalid'
   | 'fill_first_controls_conflict'
   | 'fixed_error_cooldown_match_required'
   | 'non_retryable_error_match_required'
@@ -278,6 +279,7 @@ export interface DisabledImageGenerationToolErrorVisualConfig {
 export type RoutingPriorityOverrideStrategy = '' | 'round-robin' | 'fill-first' | 'random' | 'weighted-round-robin';
 
 export interface RoutingSubscriptionOverrideVisualEntry {
+  credentials?: string[];
   clientId: string;
   providers: string[];
   planTypes: string[];

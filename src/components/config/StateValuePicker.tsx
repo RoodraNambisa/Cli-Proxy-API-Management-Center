@@ -24,6 +24,7 @@ export function StateValuePicker({
   onOpen,
   loading,
   loadError,
+  catalogHint,
 }: {
   label: string;
   value: string[];
@@ -39,6 +40,7 @@ export function StateValuePicker({
   onOpen?: () => void;
   loading?: boolean;
   loadError?: string;
+  catalogHint?: string;
 }) {
   const { t } = useTranslation();
   const text = (key: string) => t(`codex_state.${key}`);
@@ -215,7 +217,7 @@ export function StateValuePicker({
         {onOpen && (
           <div className={styles.loadRow}>
             <span role="status">
-              {loading ? text('picker_loading') : text('picker_catalog_hint')}
+              {loading ? text('picker_loading') : (catalogHint ?? text('picker_catalog_hint'))}
             </span>
             <Button size="sm" variant="secondary" disabled={loading || disabled} onClick={onOpen}>
               {t('common.refresh')}

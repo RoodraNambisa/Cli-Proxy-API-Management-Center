@@ -1,3 +1,4 @@
+import { RoutingCredentialPicker } from './RoutingCredentialPicker';
 import { CodexStateEditor } from './CodexStateEditor';
 import { CodexQuotaAutoDisableEditor } from './CodexQuotaAutoDisableEditor';
 import { ChatGptWebLibraryCleanup } from './ChatGptWebLibraryCleanup';
@@ -1525,7 +1526,7 @@ export function VisualConfigEditor({
     (
       priorityClientId: string,
       subscriptionClientId: string,
-      field: 'planTypes' | 'perAuthRequestLimit' | 'perAuthRequestWindowMinutes'
+      field: 'planTypes' | 'credentials' | 'perAuthRequestLimit' | 'perAuthRequestWindowMinutes'
     ) =>
       getValidationMessage(
         t,
@@ -4452,6 +4453,11 @@ export function VisualConfigEditor({
                                             subscriptionRule.clientId,
                                             'perAuthRequestWindowMinutes'
                                           );
+                                        const credentialsError = getRoutingSubscriptionOverrideError(
+                                          rule.clientId,
+                                          subscriptionRule.clientId,
+                                          'credentials'
+                                        );
                                         const planTypesInputId = `routing-subscription-${subscriptionRule.clientId}-plan-types`;
                                         const planTypesHintId = `${planTypesInputId}-hint`;
                                         const planTypesErrorId = `${planTypesInputId}-error`;
@@ -4462,11 +4468,12 @@ export function VisualConfigEditor({
                                             key={subscriptionRule.clientId}
                                             title={t('config_management.visual.sections.network.priority_subscription_overrides_rule', { index: subscriptionIndex + 1 })}
                                             initialExpanded={!baselineValues.routingPriorityOverrides.some((saved) => saved.subscriptionOverrides.some((entry) => entry.clientId === subscriptionRule.clientId))}
-                                            invalid={Boolean(planTypesError || subscriptionLimitError || subscriptionWindowError)}
+                                            invalid={Boolean(planTypesError || credentialsError || subscriptionLimitError || subscriptionWindowError)}
                                             labels={[t('config_management.visual.common.rule_column'), t('config_management.visual.common.match_column'), t('config_management.visual.common.effect_column')]}
                                             cells={[
                                               <strong>#{subscriptionIndex + 1}</strong>,
                                               <ConfigSummary entries={[
+                                                [t('routing_credentials.label'), (subscriptionRule.credentials ?? []).join(', ')],
                                                 ['providers', subscriptionRule.providers.join(', ')], ['plan-types', subscriptionRule.planTypes.join(', ') || t('config_management.visual.sections.network.priority_subscription_overrides_plan_types_empty')],
                                               ]} />,
                                               <ConfigSummary entries={[
@@ -4479,6 +4486,17 @@ export function VisualConfigEditor({
                                             >{t('config_management.visual.common.delete')}</Button>}
                                           >
                                             <div className={styles.subscriptionOverrideGrid}>
+                                              <div className={styles.subscriptionCredentialPicker}>
+                                                <RoutingCredentialPicker
+                                                  value={subscriptionRule.credentials ?? []}
+                                                  priority={rule.priority}
+                                                  disabled={disabled}
+                                                  error={credentialsError}
+                                                  onChange={(credentials) => updateRoutingSubscriptionOverride(
+                                                    rule.clientId, subscriptionRule.clientId, { credentials }
+                                                  )}
+                                                />
+                                              </div>
                                               <FieldShell
                                                 label={t(
                                                   'config_management.visual.sections.network.priority_subscription_overrides_plan_types'

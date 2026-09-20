@@ -372,6 +372,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'routing.priority-overrides[].per-auth-request-window-minutes',
       'routing.priority-overrides[].subscription-overrides',
       'routing.priority-overrides[].subscription-overrides[].providers',
+      'routing.priority-overrides[].subscription-overrides[].credentials',
       'routing.priority-overrides[].subscription-overrides[].plan-types',
       'routing.priority-overrides[].subscription-overrides[].per-auth-request-limit',
       'routing.priority-overrides[].subscription-overrides[].per-auth-request-window-minutes',

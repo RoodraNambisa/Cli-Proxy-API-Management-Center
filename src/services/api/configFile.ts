@@ -3,6 +3,7 @@
  */
 
 import { apiClient } from './client';
+import { requireRoutingCredentialSupport } from './routingCredentials';
 import { parseDocument } from 'yaml';
 import i18n from '@/i18n';
 
@@ -19,7 +20,9 @@ export const configFileApi = {
   },
 
   async saveConfigYaml(content: string): Promise<void> {
-    const state = parseDocument(content).toJS()?.codex?.['state-override'];
+    const root = parseDocument(content).toJS();
+    await requireRoutingCredentialSupport(root?.routing?.['priority-overrides']);
+    const state = root?.codex?.['state-override'];
     const rules: Array<Record<string, unknown>> = Array.isArray(state?.rules) ? state.rules : [];
     const modelOverrides = rules.some(
       (rule) => Array.isArray(rule?.['model-overrides']) && rule['model-overrides'].length

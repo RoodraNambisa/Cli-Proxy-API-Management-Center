@@ -63,6 +63,7 @@ export interface RequestBodyReleaseConfig {
 export type RoutingStrategy = 'round-robin' | 'fill-first' | 'random' | 'weighted-round-robin';
 
 export interface RoutingSubscriptionOverrideConfig {
+  credentials?: string[];
   providers?: string[];
   planTypes: string[];
   perAuthRequestLimit?: number | null;

@@ -1,3 +1,4 @@
+import { requireRoutingCredentialSupport } from './routingCredentials';
 /**
  * 配置相关 API
  */
@@ -349,13 +350,15 @@ const normalizeRoutingPriorityOverrides = (value: unknown): RoutingPriorityOverr
         const planTypes = normalizeStringList(
           subscriptionSource['plan-types'] ?? subscriptionSource.planTypes
         );
-        if (planTypes.length === 0 && normalizeStringList(subscriptionSource.providers).length === 0) return subscriptionResult;
+        const credentials = normalizeStringList(subscriptionSource.credentials);
+        if (planTypes.length === 0 && normalizeStringList(subscriptionSource.providers).length === 0 && credentials.length === 0) return subscriptionResult;
 
         const subscriptionEntry: NonNullable<
           RoutingPriorityOverrideConfig['subscriptionOverrides']
         >[number] = {
           planTypes,
         };
+        if (credentials.length > 0) subscriptionEntry.credentials = credentials;
         const providers = normalizeStringList(subscriptionSource.providers);
         if (providers.length > 0) {
           subscriptionEntry.providers = providers;
@@ -440,6 +443,7 @@ const serializeRoutingPriorityOverrides = (
           const subscriptionEntry: Record<string, unknown> = {
             'plan-types': subscriptionOverride.planTypes,
           };
+          if (subscriptionOverride.credentials?.length) subscriptionEntry.credentials = subscriptionOverride.credentials;
           if (subscriptionOverride.providers?.length) {
             subscriptionEntry.providers = subscriptionOverride.providers;
           }
@@ -742,6 +746,7 @@ export const configApi = {
   async updateRoutingPriorityOverrides(
     overrides: RoutingPriorityOverrideConfig[]
   ): Promise<RoutingPriorityOverrideConfig[]> {
+    await requireRoutingCredentialSupport(overrides);
     const data = await apiClient.put('/routing/priority-overrides', {
       value: serializeRoutingPriorityOverrides(overrides),
     });
@@ -754,6 +759,7 @@ export const configApi = {
   async patchRoutingPriorityOverrides(
     overrides: RoutingPriorityOverrideConfig[]
   ): Promise<RoutingPriorityOverrideConfig[]> {
+    await requireRoutingCredentialSupport(overrides);
     const data = await apiClient.patch('/routing/priority-overrides', {
       value: serializeRoutingPriorityOverrides(overrides),
     });

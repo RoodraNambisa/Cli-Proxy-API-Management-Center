@@ -18,6 +18,7 @@ const priorityFields = [
   'subscriptionOverrides',
 ];
 const subscriptionFields = [
+  'credentials',
   'providers',
   'plan-types',
   'planTypes',
