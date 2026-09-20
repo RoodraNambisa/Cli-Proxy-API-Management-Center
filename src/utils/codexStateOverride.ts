@@ -145,6 +145,19 @@ export function readCodexState(raw: unknown): CodexStateOverride {
               'plan-types': Array.isArray(r['plan-types']) ? r['plan-types'] : [],
               models: Array.isArray(r.models) ? r.models : [],
               settings: record(r.settings),
+              ...(Array.isArray(r['model-overrides'])
+                ? {
+                    'model-overrides': r['model-overrides'].map((raw) => {
+                      const item = record(raw);
+                      return {
+                        ...item,
+                        id: typeof item.id === 'string' ? item.id : '',
+                        models: Array.isArray(item.models) ? item.models : [],
+                        settings: record(item.settings),
+                      };
+                    }),
+                  }
+                : {}),
             } as CodexStateRule;
           }),
         }

@@ -193,7 +193,15 @@ export function StateRuleModelOverrides({
                 size="sm"
                 variant="secondary"
                 disabled={blocked}
-                onClick={() => patch(item.id, { settings: {} })}
+                onClick={() =>
+                  patch(item.id, {
+                    settings: Object.fromEntries(
+                      Object.entries(item.settings).filter(
+                        ([key]) => !STATE_SETTING_KEYS.includes(key)
+                      )
+                    ),
+                  })
+                }
               >
                 {text('model_restore')}
               </Button>

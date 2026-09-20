@@ -166,6 +166,29 @@ describe('State model overrides', () => {
     fireEvent.click(screen.getByRole('button', { name: 'codex_state.model_restore' }));
     expect(draft().rules[0]['model-overrides'][0].settings).toEqual({});
   });
+  it('keeps extension settings when restoring known fields and rejects malformed rows', () => {
+    const initial = {
+      ...raw,
+      rules: [
+        {
+          id: 'main',
+          name: 'Main',
+          models: ['sol'],
+          settings: {},
+          'model-overrides': [
+            { id: 'sol', models: ['sol'], settings: { 'match-model': false, future: 'keep' } },
+          ],
+        },
+      ],
+    };
+    render(<Fixture initial={initial} />);
+    fireEvent.click(screen.getByRole('button', { name: /1\. Main/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'codex_state.model_restore' }));
+    expect(draft().rules[0]['model-overrides'][0].settings).toEqual({ future: 'keep' });
+    expect(
+      codexStateError(readCodexState({ rules: [{ id: 'a', 'model-overrides': [null] }] }))
+    ).toBe(true);
+  });
   it('blocks creation and saving on backends without the capability', async () => {
     render(<Fixture supported={false} />);
     expect(
