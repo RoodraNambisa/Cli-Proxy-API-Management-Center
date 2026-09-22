@@ -1,9 +1,18 @@
+import {
+  readStateStrategy,
+  mergeStateSettings,
+  stateStrategySettingsInvalid,
+  STATE_STRATEGY_KEYS,
+  type StateStrategyFields,
+} from './codexStateStrategy';
 import { generateId } from './helpers';
 import type { Document } from 'yaml';
 import { detachErrorRuleAliases, readMergedYamlField } from './requestScopedErrorsYaml';
 import { API_KEY_PRIORITY_LIMIT } from './apiKeyGroups';
 
 export const STATE_NUMBER_DEFAULTS = {
+  'cookie-max-age-seconds': 0,
+  'cookie-refresh-before-seconds': 0,
   'active-minutes': 60,
   'ttl-minutes': 60,
   'refresh-before-minutes': 5,
@@ -41,30 +50,31 @@ export type CodexStateRule = {
   settings: Record<string, unknown>;
   [key: string]: unknown;
 };
-export type CodexStateOverride = Record<StateNumberField, string> & {
-  rules?: CodexStateRule[];
-  enabled: boolean;
-  priorities: string;
-  'included-credentials': string;
-  models: string;
-  'excluded-credentials': string;
-  mode: string;
-  'missing-policy': string;
-  acquisition: string;
-  'proxy-mode': string;
-  'proxy-url': string;
-  lengths: string;
-  'match-model': boolean;
-  'invalidate-on-state-length-mismatch': boolean;
-  'invalidate-on-model-mismatch': boolean;
-  prompt: string;
-  'response-contains': string;
-  'error-type': string;
-  'error-code': string;
-  'error-message': string;
-  'model-overrides': string;
-  'plan-lengths': StatePlanLengthRule[];
-};
+export type CodexStateOverride = Record<StateNumberField, string> &
+  StateStrategyFields & {
+    rules?: CodexStateRule[];
+    enabled: boolean;
+    priorities: string;
+    'included-credentials': string;
+    models: string;
+    'excluded-credentials': string;
+    mode: string;
+    'missing-policy': string;
+    acquisition: string;
+    'proxy-mode': string;
+    'proxy-url': string;
+    lengths: string;
+    'match-model': boolean;
+    'invalidate-on-state-length-mismatch': boolean;
+    'invalidate-on-model-mismatch': boolean;
+    prompt: string;
+    'response-contains': string;
+    'error-type': string;
+    'error-code': string;
+    'error-message': string;
+    'model-overrides': string;
+    'plan-lengths': StatePlanLengthRule[];
+  };
 const record = (raw: unknown): Record<string, unknown> =>
   raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
 const listText = (raw: unknown) => (Array.isArray(raw) ? raw.join(', ') : '');
@@ -114,8 +124,9 @@ export function readCodexState(raw: unknown): CodexStateOverride {
   const text = (key: string, fallback: string) =>
     typeof s[key] === 'string' && s[key] !== '' ? (s[key] as string) : fallback;
   return {
+    ...readStateStrategy(s),
     ...(Object.fromEntries(
-      Object.entries(STATE_NUMBER_DEFAULTS).map(([k, v]) => [k, String(s[k] || v)])
+      Object.entries(STATE_NUMBER_DEFAULTS).map(([k, v]) => [k, String(s[k] ?? v)])
     ) as Record<StateNumberField, string>),
     'model-overrides': JSON.stringify(s['model-overrides'] ?? [], null, 2),
     'plan-lengths': Array.isArray(s['plan-lengths'])
@@ -193,6 +204,27 @@ export const codexStateEqual = (a: CodexStateOverride, b: CodexStateOverride) =>
   JSON.stringify(a) === JSON.stringify(b);
 export function codexStateError(v: CodexStateOverride): boolean {
   if (!readStateModelOverrides(v['model-overrides'])) return true;
+  const strategyRaw = {
+    ...v,
+    'ttl-seconds': v['ttl-seconds'] === '' ? undefined : Number(v['ttl-seconds']),
+    'refresh-before-seconds':
+      v['refresh-before-seconds'] === '' ? undefined : Number(v['refresh-before-seconds']),
+    'cookie-max-age-seconds': Number(v['cookie-max-age-seconds']),
+    'cookie-refresh-before-seconds': Number(v['cookie-refresh-before-seconds']),
+  };
+  if (stateStrategySettingsInvalid(strategyRaw)) return true;
+  const stateTTL =
+    v['ttl-seconds'] === '' ? Number(v['ttl-minutes']) * 60 : Number(v['ttl-seconds']);
+  const stateLead =
+    v['refresh-before-seconds'] === ''
+      ? Number(v['refresh-before-minutes']) * 60
+      : Number(v['refresh-before-seconds']);
+  if (v.strategy !== 'cookie-only' && stateLead >= stateTTL) return true;
+  if (
+    Number(v['cookie-max-age-seconds']) > 0 &&
+    Number(v['cookie-refresh-before-seconds']) >= Number(v['cookie-max-age-seconds'])
+  )
+    return true;
   if (v.rules !== undefined) {
     if (v.rules.length > 128) return true;
     const seen = new Set<string>();
@@ -244,37 +276,42 @@ export function codexStateError(v: CodexStateOverride): boolean {
       )
         return true;
 
-      const effective = readCodexState({
-        ...serializeCodexState({ ...v, rules: undefined }),
-        ...Object.fromEntries(
-          Object.entries(settings).filter(([key]) =>
-            [
-              ...Object.keys(STATE_NUMBER_DEFAULTS).filter((key) => key !== 'concurrency'),
-              'mode',
-              'missing-policy',
-              'acquisition',
-              'proxy-mode',
-              'proxy-url',
-              'lengths',
-              'match-model',
-              'prompt',
-              'response-contains',
-              'error-type',
-              'error-code',
-              'error-message',
-              'invalidate-on-state-length-mismatch',
-              'invalidate-on-model-mismatch',
-            ].includes(key)
+      const effective = readCodexState(
+        mergeStateSettings(
+          serializeCodexState({ ...v, rules: undefined }),
+          Object.fromEntries(
+            Object.entries(settings).filter(([key]) =>
+              [
+                ...STATE_STRATEGY_KEYS,
+                ...Object.keys(STATE_NUMBER_DEFAULTS).filter((key) => key !== 'concurrency'),
+                'mode',
+                'missing-policy',
+                'acquisition',
+                'proxy-mode',
+                'proxy-url',
+                'lengths',
+                'match-model',
+                'prompt',
+                'response-contains',
+                'error-type',
+                'error-code',
+                'error-message',
+                'invalidate-on-state-length-mismatch',
+                'invalidate-on-model-mismatch',
+              ].includes(key)
+            )
           )
-        ),
-      });
+        )
+      );
+      if (stateStrategySettingsInvalid(settings)) return true;
       if (
         Object.entries(STATE_NUMBER_DEFAULTS).some(
           ([key]) =>
             key in settings &&
             (typeof settings[key] !== 'number' ||
               !Number.isInteger(settings[key]) ||
-              Number(settings[key]) < (key === 'max-retry-rounds' ? 0 : 1))
+              Number(settings[key]) <
+                (key === 'max-retry-rounds' || key.startsWith('cookie-') ? 0 : 1))
         )
       )
         return true;
@@ -333,7 +370,7 @@ export function codexStateError(v: CodexStateOverride): boolean {
                 {
                   ...r,
                   'model-overrides': undefined,
-                  settings: { ...r.settings, ...item.settings },
+                  settings: mergeStateSettings(r.settings, item.settings),
                 },
               ],
             })
@@ -364,6 +401,20 @@ export function codexStateError(v: CodexStateOverride): boolean {
     const models = new Set<string>();
     for (const raw of overrides) {
       const item = record(raw);
+      if (stateStrategySettingsInvalid(item)) return true;
+      const effective = mergeStateSettings(strategyRaw, item);
+      if (
+        effective.strategy !== 'cookie-only' &&
+        Number(effective['refresh-before-seconds'] ?? Number(v['refresh-before-minutes']) * 60) >=
+          Number(effective['ttl-seconds'] ?? Number(v['ttl-minutes']) * 60)
+      )
+        return true;
+      if (
+        Number(effective['cookie-max-age-seconds']) > 0 &&
+        Number(effective['cookie-refresh-before-seconds']) >=
+          Number(effective['cookie-max-age-seconds'])
+      )
+        return true;
       if (
         typeof item.model !== 'string' ||
         !item.model.trim() ||
@@ -395,6 +446,8 @@ export function codexStateError(v: CodexStateOverride): boolean {
     return true;
   }
   const bounds: Record<StateNumberField, [number, number]> = {
+    'cookie-max-age-seconds': [0, 86400],
+    'cookie-refresh-before-seconds': [0, 86400],
     'active-minutes': [1, 10080],
     'ttl-minutes': [1, 1440],
     'refresh-before-minutes': [1, 1439],
@@ -413,7 +466,7 @@ export function codexStateError(v: CodexStateOverride): boolean {
     )
   )
     return true;
-  if (Number(v['refresh-before-minutes']) >= Number(v['ttl-minutes'])) return true;
+
   if (
     !['override', 'missing'].includes(v.mode) ||
     !['continue', 'error', 'hide'].includes(v['missing-policy']) ||
@@ -473,6 +526,9 @@ export function writeCodexState(doc: Document, value: CodexStateOverride) {
 export function serializeCodexState(value: CodexStateOverride): Record<string, unknown> {
   return {
     ...value,
+    'ttl-seconds': value['ttl-seconds'] === '' ? undefined : Number(value['ttl-seconds']),
+    'refresh-before-seconds':
+      value['refresh-before-seconds'] === '' ? undefined : Number(value['refresh-before-seconds']),
     'model-overrides': JSON.parse(value['model-overrides'] || '[]'),
     'plan-lengths': value['plan-lengths'].map((rule) => ({
       ...rule.extra,

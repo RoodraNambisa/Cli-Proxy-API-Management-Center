@@ -26,12 +26,15 @@ const waitForPoll = (signal: AbortSignal) =>
     signal.addEventListener('abort', done, { once: true });
   });
 
-export function useCodexStateAcquisition(fileName: string) {
+export function useCodexStateAcquisition(
+  fileName: string,
+  strategy: 'state' | 'cookie-only' = 'state'
+) {
   const { t } = useTranslation();
   const connection = useAuthStore(
     (s) => `${s.apiBase}:${s.managementAccessPath}:${s.connectionGeneration ?? 0}`
   );
-  const scope = `${connection}:${fileName}`;
+  const scope = `${connection}:${fileName}:${strategy}`;
   const activeScope = useRef(scope);
   activeScope.current = scope;
   const controller = useRef<AbortController | null>(null);
@@ -80,14 +83,22 @@ export function useCodexStateAcquisition(fileName: string) {
         fileName,
         model,
         capturedConnection,
-        abort.signal
+        abort.signal,
+        strategy
       );
       if (!current()) return false;
-      if (response.diagnostic !== true || !response.model || typeof response.previous_acquired !== 'number')
+      if (
+        response.diagnostic !== true ||
+        !response.model ||
+        typeof response.previous_acquired !== 'number'
+      )
         throw new Error(t('model_probe.state_acquire_upgrade'));
-      let snapshots = response.models;
+      let status = response;
       while (current()) {
-        const snapshot = snapshots.find((item) => item.model === response.model);
+        const snapshot =
+          strategy === 'cookie-only'
+            ? status.cookie
+            : status.models.find((item) => item.model === response.model);
         if (!snapshot) throw new Error(t('model_probe.state_acquire_unavailable'));
         if (snapshot.status !== 'queued' && snapshot.status !== 'acquiring') {
           if (snapshot.status === 'valid' && snapshot.acquired > response.previous_acquired) {
@@ -104,8 +115,10 @@ export function useCodexStateAcquisition(fileName: string) {
         publish({ status: snapshot.status, snapshot });
         await waitForPoll(abort.signal);
         if (!current()) return false;
-        snapshots = (await authFilesApi.getCodexState(fileName, capturedConnection, abort.signal))
-          .models;
+        status = {
+          ...response,
+          ...(await authFilesApi.getCodexState(fileName, capturedConnection, abort.signal)),
+        };
       }
     } catch (error) {
       publish({ status: 'failed', error: error instanceof Error ? error.message : String(error) });

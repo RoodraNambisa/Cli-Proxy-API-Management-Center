@@ -1,3 +1,4 @@
+import { stateNeedsTurnState } from "@/utils/codexStateStrategy";
 import { normalizeRoutingCredentials, validRoutingCredential } from '@/utils/routingCredentials';
 import { readCodexState, writeCodexState, codexStateEqual, codexStateError } from '@/utils/codexStateOverride';
 import { readCodexQuotaAutoDisable, codexQuotaAutoDisableEqual, codexQuotaAutoDisableError, writeCodexQuotaAutoDisable } from '@/utils/codexQuotaAutoDisable';
@@ -1744,7 +1745,7 @@ export function getVisualConfigValidationErrors(
     ...errorResponseRewriteErrors,
     ...codexLiveMediaErrors(values.codexLiveMediaRelay),
     ...grokConfigErrors(values.grok),
-    codexStateOverride: codexStateError(values.codexStateOverride) || (values.codexStateOverride.enabled && values.codexTurnStatePolicy === 'strip') ? 'codex_state_override' : undefined,
+    codexStateOverride: codexStateError(values.codexStateOverride) || (values.codexStateOverride.enabled && values.codexTurnStatePolicy === 'strip' && stateNeedsTurnState(values.codexStateOverride)) ? 'codex_state_override' : undefined,
     codexQuotaAutoDisable: codexQuotaAutoDisableError(values.codexQuotaAutoDisable) ? 'codex_quota_auto_disable' : undefined,
     responseModelRewrite: responseModelRewriteError(values.responseModelRewrite) ? 'integer_list' : undefined,
     ...nonRetryableErrorErrors,

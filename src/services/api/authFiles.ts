@@ -32,7 +32,7 @@ export interface GrokCatalogRefreshInfo {
 
 type StatusError = { status?: number };
 export type CodexStateOptions = {
-  features?: {rule_model_overrides?: boolean; state_retry_rounds?: boolean};
+  features?: {rule_model_overrides?: boolean; state_retry_rounds?: boolean; cookie_only?: boolean; state_seconds?: boolean};
   credentials: Array<{id: string; name: string; alias?: string; priority: number; plan: string; disabled: boolean}>;
   models: Array<{id: string; upstream_id: string}>;
   priorities: number[];
@@ -41,6 +41,7 @@ export type CodexStateOptions = {
 export type CodexStatePreview = {managed:boolean;registered:boolean;upstream_model:string;match:{rule_id?:string;rule_name?:string;rule_index:number;action:string;model_override_id?:string;conflicts?:string[];sources?:Record<string,string>};policy:Record<string,string|number|boolean|number[]|null>};
 export type CodexStateProxyResult = { ok: boolean; ip?: string; loc?: string; elapsed_ms?: number; error?: string; message?: string };
 export type ModelProbeRequest = {
+ codex_cookie?: { mode: "configured" | "none" | "managed" | "candidate" };
   name: string; model: string; protocol: string; stream: boolean; upstream?: string;
   prompt?: string; max_output_tokens?: number; request_body?: Record<string, unknown>;
   codex_state?: { mode: 'auto' | 'configured' | 'none' | 'custom' | 'managed' | 'acquired'; 'x-codex-turn-state'?: string };
@@ -50,6 +51,7 @@ export type ModelProbeUsage = {
   cached_tokens?: number; reasoning_tokens?: number; cache_creation_tokens?: number;
 };
 export type ModelProbeResult = {
+ codex_cookie?: { mode: string; source: string; sent: boolean; digest?: string; version?: number; names: string[] };
   success: boolean; name: string; provider?: string; model: string; upstream_model?: string;
   returned_model?: string; request_path: string; upstream_url?: string; stream: boolean;
   latency_ms: number; status_code?: number; request_id?: string; response_id?: string;
@@ -1343,14 +1345,14 @@ export const authFilesApi = {
     return apiClient.postAtConnection<ModelProbeResult>({ ...connection, timeout: 0 }, '/auth-files/models/probe', input, { signal, timeout: 0 });
   },
 
-  acquireCodexState(name: string, model: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
-    return apiClient.postAtConnection<{ diagnostic?: boolean; model: string; previous_acquired: number; models: import('@/types/authFile').CodexStateSnapshot[] }>(
-      connection, '/auth-files/codex/state', { name, model, action: 'acquire', diagnostic: true }, { signal }
+  acquireCodexState(name: string, model: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal, strategy: 'state' | 'cookie-only' = 'state') {
+    return apiClient.postAtConnection<{ cookie?: import('@/types/authFile').CodexCookieSnapshot; diagnostic?: boolean; model: string; previous_acquired: number; models: import('@/types/authFile').CodexStateSnapshot[] }>(
+      connection, '/auth-files/codex/state', { name, model, action: 'acquire', diagnostic: true, ...(strategy === 'cookie-only' ? {strategy} : {}) }, { signal }
     );
   },
 
   getCodexState(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
-    return apiClient.getAtConnection<{ models: import('@/types/authFile').CodexStateSnapshot[] }>(
+    return apiClient.getAtConnection<{ cookie?: import('@/types/authFile').CodexCookieSnapshot; models: import('@/types/authFile').CodexStateSnapshot[] }>(
       connection, `/auth-files/codex/state?name=${encodeURIComponent(name)}&diagnostic=true`, { signal }
     );
   },

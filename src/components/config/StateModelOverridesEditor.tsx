@@ -1,3 +1,4 @@
+import { StateStrategyEditor } from './StateStrategyEditor';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -127,6 +128,12 @@ export function StateModelOverridesEditor({
                       </Button>
                     }
                   >
+                    <StateStrategyEditor
+                      settings={rule}
+                      strategy={value.strategy}
+                      disabled={disabled}
+                      onChange={(next) => save(rules.map((item, i) => (i === index ? next : item)))}
+                    />
                     <StateValuePicker
                       label={text('override_model')}
                       value={model ? [model] : []}

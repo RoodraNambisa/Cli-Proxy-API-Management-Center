@@ -1,3 +1,4 @@
+import { STATE_STRATEGY_KEYS, mergeStateSettings } from './codexStateStrategy';
 import { generateId } from './helpers';
 import {
   readStateModelOverrides,
@@ -8,6 +9,7 @@ import {
 } from './codexStateOverride';
 
 export const STATE_SETTING_KEYS = [
+  ...STATE_STRATEGY_KEYS,
   'mode',
   'missing-policy',
   'acquisition',
@@ -47,14 +49,14 @@ export function inheritedStateSettings(
   const override = readStateModelOverrides(value['model-overrides'])?.find(
     (item) => item.model === model
   );
-  return { ...defaults, ...override, ...parent };
+  return mergeStateSettings(mergeStateSettings(defaults, override ?? {}), parent);
 }
 
 function modelSettings(rule: CodexStateRule, model: string) {
   const override = rule['model-overrides']?.find(
     (item) => item.enabled !== false && item.models.includes(model)
   );
-  return { ...rule.settings, ...override?.settings };
+  return mergeStateSettings(rule.settings, override?.settings ?? {});
 }
 
 export type StateRuleMerge = {

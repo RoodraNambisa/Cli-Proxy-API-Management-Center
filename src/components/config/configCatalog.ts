@@ -665,7 +665,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     aliases: ['message_start', 'input_tokens', 'token estimate', 'token 估算', 'token 估計', 'оценка токенов'],
   },
   {
-    id: 'config-codex-state', pageId: 'provider-codex', labelKey: 'codex_state.title', yamlKeys: ['codex.state-override'], aliases: ['state', '292', '312', '覆盖', '自动获取'],
+    id: 'config-codex-state', pageId: 'provider-codex', labelKey: 'codex_state.title', yamlKeys: ['codex.state-override'], aliases: ['state', 'cookie', 'cookie-only', '292', '312', '覆盖', '自动获取', '秒级有效期'],
   },
   {
     id: 'config-codex-quota-auto-disable',

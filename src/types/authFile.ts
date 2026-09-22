@@ -1,3 +1,12 @@
+export interface CodexCookieBundleSnapshot {
+  version: number; digest: string; received_at: string; age_seconds: number;
+  expires_at?: string; local_expires_at?: string;
+  members: Array<{ version?: number; name: string; digest: string; domain?: string; path: string; secure: boolean; expires_at?: string }>;
+}
+export interface CodexCookieSnapshot extends CodexStateSnapshot {
+  main?: CodexCookieBundleSnapshot; candidate?: CodexCookieBundleSnapshot; observation?: string;
+}
+export type CodexStateData = { models: CodexStateSnapshot[]; cookie?: CodexCookieSnapshot | null };
 export interface CodexStateSnapshot {
   rule_id?: string;
   rule_name?: string;
@@ -250,7 +259,7 @@ export interface AuthFileItem {
   deletion_requested_at?: string;
   proxy_binding?: AuthFileProxyBinding;
   proxy_route?: AuthFileProxyRoute;
-  codex_state?: { enabled: boolean; models: CodexStateSnapshot[] };
+  codex_state?: { enabled: boolean; models: CodexStateSnapshot[]; cookie?: CodexCookieSnapshot | null };
   request_limit?: {
     limit: number;
     window_minutes: number;

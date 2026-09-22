@@ -1,3 +1,9 @@
+import { StateStrategyEditor } from './StateStrategyEditor';
+import {
+  stateNeedsTurnState,
+  STATE_STRATEGY_KEYS,
+  readStateStrategy,
+} from '@/utils/codexStateStrategy';
 import { CodexStateRulesEditor } from './CodexStateRulesEditor';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -170,7 +176,9 @@ export function CodexStateEditor({
         summary={text(value.enabled ? 'enabled' : 'disabled')}
         focusTarget={focusTarget}
         dirty={dirty}
-        errorCount={codexStateError(value) || (value.enabled && strip) ? 1 : 0}
+        errorCount={
+          codexStateError(value) || (value.enabled && strip && stateNeedsTurnState(value)) ? 1 : 0
+        }
       >
         <ToggleSwitch
           label={text('enabled')}
@@ -180,7 +188,7 @@ export function CodexStateEditor({
         />
         <p className="hint">{text('memory_hint')}</p>
         <p className="hint">{text('ws_hint')}</p>
-        {value.enabled && strip && (
+        {value.enabled && strip && stateNeedsTurnState(value) && (
           <div role="alert" className="error-box">
             {text('strip_conflict')}
           </div>
@@ -226,7 +234,9 @@ export function CodexStateEditor({
       summary={defaultsOnly ? text('rule_inherit') : text(value.enabled ? 'enabled' : 'disabled')}
       focusTarget={focusTarget}
       dirty={dirty}
-      errorCount={codexStateError(value) || (value.enabled && strip) ? 1 : 0}
+      errorCount={
+        codexStateError(value) || (value.enabled && strip && stateNeedsTurnState(value)) ? 1 : 0
+      }
     >
       {!defaultsOnly && (
         <>
@@ -246,7 +256,7 @@ export function CodexStateEditor({
           />
           <p className="hint">{text('memory_hint')}</p>
           <p className="hint">{text('ws_hint')}</p>
-          {value.enabled && strip && (
+          {value.enabled && strip && stateNeedsTurnState(value) && (
             <div role="alert" className="error-box">
               {text('strip_conflict')}
             </div>
@@ -298,8 +308,30 @@ export function CodexStateEditor({
           <p className="hint">{text('scope_hint')}</p>
         </>
       )}
+      <StateStrategyEditor
+        inherit={false}
+        disabled={disabled}
+        strategy={value.strategy}
+        settings={Object.fromEntries(
+          STATE_STRATEGY_KEYS.map((key) => [
+            key,
+            typeof value[key as keyof typeof value] === 'string' && key.endsWith('-seconds')
+              ? value[key as keyof typeof value] === ''
+                ? undefined
+                : Number(value[key as keyof typeof value])
+              : value[key as keyof typeof value],
+          ])
+        )}
+        onChange={(next) => {
+          patch({
+            ...readStateStrategy(next),
+            'cookie-max-age-seconds': String(next['cookie-max-age-seconds'] ?? 0),
+            'cookie-refresh-before-seconds': String(next['cookie-refresh-before-seconds'] ?? 0),
+          });
+        }}
+      />
       <div className={styles.grid}>
-        {select('mode', ['override', 'missing'])}
+        {value.strategy !== 'cookie-only' && select('mode', ['override', 'missing'])}
         {select('missing-policy', ['continue', 'error', 'hide'])}
         {select('acquisition', ['active', 'all', 'manual'])}
       </div>
@@ -316,7 +348,13 @@ export function CodexStateEditor({
       <p className="hint">{text('proxy_hint')}</p>
       <div className={styles.grid}>
         {Object.keys(STATE_NUMBER_DEFAULTS)
-          .filter((k) => !defaultsOnly || k !== 'concurrency')
+          .filter(
+            (k) =>
+              (!defaultsOnly || k !== 'concurrency') &&
+              !k.startsWith('cookie-') &&
+              (value.strategy !== 'cookie-only' ||
+                !['ttl-minutes', 'refresh-before-minutes'].includes(k))
+          )
           .map((k) => {
             const key = k as StateNumberField;
             return (

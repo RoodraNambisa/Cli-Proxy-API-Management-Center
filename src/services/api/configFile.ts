@@ -1,3 +1,4 @@
+import { STATE_STRATEGY_KEYS } from '@/utils/codexStateStrategy';
 /**
  * Configuration file API (/config.yaml).
  */
@@ -36,10 +37,42 @@ export const configFileApi = {
           : []),
       ]),
     ].some((settings) => Number(settings?.['max-retry-rounds']) > 0);
-    if (modelOverrides || retryRounds) {
+    const strategySettings = [
+      state,
+      ...(Array.isArray(state?.['model-overrides']) ? state['model-overrides'] : []),
+      ...rules.flatMap((rule) => [
+        rule.settings,
+        ...(Array.isArray(rule['model-overrides'])
+          ? rule['model-overrides'].map((item: { settings?: unknown }) => item.settings)
+          : []),
+      ]),
+    ];
+    const cookieFeatures = strategySettings.some(
+      (s) =>
+        s &&
+        STATE_STRATEGY_KEYS.some(
+          (key) =>
+            s[key] !== undefined &&
+            (key !== 'strategy' || s[key] !== 'state') &&
+            (key !== 'missing-returned-state' || s[key] !== 'ignore') &&
+            (key !== 'cookie-verify-after-acquire' || s[key] !== false) &&
+            (!key.startsWith('cookie-') || s[key] !== 0)
+        )
+    );
+    if (modelOverrides || retryRounds || cookieFeatures) {
       const options = await apiClient.get<{
-        features?: { rule_model_overrides?: boolean; state_retry_rounds?: boolean };
+        features?: {
+          rule_model_overrides?: boolean;
+          state_retry_rounds?: boolean;
+          cookie_only?: boolean;
+          state_seconds?: boolean;
+        };
       }>('/auth-files/codex/state/options');
+      if (
+        cookieFeatures &&
+        (options.features?.cookie_only !== true || options.features?.state_seconds !== true)
+      )
+        throw new Error(i18n.t('codex_state.cookie_upgrade'));
       if (modelOverrides && options.features?.rule_model_overrides !== true)
         throw new Error(i18n.t('codex_state.model_special_upgrade'));
       if (retryRounds && options.features?.state_retry_rounds !== true)

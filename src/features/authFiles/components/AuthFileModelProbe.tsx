@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCodexStateAcquisition } from '../hooks/useCodexStateAcquisition';
 import { ModelProbeDetailsModal } from './ModelProbeDetailsModal';
+import { useCodexStateOptions } from '@/hooks/useCodexStateOptions';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
@@ -28,6 +29,12 @@ export function AuthFileModelProbe({
 }) {
   const { t } = useTranslation();
   const stateAcquisition = useCodexStateAcquisition(fileName);
+  const cookieAcquisition = useCodexStateAcquisition(fileName, 'cookie-only');
+  const stateOptions = useCodexStateOptions();
+  const cookieSupported = stateOptions.data.features?.cookie_only === true;
+  useEffect(() => {
+    if (provider === 'codex') void stateOptions.refresh();
+  }, [provider, stateOptions.scope]);
   const [protocol, setProtocol] = useState(
     provider === 'codex' || provider === 'xai' ? 'responses' : 'chat'
   );
@@ -41,6 +48,9 @@ export function AuthFileModelProbe({
     'auto' | 'configured' | 'none' | 'custom' | 'managed' | 'acquired'
   >('auto');
   const [customState, setCustomState] = useState('');
+  const [cookieMode, setCookieMode] = useState<'configured' | 'none' | 'managed' | 'candidate'>(
+    'configured'
+  );
   const [upstream, setUpstream] = useState('configured');
   const [customURL, setCustomURL] = useState('');
   const [search, setSearch] = useState('');
@@ -49,7 +59,7 @@ export function AuthFileModelProbe({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<Record<string, ProbeState>>({});
   const [running, setRunning] = useState(false);
-  const busy = running || Boolean(stateAcquisition.pending);
+  const busy = running || Boolean(stateAcquisition.pending) || Boolean(cookieAcquisition.pending);
   const controller = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const allModels = useMemo(
@@ -112,7 +122,12 @@ export function AuthFileModelProbe({
     stateMode === 'custom' &&
     !/^[\x21-\x7e]{1,8192}$/.test(customState.trim());
   const invalidRequest =
-    invalidURL || temporary.invalid || invalidLimit || invalidPrompt || invalidState;
+    invalidURL ||
+    temporary.invalid ||
+    invalidLimit ||
+    invalidPrompt ||
+    invalidState ||
+    (cookieMode !== 'configured' && !cookieSupported);
 
   useEffect(
     () => () => {
@@ -141,13 +156,19 @@ export function AuthFileModelProbe({
     setResults({});
     setDetailModel(null);
   };
-  const acquireState = async (model: string) => {
+  const acquireState = async (model: string, strategy: 'state' | 'cookie-only' = 'state') => {
     if (busy) return;
     setDetailModel(null);
-    if (await stateAcquisition.acquire(model)) resetOptions(() => setStateMode('acquired'));
+    const cookie = strategy === 'cookie-only';
+    if (cookie && !cookieSupported) return;
+    if (await (cookie ? cookieAcquisition : stateAcquisition).acquire(model))
+      resetOptions(() => {
+        setStateMode(cookie ? 'none' : 'acquired');
+        setCookieMode(cookie ? 'candidate' : 'configured');
+      });
   };
   const run = async (targets: string[]) => {
-    if (controller.current || stateAcquisition.pending || !targets.length || invalidRequest) return;
+    if (controller.current || busy || !targets.length || invalidRequest) return;
     const abort = new AbortController();
     controller.current = abort;
     const currentGeneration = ++generation.current;
@@ -174,6 +195,7 @@ export function AuthFileModelProbe({
               ...(probeBody ? { request_body: probeBody } : {}),
               ...(provider === 'codex'
                 ? {
+                    ...(cookieSupported ? { codex_cookie: { mode: cookieMode } } : {}),
                     codex_state: {
                       mode: stateMode,
                       ...(stateMode === 'custom'
@@ -281,7 +303,12 @@ export function AuthFileModelProbe({
                 ariaLabel={t('model_probe.state_mode')}
                 value={stateMode}
                 disabled={busy}
-                onChange={(value) => resetOptions(() => setStateMode(value as typeof stateMode))}
+                onChange={(value) =>
+                  resetOptions(() => {
+                    setStateMode(value as typeof stateMode);
+                    if (!['auto', 'none'].includes(value)) setCookieMode('configured');
+                  })
+                }
                 options={(
                   ['auto', 'configured', 'managed', 'acquired', 'custom', 'none'] as const
                 ).map((value) => ({
@@ -290,6 +317,29 @@ export function AuthFileModelProbe({
                 }))}
               />
             </div>
+          </div>
+          <div className={styles.options}>
+            <div>
+              <label>{t('model_probe.cookie_mode')}</label>
+              <Select
+                ariaLabel={t('model_probe.cookie_mode')}
+                value={cookieMode}
+                disabled={busy || !cookieSupported}
+                options={(['configured', 'none', 'managed', 'candidate'] as const).map((value) => ({
+                  value,
+                  label: t(`model_probe.cookie_modes.${value}`),
+                }))}
+                onChange={(value) =>
+                  resetOptions(() => {
+                    setCookieMode(value as typeof cookieMode);
+                    if (value === 'managed' || value === 'candidate') setStateMode('none');
+                  })
+                }
+              />
+            </div>
+          </div>
+          <div className={styles.hint}>
+            {t(cookieSupported ? 'model_probe.cookie_hint' : 'codex_state.cookie_upgrade')}
           </div>
           <div className={styles.hint}>{t('model_probe.state_hint')}</div>
           <div className={styles.hint}>{t('model_probe.state_acquire_hint')}</div>
@@ -432,7 +482,13 @@ export function AuthFileModelProbe({
           </Button>
         )}
         {stateAcquisition.pending && (
-          <Button variant="secondary" onClick={stateAcquisition.stop}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              stateAcquisition.stop();
+              cookieAcquisition.stop();
+            }}
+          >
             {t('model_probe.state_acquire_stop')}
           </Button>
         )}
@@ -479,6 +535,7 @@ export function AuthFileModelProbe({
               const entry = results[model];
               const result = entry?.result;
               const acquisition = stateAcquisition.results[model];
+              const cookieAcquired = cookieAcquisition.results[model];
               return (
                 <tr key={model}>
                   <td>
@@ -547,7 +604,16 @@ export function AuthFileModelProbe({
                         )}
                       </div>
                     )}
-                    {!result && !entry?.error && !acquisition && '—'}
+                    {cookieAcquired && (
+                      <div
+                        className={cookieAcquired.status === 'failed' ? styles.error : styles.hint}
+                      >
+                        {t('model_probe.cookie_acquire')}:{' '}
+                        {t(`model_probe.state_acquire_states.${cookieAcquired.status}`)}
+                        {cookieAcquired.error ? ` · ${cookieAcquired.error}` : ''}
+                      </div>
+                    )}
+                    {!result && !entry?.error && !acquisition && !cookieAcquired && '—'}
                   </td>
                   <td>
                     <div className={styles.modelActions}>
@@ -559,6 +625,17 @@ export function AuthFileModelProbe({
                       >
                         {t('model_probe.test')}
                       </Button>
+                      {provider === 'codex' && cookieSupported && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={busy}
+                          loading={cookieAcquisition.pending === model}
+                          onClick={() => void acquireState(model, 'cookie-only')}
+                        >
+                          {t('model_probe.cookie_acquire')}
+                        </Button>
+                      )}
                       {provider === 'codex' && (
                         <Button
                           variant="secondary"

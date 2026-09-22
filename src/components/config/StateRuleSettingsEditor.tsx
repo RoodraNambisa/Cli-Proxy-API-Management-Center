@@ -1,3 +1,4 @@
+import { StateStrategyEditor } from './StateStrategyEditor';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -90,9 +91,15 @@ export function StateRuleSettingsEditor({
   );
   return (
     <>
+      <StateStrategyEditor
+        settings={settings}
+        onChange={onChange}
+        disabled={disabled}
+        strategy={inherited.strategy}
+      />
       <div className={styles.grid}>
         {select(r, 'acquisition', ['active', 'all', 'manual'])}
-        {select(r, 'mode', ['override', 'missing'])}
+        {(settings.strategy ?? inherited.strategy) !== 'cookie-only' && select(r, 'mode', ['override', 'missing'])}
         {select(r, 'missing-policy', ['continue', 'error', 'hide'])}
         <div>
           <label>{text('rule_lengths')}</label>
@@ -150,7 +157,13 @@ export function StateRuleSettingsEditor({
         <summary>{text('rule_advanced')}</summary>
         <div className={styles.grid}>
           {Object.keys(STATE_NUMBER_DEFAULTS)
-            .filter((key) => key !== 'concurrency')
+            .filter(
+              (key) =>
+                key !== 'concurrency' &&
+                !key.startsWith('cookie-') &&
+                ((settings.strategy ?? inherited.strategy) !== 'cookie-only' ||
+                  !['ttl-minutes', 'refresh-before-minutes'].includes(key))
+            )
             .map((key) => (
               <Input
                 key={key}

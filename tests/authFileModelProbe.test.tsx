@@ -556,3 +556,28 @@ describe('credential model connection tests', () => {
     expect(probe.mock.calls[1][2].aborted).toBe(true);
   });
 });
+
+
+describe('Cookie-only connection diagnostics',()=>{
+ it('offers temporary Cookie acquisition only with backend support',async()=>{
+  vi.spyOn(authFilesApi,'getCodexStateOptions').mockResolvedValue({credentials:[],models:[],priorities:[],plans:[],features:{cookie_only:true,state_seconds:true}});
+  const acquire=vi.spyOn(authFilesApi,'acquireCodexState').mockResolvedValue({diagnostic:true,model:'model',previous_acquired:0,models:[],cookie:{model:'model',status:'valid',length:0,attempts:1,acquired:1,uses:0,current_uses:0,completed:0,misses:0,consecutive_failures:0,exhausted:false,acquisition_tokens:3,main:{version:1,digest:'safe-digest',received_at:new Date().toISOString(),age_seconds:0,members:[]}}});
+  const probe=vi.spyOn(authFilesApi,'probeModel').mockResolvedValue(result);
+  render(<AuthFileModelProbe fileName="codex.json" provider="codex" models={[{id:'model'}]}/>);
+  fireEvent.click(await screen.findByRole('button',{name:'model_probe.cookie_acquire'}));
+  await waitFor(()=>expect(acquire).toHaveBeenCalled());
+  expect(acquire.mock.calls[0][4]).toBe('cookie-only');
+  await waitFor(()=>expect(screen.getByRole('button',{name:'model_probe.cookie_mode'}).textContent).toContain('candidate'));
+  expect(screen.getByRole('button',{name:'model_probe.state_mode'}).textContent).toContain('none');
+  fireEvent.click(screen.getByRole('button',{name:'model_probe.test model'}));
+  await waitFor(()=>expect(probe).toHaveBeenCalled());
+  expect(probe.mock.calls[0][0]).toMatchObject({codex_cookie:{mode:'candidate'},codex_state:{mode:'none'}});
+ });
+ it('does not silently offer unsupported Cookie options',async()=>{
+  const options=vi.spyOn(authFilesApi,'getCodexStateOptions').mockResolvedValue({credentials:[],models:[],priorities:[],plans:[]});
+  render(<AuthFileModelProbe fileName="codex.json" provider="codex" models={[{id:'model'}]}/>);
+  await waitFor(()=>expect(options).toHaveBeenCalled());
+  expect(screen.getByRole('button',{name:'model_probe.cookie_mode'}).hasAttribute('disabled')).toBe(true);
+  expect(screen.queryByRole('button',{name:'model_probe.cookie_acquire'})).toBeNull();
+ });
+});

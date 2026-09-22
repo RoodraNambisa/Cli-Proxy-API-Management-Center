@@ -96,6 +96,21 @@ export function ModelProbeDetailsModal({
             </div>
           ))}
         </dl>
+        {result?.codex_cookie && (
+          <section>
+            <h3>{t('model_probe.cookie_details')}</h3>
+            <dl>
+              <dt>{t('model_probe.cookie_mode')}</dt>
+              <dd>{t(`model_probe.cookie_modes.${result.codex_cookie.mode}`)}</dd>
+              <dt>{t('model_probe.cookie_sent')}</dt>
+              <dd>{result.codex_cookie.sent ? result.codex_cookie.names.join(', ') : '—'}</dd>
+              <dt>{t('model_probe.cookie_digest')}</dt>
+              <dd>{result.codex_cookie.digest || '—'}</dd>
+              <dt>{t('model_probe.cookie_version')}</dt>
+              <dd>{result.codex_cookie.version || '—'}</dd>
+            </dl>
+          </section>
+        )}
         {result?.codex_state && (
           <section>
             <strong>{t('model_probe.state_details')}</strong>

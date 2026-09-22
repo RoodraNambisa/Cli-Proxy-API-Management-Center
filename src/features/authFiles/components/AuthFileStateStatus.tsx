@@ -1,9 +1,10 @@
+import { AuthFileCookieStatus } from './AuthFileCookieStatus';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/services/api/client';
 import { useAuthStore } from '@/stores';
-import type { AuthFileItem, CodexStateSnapshot } from '@/types/authFile';
+import type { AuthFileItem, CodexStateSnapshot, CodexStateData } from '@/types/authFile';
 import styles from './AuthFileStateStatus.module.scss';
 
 export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; disabled: boolean }) {
@@ -31,7 +32,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
   const scope = `${connection}:${file.name}`;
   const active = useRef(scope);
   active.current = scope;
-  const [updated, setUpdated] = useState<{ scope: string; models: CodexStateSnapshot[] }>();
+  const [updated, setUpdated] = useState<{ scope: string } & CodexStateData>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(Date.now());
@@ -39,15 +40,19 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
   const actionRequest = useRef<AbortController | null>(null);
   const state = file.codex_state;
   const models = updated?.scope === scope ? updated.models : (state?.models ?? []);
-  const waiting = models.some(
-    (model) =>
-      ['queued', 'acquiring'].includes(model.status) ||
-      Boolean(
-        model.next_attempt && !model.exhausted && !model.manual_only && model.status !== 'paused'
-      )
-  );
-  const live = useRef({ busy, waiting, models });
-  live.current = { busy, waiting, models };
+  const cookie = updated?.scope === scope ? updated.cookie : state?.cookie;
+  const pollModels = cookie ? [...models, cookie] : models;
+  const waiting =
+    Boolean(cookie?.main && cookie.status !== 'paused' && !cookie.exhausted) ||
+    pollModels.some(
+      (model) =>
+        ['queued', 'acquiring'].includes(model.status) ||
+        Boolean(
+          model.next_attempt && !model.exhausted && !model.manual_only && model.status !== 'paused'
+        )
+    );
+  const live = useRef({ busy, waiting, models: pollModels });
+  live.current = { busy, waiting, models: pollModels };
   useEffect(() => {
     active.current = scope;
     setUpdated(undefined);
@@ -63,9 +68,9 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
   }, [file.codex_state]);
   useEffect(() => {
     if (!file.codex_state?.enabled) return;
-    const timer = setInterval(() => setNow(Date.now()), 30000);
+    const timer = setInterval(() => setNow(Date.now()), cookie ? 1000 : 30000);
     return () => clearInterval(timer);
-  }, [file.codex_state?.enabled]);
+  }, [file.codex_state?.enabled, Boolean(cookie)]);
   useEffect(() => {
     if (!state?.enabled || !waiting || disabled || busy) return;
     const controller = new AbortController();
@@ -76,7 +81,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
       const version = mutation.current;
       let delay = statePollDelay(live.current.models);
       try {
-        const response = await apiClient.getAtConnection<{ models: CodexStateSnapshot[] }>(
+        const response = await apiClient.getAtConnection<CodexStateData>(
           connection,
           `/auth-files/codex/state?name=${encodeURIComponent(file.name)}`,
           { signal: controller.signal }
@@ -87,8 +92,10 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
           version === mutation.current &&
           !live.current.busy
         ) {
-          delay = statePollDelay(response.models);
-          setUpdated({ scope, models: response.models });
+          delay = statePollDelay(
+            response.cookie ? [...response.models, response.cookie] : response.models
+          );
+          setUpdated({ scope, ...response });
           setNow(Date.now());
           setError('');
           failures = 0;
@@ -108,7 +115,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
     };
   }, [state?.enabled, waiting, disabled, busy, file.name, scope, t]);
 
-  const action = async (operation: string, model = '') => {
+  const action = async (operation: string, model = '', strategy = 'state') => {
     if (busy || disabled) return;
     mutation.current += 1;
     const controller = new AbortController();
@@ -121,23 +128,24 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
     try {
       const response =
         operation === 'refresh'
-          ? await apiClient.getAtConnection<{ models: CodexStateSnapshot[] }>(
+          ? await apiClient.getAtConnection<CodexStateData>(
               connection,
               `/auth-files/codex/state?name=${encodeURIComponent(file.name)}`,
               { signal: controller.signal }
             )
-          : await apiClient.postAtConnection<{ models: CodexStateSnapshot[] }>(
+          : await apiClient.postAtConnection<CodexStateData>(
               connection,
               '/auth-files/codex/state',
               {
                 name: file.name,
                 model,
                 action: operation,
+                strategy,
               },
               { signal: controller.signal }
             );
       if (current()) {
-        setUpdated({ scope, models: response.models });
+        setUpdated({ scope, ...response });
         setNow(Date.now());
       }
     } catch (err) {
@@ -159,7 +167,9 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
         <span>
           {models.length
             ? t('codex_state.valid_count', { count: valid, total: models.length })
-            : text('out_of_scope')}
+            : cookie
+              ? text('strategy_cookie-only')
+              : text('out_of_scope')}
         </span>
       </div>
       {models.length > 0 && valid < models.length && (
@@ -289,6 +299,14 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
           </details>
         </>
       )}
+      {cookie && (
+        <AuthFileCookieStatus
+          cookie={cookie}
+          now={now}
+          disabled={disabled || busy}
+          onAction={(operation) => void action(operation, cookie.model, 'cookie-only')}
+        />
+      )}
       {error && (
         <div role="alert" className={styles.warning}>
           {error}
@@ -301,6 +319,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
 // Long round cooldowns do not need the fast acquisition polling rate.
 function statePollDelay(models: CodexStateSnapshot[]): number {
   if (models.some((m) => ['queued', 'acquiring'].includes(m.status))) return 1500;
+  if (models.every((m) => !m.next_attempt)) return 10000;
   const deadlines = models
     .filter((m) => m.round_waiting && m.next_attempt && !m.exhausted && m.status !== 'paused')
     .map((m) => Date.parse(m.next_attempt!) - Date.now());
