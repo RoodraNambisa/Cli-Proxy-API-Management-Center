@@ -1,3 +1,4 @@
+import { CodexResponseGuardEditor } from './CodexResponseGuardEditor';
 import { RoutingCredentialPicker } from './RoutingCredentialPicker';
 import { CodexStateEditor } from './CodexStateEditor';
 import { CodexQuotaAutoDisableEditor } from './CodexQuotaAutoDisableEditor';
@@ -1774,6 +1775,7 @@ export function VisualConfigEditor({
         countErrors([
           'codexQuotaAutoDisable',
           'codexStateOverride',
+          'codexResponseGuard',
           'codexFingerprintSessionIdentityPoolSize',
           'disabledImageGenerationToolError.statusCode',
           'images.unsupportedStatusCode',
@@ -3290,6 +3292,7 @@ export function VisualConfigEditor({
                   </SettingsDisclosure>
                 </PageGroup>
                 <PageGroup active={activePageId === 'provider-codex'}>
+                  <CodexResponseGuardEditor value={values.codexResponseGuard} onChange={codexResponseGuard=>onChange({codexResponseGuard})} disabled={disabled} dirty={hasDirtyConfigField(dirtyFields,['codexResponseGuard'])} focusTarget={focusTarget}/>
                   <CodexStateEditor value={values.codexStateOverride} onChange={codexStateOverride=>onChange({codexStateOverride})} disabled={disabled} dirty={hasDirtyConfigField(dirtyFields,['codexStateOverride'])} focusTarget={focusTarget} strip={values.codexTurnStatePolicy==='strip'}/>
                   <SettingsDisclosure id="config-model-catalog-fields" title={t('common.model_catalog_label')}
                     description={t('config_management.settings_center.codex_groups.catalog_desc')}

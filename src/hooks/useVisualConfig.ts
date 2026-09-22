@@ -1,3 +1,4 @@
+import { readResponseGuard, writeResponseGuard, responseGuardError, responseGuardEqual } from '@/utils/codexResponseGuard';
 import { stateNeedsTurnState } from "@/utils/codexStateStrategy";
 import { normalizeRoutingCredentials, validRoutingCredential } from '@/utils/routingCredentials';
 import { readCodexState, writeCodexState, codexStateEqual, codexStateError } from '@/utils/codexStateOverride';
@@ -1747,6 +1748,7 @@ export function getVisualConfigValidationErrors(
     ...grokConfigErrors(values.grok),
     codexStateOverride: codexStateError(values.codexStateOverride) || (values.codexStateOverride.enabled && values.codexTurnStatePolicy === 'strip' && stateNeedsTurnState(values.codexStateOverride)) ? 'codex_state_override' : undefined,
     codexQuotaAutoDisable: codexQuotaAutoDisableError(values.codexQuotaAutoDisable) ? 'codex_quota_auto_disable' : undefined,
+    codexResponseGuard: responseGuardError(values.codexResponseGuard) ? 'codex_response_guard' : undefined,
     responseModelRewrite: responseModelRewriteError(values.responseModelRewrite) ? 'integer_list' : undefined,
     ...nonRetryableErrorErrors,
     ...oauthRequestScopedErrorErrors,
@@ -2808,6 +2810,7 @@ function getNextDirtyFields(
       )
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexResponseGuard')) updateDirty('codexResponseGuard',responseGuardEqual(nextValues.codexResponseGuard,baselineValues.codexResponseGuard));
   if (Object.prototype.hasOwnProperty.call(patch, 'codexStateOverride')) updateDirty('codexStateOverride',codexStateEqual(nextValues.codexStateOverride,baselineValues.codexStateOverride));
   if (Object.prototype.hasOwnProperty.call(patch, 'codexQuotaAutoDisable')) {
     updateDirty('codexQuotaAutoDisable', codexQuotaAutoDisableEqual(nextValues.codexQuotaAutoDisable, baselineValues.codexQuotaAutoDisable));
@@ -3506,6 +3509,7 @@ export function useVisualConfig() {
         codexEstimateClaudeInputTokens: codexEstimateClaudeInputTokens ?? false,
         codexObserveQuota: codexObserveQuota ?? false,
         codexStateOverride: readCodexState(codex?.['state-override']),
+        codexResponseGuard: readResponseGuard(codex?.['response-guard']),
         codexQuotaAutoDisable: readCodexQuotaAutoDisable(codex?.['quota-auto-disable']),
         codexOrphanDelegationCompatibility: codexOrphanDelegationCompatibility ?? false,
         codexOptimizeMultiAgentV2: codexOptimizeMultiAgentV2 ?? false,
@@ -4090,6 +4094,7 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
         const inheritedCodex = asRecord(readMergedYamlField(doc, ['codex']));
+        const guardChanged = !responseGuardEqual(values.codexResponseGuard,baselineValues.codexResponseGuard);
         const stateChanged = !codexStateEqual(values.codexStateOverride,baselineValues.codexStateOverride);
         const quotaDisableChanged = !codexQuotaAutoDisableEqual(values.codexQuotaAutoDisable, baselineValues.codexQuotaAutoDisable);
         const mediaChanged = !codexLiveMediaEqual(values.codexLiveMediaRelay, baselineValues.codexLiveMediaRelay);
@@ -4098,7 +4103,7 @@ export function useVisualConfig() {
           inheritedCodex ||
           values.codexLiveEnabled ||
           mediaChanged ||
-          quotaDisableChanged || stateChanged ||
+          quotaDisableChanged || stateChanged || guardChanged ||
           values.codexIdentityConfuse ||
           values.codexPassthroughPromptCacheKey ||
           values.codexStreamBootstrapBuffering ||
@@ -4118,6 +4123,7 @@ export function useVisualConfig() {
           ensureMapInDoc(doc, ['codex']);
           doc.setIn(['codex', 'live-enabled'], values.codexLiveEnabled);
           doc.deleteIn(['codex', 'liveEnabled']);
+          if (guardChanged) writeResponseGuard(doc,values.codexResponseGuard);
           if (stateChanged) writeCodexState(doc,values.codexStateOverride);
           if (quotaDisableChanged) writeCodexQuotaAutoDisable(doc, values.codexQuotaAutoDisable);
           if (mediaChanged) writeCodexLiveMediaYaml(doc, values.codexLiveMediaRelay);
@@ -5093,7 +5099,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [state.dirtyFields, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [state.dirtyFields, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {

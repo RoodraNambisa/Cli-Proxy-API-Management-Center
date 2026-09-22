@@ -133,6 +133,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'codexObserveQuota',
       'codexQuotaAutoDisable',
       'codexStateOverride',
+      'codexResponseGuard',
       'codexOrphanDelegationCompatibility',
       'codexOptimizeMultiAgentV2',
       'codexSpoofSessionIdentity',
@@ -663,6 +664,9 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.codex_estimate_claude_input_tokens',
     yamlKeys: ['codex.estimate-claude-input-tokens'],
     aliases: ['message_start', 'input_tokens', 'token estimate', 'token 估算', 'token 估計', 'оценка токенов'],
+  },
+  {
+    id: 'config-codex-response-guard', pageId: 'provider-codex', labelKey: 'response_guard.title', yamlKeys: ['codex.response-guard'], aliases: ['拦截', '429', '模型不匹配', '白名单', 'State 长度', 'response guard'],
   },
   {
     id: 'config-codex-state', pageId: 'provider-codex', labelKey: 'codex_state.title', yamlKeys: ['codex.state-override'], aliases: ['state', 'cookie', 'cookie-only', '292', '312', '覆盖', '自动获取', '秒级有效期'],

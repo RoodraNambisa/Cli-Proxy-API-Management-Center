@@ -32,7 +32,7 @@ export interface GrokCatalogRefreshInfo {
 
 type StatusError = { status?: number };
 export type CodexStateOptions = {
-  features?: {rule_model_overrides?: boolean; state_retry_rounds?: boolean; cookie_only?: boolean; state_seconds?: boolean};
+  features?: {rule_model_overrides?: boolean; state_retry_rounds?: boolean; cookie_only?: boolean; state_seconds?: boolean; response_guard?: boolean};
   credentials: Array<{id: string; name: string; alias?: string; priority: number; plan: string; disabled: boolean}>;
   models: Array<{id: string; upstream_id: string}>;
   priorities: number[];
@@ -41,6 +41,7 @@ export type CodexStateOptions = {
 export type CodexStatePreview = {managed:boolean;registered:boolean;upstream_model:string;match:{rule_id?:string;rule_name?:string;rule_index:number;action:string;model_override_id?:string;conflicts?:string[];sources?:Record<string,string>};policy:Record<string,string|number|boolean|number[]|null>};
 export type CodexStateProxyResult = { ok: boolean; ip?: string; loc?: string; elapsed_ms?: number; error?: string; message?: string };
 export type ModelProbeRequest = {
+  codex_response_guard?: 'off' | 'observe' | 'enforce';
  codex_cookie?: { mode: "configured" | "none" | "managed" | "candidate" };
   name: string; model: string; protocol: string; stream: boolean; upstream?: string;
   prompt?: string; max_output_tokens?: number; request_body?: Record<string, unknown>;
@@ -51,6 +52,7 @@ export type ModelProbeUsage = {
   cached_tokens?: number; reasoning_tokens?: number; cache_creation_tokens?: number;
 };
 export type ModelProbeResult = {
+  codex_response_guard?: import('@/utils/codexResponseGuard').GuardRecord;
  codex_cookie?: { mode: string; source: string; sent: boolean; digest?: string; version?: number; names: string[] };
   success: boolean; name: string; provider?: string; model: string; upstream_model?: string;
   returned_model?: string; request_path: string; upstream_url?: string; stream: boolean;
@@ -1357,6 +1359,12 @@ export const authFilesApi = {
     );
   },
 
+  previewCodexResponseGuard(input: {name:string;model:string;returned_model:string;state_present:boolean;state_length:number;config:import('@/utils/codexResponseGuard').CodexResponseGuard},connection:ApiClientConnectionSnapshot,signal:AbortSignal) {
+    return apiClient.postAtConnection<import('@/utils/codexResponseGuard').GuardPreview>(connection,'/auth-files/codex/response-guard/preview',input,{signal});
+  },
+  getCodexResponseGuardOptions(connection:ApiClientConnectionSnapshot,signal:AbortSignal) {
+    return apiClient.getAtConnection<CodexStateOptions>(connection,'/auth-files/codex/response-guard/options',{signal});
+  },
   previewCodexState(name:string, model:string, config:Record<string,unknown>, connection:ApiClientConnectionSnapshot, signal:AbortSignal) {
     return apiClient.postAtConnection<CodexStatePreview>(connection, '/auth-files/codex/state/preview', {name,model,config}, {signal});
   },

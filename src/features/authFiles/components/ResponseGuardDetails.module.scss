@@ -1,0 +1,22 @@
+.root {
+  font-size: 14px;
+  dl {
+    display: grid;
+    grid-template-columns: minmax(100px, 1fr) minmax(0, 2fr);
+    gap: 12px 20px;
+    margin: 16px 0 24px;
+    > div {
+      display: contents;
+    }
+  }
+  dt {
+    color: var(--text-secondary);
+  }
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  code {
+    font-size: 13px;
+  }
+}

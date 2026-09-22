@@ -1,3 +1,4 @@
+import { readResponseGuard, type CodexResponseGuard } from '@/utils/codexResponseGuard';
 import { DEFAULT_CODEX_STATE, type CodexStateOverride } from '@/utils/codexStateOverride';
 import { DEFAULT_CODEX_QUOTA_AUTO_DISABLE, type CodexQuotaAutoDisableConfig } from '@/utils/codexQuotaAutoDisable';
 import { DEFAULT_GROK_CONFIG, type GrokVisualConfig } from './grok';
@@ -67,6 +68,7 @@ export type VisualConfigFieldPath =
   | 'responseModelRewrite'
   | 'codexQuotaAutoDisable'
   | 'codexStateOverride'
+  | 'codexResponseGuard'
   | 'nonRetryableErrors'
   | 'oauthRequestScopedErrors'
   | 'authModelExclusions'
@@ -121,6 +123,7 @@ export type VisualConfigValidationErrorCode =
   | 'integer_list'
   | 'codex_quota_auto_disable'
   | 'codex_state_override'
+  | 'codex_response_guard'
   | 'http_status_list'
   | 'codex_custom_model_id_required'
   | 'codex_custom_model_id_duplicate'
@@ -352,6 +355,7 @@ export type VisualConfigValues = {
   codexObserveQuota: boolean;
   codexQuotaAutoDisable: CodexQuotaAutoDisableConfig;
   codexStateOverride: CodexStateOverride;
+  codexResponseGuard: CodexResponseGuard;
   codexOrphanDelegationCompatibility: boolean;
   codexOptimizeMultiAgentV2: boolean;
   codexSpoofSessionIdentity: boolean;
@@ -490,6 +494,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexObserveQuota: false,
   codexQuotaAutoDisable: DEFAULT_CODEX_QUOTA_AUTO_DISABLE,
   codexStateOverride: DEFAULT_CODEX_STATE,
+  codexResponseGuard: readResponseGuard(undefined),
   codexOrphanDelegationCompatibility: false,
   codexOptimizeMultiAgentV2: false,
   codexSpoofSessionIdentity: false,

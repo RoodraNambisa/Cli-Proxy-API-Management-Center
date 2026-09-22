@@ -48,6 +48,7 @@ export function AuthFileModelProbe({
     'auto' | 'configured' | 'none' | 'custom' | 'managed' | 'acquired'
   >('auto');
   const [customState, setCustomState] = useState('');
+  const [guardMode,setGuardMode] = useState<'off'|'observe'|'enforce'>('off');
   const [cookieMode, setCookieMode] = useState<'configured' | 'none' | 'managed' | 'candidate'>(
     'configured'
   );
@@ -196,6 +197,7 @@ export function AuthFileModelProbe({
               ...(provider === 'codex'
                 ? {
                     ...(cookieSupported ? { codex_cookie: { mode: cookieMode } } : {}),
+                    ...(stateOptions.data.features?.response_guard ? {codex_response_guard:guardMode} : {}),
                     codex_state: {
                       mode: stateMode,
                       ...(stateMode === 'custom'
@@ -298,6 +300,10 @@ export function AuthFileModelProbe({
           <div className={styles.hint}>{t('model_probe.codex_conversion')}</div>
           <div className={styles.options}>
             <div>
+              <label>{t('response_guard.probe_mode')}</label>
+              <Select ariaLabel={t('response_guard.probe_mode')} value={guardMode} disabled={busy || stateOptions.data.features?.response_guard !== true}
+                options={(['off','observe','enforce'] as const).map(value=>({value,label:t(`response_guard.mode_${value}`)}))} onChange={v=>setGuardMode(v as typeof guardMode)}/>
+              <div className="hint">{t('response_guard.test_hint')}</div>
               <label>{t('model_probe.state_mode')}</label>
               <Select
                 ariaLabel={t('model_probe.state_mode')}

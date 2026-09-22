@@ -1,3 +1,4 @@
+import { ResponseGuardDetails } from './ResponseGuardDetails';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -96,6 +97,7 @@ export function ModelProbeDetailsModal({
             </div>
           ))}
         </dl>
+        {result?.codex_response_guard && <section><h3>{t('response_guard.title')}</h3><ResponseGuardDetails record={result.codex_response_guard}/></section>}
         {result?.codex_cookie && (
           <section>
             <h3>{t('model_probe.cookie_details')}</h3>

@@ -22,7 +22,26 @@ export const configFileApi = {
 
   async saveConfigYaml(content: string): Promise<void> {
     const root = parseDocument(content).toJS();
+    const needsGuard =
+      root?.codex?.['response-guard'] !== undefined ||
+      root?.['api-key-groups']?.some?.(
+        (g: Record<string, unknown>) => g?.['credential-target-response-guard'] === true
+      );
+    const connection = needsGuard ? apiClient.captureConnection() : undefined;
     await requireRoutingCredentialSupport(root?.routing?.['priority-overrides']);
+    if (needsGuard) {
+      let supported = false;
+      try {
+        const options = await apiClient.getAtConnection<{
+          features?: { response_guard?: boolean };
+        }>(connection!, '/auth-files/codex/response-guard/options');
+        supported = options.features?.response_guard === true;
+      } catch (error) {
+        const status = (error as { status?: number })?.status;
+        if (status !== 404 && status !== 405) throw error;
+      }
+      if (!supported) throw new Error(i18n.t('response_guard.upgrade'));
+    }
     const state = root?.codex?.['state-override'];
     const rules: Array<Record<string, unknown>> = Array.isArray(state?.rules) ? state.rules : [];
     const modelOverrides = rules.some(
@@ -77,6 +96,15 @@ export const configFileApi = {
         throw new Error(i18n.t('codex_state.model_special_upgrade'));
       if (retryRounds && options.features?.state_retry_rounds !== true)
         throw new Error(i18n.t('codex_state.retry_round_upgrade'));
+    }
+    if (connection) {
+      await apiClient.putAtConnection(connection, '/config.yaml', content, {
+        headers: {
+          'Content-Type': 'application/yaml',
+          Accept: 'application/json, text/plain, */*',
+        },
+      });
+      return;
     }
     await apiClient.put('/config.yaml', content, {
       headers: {

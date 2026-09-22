@@ -48,6 +48,9 @@ export function normalizeClientApiKeyGroups(value: unknown): ClientApiKeyGroup[]
     if ('credential-target-respect-request-limit' in record || 'credentialTargetRespectRequestLimit' in record) {
       group.credentialTargetRespectRequestLimit = (record['credential-target-respect-request-limit'] ?? record.credentialTargetRespectRequestLimit) === true;
     }
+    if ('credential-target-response-guard' in record || 'credentialTargetResponseGuard' in record) {
+      group.credentialTargetResponseGuard = (record['credential-target-response-guard'] ?? record.credentialTargetResponseGuard) === true;
+    }
     if ('credential-target-response-model-rewrite' in record || 'credentialTargetResponseModelRewrite' in record) {
       group.credentialTargetResponseModelRewrite = (record['credential-target-response-model-rewrite'] ?? record.credentialTargetResponseModelRewrite) === true;
     }

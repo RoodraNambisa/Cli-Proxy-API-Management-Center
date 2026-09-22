@@ -83,3 +83,5 @@
     min-width: 620px;
   }
 }
+
+.detailView { display: grid; gap: 20px; > button { justify-self: start; } }

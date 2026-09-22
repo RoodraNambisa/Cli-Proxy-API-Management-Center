@@ -11,6 +11,7 @@ export interface CodexStateSnapshot {
   rule_id?: string;
   rule_name?: string;
   allowed_lengths?: number[];
+  length_mode?: string;
   retry_seconds?: number;
   max_attempts?: number;
   retry_round_interval_minutes?: number;

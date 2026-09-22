@@ -212,7 +212,8 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
                 </div>
                 {m.allowed_lengths && (
                   <div className={styles.counts}>
-                    {t('codex_state.rule_card_policy', {
+                    {t(m.length_mode ? 'response_guard.resource_length_policy' : 'codex_state.rule_card_policy', {
+                      mode: t(`response_guard.length-mode_${m.length_mode}`),
                       rule:
                         m.rule_name && m.rule_name !== 'legacy'
                           ? m.rule_name

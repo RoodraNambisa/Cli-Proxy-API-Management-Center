@@ -250,6 +250,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const [priorityGroups, setPriorityGroups] = useState<Record<string, ClientApiKeyGroup>>({});
   const [targetingSupported, setTargetingSupported] = useState(false);
   const [targetOptionsSupported, setTargetOptionsSupported] = useState(false);
+  const [guardOptionsSupported, setGuardOptionsSupported] = useState(false);
   const [availablePriorities, setAvailablePriorities] = useState<number[]>();
   const [providerGroups, setProviderGroups] = useState<Record<string, string[]>>({});
   const [providerGroupsLoading, setProviderGroupsLoading] = useState(false);
@@ -284,6 +285,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       setNamesSupported(snapshot.namesSupported === true);
       setTargetingSupported(snapshot.credentialTargetingSupported === true);
       setTargetOptionsSupported(snapshot.credentialTargetOptionsSupported === true);
+      setGuardOptionsSupported(snapshot.credentialResponseGuardSupported === true);
       setPriorityGroups(Object.fromEntries(snapshot.groups.map((group) => [group.apiKey, group])));
       setAvailablePriorities(snapshot.availablePriorities);
       setProviderGroups(
@@ -301,6 +303,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
       setNamesSupported(false);
       setTargetingSupported(false);
       setTargetOptionsSupported(false);
+      setGuardOptionsSupported(false);
       setAvailablePriorities(undefined);
       setProviderGroupsError(error instanceof Error ? error.message : '');
       setProviderGroupsLoaded(true);
@@ -452,7 +455,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
 
   const handleTargetOptionChange = async (
     apiKey: string,
-    field: 'credentialTargetRespectStatePolicy' | 'credentialTargetRespectRequestLimit' | 'credentialTargetResponseModelRewrite',
+    field: 'credentialTargetRespectStatePolicy' | 'credentialTargetRespectRequestLimit' | 'credentialTargetResponseModelRewrite' | 'credentialTargetResponseGuard',
     enabled: boolean
   ) => {
     if (providerGroupsLoading || providerGroupUpdating || !serverKeys.has(apiKey) || !targetOptionsSupported) return;
@@ -602,6 +605,10 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                             disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null}
                             onChange={(enabled) => void handleTargetOptionChange(key, 'credentialTargetRespectStatePolicy', enabled)} />
                           <div className="hint">{t('credential_target.respect_state_hint')}</div>
+                          <ToggleSwitch label={t('response_guard.apply_test')} checked={keyPriorities.credentialTargetResponseGuard === true}
+                            disabled={disabled || !guardOptionsSupported || providerGroupsLoading || providerGroupUpdating !== null}
+                            onChange={(enabled) => void handleTargetOptionChange(key, 'credentialTargetResponseGuard', enabled)} />
+                          <div className="hint">{t(guardOptionsSupported ? 'response_guard.test_hint' : 'response_guard.upgrade')}</div>
                           <ToggleSwitch label={t('credential_target.rewrite_model')}
                             checked={keyPriorities.credentialTargetResponseModelRewrite === true}
                             disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null}

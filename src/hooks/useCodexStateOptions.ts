@@ -6,10 +6,10 @@ import { authFilesApi, type CodexStateOptions } from '@/services/api/authFiles';
 
 const empty: CodexStateOptions = { credentials: [], models: [], priorities: [], plans: [] };
 
-export function useCodexStateOptions() {
+export function useCodexStateOptions(kind: 'state' | 'response-guard' = 'state') {
   const { t } = useTranslation();
   const scope = useAuthStore(
-    (s) => `${s.apiBase}:${s.managementAccessPath}:${s.connectionGeneration ?? 0}`
+    (s) => `${s.apiBase}:${s.managementAccessPath}:${s.connectionGeneration ?? 0}:${kind}`
   );
   const active = useRef(scope);
   active.current = scope;
@@ -34,7 +34,7 @@ export function useCodexStateOptions() {
     const current = () => !controller.signal.aborted && active.current === scope;
     setLoading(true);
     try {
-      const data = await authFilesApi.getCodexStateOptions(
+      const data = await (kind === 'response-guard' ? authFilesApi.getCodexResponseGuardOptions : authFilesApi.getCodexStateOptions)(
         apiClient.captureConnection(),
         controller.signal
       );

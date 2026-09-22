@@ -1,3 +1,4 @@
+import i18n from 'i18next';
 /**
  * Client API key management.
  */
@@ -16,6 +17,7 @@ export type ApiKeyAccessSnapshot = {
   namesSupported?: boolean;
   credentialTargetingSupported?: boolean;
   credentialTargetOptionsSupported?: boolean;
+  credentialResponseGuardSupported?: boolean;
 };
 
 const normalizeProviders = (value: unknown): string[] => {
@@ -76,14 +78,15 @@ export const apiKeysApi = {
     return (await apiKeysApi.listGroupDetails()).groups;
   },
 
-  async listGroupDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported' | 'credentialTargetingSupported' | 'credentialTargetOptionsSupported'>> {
+  async listGroupDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported' | 'credentialTargetingSupported' | 'credentialTargetOptionsSupported' | 'credentialResponseGuardSupported'>> {
     const data = await apiClient.get<Record<string, unknown>>('/api-key-groups');
-    const result: Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported' | 'credentialTargetingSupported' | 'credentialTargetOptionsSupported'> = {
+    const result: Pick<ApiKeyAccessSnapshot, 'groups' | 'availablePriorities' | 'namesSupported' | 'credentialTargetingSupported' | 'credentialTargetOptionsSupported' | 'credentialResponseGuardSupported'> = {
       groups: normalizeClientApiKeyGroups(data['api-key-groups'] ?? data.apiKeyGroups),
     };
     if ('available-priorities' in data) {
       result.availablePriorities = normalizeApiKeyPriorities(data['available-priorities']);
     }
+    if ('credential-response-guard-supported' in data) result.credentialResponseGuardSupported = data['credential-response-guard-supported'] === true;
     if ('credential-target-options-supported' in data) result.credentialTargetOptionsSupported = data['credential-target-options-supported'] === true;
     if ('credential-targeting-supported' in data) result.credentialTargetingSupported = data['credential-targeting-supported'] === true;
     if ('names-supported' in data) result.namesSupported = data['names-supported'] === true;
@@ -113,11 +116,28 @@ export const apiKeysApi = {
       'allow-credential-targeting': enabled,
     })),
 
-  updateCredentialTargetOption: (apiKey: string, field: 'credentialTargetRespectStatePolicy' | 'credentialTargetRespectRequestLimit' | 'credentialTargetResponseModelRewrite', enabled: boolean) =>
-    trackGroupUpdate(apiClient.patch('/api-key-groups', {
+  updateCredentialTargetOption: async (apiKey: string, field: 'credentialTargetRespectStatePolicy' | 'credentialTargetRespectRequestLimit' | 'credentialTargetResponseModelRewrite' | 'credentialTargetResponseGuard', enabled: boolean) => {
+    const body = {
       'api-key': apiKey,
-      [field === 'credentialTargetRespectStatePolicy' ? 'credential-target-respect-state-policy' : field === 'credentialTargetRespectRequestLimit' ? 'credential-target-respect-request-limit' : 'credential-target-response-model-rewrite']: enabled,
-    })),
+      [field === 'credentialTargetRespectStatePolicy' ? 'credential-target-respect-state-policy' : field === 'credentialTargetRespectRequestLimit' ? 'credential-target-respect-request-limit' : field === 'credentialTargetResponseGuard' ? 'credential-target-response-guard' : 'credential-target-response-model-rewrite']: enabled,
+    };
+    if (field === 'credentialTargetResponseGuard') {
+      return trackGroupUpdate((async () => {
+        const connection = apiClient.captureConnection();
+        let supported = false;
+        try {
+          const options = await apiClient.getAtConnection<{features?:{response_guard?:boolean}}>(connection, '/auth-files/codex/response-guard/options');
+          supported = options.features?.response_guard === true;
+        } catch (error) {
+          const status = (error as {status?:number})?.status;
+          if (status !== 404 && status !== 405) throw error;
+        }
+        if (!supported) throw new Error(i18n.t('response_guard.upgrade') || 'Update the backend to use response validation.');
+        return apiClient.patchAtConnection(connection, '/api-key-groups', body);
+      })());
+    }
+    return trackGroupUpdate(apiClient.patch('/api-key-groups', body));
+  },
 
   deleteGroup: (apiKey: string) =>
     trackGroupUpdate(apiClient.delete(`/api-key-groups?api-key=${encodeURIComponent(apiKey)}`)),

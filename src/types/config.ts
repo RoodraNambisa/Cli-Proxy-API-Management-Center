@@ -233,6 +233,7 @@ export interface ClientApiKeyGroup {
   credentialTargetRespectStatePolicy?: boolean;
   credentialTargetRespectRequestLimit?: boolean;
   credentialTargetResponseModelRewrite?: boolean;
+  credentialTargetResponseGuard?: boolean;
   apiKey: string;
   name?: string;
   providers: string[];

@@ -99,6 +99,9 @@ export function writeResponseModelRewrite(doc: Document, value: ResponseModelRew
 }
 
 export interface ResponseModelRewriteSummary {
+  guard_enabled?: boolean;
+  blocked?: number;
+  observed?: number;
   enabled: boolean;
   conditional: boolean;
   total: number;
@@ -106,6 +109,7 @@ export interface ResponseModelRewriteSummary {
   last_at?: string;
   rules: Array<{ rule: number; models: string[] | null }>;
   recent?: Array<{
+    validation?: import('./codexResponseGuard').GuardRecord;
     at: string;
     requested_model: string;
     original_model: string;

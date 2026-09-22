@@ -159,6 +159,7 @@ export function CredentialTargetModal({
                 : 'credential_target.state_bypass_summary'
             )}
           </div>
+          <div>{t(selectedGroup?.credentialTargetResponseGuard ? 'response_guard.test_enforced' : 'response_guard.test_off')}</div>
           <div>
             {t(
               selectedGroup?.credentialTargetResponseModelRewrite
