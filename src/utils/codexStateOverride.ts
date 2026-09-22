@@ -11,6 +11,7 @@ import { detachErrorRuleAliases, readMergedYamlField } from './requestScopedErro
 import { API_KEY_PRIORITY_LIMIT } from './apiKeyGroups';
 
 export const STATE_NUMBER_DEFAULTS = {
+  'cookie-backup-count': 0,
   'cookie-max-age-seconds': 0,
   'cookie-refresh-before-seconds': 0,
   'active-minutes': 60,
@@ -209,6 +210,7 @@ export function codexStateError(v: CodexStateOverride): boolean {
     'ttl-seconds': v['ttl-seconds'] === '' ? undefined : Number(v['ttl-seconds']),
     'refresh-before-seconds':
       v['refresh-before-seconds'] === '' ? undefined : Number(v['refresh-before-seconds']),
+    'cookie-backup-count': Number(v['cookie-backup-count']),
     'cookie-max-age-seconds': Number(v['cookie-max-age-seconds']),
     'cookie-refresh-before-seconds': Number(v['cookie-refresh-before-seconds']),
   };
@@ -446,6 +448,7 @@ export function codexStateError(v: CodexStateOverride): boolean {
     return true;
   }
   const bounds: Record<StateNumberField, [number, number]> = {
+    'cookie-backup-count': [0, 10],
     'cookie-max-age-seconds': [0, 86400],
     'cookie-refresh-before-seconds': [0, 86400],
     'active-minutes': [1, 10080],

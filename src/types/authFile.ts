@@ -4,6 +4,7 @@ export interface CodexCookieBundleSnapshot {
   members: Array<{ version?: number; name: string; digest: string; domain?: string; path: string; secure: boolean; expires_at?: string }>;
 }
 export interface CodexCookieSnapshot extends CodexStateSnapshot {
+  backups?: CodexCookieBundleSnapshot[]; backup_target?: number; promotions?: number;
   main?: CodexCookieBundleSnapshot; candidate?: CodexCookieBundleSnapshot; observation?: string;
 }
 export type CodexStateData = { models: CodexStateSnapshot[]; cookie?: CodexCookieSnapshot | null };

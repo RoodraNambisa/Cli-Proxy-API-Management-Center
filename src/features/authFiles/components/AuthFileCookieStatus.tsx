@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
-import type { CodexCookieSnapshot } from '@/types/authFile';
+import type { CodexCookieSnapshot, CodexCookieBundleSnapshot } from '@/types/authFile';
 import styles from './AuthFileStateStatus.module.scss';
 
 export function AuthFileCookieStatus({
@@ -16,21 +16,39 @@ export function AuthFileCookieStatus({
 }) {
   const { t } = useTranslation();
   const text = (key: string) => t(`codex_state.${key}`, { defaultValue: key });
+  const bundles: Array<[string, CodexCookieBundleSnapshot | undefined]> = [
+    ['main', cookie.main],
+    ['candidate', cookie.candidate],
+    ...(cookie.backups ?? []).map((b, i): [string, CodexCookieBundleSnapshot] => [
+      `backup-${i + 1}`,
+      b,
+    ]),
+  ];
   return (
     <details>
       <summary>
         {text('cookie_title')} · {text(`status_${cookie.status}`)}
       </summary>
       <p className={styles.counts}>{text('cookie_shared_hint')}</p>
-      {[
-        ['main', cookie.main],
-        ['candidate', cookie.candidate],
-      ].map(([kind, bundle]) => {
-        if (!bundle || typeof bundle === 'string') return null;
+      {cookie.backup_target !== undefined && (
+        <p className={styles.counts}>
+          {t('codex_state.cookie_backup_status', {
+            count: cookie.backups?.length ?? 0,
+            target: cookie.backup_target,
+            promotions: cookie.promotions ?? 0,
+          })}
+        </p>
+      )}
+      {bundles.map(([kind, bundle]) => {
+        if (!bundle) return null;
         return (
           <div key={String(kind)} className={styles.model}>
-            <strong>{text(`cookie_${kind}`)}</strong> · v{bundle.version} ·{' '}
-            <code>{bundle.digest}</code>
+            <strong>
+              {kind.startsWith('backup-')
+                ? t('codex_state.cookie_backup_item', { index: kind.slice(7) })
+                : text(`cookie_${kind}`)}
+            </strong>{' '}
+            · v{bundle.version} · <code>{bundle.digest}</code>
             <div>
               {t('codex_state.cookie_age', {
                 seconds: Math.max(0, Math.floor((now - Date.parse(bundle.received_at)) / 1000)),
@@ -62,8 +80,8 @@ export function AuthFileCookieStatus({
         {cookie.observation ? text(`reason_${cookie.observation}`) : '—'}
       </div>
       <div>
-        {text('override_model')}：{cookie.last_returned_model || '—'} · {text('cookie_returned_length')}：
-        {cookie.last_returned_length ?? '—'}
+        {text('override_model')}：{cookie.last_returned_model || '—'} ·{' '}
+        {text('cookie_returned_length')}：{cookie.last_returned_length ?? '—'}
       </div>
       <div className={styles.counts}>
         {t('codex_state.counts', {

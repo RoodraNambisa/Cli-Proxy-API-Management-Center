@@ -21,6 +21,27 @@ describe('Cookie backend capability guard', () => {
     }
     expect(mocks.put).not.toHaveBeenCalled();
   });
+  it('requires the standby capability for a positive target at every layer', async () => {
+    mocks.get.mockResolvedValue({
+      features: { cookie_only: true, state_seconds: true, rule_model_overrides: true },
+    });
+    for (const suffix of [
+      '    cookie-backup-count: 2\n',
+      '    rules:\n      - id: rule\n        settings:\n          cookie-backup-count: 2\n',
+      '    model-overrides:\n      - model: text\n        cookie-backup-count: 2\n',
+      '    rules:\n      - id: rule\n        model-overrides:\n          - id: model\n            models: [text]\n            settings:\n              cookie-backup-count: 2\n',
+    ]) {
+      await expect(
+        configFileApi.saveConfigYaml('codex:\n  state-override:\n' + suffix)
+      ).rejects.toThrow('cookie_backup_upgrade');
+    }
+    expect(mocks.put).not.toHaveBeenCalled();
+    mocks.get.mockResolvedValue({
+      features: { cookie_only: true, state_seconds: true, cookie_backup_pool: true },
+    });
+    await configFileApi.saveConfigYaml('codex:\n  state-override:\n    cookie-backup-count: 2\n');
+    expect(mocks.put).toHaveBeenCalledTimes(1);
+  });
   it('keeps defaults compatible and saves after advertised support', async () => {
     await configFileApi.saveConfigYaml(
       'codex:\n  state-override:\n    strategy: state\n    cookie-max-age-seconds: 0\n'

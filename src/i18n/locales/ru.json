@@ -5145,7 +5145,13 @@
     "reason_cookie_verification_state_length_mismatch": "Cookie verification State length did not match",
     "reason_rules_changed": "Validation rules changed",
     "reason_missing_returned_model": "No upstream model returned; not invalidated",
-    "cookie_returned_length": "Returned State length"
+    "cookie_returned_length": "Returned State length",
+    "cookie-backup-count": "Количество резервных Cookie",
+    "cookie_backup_hint": "Для каждой учётной записи сохраняется один активный набор и 0–10 проверенных резервных наборов, без учёта получаемого кандидата. Ноль отключает запас. При разных правилах используется наибольшее количество. Пополнение следует области получения; при отказе выбирается действующий резерв. Пополнение расходует запросы, срок действия каждого резерва независим.",
+    "cookie_backup_status": "Доступно резервов {{count}} / {{target}} · Переключений: {{promotions}}",
+    "cookie_backup_item": "Резерв №{{index}}",
+    "cookie_backup_upgrade": "Обновите сервер для использования резервного пула Cookie.",
+    "reason_duplicate_cookie": "Сервер вернул существующие Cookie маршрутизации; резерв не добавлен. Повтор в пределах бюджета попыток."
   },
   "auth_error_history": {
     "title": "Последние ошибки",

@@ -1,6 +1,7 @@
 export const STATE_STRATEGY_KEYS = [
   'strategy',
   'cookie-verify-after-acquire',
+  'cookie-backup-count',
   'cookie-max-age-seconds',
   'cookie-refresh-before-seconds',
   'ttl-seconds',
@@ -55,6 +56,14 @@ export function stateStrategySettingsInvalid(s: Record<string, unknown>): boolea
   if (
     s['cookie-verify-after-acquire'] !== undefined &&
     typeof s['cookie-verify-after-acquire'] !== 'boolean'
+  )
+    return true;
+  if (
+    s['cookie-backup-count'] !== undefined &&
+    (typeof s['cookie-backup-count'] !== 'number' ||
+      !Number.isInteger(s['cookie-backup-count']) ||
+      s['cookie-backup-count'] < 0 ||
+      s['cookie-backup-count'] > 10)
   )
     return true;
   return [

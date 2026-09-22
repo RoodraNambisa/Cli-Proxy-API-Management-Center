@@ -5144,7 +5144,13 @@
     "reason_cookie_verification_state_length_mismatch": "Cookie 复核返回 State 长度不符",
     "reason_rules_changed": "校验配置已变更",
     "reason_missing_returned_model": "上游未返回模型，未判失效",
-    "cookie_returned_length": "返回 State 长度"
+    "cookie_returned_length": "返回 State 长度",
+    "cookie-backup-count": "備用 Cookie 數量",
+    "cookie_backup_hint": "每憑證保留 1 份主用和 0–10 份已校驗備用；不含取得中的候選。0 表示不預存備用。同一憑證規則數量不同取最大值；背景按既有取得範圍補足，失效先切換有效備用。補充會產生請求用量，備用也會獨立到期。",
+    "cookie_backup_status": "可用備用 {{count}} / {{target}} · 已切換 {{promotions}} 次",
+    "cookie_backup_item": "備用 #{{index}}",
+    "cookie_backup_upgrade": "目前後端不支援 Cookie 備用池，請先升級後端。",
+    "reason_duplicate_cookie": "上游傳回既有的路由 Cookie，未增加備用；按取得失敗預算重試。"
   },
   "auth_error_history": {
     "title": "最近錯誤",

@@ -66,6 +66,7 @@ export const configFileApi = {
           : []),
       ]),
     ];
+    const cookieBackups = strategySettings.some((s) => Number(s?.['cookie-backup-count']) > 0);
     const cookieFeatures = strategySettings.some(
       (s) =>
         s &&
@@ -83,6 +84,7 @@ export const configFileApi = {
         features?: {
           rule_model_overrides?: boolean;
           state_retry_rounds?: boolean;
+          cookie_backup_pool?: boolean;
           cookie_only?: boolean;
           state_seconds?: boolean;
         };
@@ -92,6 +94,8 @@ export const configFileApi = {
         (options.features?.cookie_only !== true || options.features?.state_seconds !== true)
       )
         throw new Error(i18n.t('codex_state.cookie_upgrade'));
+      if (cookieBackups && options.features?.cookie_backup_pool !== true)
+        throw new Error(i18n.t('codex_state.cookie_backup_upgrade'));
       if (modelOverrides && options.features?.rule_model_overrides !== true)
         throw new Error(i18n.t('codex_state.model_special_upgrade'));
       if (retryRounds && options.features?.state_retry_rounds !== true)

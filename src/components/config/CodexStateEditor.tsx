@@ -315,7 +315,8 @@ export function CodexStateEditor({
         settings={Object.fromEntries(
           STATE_STRATEGY_KEYS.map((key) => [
             key,
-            typeof value[key as keyof typeof value] === 'string' && key.endsWith('-seconds')
+            typeof value[key as keyof typeof value] === 'string' &&
+            (key.endsWith('-seconds') || key === 'cookie-backup-count')
               ? value[key as keyof typeof value] === ''
                 ? undefined
                 : Number(value[key as keyof typeof value])
@@ -325,6 +326,7 @@ export function CodexStateEditor({
         onChange={(next) => {
           patch({
             ...readStateStrategy(next),
+            'cookie-backup-count': String(next['cookie-backup-count'] ?? 0),
             'cookie-max-age-seconds': String(next['cookie-max-age-seconds'] ?? 0),
             'cookie-refresh-before-seconds': String(next['cookie-refresh-before-seconds'] ?? 0),
           });

@@ -5148,7 +5148,13 @@
     "reason_cookie_verification_state_length_mismatch": "Cookie verification State length did not match",
     "reason_rules_changed": "Validation rules changed",
     "reason_missing_returned_model": "No upstream model returned; not invalidated",
-    "cookie_returned_length": "Returned State length"
+    "cookie_returned_length": "Returned State length",
+    "cookie-backup-count": "Standby Cookie count",
+    "cookie_backup_hint": "Keep one active bundle and 0–10 validated standby bundles per credential, excluding the candidate being acquired. Zero disables stockpiling. Matching rules share the largest requested count. Background refill follows the acquisition scope; invalid primaries switch to valid standbys first. Refills consume requests and each standby expires independently.",
+    "cookie_backup_status": "Ready standbys {{count}} / {{target}} · {{promotions}} promotions",
+    "cookie_backup_item": "Standby #{{index}}",
+    "cookie_backup_upgrade": "Update the backend to use the Cookie standby pool.",
+    "reason_duplicate_cookie": "The upstream returned existing routing Cookies; no standby was added. Retrying within the acquisition failure budget."
   },
   "auth_error_history": {
     "title": "Recent errors",

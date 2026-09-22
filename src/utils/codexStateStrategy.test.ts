@@ -75,6 +75,29 @@ describe('State and Cookie strategy configuration', () => {
     expect(codexStateError(value)).toBe(false);
     expect(serializeCodexState(value)['strategy']).toBe('cookie-only');
   });
+  it('preserves standby targets and explicit zero overrides', () => {
+    const value = readCodexState({
+      strategy: 'cookie-only',
+      'cookie-backup-count': 2,
+      rules: [{ id: 'rule', settings: { 'cookie-backup-count': 0 } }],
+    });
+    expect(codexStateError(value)).toBe(false);
+    const data = serializeCodexState(value);
+    expect(data['cookie-backup-count']).toBe(2);
+    expect(
+      (data.rules as Array<{ settings: Record<string, unknown> }>)[0].settings[
+        'cookie-backup-count'
+      ]
+    ).toBe(0);
+    for (const n of [-1, 11, 1.5]) {
+      expect(codexStateError(readCodexState({ 'cookie-backup-count': n }))).toBe(true);
+      expect(
+        codexStateError(
+          readCodexState({ rules: [{ id: 'rule', settings: { 'cookie-backup-count': n } }] })
+        )
+      ).toBe(true);
+    }
+  });
   it('rejects invalid legacy and rule strategy overrides', () => {
     for (const settings of [
       { strategy: '' },

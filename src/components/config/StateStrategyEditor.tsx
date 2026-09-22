@@ -72,14 +72,14 @@ export function StateStrategyEditor({
           </div>
         )}
         {(effective === 'cookie-only'
-          ? ['cookie-max-age-seconds', 'cookie-refresh-before-seconds']
+          ? ['cookie-max-age-seconds', 'cookie-refresh-before-seconds', 'cookie-backup-count']
           : ['ttl-seconds', 'refresh-before-seconds']
         ).map((key) => (
           <Input
             key={key}
             type="number"
             min={key === 'ttl-seconds' ? 1 : 0}
-            max={86400}
+            max={key === 'cookie-backup-count' ? 10 : 86400}
             label={text(key)}
             disabled={disabled}
             placeholder={text(inherit ? 'rule_inherit' : 'seconds_fallback')}
@@ -91,6 +91,7 @@ export function StateStrategyEditor({
       <p className="hint">
         {text(effective === 'cookie-only' ? 'cookie_strategy_hint' : 'seconds_hint')}
       </p>
+      {effective === 'cookie-only' && <p className="hint">{text('cookie_backup_hint')}</p>}
     </>
   );
 }
