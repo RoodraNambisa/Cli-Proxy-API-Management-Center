@@ -24,12 +24,26 @@ export function AuthFileCookieStatus({
       b,
     ]),
   ];
+  const poolName = cookie.pool?.slice(cookie.pool.indexOf(':') + 1);
+  const poolLabel = !cookie.pool
+    ? text('cookie-pool-mode_credential')
+    : t(`codex_state.cookie_pool_${cookie.pool.split(':')[0]}`, { name: poolName });
   return (
     <details>
       <summary>
-        {text('cookie_title')} · {text(`status_${cookie.status}`)}
+        {text('cookie_title')} · {poolLabel} · {text(`status_${cookie.status}`)}
       </summary>
       <p className={styles.counts}>{text('cookie_shared_hint')}</p>
+      {cookie.acquisition_model && (
+        <div>
+          {text('cookie-acquisition-model')}：<code>{cookie.acquisition_model}</code>
+        </div>
+      )}
+      {cookie.shared_models && (
+        <div className={styles.counts}>
+          {text('cookie_shared_models')}：{cookie.shared_models.join(', ')}
+        </div>
+      )}
       {cookie.backup_target !== undefined && (
         <p className={styles.counts}>
           {t('codex_state.cookie_backup_status', {

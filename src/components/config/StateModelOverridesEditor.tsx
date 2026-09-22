@@ -131,6 +131,7 @@ export function StateModelOverridesEditor({
                     <StateStrategyEditor
                       settings={rule}
                       strategy={value.strategy}
+                      poolMode={value['cookie-pool-mode']}
                       disabled={disabled}
                       onChange={(next) => save(rules.map((item, i) => (i === index ? next : item)))}
                     />

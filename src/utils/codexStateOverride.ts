@@ -215,6 +215,8 @@ export function codexStateError(v: CodexStateOverride): boolean {
     'cookie-refresh-before-seconds': Number(v['cookie-refresh-before-seconds']),
   };
   if (stateStrategySettingsInvalid(strategyRaw)) return true;
+  if (v.strategy === 'cookie-only' && v['cookie-pool-mode'] === 'shared' && !v['cookie-pool-group'])
+    return true;
   const stateTTL =
     v['ttl-seconds'] === '' ? Number(v['ttl-minutes']) * 60 : Number(v['ttl-seconds']);
   const stateLead =
@@ -406,9 +408,12 @@ export function codexStateError(v: CodexStateOverride): boolean {
       if (stateStrategySettingsInvalid(item)) return true;
       const effective = mergeStateSettings(strategyRaw, item);
       if (
-        effective.strategy !== 'cookie-only' &&
-        Number(effective['refresh-before-seconds'] ?? Number(v['refresh-before-minutes']) * 60) >=
-          Number(effective['ttl-seconds'] ?? Number(v['ttl-minutes']) * 60)
+        (effective.strategy === 'cookie-only' &&
+          effective['cookie-pool-mode'] === 'shared' &&
+          !effective['cookie-pool-group']) ||
+        (effective.strategy !== 'cookie-only' &&
+          Number(effective['refresh-before-seconds'] ?? Number(v['refresh-before-minutes']) * 60) >=
+            Number(effective['ttl-seconds'] ?? Number(v['ttl-minutes']) * 60))
       )
         return true;
       if (

@@ -117,7 +117,12 @@ export function useCodexStateAcquisition(
         if (!current()) return false;
         status = {
           ...response,
-          ...(await authFilesApi.getCodexState(fileName, capturedConnection, abort.signal)),
+          ...(await authFilesApi.getCodexState(
+            fileName,
+            capturedConnection,
+            abort.signal,
+            response.model
+          )),
         };
       }
     } catch (error) {

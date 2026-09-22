@@ -98,6 +98,25 @@ describe('State and Cookie strategy configuration', () => {
       ).toBe(true);
     }
   });
+  it('keeps acquisition model and pool sharing independent, including explicit empty overrides', () => {
+    const value = readCodexState({
+      strategy: 'cookie-only',
+      'cookie-acquisition-model': 'base',
+      'cookie-pool-group': 'common',
+      rules: [{ id: 'one', settings: { 'cookie-acquisition-model': '', 'cookie-pool-group': '' } }],
+    });
+    expect(value['cookie-pool-mode']).toBe('auto');
+    expect(codexStateError(value)).toBe(false);
+    const doc = parseDocument('codex:\n  state-override:\n    extension: keep\n');
+    writeCodexState(doc, value);
+    const saved = doc.toJS().codex['state-override'];
+    expect(saved.rules[0].settings['cookie-acquisition-model']).toBe('');
+    expect(saved.rules[0].settings['cookie-pool-group']).toBe('');
+    expect(saved.extension).toBe('keep');
+    expect(
+      codexStateError(readCodexState({ strategy: 'cookie-only', 'cookie-pool-mode': 'shared' }))
+    ).toBe(true);
+  });
   it('rejects invalid legacy and rule strategy overrides', () => {
     for (const settings of [
       { strategy: '' },

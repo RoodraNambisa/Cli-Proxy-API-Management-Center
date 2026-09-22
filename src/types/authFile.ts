@@ -4,10 +4,11 @@ export interface CodexCookieBundleSnapshot {
   members: Array<{ version?: number; name: string; digest: string; domain?: string; path: string; secure: boolean; expires_at?: string }>;
 }
 export interface CodexCookieSnapshot extends CodexStateSnapshot {
+  pool?: string; acquisition_model?: string; shared_models?: string[];
   backups?: CodexCookieBundleSnapshot[]; backup_target?: number; promotions?: number;
   main?: CodexCookieBundleSnapshot; candidate?: CodexCookieBundleSnapshot; observation?: string;
 }
-export type CodexStateData = { models: CodexStateSnapshot[]; cookie?: CodexCookieSnapshot | null };
+export type CodexStateData = { models: CodexStateSnapshot[]; cookie?: CodexCookieSnapshot | null; cookies?: CodexCookieSnapshot[] };
 export interface CodexStateSnapshot {
   rule_id?: string;
   rule_name?: string;
@@ -261,7 +262,7 @@ export interface AuthFileItem {
   deletion_requested_at?: string;
   proxy_binding?: AuthFileProxyBinding;
   proxy_route?: AuthFileProxyRoute;
-  codex_state?: { enabled: boolean; models: CodexStateSnapshot[]; cookie?: CodexCookieSnapshot | null };
+  codex_state?: { enabled: boolean; models: CodexStateSnapshot[]; cookie?: CodexCookieSnapshot | null; cookies?: CodexCookieSnapshot[] };
   request_limit?: {
     limit: number;
     window_minutes: number;

@@ -1,5 +1,8 @@
 export const STATE_STRATEGY_KEYS = [
   'strategy',
+  'cookie-acquisition-model',
+  'cookie-pool-mode',
+  'cookie-pool-group',
   'cookie-verify-after-acquire',
   'cookie-backup-count',
   'cookie-max-age-seconds',
@@ -11,6 +14,9 @@ export const STATE_STRATEGY_KEYS = [
 
 export type StateStrategyFields = {
   strategy: string;
+  'cookie-acquisition-model': string;
+  'cookie-pool-mode': string;
+  'cookie-pool-group': string;
   'cookie-verify-after-acquire': boolean;
   'ttl-seconds': string;
   'refresh-before-seconds': string;
@@ -19,6 +25,12 @@ export type StateStrategyFields = {
 
 export function readStateStrategy(raw: Record<string, unknown>): StateStrategyFields {
   return {
+    'cookie-acquisition-model':
+      typeof raw['cookie-acquisition-model'] === 'string' ? raw['cookie-acquisition-model'] : '',
+    'cookie-pool-mode':
+      typeof raw['cookie-pool-mode'] === 'string' ? raw['cookie-pool-mode'] : 'auto',
+    'cookie-pool-group':
+      typeof raw['cookie-pool-group'] === 'string' ? raw['cookie-pool-group'] : '',
     strategy: typeof raw.strategy === 'string' ? raw.strategy : 'state',
     'cookie-verify-after-acquire': raw['cookie-verify-after-acquire'] === true,
     'ttl-seconds': raw['ttl-seconds'] == null ? '' : String(raw['ttl-seconds']),
@@ -46,6 +58,28 @@ export function mergeStateSettings(
 }
 
 export function stateStrategySettingsInvalid(s: Record<string, unknown>): boolean {
+  if (
+    s['cookie-pool-mode'] !== undefined &&
+    !['auto', 'model', 'shared', 'credential'].includes(String(s['cookie-pool-mode']))
+  )
+    return true;
+  const source = s['cookie-acquisition-model'];
+  if (
+    source !== undefined &&
+    (typeof source !== 'string' ||
+      new TextEncoder().encode(source).length > 256 ||
+      /[\s\x00-\x1f\x7f*?]/.test(source))
+  )
+    return true;
+  const group = s['cookie-pool-group'];
+  if (
+    group !== undefined &&
+    (typeof group !== 'string' ||
+      new TextEncoder().encode(group).length > 128 ||
+      group.trim() !== group ||
+      /[\x00-\x1f\x7f]/.test(group))
+  )
+    return true;
   if (s.strategy !== undefined && !['state', 'cookie-only'].includes(String(s.strategy)))
     return true;
   if (

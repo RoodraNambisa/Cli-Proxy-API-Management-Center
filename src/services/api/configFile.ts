@@ -66,6 +66,13 @@ export const configFileApi = {
           : []),
       ]),
     ];
+    const cookieModelRules = strategySettings.some(
+      (s) =>
+        s &&
+        (Boolean(s['cookie-acquisition-model']) ||
+          (s['cookie-pool-mode'] !== undefined && s['cookie-pool-mode'] !== 'credential') ||
+          Boolean(s['cookie-pool-group']))
+    );
     const cookieBackups = strategySettings.some((s) => Number(s?.['cookie-backup-count']) > 0);
     const cookieFeatures = strategySettings.some(
       (s) =>
@@ -76,6 +83,9 @@ export const configFileApi = {
             (key !== 'strategy' || s[key] !== 'state') &&
             (key !== 'missing-returned-state' || s[key] !== 'ignore') &&
             (key !== 'cookie-verify-after-acquire' || s[key] !== false) &&
+            (key !== 'cookie-pool-mode' || s[key] !== 'credential') &&
+            ((key !== 'cookie-acquisition-model' && key !== 'cookie-pool-group') ||
+              s[key] !== '') &&
             (!key.startsWith('cookie-') || s[key] !== 0)
         )
     );
@@ -84,6 +94,7 @@ export const configFileApi = {
         features?: {
           rule_model_overrides?: boolean;
           state_retry_rounds?: boolean;
+          cookie_model_rules?: boolean;
           cookie_backup_pool?: boolean;
           cookie_only?: boolean;
           state_seconds?: boolean;
@@ -94,6 +105,8 @@ export const configFileApi = {
         (options.features?.cookie_only !== true || options.features?.state_seconds !== true)
       )
         throw new Error(i18n.t('codex_state.cookie_upgrade'));
+      if (cookieModelRules && options.features?.cookie_model_rules !== true)
+        throw new Error(i18n.t('codex_state.cookie_model_rules_upgrade'));
       if (cookieBackups && options.features?.cookie_backup_pool !== true)
         throw new Error(i18n.t('codex_state.cookie_backup_upgrade'));
       if (modelOverrides && options.features?.rule_model_overrides !== true)

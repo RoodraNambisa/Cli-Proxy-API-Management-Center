@@ -40,10 +40,14 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
   const actionRequest = useRef<AbortController | null>(null);
   const state = file.codex_state;
   const models = updated?.scope === scope ? updated.models : (state?.models ?? []);
-  const cookie = updated?.scope === scope ? updated.cookie : state?.cookie;
-  const pollModels = cookie ? [...models, cookie] : models;
+  const data = updated?.scope === scope ? updated : state;
+  const cookies = data?.cookies ?? (data?.cookie ? [data.cookie] : []);
+  const pollModels = [...models, ...cookies];
   const waiting =
-    Boolean(cookie?.main && cookie.status !== 'paused' && !cookie.exhausted) ||
+    cookies.some(
+      (cookie) =>
+        (cookie.main || cookie.backups?.length) && cookie.status !== 'paused' && !cookie.exhausted
+    ) ||
     pollModels.some(
       (model) =>
         ['queued', 'acquiring'].includes(model.status) ||
@@ -68,9 +72,9 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
   }, [file.codex_state]);
   useEffect(() => {
     if (!file.codex_state?.enabled) return;
-    const timer = setInterval(() => setNow(Date.now()), cookie ? 1000 : 30000);
+    const timer = setInterval(() => setNow(Date.now()), cookies.length ? 1000 : 30000);
     return () => clearInterval(timer);
-  }, [file.codex_state?.enabled, Boolean(cookie)]);
+  }, [file.codex_state?.enabled, Boolean(cookies.length)]);
   useEffect(() => {
     if (!state?.enabled || !waiting || disabled || busy) return;
     const controller = new AbortController();
@@ -92,9 +96,10 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
           version === mutation.current &&
           !live.current.busy
         ) {
-          delay = statePollDelay(
-            response.cookie ? [...response.models, response.cookie] : response.models
-          );
+          delay = statePollDelay([
+            ...response.models,
+            ...(response.cookies ?? (response.cookie ? [response.cookie] : [])),
+          ]);
           setUpdated({ scope, ...response });
           setNow(Date.now());
           setError('');
@@ -115,7 +120,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
     };
   }, [state?.enabled, waiting, disabled, busy, file.name, scope, t]);
 
-  const action = async (operation: string, model = '', strategy = 'state') => {
+  const action = async (operation: string, model = '', strategy = 'state', pool?: string) => {
     if (busy || disabled) return;
     mutation.current += 1;
     const controller = new AbortController();
@@ -141,6 +146,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
                 model,
                 action: operation,
                 strategy,
+                ...(pool === undefined ? {} : { cookie_pool: pool }),
               },
               { signal: controller.signal }
             );
@@ -167,7 +173,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
         <span>
           {models.length
             ? t('codex_state.valid_count', { count: valid, total: models.length })
-            : cookie
+            : cookies.length > 0
               ? text('strategy_cookie-only')
               : text('out_of_scope')}
         </span>
@@ -212,15 +218,20 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
                 </div>
                 {m.allowed_lengths && (
                   <div className={styles.counts}>
-                    {t(m.length_mode ? 'response_guard.resource_length_policy' : 'codex_state.rule_card_policy', {
-                      mode: t(`response_guard.length-mode_${m.length_mode}`),
-                      rule:
-                        m.rule_name && m.rule_name !== 'legacy'
-                          ? m.rule_name
-                          : m.rule_id || text('rule_legacy'),
-                      lengths: m.allowed_lengths.join(', ') || text('picker_any_length'),
-                      seconds: m.retry_seconds,
-                    })}
+                    {t(
+                      m.length_mode
+                        ? 'response_guard.resource_length_policy'
+                        : 'codex_state.rule_card_policy',
+                      {
+                        mode: t(`response_guard.length-mode_${m.length_mode}`),
+                        rule:
+                          m.rule_name && m.rule_name !== 'legacy'
+                            ? m.rule_name
+                            : m.rule_id || text('rule_legacy'),
+                        lengths: m.allowed_lengths.join(', ') || text('picker_any_length'),
+                        seconds: m.retry_seconds,
+                      }
+                    )}
                   </div>
                 )}
                 {m.manual_only && <div className={styles.counts}>{text('manual_only')}</div>}
@@ -300,14 +311,15 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
           </details>
         </>
       )}
-      {cookie && (
+      {cookies.map((cookie) => (
         <AuthFileCookieStatus
+          key={cookie.pool ?? 'credential'}
           cookie={cookie}
           now={now}
           disabled={disabled || busy}
-          onAction={(operation) => void action(operation, cookie.model, 'cookie-only')}
+          onAction={(operation) => void action(operation, cookie.model, 'cookie-only', cookie.pool)}
         />
-      )}
+      ))}
       {error && (
         <div role="alert" className={styles.warning}>
           {error}

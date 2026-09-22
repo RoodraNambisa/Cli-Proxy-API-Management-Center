@@ -42,6 +42,23 @@ describe('Cookie backend capability guard', () => {
     await configFileApi.saveConfigYaml('codex:\n  state-override:\n    cookie-backup-count: 2\n');
     expect(mocks.put).toHaveBeenCalledTimes(1);
   });
+  it('requires model-rule support before saving independent sources or sharing groups', async () => {
+    mocks.get.mockResolvedValue({ features: { cookie_only: true, state_seconds: true } });
+    for (const value of [
+      'cookie-acquisition-model: base',
+      'cookie-pool-mode: auto',
+      'cookie-pool-group: common',
+    ]) {
+      await expect(
+        configFileApi.saveConfigYaml('codex:\n  state-override:\n    ' + value + '\n')
+      ).rejects.toThrow('cookie_model_rules_upgrade');
+    }
+    mocks.get.mockResolvedValue({
+      features: { cookie_only: true, state_seconds: true, cookie_model_rules: true },
+    });
+    await configFileApi.saveConfigYaml('codex:\n  state-override:\n    cookie-pool-mode: auto\n');
+    expect(mocks.put).toHaveBeenCalledTimes(1);
+  });
   it('keeps defaults compatible and saves after advertised support', async () => {
     await configFileApi.saveConfigYaml(
       'codex:\n  state-override:\n    strategy: state\n    cookie-max-age-seconds: 0\n'

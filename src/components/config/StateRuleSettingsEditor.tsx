@@ -96,10 +96,12 @@ export function StateRuleSettingsEditor({
         onChange={onChange}
         disabled={disabled}
         strategy={inherited.strategy}
+        poolMode={inherited['cookie-pool-mode']}
       />
       <div className={styles.grid}>
         {select(r, 'acquisition', ['active', 'all', 'manual'])}
-        {(settings.strategy ?? inherited.strategy) !== 'cookie-only' && select(r, 'mode', ['override', 'missing'])}
+        {(settings.strategy ?? inherited.strategy) !== 'cookie-only' &&
+          select(r, 'mode', ['override', 'missing'])}
         {select(r, 'missing-policy', ['continue', 'error', 'hide'])}
         <div>
           <label>{text('rule_lengths')}</label>

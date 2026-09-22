@@ -32,7 +32,7 @@ export interface GrokCatalogRefreshInfo {
 
 type StatusError = { status?: number };
 export type CodexStateOptions = {
-  features?: {rule_model_overrides?: boolean; state_retry_rounds?: boolean; cookie_backup_pool?: boolean; cookie_only?: boolean; state_seconds?: boolean; response_guard?: boolean};
+  features?: {rule_model_overrides?: boolean; state_retry_rounds?: boolean; cookie_model_rules?: boolean; cookie_backup_pool?: boolean; cookie_only?: boolean; state_seconds?: boolean; response_guard?: boolean};
   credentials: Array<{id: string; name: string; alias?: string; priority: number; plan: string; disabled: boolean}>;
   models: Array<{id: string; upstream_id: string}>;
   priorities: number[];
@@ -1353,9 +1353,9 @@ export const authFilesApi = {
     );
   },
 
-  getCodexState(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+  getCodexState(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal, model?: string) {
     return apiClient.getAtConnection<{ cookie?: import('@/types/authFile').CodexCookieSnapshot; models: import('@/types/authFile').CodexStateSnapshot[] }>(
-      connection, `/auth-files/codex/state?name=${encodeURIComponent(name)}&diagnostic=true`, { signal }
+      connection, `/auth-files/codex/state?name=${encodeURIComponent(name)}&diagnostic=true${model ? `&model=${encodeURIComponent(model)}` : ''}`, { signal }
     );
   },
 
