@@ -158,7 +158,6 @@ describe('State selection and visual model rules', () => {
         change={change}
       />
     );
-    fireEvent.click(screen.getByText('codex_state.model_overrides', { selector: 'summary' }));
     fireEvent.click(
       screen.getByRole('button', {
         name: 'config_management.visual.common.edit: codex_state.override_rule 1',
@@ -196,7 +195,6 @@ describe('State selection and visual model rules', () => {
         focusTarget="config-codex-state"
       />
     );
-    fireEvent.click(screen.getByText('codex_state.model_overrides', { selector: 'summary' }));
     expect(screen.getByText('codex_state.override_parse_error')).toBeTruthy();
     fireEvent.click(screen.getByText('codex_state.override_json', { selector: 'summary' }));
     expect(

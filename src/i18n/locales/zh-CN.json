@@ -5106,8 +5106,8 @@
     "reason_state_length_mismatch": "State 长度不符合条件",
     "reason_response_model_mismatch": "返回模型不符合条件",
     "reason_response_text_mismatch": "答案不包含指定文本",
-    "model_overrides": "高级：每模型获取条件",
-    "model_overrides_hint": "选择实际模型后，逐项设置获取条件；未单独设置的字段继承全局。这些规则不会扩大管理模型范围，订阅长度规则仍优先于这里的长度设置。",
+    "model_overrides": "公共模型默认规则",
+    "model_overrides_hint": "每条规则可选择多个实际模型，统一设置获取基础模型、共享组及其他默认参数。凭证规则继承这些默认值，单独设置的字段优先；未匹配模型沿用上方默认值。不会扩大托管范围；订阅长度规则仍优先于这里的长度设置。",
     "missing-policy_hide": "暂时隐藏并跳过该凭证的模型",
     "returned_length": "实际返回长度：{{length}}",
     "returned_model": "实际返回模型：{{model}}",
@@ -5174,7 +5174,11 @@
     "reason_cookie_acquisition_requires_text_model": "获取基础模型必须支持文本请求",
     "cookie_pool_shared": "共享组 {{name}}",
     "cookie_pool_source": "基础模型 {{name}}",
-    "cookie_pool_model": "独立模型 {{name}}"
+    "cookie_pool_model": "独立模型 {{name}}",
+    "default_rule_models": "适用模型（可多选，填写实际模型）",
+    "default_rule_models_required": "至少选择一个模型",
+    "cookie-acquisition-model_default": "默认获取 Cookie 的基础模型",
+    "cookie-pool-group_default": "默认共享组"
   },
   "auth_error_history": {
     "title": "最近错误",

@@ -332,6 +332,17 @@ export function CodexStateEditor({
           });
         }}
       />
+      <StateModelOverridesEditor
+        key={catalog.scope}
+        value={value}
+        onChange={(raw) => patch({ 'model-overrides': raw })}
+        models={upstreamModels}
+        lengths={lengths}
+        disabled={disabled}
+        loadModels={load}
+        loading={catalog.loading}
+        loadError={catalog.error}
+      />
       <div className={styles.grid}>
         {value.strategy !== 'cookie-only' && select('mode', ['override', 'missing'])}
         {select('missing-policy', ['continue', 'error', 'hide'])}
@@ -464,17 +475,6 @@ export function CodexStateEditor({
           </div>
         ))}
       </div>
-      <StateModelOverridesEditor
-        key={catalog.scope}
-        value={value}
-        onChange={(raw) => patch({ 'model-overrides': raw })}
-        models={upstreamModels}
-        lengths={lengths}
-        disabled={disabled}
-        loadModels={load}
-        loading={catalog.loading}
-        loadError={catalog.error}
-      />
       <p className="hint">{text('validation_hint')}</p>
       <strong>{text('response_watch')}</strong>
       <div className={styles.grid}>

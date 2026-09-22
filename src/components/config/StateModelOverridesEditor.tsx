@@ -5,13 +5,44 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ConfigTable, ConfigTableRow } from './ConfigTable';
+import { StateSettingsSummary } from './StateRuleModelOverrides';
 import { StateValuePicker, type StateChoice } from './StateValuePicker';
+import { sameStateValue } from '@/utils/codexStateModelRules';
+import { generateId } from '@/utils/helpers';
 import {
   readStateModelOverrides,
   stateListItemError,
   type CodexStateOverride,
 } from '@/utils/codexStateOverride';
 import styles from './CodexStateEditor.module.scss';
+
+type ModelDefaultGroup = {
+  id: string;
+  models: string[];
+  settings: Record<string, unknown>;
+};
+
+function groupDefaults(raw: string): ModelDefaultGroup[] | undefined {
+  const entries = readStateModelOverrides(raw);
+  if (!entries || entries.some((entry) => typeof entry.model !== 'string')) return;
+  const groups: ModelDefaultGroup[] = [];
+  for (const { model, ...settings } of entries) {
+    const name = model as string;
+    const previous = groups[groups.length - 1];
+    // Group identical adjacent defaults without merging different criteria or extensions.
+    if (
+      name &&
+      previous?.models.length &&
+      !previous.models.includes(name) &&
+      sameStateValue(previous.settings, settings)
+    ) {
+      previous.models.push(name);
+    } else {
+      groups.push({ id: generateId(), models: name ? [name] : [], settings });
+    }
+  }
+  return groups;
+}
 
 export function StateModelOverridesEditor({
   value,
@@ -34,47 +65,68 @@ export function StateModelOverridesEditor({
 }) {
   const { t } = useTranslation();
   const text = (key: string) => t(`codex_state.${key}`);
-  const rules = readStateModelOverrides(value['model-overrides']);
-  const [revision, setRevision] = useState(0);
-  const save = (rules: Record<string, unknown>[]) => onChange(JSON.stringify(rules, null, 2));
-  const update = (index: number, patch: Record<string, unknown>) => {
-    if (!rules) return;
-    save(
-      rules.map((rule, position) =>
-        position === index
-          ? Object.fromEntries(
-              Object.entries({ ...rule, ...patch }).filter(([, v]) => v !== undefined)
-            )
-          : rule
-      )
+  const raw = value['model-overrides'];
+  const [draft, setDraft] = useState(() => ({ raw, groups: groupDefaults(raw) }));
+  let groups = draft.groups;
+  if (draft.raw !== raw) {
+    groups = groupDefaults(raw);
+    setDraft({ raw, groups });
+  }
+  const save = (next: ModelDefaultGroup[]) => {
+    const serialized = JSON.stringify(
+      next.flatMap(({ models, settings }) =>
+        (models.length ? models : ['']).map((model) => ({ model, ...settings }))
+      ),
+      null,
+      2
     );
+    setDraft({ raw: serialized, groups: next });
+    onChange(serialized);
   };
-  const columns = [text('override_model'), text('override_settings'), t('common.action')];
+  const replace = (index: number, patch: Partial<ModelDefaultGroup>) => {
+    if (groups) save(groups.map((group, i) => (i === index ? { ...group, ...patch } : group)));
+  };
+  const update = (index: number, patch: Record<string, unknown>) => {
+    if (!groups) return;
+    replace(index, {
+      settings: Object.fromEntries(
+        Object.entries({ ...groups[index].settings, ...patch }).filter(([, v]) => v !== undefined)
+      ),
+    });
+  };
+  const count = groups?.reduce((sum, group) => sum + Math.max(group.models.length, 1), 0) ?? 0;
+  const columns = [text('default_rule_models'), text('override_settings'), t('common.action')];
   return (
-    <details className={styles.overrides}>
-      <summary>{text('model_overrides')}</summary>
+    <section className={styles.overrides} aria-label={text('model_overrides')}>
+      <div className={styles.planHeading}>
+        <strong>
+          {text('model_overrides')}
+          {groups ? ` · ${groups.length}` : ''}
+        </strong>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={disabled || !groups || count >= 256}
+          onClick={() =>
+            groups && save([...groups, { id: generateId(), models: [], settings: {} }])
+          }
+        >
+          {text('override_add')}
+        </Button>
+      </div>
       <p className="hint">{text('model_overrides_hint')}</p>
-      {rules ? (
+      {groups ? (
         <>
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={disabled || rules.length >= 256}
-            onClick={() => save([...rules, { model: '' }])}
-          >
-            {text('override_add')}
-          </Button>
-          {rules.length > 0 ? (
+          {groups.length > 0 ? (
             <ConfigTable label={text('model_overrides')} columns={columns}>
-              {rules.map((rule, index) => {
-                const model = typeof rule.model === 'string' ? rule.model : '';
+              {groups.map((group, index) => {
+                const rule = group.settings;
                 const invalid =
-                  !model || rules.some((other, i) => i !== index && other.model === model);
-                const settings =
-                  ['lengths', 'match-model', 'prompt', 'response-contains']
-                    .filter((key) => rule[key] != null)
-                    .map(text)
-                    .join(' · ') || text('override_inherit_all');
+                  !group.models.length ||
+                  groups.some(
+                    (other, i) =>
+                      i !== index && other.models.some((model) => group.models.includes(model))
+                  );
                 const mode = (field: 'lengths' | 'prompt' | 'response-contains') =>
                   rule[field] == null ? 'inherit' : 'custom';
                 const modeSelect = (field: 'lengths' | 'prompt' | 'response-contains') => (
@@ -107,11 +159,14 @@ export function StateModelOverridesEditor({
                 );
                 return (
                   <ConfigTableRow
-                    key={`${revision}:${index}`}
+                    key={group.id}
                     title={`${text('override_rule')} ${index + 1}`}
                     labels={columns}
-                    cells={[model || text('override_model_required'), settings]}
-                    initialExpanded={!model}
+                    cells={[
+                      group.models.join(', ') || text('default_rule_models_required'),
+                      <StateSettingsSummary settings={rule} inherited={value} />,
+                    ]}
+                    initialExpanded={!group.models.length}
                     invalid={invalid}
                     actions={
                       <Button
@@ -120,27 +175,19 @@ export function StateModelOverridesEditor({
                         disabled={disabled}
                         aria-label={`${text('plan_remove')} ${index + 1}`}
                         onClick={() => {
-                          setRevision((value) => value + 1);
-                          save(rules.filter((_, position) => position !== index));
+                          save(groups.filter((_, position) => position !== index));
                         }}
                       >
                         {t('common.delete')}
                       </Button>
                     }
                   >
-                    <StateStrategyEditor
-                      settings={rule}
-                      strategy={value.strategy}
-                      poolMode={value['cookie-pool-mode']}
-                      disabled={disabled}
-                      onChange={(next) => save(rules.map((item, i) => (i === index ? next : item)))}
-                    />
                     <StateValuePicker
-                      label={text('override_model')}
-                      value={model ? [model] : []}
+                      label={text('default_rule_models')}
+                      value={group.models}
                       choices={models}
-                      maxItems={1}
-                      emptyLabel={text('override_model_required')}
+                      maxItems={256 - count + Math.max(group.models.length, 1)}
+                      emptyLabel={text('default_rule_models_required')}
                       disabled={disabled}
                       onOpen={loadModels}
                       loading={loading}
@@ -148,11 +195,18 @@ export function StateModelOverridesEditor({
                       validate={(item) =>
                         stateListItemError(item, 'model')
                           ? text('picker_invalid_identifier')
-                          : rules.some((r, i) => i !== index && r.model === item)
+                          : groups.some((other, i) => i !== index && other.models.includes(item))
                             ? text('override_duplicate')
                             : undefined
                       }
-                      onChange={(items) => update(index, { model: items[0] ?? '' })}
+                      onChange={(models) => replace(index, { models })}
+                    />
+                    <StateStrategyEditor
+                      settings={rule}
+                      strategy={value.strategy}
+                      poolMode={value['cookie-pool-mode']}
+                      disabled={disabled}
+                      onChange={(settings) => replace(index, { settings })}
                     />
                     <div className={styles.grid}>
                       <div>
@@ -246,12 +300,9 @@ export function StateModelOverridesEditor({
           className={styles.json}
           disabled={disabled}
           value={value['model-overrides']}
-          onChange={(event) => {
-            setRevision((value) => value + 1);
-            onChange(event.target.value);
-          }}
+          onChange={(event) => onChange(event.target.value)}
         />
       </details>
-    </details>
+    </section>
   );
 }

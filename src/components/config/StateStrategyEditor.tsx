@@ -47,7 +47,7 @@ export function StateStrategyEditor({
   const textField = (key: string, clearLabel: string) => (
     <div>
       <Input
-        label={text(key)}
+        label={text(!inherit ? `${key}_default` : key)}
         disabled={disabled}
         value={String(settings[key] ?? '')}
         placeholder={text(inherit && settings[key] === undefined ? 'rule_inherit' : clearLabel)}

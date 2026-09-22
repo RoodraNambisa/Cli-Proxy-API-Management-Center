@@ -39,11 +39,23 @@ export function StateSettingsSummary({
       ? text(value ? 'rule_bool_true' : 'rule_bool_false')
       : Array.isArray(value)
         ? value.join(', ') || text('picker_any_length')
-        : ['mode', 'missing-policy', 'acquisition', 'proxy-mode'].includes(key)
+        : [
+              'mode',
+              'missing-policy',
+              'acquisition',
+              'proxy-mode',
+              'strategy',
+              'cookie-pool-mode',
+              'missing-returned-state',
+            ].includes(key)
           ? text(`${key}_${value}`)
-          : typeof value === 'number'
-            ? String(value)
-            : text('rule_custom');
+          : key === 'cookie-acquisition-model'
+            ? String(value) || text('cookie_source_self')
+            : key === 'cookie-pool-group'
+              ? String(value) || text('cookie_group_none')
+              : typeof value === 'number'
+                ? String(value)
+                : text('rule_custom');
   return (
     <span className={styles.settingsSummary}>
       {items.length

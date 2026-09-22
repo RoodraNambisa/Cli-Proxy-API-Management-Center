@@ -5103,8 +5103,8 @@
     "reason_state_length_mismatch": "State length mismatch",
     "reason_response_model_mismatch": "Response model mismatch",
     "reason_response_text_mismatch": "Required response text missing",
-    "model_overrides": "Advanced: per-model acquisition rules",
-    "model_overrides_hint": "Выберите исходную модель и условия получения. Неуказанные поля наследуются. Правила не расширяют область моделей; длина по подписке имеет приоритет.",
+    "model_overrides": "Общие настройки моделей",
+    "model_overrides_hint": "В каждом правиле можно выбрать несколько моделей провайдера и задать общую модель получения Cookie, группу пула и другие параметры. Правила учётных данных наследуют эти значения; явно заданные параметры имеют приоритет. Остальные модели используют значения выше. Область управления не расширяется; правила длины по подписке сохраняют приоритет.",
     "missing-policy_hide": "Временно скрыть модель этой учётной записи",
     "returned_length": "Полученная длина: {{length}}",
     "returned_model": "Полученная модель: {{model}}",
@@ -5171,7 +5171,11 @@
     "reason_cookie_acquisition_requires_text_model": "Модель получения должна поддерживать текстовые запросы",
     "cookie_pool_shared": "Группа {{name}}",
     "cookie_pool_source": "Источник {{name}}",
-    "cookie_pool_model": "Модель {{name}}"
+    "cookie_pool_model": "Модель {{name}}",
+    "default_rule_models": "Модели провайдера (можно выбрать несколько)",
+    "default_rule_models_required": "Выберите хотя бы одну модель",
+    "cookie-acquisition-model_default": "Модель получения Cookie по умолчанию",
+    "cookie-pool-group_default": "Группа пула по умолчанию"
   },
   "auth_error_history": {
     "title": "Последние ошибки",

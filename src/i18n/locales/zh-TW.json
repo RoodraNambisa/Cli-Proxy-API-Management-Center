@@ -5102,8 +5102,8 @@
     "reason_state_length_mismatch": "State 长度不符合条件",
     "reason_response_model_mismatch": "返回模型不符合条件",
     "reason_response_text_mismatch": "答案不包含指定文本",
-    "model_overrides": "高级：每模型获取条件",
-    "model_overrides_hint": "選擇實際模型後逐項設定取得條件；未單獨設定的欄位繼承全域。規則不會擴大管理模型範圍，訂閱長度規則仍優先於此處的長度設定。",
+    "model_overrides": "共用模型預設規則",
+    "model_overrides_hint": "每條規則可選擇多個實際模型，統一設定取得基礎模型、共用群組及其他預設參數。憑證規則繼承這些預設值，個別設定的欄位優先；未匹配模型沿用上方預設值。不會擴大託管範圍；訂閱長度規則仍優先於此處的長度設定。",
     "missing-policy_hide": "暫時隱藏並跳過此憑證的模型",
     "returned_length": "實際回傳長度：{{length}}",
     "returned_model": "實際回傳模型：{{model}}",
@@ -5170,7 +5170,11 @@
     "reason_cookie_acquisition_requires_text_model": "取得基礎模型必須支援文字請求",
     "cookie_pool_shared": "共享群組 {{name}}",
     "cookie_pool_source": "基礎模型 {{name}}",
-    "cookie_pool_model": "獨立模型 {{name}}"
+    "cookie_pool_model": "獨立模型 {{name}}",
+    "default_rule_models": "適用模型（可多選，填寫實際模型）",
+    "default_rule_models_required": "至少選擇一個模型",
+    "cookie-acquisition-model_default": "預設取得 Cookie 的基礎模型",
+    "cookie-pool-group_default": "預設共用群組"
   },
   "auth_error_history": {
     "title": "最近錯誤",

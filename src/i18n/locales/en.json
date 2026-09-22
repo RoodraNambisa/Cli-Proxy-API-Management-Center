@@ -5106,8 +5106,8 @@
     "reason_state_length_mismatch": "State length mismatch",
     "reason_response_model_mismatch": "Response model mismatch",
     "reason_response_text_mismatch": "Required response text missing",
-    "model_overrides": "Advanced: per-model acquisition rules",
-    "model_overrides_hint": "Choose an upstream model and set its acquisition criteria. Unset fields inherit global settings. Rules do not expand model scope; subscription length rules still take precedence.",
+    "model_overrides": "Shared model defaults",
+    "model_overrides_hint": "Select multiple upstream models per rule to share acquisition, pool and other defaults. Credential rules inherit these values; explicit credential settings take precedence. Other models use the defaults above. These rules do not expand managed scope; subscription length rules still take precedence over these length settings.",
     "missing-policy_hide": "Temporarily hide and skip this credential/model",
     "returned_length": "Returned length: {{length}}",
     "returned_model": "Returned model: {{model}}",
@@ -5174,7 +5174,11 @@
     "reason_cookie_acquisition_requires_text_model": "The acquisition model must support text requests",
     "cookie_pool_shared": "Group {{name}}",
     "cookie_pool_source": "Source {{name}}",
-    "cookie_pool_model": "Model {{name}}"
+    "cookie_pool_model": "Model {{name}}",
+    "default_rule_models": "Applicable upstream models (multiple allowed)",
+    "default_rule_models_required": "Choose at least one model",
+    "cookie-acquisition-model_default": "Default Cookie acquisition model",
+    "cookie-pool-group_default": "Default sharing group"
   },
   "auth_error_history": {
     "title": "Recent errors",
