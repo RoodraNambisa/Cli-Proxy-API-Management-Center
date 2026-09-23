@@ -104,6 +104,8 @@ export function ModelProbeDetailsModal({
             <dl>
               <dt>{t('model_probe.cookie_mode')}</dt>
               <dd>{t(`model_probe.cookie_modes.${result.codex_cookie.mode}`)}</dd>
+              <dt>{t('codex_auto_cookie.source')}</dt>
+              <dd>{t(`codex_auto_cookie.sources.${result.codex_cookie.source}`, {defaultValue: result.codex_cookie.source})}</dd>
               <dt>{t('model_probe.cookie_sent')}</dt>
               <dd>{result.codex_cookie.sent ? result.codex_cookie.names.join(', ') : '—'}</dd>
               <dt>{t('model_probe.cookie_digest')}</dt>

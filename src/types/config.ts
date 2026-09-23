@@ -242,6 +242,8 @@ export interface ClientApiKeyGroup {
 }
 
 export interface CodexConfig {
+  autoCookie?: boolean;
+  autoCookieOverride?: boolean;
   liveEnabled?: boolean;
   liveMediaRelay?: CodexLiveMediaConfig;
   optimizeMultiAgentV2?: boolean;

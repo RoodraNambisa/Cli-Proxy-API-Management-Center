@@ -1,3 +1,4 @@
+import { CodexAutoCookieEditor } from './CodexAutoCookieEditor';
 import { CodexResponseGuardEditor } from './CodexResponseGuardEditor';
 import { RoutingCredentialPicker } from './RoutingCredentialPicker';
 import { CodexStateEditor } from './CodexStateEditor';
@@ -1774,6 +1775,7 @@ export function VisualConfigEditor({
         authSectionErrorCount +
         countErrors([
           'codexQuotaAutoDisable',
+          'codexAutoCookie',
           'codexStateOverride',
           'codexResponseGuard',
           'codexFingerprintSessionIdentityPoolSize',
@@ -3293,6 +3295,15 @@ export function VisualConfigEditor({
                 </PageGroup>
                 <PageGroup active={activePageId === 'provider-codex'}>
                   <CodexResponseGuardEditor value={values.codexResponseGuard} onChange={codexResponseGuard=>onChange({codexResponseGuard})} disabled={disabled} dirty={hasDirtyConfigField(dirtyFields,['codexResponseGuard'])} focusTarget={focusTarget}/>
+                  <CodexAutoCookieEditor
+                    enabled={values.codexAutoCookie}
+                    override={values.codexAutoCookieOverride}
+                    state={values.codexStateOverride}
+                    onChange={onChange}
+                    disabled={disabled}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexAutoCookie', 'codexAutoCookieOverride'])}
+                    focusTarget={focusTarget}
+                  />
                   <CodexStateEditor value={values.codexStateOverride} onChange={codexStateOverride=>onChange({codexStateOverride})} disabled={disabled} dirty={hasDirtyConfigField(dirtyFields,['codexStateOverride'])} focusTarget={focusTarget} strip={values.codexTurnStatePolicy==='strip'}/>
                   <SettingsDisclosure id="config-model-catalog-fields" title={t('common.model_catalog_label')}
                     description={t('config_management.settings_center.codex_groups.catalog_desc')}

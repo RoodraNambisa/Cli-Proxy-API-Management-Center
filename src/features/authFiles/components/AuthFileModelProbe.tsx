@@ -32,6 +32,7 @@ export function AuthFileModelProbe({
   const cookieAcquisition = useCodexStateAcquisition(fileName, 'cookie-only');
   const stateOptions = useCodexStateOptions();
   const cookieSupported = stateOptions.data.features?.cookie_only === true;
+  const autoCookieEnabled = stateOptions.data.auto_cookie_enabled === true;
   useEffect(() => {
     if (provider === 'codex') void stateOptions.refresh();
   }, [provider, stateOptions.scope]);
@@ -52,6 +53,10 @@ export function AuthFileModelProbe({
   const [cookieMode, setCookieMode] = useState<'configured' | 'none' | 'managed' | 'candidate'>(
     'configured'
   );
+  const effectiveCookieMode =
+    autoCookieEnabled && (cookieMode === 'managed' || cookieMode === 'candidate')
+      ? 'configured'
+      : cookieMode;
   const [upstream, setUpstream] = useState('configured');
   const [customURL, setCustomURL] = useState('');
   const [search, setSearch] = useState('');
@@ -128,7 +133,7 @@ export function AuthFileModelProbe({
     invalidLimit ||
     invalidPrompt ||
     invalidState ||
-    (cookieMode !== 'configured' && !cookieSupported);
+    (effectiveCookieMode !== 'configured' && !cookieSupported);
 
   useEffect(
     () => () => {
@@ -161,7 +166,7 @@ export function AuthFileModelProbe({
     if (busy) return;
     setDetailModel(null);
     const cookie = strategy === 'cookie-only';
-    if (cookie && !cookieSupported) return;
+    if (cookie && (!cookieSupported || autoCookieEnabled)) return;
     if (await (cookie ? cookieAcquisition : stateAcquisition).acquire(model))
       resetOptions(() => {
         setStateMode(cookie ? 'none' : 'acquired');
@@ -196,7 +201,7 @@ export function AuthFileModelProbe({
               ...(probeBody ? { request_body: probeBody } : {}),
               ...(provider === 'codex'
                 ? {
-                    ...(cookieSupported ? { codex_cookie: { mode: cookieMode } } : {}),
+                    ...(cookieSupported ? { codex_cookie: { mode: effectiveCookieMode } } : {}),
                     ...(stateOptions.data.features?.response_guard ? {codex_response_guard:guardMode} : {}),
                     codex_state: {
                       mode: stateMode,
@@ -329,12 +334,11 @@ export function AuthFileModelProbe({
               <label>{t('model_probe.cookie_mode')}</label>
               <Select
                 ariaLabel={t('model_probe.cookie_mode')}
-                value={cookieMode}
+                value={effectiveCookieMode}
                 disabled={busy || !cookieSupported}
-                options={(['configured', 'none', 'managed', 'candidate'] as const).map((value) => ({
-                  value,
-                  label: t(`model_probe.cookie_modes.${value}`),
-                }))}
+                options={(['configured', 'none', 'managed', 'candidate'] as const)
+                  .filter((value) => !autoCookieEnabled || value === 'configured' || value === 'none')
+                  .map((value) => ({ value, label: t(`model_probe.cookie_modes.${value}`) }))}
                 onChange={(value) =>
                   resetOptions(() => {
                     setCookieMode(value as typeof cookieMode);
@@ -345,7 +349,9 @@ export function AuthFileModelProbe({
             </div>
           </div>
           <div className={styles.hint}>
-            {t(cookieSupported ? 'model_probe.cookie_hint' : 'codex_state.cookie_upgrade')}
+            {t(autoCookieEnabled
+              ? 'codex_auto_cookie.probe_hint'
+              : cookieSupported ? 'model_probe.cookie_hint' : 'codex_state.cookie_upgrade')}
           </div>
           <div className={styles.hint}>{t('model_probe.state_hint')}</div>
           <div className={styles.hint}>{t('model_probe.state_acquire_hint')}</div>
@@ -631,7 +637,7 @@ export function AuthFileModelProbe({
                       >
                         {t('model_probe.test')}
                       </Button>
-                      {provider === 'codex' && cookieSupported && (
+                      {provider === 'codex' && cookieSupported && !autoCookieEnabled && (
                         <Button
                           variant="secondary"
                           size="sm"

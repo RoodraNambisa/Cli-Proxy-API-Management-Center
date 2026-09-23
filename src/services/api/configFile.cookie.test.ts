@@ -9,6 +9,27 @@ describe('Cookie backend capability guard', () => {
     vi.clearAllMocks();
     mocks.get.mockResolvedValue({ features: {} });
   });
+  it('checks passive cookies and rejects Cookie-only conflicts before writing YAML', async () => {
+    await expect(configFileApi.saveConfigYaml('codex: {auto-cookie: true}')).rejects.toThrow(
+      'codex_auto_cookie.upgrade'
+    );
+    mocks.get.mockResolvedValue({ features: { auto_cookie: true } });
+    await configFileApi.saveConfigYaml('codex: {auto-cookie: true, auto-cookie-override: false}');
+    expect(mocks.put).toHaveBeenCalledTimes(1);
+    await expect(
+      configFileApi.saveConfigYaml(
+        'codex: {auto-cookie: true, state-override: {enabled: true, strategy: cookie-only}}'
+      )
+    ).rejects.toThrow('codex_auto_cookie.conflict');
+    expect(mocks.put).toHaveBeenCalledTimes(1);
+  });
+  it('explains the required upgrade when an older backend has no capability endpoint', async () => {
+    mocks.get.mockRejectedValueOnce({ status: 404 });
+    await expect(configFileApi.saveConfigYaml('codex: {auto-cookie: true}')).rejects.toThrow(
+      'codex_auto_cookie.upgrade'
+    );
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
   it('blocks new strategies and explicit seconds on an old backend', async () => {
     for (const field of [
       'strategy: cookie-only',

@@ -986,6 +986,8 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       passthroughPromptCacheKey: readCodexBooleanPolicy(codex, 'passthrough-prompt-cache-key', 'passthroughPromptCacheKey'),
       streamBootstrapBuffering: readCodexBooleanPolicy(codex, 'stream-bootstrap-buffering', 'streamBootstrapBuffering'),
       estimateClaudeInputTokens: readCodexBooleanPolicy(codex, 'estimate-claude-input-tokens', 'estimateClaudeInputTokens'),
+      autoCookie: readCodexBooleanPolicy(codex, 'auto-cookie', 'autoCookie'),
+      autoCookieOverride: readCodexBooleanPolicy(codex, 'auto-cookie-override', 'autoCookieOverride'),
       observeQuota: readCodexBooleanPolicy(codex, 'observe-quota', 'observeQuota'),
       orphanDelegationCompatibility: readCodexBooleanPolicy(codex, 'orphan-delegation-compatibility', 'orphanDelegationCompatibility'),
       identityConfuse: normalizeBoolean(codex['identity-confuse'] ?? codex.identityConfuse),

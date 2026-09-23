@@ -1,3 +1,5 @@
+import { autoCookieConflict } from '@/utils/codexAutoCookie';
+import { readCodexState } from '@/utils/codexStateOverride';
 import { STATE_STRATEGY_KEYS } from '@/utils/codexStateStrategy';
 /**
  * Configuration file API (/config.yaml).
@@ -43,6 +45,9 @@ export const configFileApi = {
       if (!supported) throw new Error(i18n.t('response_guard.upgrade'));
     }
     const state = root?.codex?.['state-override'];
+    const autoCookie = root?.codex?.['auto-cookie'] === true;
+    const conflict = autoCookie && autoCookieConflict(readCodexState(state));
+    if (conflict) throw new Error(i18n.t('codex_auto_cookie.conflict', { rule: conflict }));
     const rules: Array<Record<string, unknown>> = Array.isArray(state?.rules) ? state.rules : [];
     const modelOverrides = rules.some(
       (rule) => Array.isArray(rule?.['model-overrides']) && rule['model-overrides'].length
@@ -89,9 +94,10 @@ export const configFileApi = {
             (!key.startsWith('cookie-') || s[key] !== 0)
         )
     );
-    if (modelOverrides || retryRounds || cookieFeatures) {
+    if (autoCookie || modelOverrides || retryRounds || cookieFeatures) {
       const options = await apiClient.get<{
         features?: {
+          auto_cookie?: boolean;
           rule_model_overrides?: boolean;
           state_retry_rounds?: boolean;
           cookie_model_rules?: boolean;
@@ -99,12 +105,19 @@ export const configFileApi = {
           cookie_only?: boolean;
           state_seconds?: boolean;
         };
-      }>('/auth-files/codex/state/options');
+      }>('/auth-files/codex/state/options').catch((error: unknown) => {
+        const status = (error as { status?: number })?.status;
+        if (autoCookie && (status === 404 || status === 405))
+          throw new Error(i18n.t('codex_auto_cookie.upgrade'));
+        throw error;
+      });
       if (
         cookieFeatures &&
         (options.features?.cookie_only !== true || options.features?.state_seconds !== true)
       )
         throw new Error(i18n.t('codex_state.cookie_upgrade'));
+      if (autoCookie && options.features?.auto_cookie !== true)
+        throw new Error(i18n.t('codex_auto_cookie.upgrade'));
       if (cookieModelRules && options.features?.cookie_model_rules !== true)
         throw new Error(i18n.t('codex_state.cookie_model_rules_upgrade'));
       if (cookieBackups && options.features?.cookie_backup_pool !== true)

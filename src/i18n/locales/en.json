@@ -3112,7 +3112,8 @@
         "grok_upstream_mode": "Global default upstream: cli, api, us-east-1, us-west-2, eu-west-1",
         "grok_model_routing": "Use at most 64 routes, each with 1–64 model names (up to 256 characters) and a valid node. Only * is a wildcard. Use at most 8 node names or complete HTTP(S) base URLs without user information, query parameters or fragments.",
         "codex_state_override": "Check numeric limits, proxy placeholders and policies. Refresh lead time must be less than lifetime.",
-        "codex_response_guard": "Invalid validation rules. Check selectors, duplicate model overrides and field values."
+        "codex_response_guard": "Invalid validation rules. Check selectors, duplicate model overrides and field values.",
+        "codex_auto_cookie_conflict": "Conflicts with enabled Cookie-only management. Disable the conflicting rule or automatic cookies before saving."
       },
       "common": {
         "summary_providers": "Providers",
@@ -5365,5 +5366,27 @@
     "rule_short": "Validation",
     "rewrite_short": "Naming",
     "verdict_unknown": "Not determined"
+  },
+  "codex_auto_cookie": {
+    "title": "Official-style automatic Cookies",
+    "description": "Share infrastructure cookies within each credential, apply response updates, and filter expiry before sending.",
+    "hint": "Only official ChatGPT HTTPS/WSS hosts and allowlisted cookies are supported. Models share cookies within a credential; credentials stay isolated. No acquisition probes or model/State checks are added. Set-Cookie updates are merged in arrival order, with the last write winning. Conflicts with enabled Cookie-only management. State probes neither read nor write this store.",
+    "override": "Override request Cookie headers",
+    "override_hint": "Enabled by default. The automatic store replaces the entire outbound Cookie header, including client and credential headers. If no valid cookie exists, send none rather than falling back to explicit values.",
+    "explicit_hint": "When override is off, explicit Cookie headers take precedence without additions. Automatic cookies are supplied only when no explicit header exists. Response Set-Cookie still updates the store.",
+    "conflict": "Conflicts with Cookie-only management: {{rule}}. Disable the conflicting rule or automatic cookies before saving.",
+    "upgrade": "Update the backend to enable automatic Cookies.",
+    "probe_hint": "Automatic cookies are enabled. Follow configuration uses this credential’s store; No Cookie skips both reading and writing. Legacy Cookie acquisition and candidate verification are unavailable.",
+    "source": "Cookie handling",
+    "sources": {
+      "automatic": "Automatically supplied",
+      "explicit": "Explicit Cookie takes precedence",
+      "empty": "No valid Cookie; none sent",
+      "skipped": "Automatic cookies skipped",
+      "unsupported": "Unsupported host or credential",
+      "none": "No Cookie",
+      "managed": "Legacy managed Cookie",
+      "candidate": "Legacy candidate Cookie"
+    }
   }
 }

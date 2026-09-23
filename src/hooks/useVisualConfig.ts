@@ -1,3 +1,4 @@
+import { autoCookieConflict } from '@/utils/codexAutoCookie';
 import { readResponseGuard, writeResponseGuard, responseGuardError, responseGuardEqual } from '@/utils/codexResponseGuard';
 import { stateNeedsTurnState } from "@/utils/codexStateStrategy";
 import { normalizeRoutingCredentials, validRoutingCredential } from '@/utils/routingCredentials';
@@ -1746,6 +1747,8 @@ export function getVisualConfigValidationErrors(
     ...errorResponseRewriteErrors,
     ...codexLiveMediaErrors(values.codexLiveMediaRelay),
     ...grokConfigErrors(values.grok),
+    codexAutoCookie: values.codexAutoCookie && autoCookieConflict(values.codexStateOverride)
+      ? 'codex_auto_cookie_conflict' : undefined,
     codexStateOverride: codexStateError(values.codexStateOverride) || (values.codexStateOverride.enabled && values.codexTurnStatePolicy === 'strip' && stateNeedsTurnState(values.codexStateOverride)) ? 'codex_state_override' : undefined,
     codexQuotaAutoDisable: codexQuotaAutoDisableError(values.codexQuotaAutoDisable) ? 'codex_quota_auto_disable' : undefined,
     codexResponseGuard: responseGuardError(values.codexResponseGuard) ? 'codex_response_guard' : undefined,
@@ -2431,6 +2434,10 @@ function getNextDirtyFields(
       'codexEstimateClaudeInputTokens',
       nextValues.codexEstimateClaudeInputTokens === baselineValues.codexEstimateClaudeInputTokens
     );
+  }
+  for (const field of ['codexAutoCookie', 'codexAutoCookieOverride'] as const) {
+    if (Object.prototype.hasOwnProperty.call(patch, field))
+      updateDirty(field, nextValues[field] === baselineValues[field]);
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexObserveQuota')) {
     updateDirty('codexObserveQuota', nextValues.codexObserveQuota === baselineValues.codexObserveQuota);
@@ -3508,6 +3515,8 @@ export function useVisualConfig() {
         codexStreamBootstrapBuffering: codexStreamBootstrapBuffering ?? false,
         codexEstimateClaudeInputTokens: codexEstimateClaudeInputTokens ?? false,
         codexObserveQuota: codexObserveQuota ?? false,
+        codexAutoCookie: codex?.['auto-cookie'] === true,
+        codexAutoCookieOverride: codex?.['auto-cookie-override'] !== false,
         codexStateOverride: readCodexState(codex?.['state-override']),
         codexResponseGuard: readResponseGuard(codex?.['response-guard']),
         codexQuotaAutoDisable: readCodexQuotaAutoDisable(codex?.['quota-auto-disable']),
@@ -4109,6 +4118,9 @@ export function useVisualConfig() {
           values.codexStreamBootstrapBuffering ||
           values.codexEstimateClaudeInputTokens ||
           values.codexObserveQuota ||
+          values.codexAutoCookie ||
+          values.codexAutoCookie !== baselineValues.codexAutoCookie ||
+          values.codexAutoCookieOverride !== baselineValues.codexAutoCookieOverride ||
           values.codexOrphanDelegationCompatibility ||
           values.codexOptimizeMultiAgentV2 ||
           values.codexSpoofSessionIdentity ||
@@ -4125,6 +4137,10 @@ export function useVisualConfig() {
           doc.deleteIn(['codex', 'liveEnabled']);
           if (guardChanged) writeResponseGuard(doc,values.codexResponseGuard);
           if (stateChanged) writeCodexState(doc,values.codexStateOverride);
+          if (values.codexAutoCookie || values.codexAutoCookie !== baselineValues.codexAutoCookie || docHas(doc, ['codex', 'auto-cookie']))
+            doc.setIn(['codex', 'auto-cookie'], values.codexAutoCookie);
+          if (values.codexAutoCookie || values.codexAutoCookieOverride !== baselineValues.codexAutoCookieOverride || docHas(doc, ['codex', 'auto-cookie-override']))
+            doc.setIn(['codex', 'auto-cookie-override'], values.codexAutoCookieOverride);
           if (quotaDisableChanged) writeCodexQuotaAutoDisable(doc, values.codexQuotaAutoDisable);
           if (mediaChanged) writeCodexLiveMediaYaml(doc, values.codexLiveMediaRelay);
           doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
@@ -5099,7 +5115,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [state.dirtyFields, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [state.dirtyFields, baselineValues.codexAutoCookie, baselineValues.codexAutoCookieOverride, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {

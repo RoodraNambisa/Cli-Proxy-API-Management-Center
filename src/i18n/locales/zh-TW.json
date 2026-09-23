@@ -3108,7 +3108,8 @@
         "grok_upstream_mode": "全域預設上游: cli, api, us-east-1, us-west-2, eu-west-1",
         "grok_model_routing": "最多 64 條路由，每條填寫 1–64 個模型名稱（最長 256 字元）和有效節點；只支援 * 萬用字元。 目錄來源最多 8 個，請選擇節點或填寫完整 HTTP(S) 基礎位址，不得含使用者資訊、查詢參數或片段。",
         "codex_state_override": "请检查数值范围、代理占位符和策略；提前续取时间必须小于有效期。",
-        "codex_response_guard": "規則設定有誤，请檢查匹配條件、重複的模型覆盖和欄位值。"
+        "codex_response_guard": "規則設定有誤，请檢查匹配條件、重複的模型覆盖和欄位值。",
+        "codex_auto_cookie_conflict": "與已啟用的 Cookie-only 託管衝突。請關閉對應規則或自動補全後再儲存。"
       },
       "common": {
         "summary_providers": "提供者",
@@ -5361,5 +5362,27 @@
     "rule_short": "校驗",
     "rewrite_short": "轉換",
     "verdict_unknown": "尚未判定"
+  },
+  "codex_auto_cookie": {
+    "title": "模擬官方 Cookie 自動補全",
+    "description": "按憑證共用基礎設施 Cookie，隨上游回應更新，送出前過濾過期項。",
+    "hint": "僅處理官方 ChatGPT HTTPS/WSS 位址與白名單 Cookie。不同憑證隔離，同一憑證的所有模型共用；不主動取得、不按模型或 State 長度篩選。收到 Set-Cookie 後逐項覆寫，最後寫入生效。與已啟用的 Cookie-only 託管互斥，State 取得請求不讀寫此儲存。",
+    "override": "覆寫請求自帶 Cookie",
+    "override_hint": "預設啟用。自動儲存接管送往上游的整條 Cookie 請求標頭，包括客戶端與憑證自訂標頭；沒有可用 Cookie 時不攜帶，不回退到自帶值。",
+    "explicit_hint": "關閉覆寫：已有明確 Cookie 請求標頭時原樣優先，不追加；沒有時才自動補全。回應 Set-Cookie 仍會更新儲存。",
+    "conflict": "與 Cookie-only 託管衝突：{{rule}}。請關閉對應規則或自動補全後再儲存。",
+    "upgrade": "目前後端不支援 Cookie 自動補全，請先升級後端。",
+    "probe_hint": "自動補全已啟用。跟隨設定會使用該憑證的自動 Cookie；選擇不帶 Cookie 將同時跳過讀取和回寫。舊 Cookie 取得與候選複核不可用。",
+    "source": "Cookie 處理方式",
+    "sources": {
+      "automatic": "已自動補全",
+      "explicit": "明確 Cookie 優先",
+      "empty": "無有效 Cookie，未攜帶",
+      "skipped": "已跳過自動 Cookie",
+      "unsupported": "位址或憑證不適用",
+      "none": "未使用 Cookie",
+      "managed": "舊託管主用 Cookie",
+      "candidate": "舊候選 Cookie"
+    }
   }
 }

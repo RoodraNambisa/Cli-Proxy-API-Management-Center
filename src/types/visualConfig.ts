@@ -67,6 +67,8 @@ export type VisualConfigFieldPath =
   | 'errorResponseRewrites'
   | 'responseModelRewrite'
   | 'codexQuotaAutoDisable'
+  | 'codexAutoCookie'
+  | 'codexAutoCookieOverride'
   | 'codexStateOverride'
   | 'codexResponseGuard'
   | 'nonRetryableErrors'
@@ -122,6 +124,7 @@ export type VisualConfigValidationErrorCode =
   | 'auth_model_exclusion_match_required'
   | 'integer_list'
   | 'codex_quota_auto_disable'
+  | 'codex_auto_cookie_conflict'
   | 'codex_state_override'
   | 'codex_response_guard'
   | 'http_status_list'
@@ -354,6 +357,8 @@ export type VisualConfigValues = {
   codexEstimateClaudeInputTokens: boolean;
   codexObserveQuota: boolean;
   codexQuotaAutoDisable: CodexQuotaAutoDisableConfig;
+  codexAutoCookie: boolean;
+  codexAutoCookieOverride: boolean;
   codexStateOverride: CodexStateOverride;
   codexResponseGuard: CodexResponseGuard;
   codexOrphanDelegationCompatibility: boolean;
@@ -493,6 +498,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexEstimateClaudeInputTokens: false,
   codexObserveQuota: false,
   codexQuotaAutoDisable: DEFAULT_CODEX_QUOTA_AUTO_DISABLE,
+  codexAutoCookie: false,
+  codexAutoCookieOverride: true,
   codexStateOverride: DEFAULT_CODEX_STATE,
   codexResponseGuard: readResponseGuard(undefined),
   codexOrphanDelegationCompatibility: false,

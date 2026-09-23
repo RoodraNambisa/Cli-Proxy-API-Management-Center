@@ -132,6 +132,8 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'codexEstimateClaudeInputTokens',
       'codexObserveQuota',
       'codexQuotaAutoDisable',
+      'codexAutoCookie',
+      'codexAutoCookieOverride',
       'codexStateOverride',
       'codexResponseGuard',
       'codexOrphanDelegationCompatibility',
@@ -667,6 +669,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
   },
   {
     id: 'config-codex-response-guard', pageId: 'provider-codex', labelKey: 'response_guard.title', yamlKeys: ['codex.response-guard'], aliases: ['拦截', '429', '模型不匹配', '白名单', 'State 长度', 'response guard'],
+  },
+  {
+    id: 'config-codex-auto-cookie',
+    pageId: 'provider-codex',
+    labelKey: 'codex_auto_cookie.title',
+    yamlKeys: ['codex.auto-cookie', 'codex.auto-cookie-override'],
+    aliases: ['Cookie 自动补全', '覆盖请求自带 Cookie', '官方 Cookie', 'auto cookie'],
   },
   {
     id: 'config-codex-state', pageId: 'provider-codex', labelKey: 'codex_state.title', yamlKeys: ['codex.state-override'], aliases: ['state', 'cookie', 'cookie-only', '292', '312', '覆盖', '自动获取', '秒级有效期'],
