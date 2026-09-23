@@ -17,6 +17,7 @@ import {
   STATE_SETTING_KEYS,
 } from '@/utils/codexStateModelRules';
 import { generateId } from '@/utils/helpers';
+import { hasCookieRulePool } from '@/utils/codexCookieSharing';
 import styles from './CodexStateEditor.module.scss';
 
 export function StateSettingsSummary({
@@ -33,7 +34,10 @@ export function StateSettingsSummary({
   const { t } = useTranslation();
   const text = (key: string) => t(`codex_state.${key}`);
   const defaults = inheritedStateSettings(inherited, parent, model);
-  const items = Object.entries(settings).filter(([key]) => STATE_SETTING_KEYS.includes(key));
+  const rulePool = hasCookieRulePool(settings);
+  const items = Object.entries(settings).filter(
+    ([key]) => STATE_SETTING_KEYS.includes(key) && !(rulePool && key === 'cookie-pool-mode')
+  );
   const format = (key: string, value: unknown) =>
     typeof value === 'boolean'
       ? text(value ? 'rule_bool_true' : 'rule_bool_false')
@@ -52,7 +56,9 @@ export function StateSettingsSummary({
           : key === 'cookie-acquisition-model'
             ? String(value) || text('cookie_source_self')
             : key === 'cookie-pool-group'
-              ? String(value) || text('cookie_group_none')
+              ? rulePool
+                ? text('cookie_sharing_rule')
+                : String(value) || text('cookie_group_none')
               : typeof value === 'number'
                 ? String(value)
                 : text('rule_custom');
@@ -61,7 +67,14 @@ export function StateSettingsSummary({
       {items.length
         ? items.map(([key, v]) => (
             <span key={key}>
-              {text(key === 'lengths' ? 'rule_lengths' : key)}: {format(key, v)}
+              {text(
+                key === 'lengths'
+                  ? 'rule_lengths'
+                  : rulePool && key === 'cookie-pool-group'
+                    ? 'cookie_sharing'
+                    : key
+              )}
+              : {format(key, v)}
               {sameStateValue(v, defaults[key]) &&
                 !(key === 'lengths' && inherited['plan-lengths'].length) &&
                 (model !== undefined || inherited['model-overrides'] === '[]') && (

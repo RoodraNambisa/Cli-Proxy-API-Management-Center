@@ -37,6 +37,8 @@ it('distinguishes ready standbys from the candidate and shows the target', () =>
     backups: [bundle(3), bundle(4)],
     backup_target: 3,
     promotions: 1,
+    pool: 'shared:cookie-rule-fixture',
+    shared_models: ['luna', 'astra'],
   };
   render(
     <AuthFileCookieStatus
@@ -50,4 +52,7 @@ it('distinguishes ready standbys from the candidate and shows the target', () =>
   expect(screen.getByText('codex_state.cookie_backup_item / 1')).toBeTruthy();
   expect(screen.getByText('codex_state.cookie_backup_item / 2')).toBeTruthy();
   expect(screen.getByText('codex_state.cookie_candidate /')).toBeTruthy();
+  const summary = screen.getByText(/codex_state.cookie_title/, { selector: 'summary' });
+  expect(summary.textContent).toContain('luna, astra');
+  expect(summary.textContent).not.toContain('cookie-rule-fixture');
 });

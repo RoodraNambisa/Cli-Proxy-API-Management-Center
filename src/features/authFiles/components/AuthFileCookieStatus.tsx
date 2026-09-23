@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import type { CodexCookieSnapshot, CodexCookieBundleSnapshot } from '@/types/authFile';
+import { hasCookieRulePool } from '@/utils/codexCookieSharing';
 import styles from './AuthFileStateStatus.module.scss';
 
 export function AuthFileCookieStatus({
@@ -27,7 +28,12 @@ export function AuthFileCookieStatus({
   const poolName = cookie.pool?.slice(cookie.pool.indexOf(':') + 1);
   const poolLabel = !cookie.pool
     ? text('cookie-pool-mode_credential')
-    : t(`codex_state.cookie_pool_${cookie.pool.split(':')[0]}`, { name: poolName });
+    : hasCookieRulePool({
+          'cookie-pool-mode': cookie.pool.split(':')[0],
+          'cookie-pool-group': poolName,
+        })
+      ? `${text('cookie_rule_pool')} · ${cookie.shared_models?.join(', ') || cookie.model}`
+      : t(`codex_state.cookie_pool_${cookie.pool.split(':')[0]}`, { name: poolName });
   return (
     <details>
       <summary>

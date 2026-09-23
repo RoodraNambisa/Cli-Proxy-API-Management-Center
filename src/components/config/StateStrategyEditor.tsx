@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { StateCookieRoutingEditor } from './StateCookieRoutingEditor';
 import styles from './CodexStateEditor.module.scss';
 
 export function StateStrategyEditor({
@@ -43,46 +43,22 @@ export function StateStrategyEditor({
     </div>
   );
   const effective = String(settings.strategy ?? strategy);
-  const effectivePool = String(settings['cookie-pool-mode'] ?? poolMode);
-  const textField = (key: string, clearLabel: string) => (
-    <div>
-      <Input
-        label={text(!inherit ? `${key}_default` : key)}
+  const routing =
+    effective === 'cookie-only' ? (
+      <StateCookieRoutingEditor
+        settings={settings}
+        onChange={onChange}
         disabled={disabled}
-        value={String(settings[key] ?? '')}
-        placeholder={text(inherit && settings[key] === undefined ? 'rule_inherit' : clearLabel)}
-        onChange={(e) => set(key, e.target.value)}
+        inherit={inherit}
+        poolMode={poolMode}
       />
-      {inherit && (
-        <div className={styles.ruleActions}>
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={disabled}
-            onClick={() => set(key, undefined)}
-          >
-            {text('rule_inherit')}
-          </Button>
-          <Button size="sm" variant="secondary" disabled={disabled} onClick={() => set(key, '')}>
-            {text(clearLabel)}
-          </Button>
-        </div>
-      )}
-    </div>
-  );
+    ) : null;
   return (
     <>
+      {inherit && routing}
       <div className={styles.grid}>
         {select('strategy', ['state', 'cookie-only'], 'state')}
         {select('missing-returned-state', ['ignore', 'reject'], 'ignore')}
-        {effective === 'cookie-only' && (
-          <>
-            {textField('cookie-acquisition-model', 'cookie_source_self')}
-            {select('cookie-pool-mode', ['auto', 'model', 'shared', 'credential'], 'auto')}
-            {['auto', 'shared'].includes(effectivePool) &&
-              textField('cookie-pool-group', 'cookie_group_none')}
-          </>
-        )}
         {effective === 'cookie-only' && (
           <div>
             <label>{text('cookie-verify-after-acquire')}</label>
@@ -126,14 +102,12 @@ export function StateStrategyEditor({
           />
         ))}
       </div>
+      {!inherit && routing}
       <p className="hint">
         {text(effective === 'cookie-only' ? 'cookie_strategy_hint' : 'seconds_hint')}
       </p>
       {effective === 'cookie-only' && (
-        <>
-          <p className="hint">{text('cookie_model_rules_hint')}</p>
-          <p className="hint">{text('cookie_backup_hint')}</p>
-        </>
+        <p className="hint">{text('cookie_backup_hint')}</p>
       )}
     </>
   );

@@ -11,6 +11,7 @@ import { StateRuleModelOverrides, StateSettingsSummary } from './StateRuleModelO
 import { apiClient } from '@/services/api/client';
 import { authFilesApi, type CodexStatePreview } from '@/services/api/authFiles';
 import { useAuthStore } from '@/stores';
+import { copyCookieRulePools } from '@/utils/codexCookieSharing';
 import {
   codexStateError,
   newCodexStateRule,
@@ -198,7 +199,7 @@ export function CodexStateRulesEditor({
                 variant="secondary"
                 disabled={disabled || rules.length >= 128}
                 onClick={() => {
-                  const copy = structuredClone(r);
+                  const copy = copyCookieRulePools(r);
                   copy.id = newCodexStateRule().id;
                   copy.name = `${r.name || text('rule_unnamed')} (${text('rule_copy')})`;
                   change([...rules.slice(0, i + 1), copy, ...rules.slice(i + 1)]);

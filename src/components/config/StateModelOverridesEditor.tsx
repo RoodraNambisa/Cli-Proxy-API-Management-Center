@@ -9,6 +9,7 @@ import { StateSettingsSummary } from './StateRuleModelOverrides';
 import { StateValuePicker, type StateChoice } from './StateValuePicker';
 import { sameStateValue } from '@/utils/codexStateModelRules';
 import { generateId } from '@/utils/helpers';
+import { shareCookieRule } from '@/utils/codexCookieSharing';
 import {
   readStateModelOverrides,
   stateListItemError,
@@ -108,7 +109,18 @@ export function StateModelOverridesEditor({
           variant="secondary"
           disabled={disabled || !groups || count >= 256}
           onClick={() =>
-            groups && save([...groups, { id: generateId(), models: [], settings: {} }])
+            groups &&
+            save([
+              ...groups,
+              {
+                id: generateId(),
+                models: [],
+                settings:
+                  value.strategy === 'cookie-only'
+                    ? shareCookieRule({ 'cookie-acquisition-model': '' })
+                    : {},
+              },
+            ])
           }
         >
           {text('override_add')}

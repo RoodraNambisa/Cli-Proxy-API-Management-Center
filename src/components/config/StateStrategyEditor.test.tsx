@@ -16,7 +16,7 @@ it('distinguishes using the current model from inheriting a configured base mode
     />
   );
   const field = screen
-    .getByLabelText('codex_state.cookie-acquisition-model')
+    .getByLabelText('codex_state.cookie_unified_model')
     .closest('.form-group')!.parentElement!;
   fireEvent.click(within(field).getByRole('button', { name: 'codex_state.cookie_source_self' }));
   expect(change.mock.calls[change.mock.calls.length - 1][0]['cookie-acquisition-model']).toBe('');

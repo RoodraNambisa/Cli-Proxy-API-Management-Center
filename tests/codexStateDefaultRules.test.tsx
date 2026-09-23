@@ -59,7 +59,9 @@ const edit = (index: number) =>
   );
 const clearSetting = (key: string, button: string) => {
   const field = screen
-    .getByRole('textbox', { name: `codex_state.${key}` })
+    .getByRole('textbox', {
+      name: `codex_state.${key === 'cookie-acquisition-model' ? 'cookie_unified_model' : key}`,
+    })
     .closest('.form-group')!.parentElement!;
   fireEvent.click(within(field).getByRole('button', { name: `codex_state.${button}` }));
 };
@@ -81,11 +83,10 @@ describe('shared model default rules', () => {
     fireEvent.click(screen.getByRole('button', { name: 'codex_state.override_add' }));
     expect(screen.getByTestId('invalid').textContent).toBe('true');
     addModels(modern);
-    const source = screen.getByLabelText('codex_state.cookie-acquisition-model');
+    const source = screen.getByLabelText('codex_state.cookie_unified_model');
     source.focus();
     fireEvent.change(source, { target: { value: 'gpt-5.6-luna' } });
     expect(document.activeElement).toBe(source);
-    clearSetting('cookie-pool-group', 'cookie_group_none');
     edit(1);
     expect(within(region).queryByText('codex_state.rule_custom')).toBeNull();
     expect(
@@ -95,14 +96,23 @@ describe('shared model default rules', () => {
     fireEvent.click(screen.getByRole('button', { name: 'codex_state.override_add' }));
     addModels(['gpt-5.5']);
     clearSetting('cookie-acquisition-model', 'cookie_source_self');
-    clearSetting('cookie-pool-group', 'cookie_group_none');
+    const firstPool = draft()['model-overrides'][0]['cookie-pool-group'];
+    const secondPool = draft()['model-overrides'][4]['cookie-pool-group'];
+    expect(firstPool).toMatch(/^cookie-rule-/);
+    expect(secondPool).not.toBe(firstPool);
     expect(draft()['model-overrides']).toEqual([
       ...modern.map((model) => ({
         model,
         'cookie-acquisition-model': 'gpt-5.6-luna',
-        'cookie-pool-group': '',
+        'cookie-pool-mode': 'shared',
+        'cookie-pool-group': firstPool,
       })),
-      { model: 'gpt-5.5', 'cookie-acquisition-model': '', 'cookie-pool-group': '' },
+      {
+        model: 'gpt-5.5',
+        'cookie-acquisition-model': '',
+        'cookie-pool-mode': 'shared',
+        'cookie-pool-group': secondPool,
+      },
     ]);
     expect(draft().rules).toEqual(before.rules);
     expect(draft()['cookie-acquisition-model']).toBe('fallback');
@@ -143,9 +153,9 @@ describe('shared model default rules', () => {
       })
     ).toHaveLength(2);
     edit(1);
-    fireEvent.change(screen.getByLabelText('codex_state.cookie-pool-group'), {
-      target: { value: 'modern' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'codex_state.cookie_sharing' }));
+    fireEvent.click(screen.getByRole('option', { name: 'codex_state.cookie_sharing_rule' }));
+    const pool = draft()['model-overrides'][0]['cookie-pool-group'];
     clearSetting('cookie-acquisition-model', 'rule_inherit');
     const expected = modern.map((model) => ({
       model,
@@ -153,7 +163,8 @@ describe('shared model default rules', () => {
       'match-model': false,
       'cookie-backup-count': 0,
       extension: { keep: true },
-      'cookie-pool-group': 'modern',
+      'cookie-pool-mode': 'shared',
+      'cookie-pool-group': pool,
     }));
     expect(draft()['model-overrides']).toEqual([...expected, other]);
     const doc = parseDocument('codex: {state-override: {future: keep}}');
