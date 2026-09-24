@@ -145,7 +145,9 @@ export type VisualConfigValidationErrorCode =
   | 'integer_range_0_9223372036'
   | 'strict_size_requires_aspect_adaptation'
   | 'resize_requires_aspect_adaptation'
-  | 'resize_filter';
+  | 'resize_filter'
+  | 'image_reasoning_mode'
+  | 'image_instant_requires_auto';
 
 export type VisualConfigValidationErrors = Partial<
   Record<VisualConfigFieldPath | string, VisualConfigValidationErrorCode>
@@ -385,6 +387,7 @@ export type VisualConfigValues = {
   chatgptWebInvalidPasskeyResponseAsDead: boolean;
   chatgptWebAutoDeleteDeadPriorities: string[];
   chatgptWebImageUpstreamModel: string;
+  chatgptWebImageReasoningMode: string;
   chatgptWebImageModels: string[];
   chatgptWebIgnoreUnsupportedImageParams: boolean;
   chatgptWebSanitizeErrorResponses: boolean;
@@ -526,6 +529,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebInvalidPasskeyResponseAsDead: false,
   chatgptWebAutoDeleteDeadPriorities: [],
   chatgptWebImageUpstreamModel: 'auto',
+  chatgptWebImageReasoningMode: 'auto',
   chatgptWebImageModels: [],
   chatgptWebIgnoreUnsupportedImageParams: false,
   chatgptWebSanitizeErrorResponses: false,

@@ -144,6 +144,7 @@ export interface ImagesConfig {
     bootstrapRetries?: number;
     imageModels?: string[];
     upstreamModel?: string;
+    reasoningMode?: string;
     sanitizeErrorResponses?: boolean;
     autoCleanupLibraryOnFull?: boolean;
     normalizeMismatchedImageMime?: boolean;

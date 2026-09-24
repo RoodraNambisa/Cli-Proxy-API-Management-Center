@@ -1662,6 +1662,14 @@ export function getVisualConfigValidationErrors(
       3840,
       'integer_range_1_3840'
     ),
+    chatgptWebImageReasoningMode: !['auto', 'instant', 'low', 'medium', 'high', 'xhigh', ''].includes(
+      values.chatgptWebImageReasoningMode.trim().toLowerCase()
+    )
+      ? 'image_reasoning_mode'
+      : values.chatgptWebImageReasoningMode.trim().toLowerCase() === 'instant' &&
+          !['', 'auto'].includes(values.chatgptWebImageUpstreamModel.trim())
+        ? 'image_instant_requires_auto'
+        : undefined,
     chatgptWebStrictSize:
       values.chatgptWebStrictSize && !values.chatgptWebAdaptSizeToAspectRatio
         ? 'strict_size_requires_aspect_adaptation'
@@ -2596,6 +2604,12 @@ function getNextDirtyFields(
       nextValues.chatgptWebImageUpstreamModel === baselineValues.chatgptWebImageUpstreamModel
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageReasoningMode')) {
+    updateDirty(
+      'chatgptWebImageReasoningMode',
+      nextValues.chatgptWebImageReasoningMode === baselineValues.chatgptWebImageReasoningMode
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageModels')) {
     updateDirty(
       'chatgptWebImageModels',
@@ -3316,6 +3330,11 @@ export function useVisualConfig() {
       const authMaintenance = asRecord(parsed['auth-maintenance']);
       const images = asRecord(parsed.images);
       const imagesChatGPTWeb = asRecord(images?.['chatgpt-web'] ?? images?.chatgptWeb);
+      const imageReasoningMode = imagesChatGPTWeb && Object.prototype.hasOwnProperty.call(imagesChatGPTWeb, 'reasoning-mode')
+        ? imagesChatGPTWeb['reasoning-mode'] : imagesChatGPTWeb?.reasoningMode;
+      if (imageReasoningMode !== undefined && typeof imageReasoningMode !== 'string') {
+        throw new Error('images.chatgpt-web.reasoning-mode must be a string');
+      }
       const pprof = asRecord(parsed.pprof);
       const routing = asRecord(readMergedYamlField(document, ['routing']));
       const payload = asRecord(parsed.payload);
@@ -3596,6 +3615,7 @@ export function useVisualConfig() {
             : typeof imagesChatGPTWeb?.upstreamModel === 'string'
               ? imagesChatGPTWeb.upstreamModel
               : DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel,
+        chatgptWebImageReasoningMode: (imageReasoningMode ?? 'auto').trim().toLowerCase() || 'auto',
         chatgptWebImageModels: parseStringList(
           imagesChatGPTWeb?.['image-models'] ?? imagesChatGPTWeb?.imageModels
         ),
@@ -4531,6 +4551,8 @@ export function useVisualConfig() {
           values.images.streamFlushMinBytes !== imagesDefaults.streamFlushMinBytes ||
           values.chatgptWebImageUpstreamModel !==
             DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel ||
+          values.chatgptWebImageReasoningMode !==
+            DEFAULT_VISUAL_VALUES.chatgptWebImageReasoningMode ||
           values.chatgptWebIgnoreUnsupportedImageParams !==
             DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
           values.chatgptWebSanitizeErrorResponses !==
@@ -4646,6 +4668,8 @@ export function useVisualConfig() {
             ) ||
             values.chatgptWebImageUpstreamModel !==
               DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel ||
+            values.chatgptWebImageReasoningMode !==
+              DEFAULT_VISUAL_VALUES.chatgptWebImageReasoningMode ||
             values.chatgptWebIgnoreUnsupportedImageParams !==
               DEFAULT_VISUAL_VALUES.chatgptWebIgnoreUnsupportedImageParams ||
             values.chatgptWebSanitizeErrorResponses !==
@@ -4713,6 +4737,12 @@ export function useVisualConfig() {
               doc,
               ['images', 'chatgpt-web', 'upstream-model'],
               values.chatgptWebImageUpstreamModel
+            );
+            doc.deleteIn(['images', 'chatgpt-web', 'reasoningMode']);
+            setStringInDoc(
+              doc,
+              ['images', 'chatgpt-web', 'reasoning-mode'],
+              values.chatgptWebImageReasoningMode.trim().toLowerCase() || 'auto'
             );
             doc.setIn(
               ['images', 'chatgpt-web', 'ignore-unsupported-params'],

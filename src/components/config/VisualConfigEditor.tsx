@@ -2334,6 +2334,41 @@ export function VisualConfigEditor({
               </div>
               <div className={styles.webImageModelGrid}>
                 <FieldShell
+                  htmlFor="config-chatgpt-web-image-reasoning-mode"
+                  label={t('config_management.settings_center.chatgpt_web.image_reasoning_mode')}
+                  hint={t(
+                    'config_management.settings_center.chatgpt_web.image_reasoning_mode_description'
+                  )}
+                  hintId="config-chatgpt-web-image-reasoning-mode-hint"
+                  error={getValidationMessage(t, validationErrors?.chatgptWebImageReasoningMode)}
+                  compactHint
+                >
+                  <Select
+                    id="config-chatgpt-web-image-reasoning-mode"
+                    value={values.chatgptWebImageReasoningMode}
+                    disabled={disabled}
+                    aria-describedby="config-chatgpt-web-image-reasoning-mode-hint"
+                    aria-invalid={Boolean(validationErrors?.chatgptWebImageReasoningMode)}
+                    options={[
+                      {
+                        value: 'auto',
+                        label: t('config_management.settings_center.chatgpt_web.image_reasoning_auto'),
+                      },
+                      {
+                        value: 'instant',
+                        label: t('config_management.settings_center.chatgpt_web.image_reasoning_instant'),
+                      },
+                      ...['low', 'medium', 'high', 'xhigh'].map((value) => ({
+                        value,
+                        label: t(`config_management.settings_center.chatgpt_web.image_reasoning_${value}`),
+                      })),
+                    ]}
+                    onChange={(chatgptWebImageReasoningMode) =>
+                      onChange({ chatgptWebImageReasoningMode })
+                    }
+                  />
+                </FieldShell>
+                <FieldShell
                   htmlFor="config-chatgpt-web-image-upstream-model"
                   label={t('config_management.settings_center.chatgpt_web.image_upstream_model')}
                   hint={t(
@@ -2354,7 +2389,7 @@ export function VisualConfigEditor({
                     }
                   />
                 </FieldShell>
-                <div id="config-chatgpt-web-image-models" tabIndex={-1}>
+                <div id="config-chatgpt-web-image-models" className={styles.webImageAliases} tabIndex={-1}>
                   <FieldShell
                     label={t('config_management.settings_center.chatgpt_web.image_models')}
                     hint={t(

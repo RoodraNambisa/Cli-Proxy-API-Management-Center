@@ -17,6 +17,28 @@ vi.mock('react-i18next', async (importOriginal) => ({
 }));
 
 describe('Provider-scoped image model controls', () => {
+  test('offers all Web image reasoning modes and indexes the control for search and dirty state', () => {
+    const values = structuredClone(DEFAULT_VISUAL_VALUES);
+    const onChange = vi.fn();
+    render(<MemoryRouter initialEntries={['/config?section=config-chatgpt-web-image-reasoning-mode']}>
+      <VisualConfigEditor values={values} baselineValues={values} onChange={onChange} renderRequestBodyPanels={() => null} />
+    </MemoryRouter>);
+    const control = document.getElementById('config-chatgpt-web-image-reasoning-mode')!;
+    expect(control).not.toBeNull();
+    expect(control.closest('[hidden]')).toBeNull();
+    fireEvent.click(control);
+    for (const mode of ['auto', 'instant', 'low', 'medium', 'high', 'xhigh']) {
+      expect(screen.getByRole('option', {name: `config_management.settings_center.chatgpt_web.image_reasoning_${mode}`})).not.toBeNull();
+    }
+    fireEvent.click(screen.getByRole('option', {name: 'config_management.settings_center.chatgpt_web.image_reasoning_xhigh'}));
+    expect(onChange).toHaveBeenLastCalledWith({chatgptWebImageReasoningMode: 'xhigh'});
+    expect(CONFIG_SEARCH_DEFINITIONS.find(item=>item.id==='config-chatgpt-web-image-reasoning-mode')?.yamlKeys).toContain('images.chatgpt-web.reasoning-mode');
+    const page = CONFIG_PAGE_DEFINITIONS.find(item=>item.id==='provider-chatgpt-web')!;
+    expect(configPageHasDirtyFields(page,['chatgptWebImageReasoningMode'])).toBe(true);
+    for (const locale of [en, ru, zhCN, zhTW]) {
+      expect(locale.config_management.settings_center.chatgpt_web.image_reasoning_xhigh).toBeTruthy();
+    }
+  });
   test('keeps a newly added alias focused and visible as it grows, and preserves edits after deletion', () => {
     function Editor() {
       const [value, setValue] = useState(['gpt-image-2', 'gpt-image-2.5']);

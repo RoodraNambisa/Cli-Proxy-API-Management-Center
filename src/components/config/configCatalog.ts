@@ -168,6 +168,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebAutoDeleteDead',
       'chatgptWebInvalidPasskeyResponseAsDead',
       'chatgptWebImageUpstreamModel',
+      'chatgptWebImageReasoningMode',
       'chatgptWebImageModels',
       'chatgptWebIgnoreUnsupportedImageParams',
       'chatgptWebSanitizeErrorResponses',
@@ -890,6 +891,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.settings_center.chatgpt_web.image_upstream_model',
     yamlKeys: ['images.chatgpt-web.upstream-model', 'images.chatgpt-web.ignore-unsupported-params'],
     aliases: ['picture_v2', 'web image', '图片参数', '忽略参数'],
+  },
+  {
+    id: 'config-chatgpt-web-image-reasoning-mode',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'config_management.settings_center.chatgpt_web.image_reasoning_mode',
+    yamlKeys: ['images.chatgpt-web.reasoning-mode'],
+    aliases: ['instant', 'thinking', '即时', '思考模式', 'picture_v2'],
   },
   {
     id: 'config-chatgpt-web-image-models',

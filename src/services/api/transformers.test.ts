@@ -82,6 +82,10 @@ describe('normalizeConfigResponse Codex configuration', () => {
 });
 
 describe('normalizeConfigResponse ChatGPT Web image configuration', () => {
+  it.each(['reasoning-mode', 'reasoningMode'])('normalizes %s without inventing a default', (key) => {
+    expect(normalizeConfigResponse({images: {'chatgpt-web': {[key]: 'instant'}}}).images?.chatgptWeb?.reasoningMode).toBe('instant');
+    expect(normalizeConfigResponse({images: {'chatgpt-web': {}}}).images?.chatgptWeb?.reasoningMode).toBeUndefined();
+  });
   it.each([
     {
       'image-models': ['tool-a', 'tool-b'],

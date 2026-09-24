@@ -1189,6 +1189,10 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
               typeof (chatgptWeb['upstream-model'] ?? chatgptWeb.upstreamModel) === 'string'
                 ? String(chatgptWeb['upstream-model'] ?? chatgptWeb.upstreamModel)
                 : undefined,
+            reasoningMode:
+              typeof (chatgptWeb['reasoning-mode'] ?? chatgptWeb.reasoningMode) === 'string'
+                ? String(chatgptWeb['reasoning-mode'] ?? chatgptWeb.reasoningMode)
+                : undefined,
             sanitizeErrorResponses: normalizeBoolean(
               chatgptWeb['sanitize-error-responses'] ?? chatgptWeb.sanitizeErrorResponses
             ),
