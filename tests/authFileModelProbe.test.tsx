@@ -4,6 +4,7 @@ import { AuthFileModelProbe } from '@/features/authFiles/components/AuthFileMode
 import { AuthFileModelsModal } from '@/features/authFiles/components/AuthFileModelsModal';
 import { authFilesApi, type ModelProbeResult } from '@/services/api/authFiles';
 import { apiClient } from '@/services/api/client';
+import { useAuthStore } from '@/stores';
 import * as clipboard from '@/utils/clipboard';
 import type { CodexStateSnapshot } from '@/types/authFile';
 
@@ -25,6 +26,37 @@ const result: ModelProbeResult = {
 const models = [{ id: 'grok-4.6' }, { id: 'grok-4.5' }, { id: 'grok-imagine-image' }];
 
 describe('credential model connection tests', () => {
+  it('refreshes State options only when the provider or connection scope changes', async () => {
+    const options = vi.spyOn(authFilesApi, 'getCodexStateOptions').mockResolvedValue({
+      credentials: [], models: [], priorities: [], plans: [],
+    });
+    const previousGeneration = useAuthStore.getState().connectionGeneration;
+    const props = { fileName: 'codex.json', models: [{ id: 'model' }] };
+    const view = render(<AuthFileModelProbe {...props} provider="xai" />);
+    try {
+      expect(options).not.toHaveBeenCalled();
+      await act(async () => view.rerender(<AuthFileModelProbe {...props} provider="codex" />));
+      expect(options).toHaveBeenCalledTimes(1);
+      await act(async () => view.rerender(<AuthFileModelProbe {...props} provider="codex" />));
+      fireEvent.change(screen.getByRole('textbox', { name: 'model_probe.prompt' }), {
+        target: { value: 'changed prompt' },
+      });
+      expect(options).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        useAuthStore.setState({ connectionGeneration: (previousGeneration ?? 0) + 1 });
+      });
+      expect(options).toHaveBeenCalledTimes(2);
+      await act(async () => view.rerender(<AuthFileModelProbe {...props} provider="xai" />));
+      await act(async () => {
+        useAuthStore.setState({ connectionGeneration: (previousGeneration ?? 0) + 2 });
+      });
+      expect(options).toHaveBeenCalledTimes(2);
+    } finally {
+      view.unmount();
+      useAuthStore.setState({ connectionGeneration: previousGeneration });
+    }
+  });
+
   it.each(['responses', 'chat', 'chat-direct', 'chat-responses'])(
     'sends temporary reasoning effort for %s while preserving advanced JSON',
     async (protocol) => {

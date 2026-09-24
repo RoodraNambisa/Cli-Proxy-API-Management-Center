@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { parseDocument, parse } from 'yaml';
-import { mergeStateSettings, stateNeedsTurnState } from './codexStateStrategy';
+import {
+  mergeStateSettings,
+  stateNeedsTurnState,
+  stateStrategySettingsInvalid,
+} from './codexStateStrategy';
 import {
   readCodexState,
   serializeCodexState,
@@ -10,6 +14,28 @@ import {
 import { inheritedStateSettings } from './codexStateModelRules';
 
 describe('State and Cookie strategy configuration', () => {
+  it('rejects every ASCII control character in model and group names', () => {
+    for (const key of ['cookie-acquisition-model', 'cookie-pool-group']) {
+      for (const code of [...Array.from({ length: 32 }, (_, index) => index), 0x7f]) {
+        expect(stateStrategySettingsInvalid({ [key]: `left${String.fromCharCode(code)}right` })).toBe(true);
+      }
+    }
+  });
+  it('preserves wildcard, whitespace, Unicode and byte-length validation', () => {
+    for (const value of ['model name', 'model*', 'model?', 'model\u00a0name', 'model\u2028name']) {
+      expect(stateStrategySettingsInvalid({ 'cookie-acquisition-model': value })).toBe(true);
+    }
+    for (const value of ['', 'model-name', '\u6a21\u578b', 'a'.repeat(256)]) {
+      expect(stateStrategySettingsInvalid({ 'cookie-acquisition-model': value })).toBe(false);
+    }
+    for (const value of ['', 'group name', 'group*?', '\u5171\u4eab\u7ec4', 'a'.repeat(128)]) {
+      expect(stateStrategySettingsInvalid({ 'cookie-pool-group': value })).toBe(false);
+    }
+    expect(stateStrategySettingsInvalid({ 'cookie-acquisition-model': 'a'.repeat(257) })).toBe(true);
+    expect(stateStrategySettingsInvalid({ 'cookie-pool-group': 'a'.repeat(129) })).toBe(true);
+    expect(stateStrategySettingsInvalid({ 'cookie-pool-group': ' leading' })).toBe(true);
+    expect(stateStrategySettingsInvalid({ 'cookie-pool-group': 'trailing ' })).toBe(true);
+  });
   it('normalizes units per layer, preserving explicit zero', () => {
     const a = mergeStateSettings(
       { 'ttl-seconds': 120, 'refresh-before-seconds': 15 },

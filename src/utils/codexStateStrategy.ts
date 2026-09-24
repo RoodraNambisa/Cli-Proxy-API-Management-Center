@@ -57,6 +57,14 @@ export function mergeStateSettings(
   return merged;
 }
 
+function hasAsciiControlCharacters(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x1f || code === 0x7f) return true;
+  }
+  return false;
+}
+
 export function stateStrategySettingsInvalid(s: Record<string, unknown>): boolean {
   if (
     s['cookie-pool-mode'] !== undefined &&
@@ -68,7 +76,8 @@ export function stateStrategySettingsInvalid(s: Record<string, unknown>): boolea
     source !== undefined &&
     (typeof source !== 'string' ||
       new TextEncoder().encode(source).length > 256 ||
-      /[\s\x00-\x1f\x7f*?]/.test(source))
+      hasAsciiControlCharacters(source) ||
+      /[\s*?]/.test(source))
   )
     return true;
   const group = s['cookie-pool-group'];
@@ -77,7 +86,7 @@ export function stateStrategySettingsInvalid(s: Record<string, unknown>): boolea
     (typeof group !== 'string' ||
       new TextEncoder().encode(group).length > 128 ||
       group.trim() !== group ||
-      /[\x00-\x1f\x7f]/.test(group))
+      hasAsciiControlCharacters(group))
   )
     return true;
   if (s.strategy !== undefined && !['state', 'cookie-only'].includes(String(s.strategy)))

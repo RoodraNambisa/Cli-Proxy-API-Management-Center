@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCodexStateAcquisition } from '../hooks/useCodexStateAcquisition';
 import { ModelProbeDetailsModal } from './ModelProbeDetailsModal';
@@ -33,8 +33,11 @@ export function AuthFileModelProbe({
   const stateOptions = useCodexStateOptions();
   const cookieSupported = stateOptions.data.features?.cookie_only === true;
   const autoCookieEnabled = stateOptions.data.auto_cookie_enabled === true;
+  const refreshStateOptions = useEffectEvent(() => {
+    void stateOptions.refresh();
+  });
   useEffect(() => {
-    if (provider === 'codex') void stateOptions.refresh();
+    if (provider === 'codex') refreshStateOptions();
   }, [provider, stateOptions.scope]);
   const [protocol, setProtocol] = useState(
     provider === 'codex' || provider === 'xai' ? 'responses' : 'chat'

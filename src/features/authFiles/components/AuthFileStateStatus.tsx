@@ -42,6 +42,7 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
   const models = updated?.scope === scope ? updated.models : (state?.models ?? []);
   const data = updated?.scope === scope ? updated : state;
   const cookies = data?.cookies ?? (data?.cookie ? [data.cookie] : []);
+  const hasCookies = cookies.length > 0;
   const pollModels = [...models, ...cookies];
   const waiting =
     cookies.some(
@@ -72,9 +73,9 @@ export function AuthFileStateStatus({ file, disabled }: { file: AuthFileItem; di
   }, [file.codex_state]);
   useEffect(() => {
     if (!file.codex_state?.enabled) return;
-    const timer = setInterval(() => setNow(Date.now()), cookies.length ? 1000 : 30000);
+    const timer = setInterval(() => setNow(Date.now()), hasCookies ? 1000 : 30000);
     return () => clearInterval(timer);
-  }, [file.codex_state?.enabled, Boolean(cookies.length)]);
+  }, [file.codex_state?.enabled, hasCookies]);
   useEffect(() => {
     if (!state?.enabled || !waiting || disabled || busy) return;
     const controller = new AbortController();
