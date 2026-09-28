@@ -3057,6 +3057,7 @@
         "boolean_false": "false"
       },
       "validation": {
+        "codex_base_url": "請輸入 HTTP(S) 基底位址，不得包含使用者名稱、密碼、查詢參數或片段。",
         "grok_image_tool_policy": "請選擇移除、報錯或允許。",
         "grok_headers": "請求頭名稱和值必須合法，同名頭不能重複，最多 64 項。",
         "grok_parameter": "Grok 參數值不合法。",
@@ -4635,6 +4636,13 @@
       "unknown": "未知",
       "not_applicable": "不適用"
     }
+  },
+  "codex_upstream": {
+    "global_label": "Codex OAuth 預設 Base URL",
+    "global_hint": "留空使用官方位址；單一憑證 base_url 優先。用於 Responses、Compact、圖片與 Alpha Search，不變更 API Key、登入更新、配額查詢或原生 Realtime 位址。請填寫協定相容的完整基底位址，不要加 /responses。自訂服務會收到存取權杖，請僅使用可信任的位址。",
+    "account_label": "Codex Base URL（此憑證）",
+    "account_hint": "優先於全域預設位址，清空後恢復繼承。需相容 Codex 協定；自訂服務會收到此憑證的存取權杖，請僅使用可信任的位址。",
+    "invalid_url": "請輸入 HTTP(S) 基底位址，不得包含使用者名稱、密碼、查詢參數或片段。"
   },
   "grok_upstream": {
     "title": "Grok 上游位址",

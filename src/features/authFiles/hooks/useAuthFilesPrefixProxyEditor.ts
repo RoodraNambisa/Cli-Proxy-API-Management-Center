@@ -168,9 +168,9 @@ export const buildAuthFileFieldsPatch = (
 ): AuthFileFieldsPatch => {
   const patch: AuthFileFieldsPatch = {};
   if (
-    isXaiFile &&
+    (isXaiFile || isCodexFile) &&
     (!jsonValuesEqual(previous.base_url, next.base_url) ||
-      !jsonValuesEqual(previous.using_api, next.using_api))
+      (isXaiFile && !jsonValuesEqual(previous.using_api, next.using_api)))
   ) {
     patch.base_url = typeof next.base_url === 'string' ? next.base_url : '';
   }
@@ -270,10 +270,10 @@ const buildPrefixProxyUpdatedText = (
 ): string => {
   if (!editor?.json) return editor?.rawText ?? '';
   const next: Record<string, unknown> = { ...editor.json };
-  if (editor.isXaiFile && editor.baseUrlTouched) {
+  if ((editor.isXaiFile || editor.isCodexFile) && editor.baseUrlTouched) {
     const baseUrl = normalizeGrokBaseUrl(editor.baseUrl) ?? editor.baseUrl.trim();
     next.base_url = baseUrl;
-    next.using_api = Boolean(baseUrl && baseUrl !== GROK_UPSTREAM_URLS.cli);
+    if (editor.isXaiFile) next.using_api = Boolean(baseUrl && baseUrl !== GROK_UPSTREAM_URLS.cli);
   }
   if (editor.isXaiFile && editor.grokRoutingTouched && editor.grokRouting) {
     const previous = readGrokModelRouting(
@@ -459,10 +459,10 @@ export function useAuthFilesPrefixProxyEditor(
     (prefixProxyEditor?.grokRoutingTouched &&
       prefixProxyEditor.grokRouting &&
       grokModelRoutingError(prefixProxyEditor.grokRouting)) ||
-    (prefixProxyEditor?.isXaiFile &&
+    ((prefixProxyEditor?.isXaiFile || prefixProxyEditor?.isCodexFile) &&
       prefixProxyEditor.baseUrlTouched &&
       (normalizeGrokBaseUrl(prefixProxyEditor.baseUrl) === null ||
-        (prefixProxyEditor.grokUpstream === 'custom' && !prefixProxyEditor.baseUrl.trim()))) ||
+        (prefixProxyEditor.isXaiFile && prefixProxyEditor.grokUpstream === 'custom' && !prefixProxyEditor.baseUrl.trim()))) ||
     prefixProxyEditor?.requestScopedErrors.some((rule) => validateRequestScopedErrorRule(rule)) ||
     (prefixProxyEditor?.headersTouched && prefixProxyEditor.headersError) ||
     (prefixProxyEditor?.isChatGptWebFile &&
@@ -753,12 +753,12 @@ export function useAuthFilesPrefixProxyEditor(
       }
     }
     if (
-      prefixProxyEditor?.isXaiFile &&
+      (prefixProxyEditor?.isXaiFile || prefixProxyEditor?.isCodexFile) &&
       prefixProxyEditor.baseUrlTouched &&
       (normalizeGrokBaseUrl(prefixProxyEditor.baseUrl) === null ||
-        (prefixProxyEditor.grokUpstream === 'custom' && !prefixProxyEditor.baseUrl.trim()))
+        (prefixProxyEditor.isXaiFile && prefixProxyEditor.grokUpstream === 'custom' && !prefixProxyEditor.baseUrl.trim()))
     ) {
-      showNotification(t('grok_upstream.invalid_url'), 'error');
+      showNotification(t(prefixProxyEditor.isCodexFile ? 'codex_upstream.invalid_url' : 'grok_upstream.invalid_url'), 'error');
       return;
     }
     const ruleIssue = prefixProxyEditor?.requestScopedErrors

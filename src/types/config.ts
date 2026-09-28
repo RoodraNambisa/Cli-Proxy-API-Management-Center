@@ -243,6 +243,7 @@ export interface ClientApiKeyGroup {
 }
 
 export interface CodexConfig {
+  baseUrl?: string;
   autoCookie?: boolean;
   autoCookieOverride?: boolean;
   liveEnabled?: boolean;

@@ -1,4 +1,5 @@
 import { autoCookieConflict } from '@/utils/codexAutoCookie';
+import { normalizeCodexBaseUrl, readCodexBaseUrl } from '@/utils/codexUpstream';
 import { readResponseGuard, writeResponseGuard, responseGuardError, responseGuardEqual } from '@/utils/codexResponseGuard';
 import { stateNeedsTurnState } from "@/utils/codexStateStrategy";
 import { normalizeRoutingCredentials, validRoutingCredential } from '@/utils/routingCredentials';
@@ -1624,6 +1625,7 @@ export function getVisualConfigValidationErrors(
     requestRetry: getNonNegativeIntegerError(values.requestRetry),
     maxRetryCredentials: getNonNegativeIntegerError(values.maxRetryCredentials),
     maxRetryInterval: getNonNegativeIntegerError(values.maxRetryInterval),
+    codexBaseUrl: normalizeCodexBaseUrl(values.codexBaseUrl) === null ? 'codex_base_url' : undefined,
     codexFingerprintSessionIdentityPoolSize: getIntegerRangeError(
       values.codexFingerprintSessionIdentityPoolSize,
       MIN_CODEX_SESSION_IDENTITY_POOL_SIZE,
@@ -2418,6 +2420,9 @@ function getNextDirtyFields(
       'codexIdentityConfuse',
       nextValues.codexIdentityConfuse === baselineValues.codexIdentityConfuse
     );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexBaseUrl')) {
+    updateDirty('codexBaseUrl', nextValues.codexBaseUrl === baselineValues.codexBaseUrl);
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexPassthroughPromptCacheKey')) {
     updateDirty(
@@ -3305,6 +3310,7 @@ export function useVisualConfig() {
       const tls = asRecord(parsed.tls);
       const remoteManagement = asRecord(parsed['remote-management']);
       const codex = asRecord(readMergedYamlField(document, ['codex']));
+      const codexBaseUrl = readCodexBaseUrl(codex?.['base-url'] ?? codex?.baseUrl);
       const codexLiveEnabled = codex && Object.prototype.hasOwnProperty.call(codex, 'live-enabled')
         ? codex['live-enabled'] : codex?.liveEnabled;
       if (codexLiveEnabled != null && typeof codexLiveEnabled !== 'boolean') {
@@ -3528,6 +3534,7 @@ export function useVisualConfig() {
         proxyUrl: typeof parsed['proxy-url'] === 'string' ? parsed['proxy-url'] : '',
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
+        codexBaseUrl,
         codexLiveEnabled: codexLiveEnabled ?? false,
         codexLiveMediaRelay: readCodexLiveMediaYaml(yamlContent),
         codexPassthroughPromptCacheKey: codexPassthroughPromptCacheKey ?? false,
@@ -4130,6 +4137,8 @@ export function useVisualConfig() {
         if (
           docHas(doc, ['codex']) ||
           inheritedCodex ||
+          values.codexBaseUrl ||
+          values.codexBaseUrl !== baselineValues.codexBaseUrl ||
           values.codexLiveEnabled ||
           mediaChanged ||
           quotaDisableChanged || stateChanged || guardChanged ||
@@ -4153,6 +4162,11 @@ export function useVisualConfig() {
             doc.setIn(['codex'], doc.createNode(inheritedCodex));
           }
           ensureMapInDoc(doc, ['codex']);
+          if (values.codexBaseUrl || values.codexBaseUrl !== baselineValues.codexBaseUrl ||
+              docHas(doc, ['codex', 'base-url']) || docHas(doc, ['codex', 'baseUrl'])) {
+            doc.setIn(['codex', 'base-url'], normalizeCodexBaseUrl(values.codexBaseUrl) ?? values.codexBaseUrl);
+            doc.deleteIn(['codex', 'baseUrl']);
+          }
           doc.setIn(['codex', 'live-enabled'], values.codexLiveEnabled);
           doc.deleteIn(['codex', 'liveEnabled']);
           if (guardChanged) writeResponseGuard(doc,values.codexResponseGuard);
@@ -5145,7 +5159,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [state.dirtyFields, baselineValues.codexAutoCookie, baselineValues.codexAutoCookieOverride, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [state.dirtyFields, baselineValues.codexBaseUrl, baselineValues.codexAutoCookie, baselineValues.codexAutoCookieOverride, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {

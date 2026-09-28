@@ -5385,10 +5385,20 @@ export function VisualConfigEditor({
 
                 <PageGroup active={activePageId === 'provider-codex'}>
                   <SettingsDisclosure id="config-codex-fingerprint" title={t('config_management.settings_center.subsections.codex_transport')} description={t('config_management.settings_center.subsections.codex_transport_desc')}
-                    focusTarget={focusTarget} targetIds={['config-codex-headers', 'config-codex-turn-state-policy', 'config-codex-fingerprint-default-mode', 'config-codex-fingerprint-session-identity-pool-size']}
-                    dirty={hasDirtyConfigField(dirtyFields, ['codexIdentityConfuse', 'codexSpoofSessionIdentity', 'codexTurnStatePolicy', 'codexFingerprintDefaultMode', 'codexFingerprintSessionIdentityPoolSize', 'codexFingerprintJA3', 'codexFingerprintForceHTTP1', 'codexFingerprintImagesForceHTTP1', 'codexEnforceSoftwareIdentity', 'codexHeaderDefaultsUserAgent', 'codexHeaderDefaultsBetaFeatures', 'codexHeaderDefaultsOriginator'])} errorCount={countErrors(['codexFingerprintSessionIdentityPoolSize'])}
+                    focusTarget={focusTarget} targetIds={['config-codex-base-url', 'config-codex-headers', 'config-codex-turn-state-policy', 'config-codex-fingerprint-default-mode', 'config-codex-fingerprint-session-identity-pool-size']}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexBaseUrl', 'codexIdentityConfuse', 'codexSpoofSessionIdentity', 'codexTurnStatePolicy', 'codexFingerprintDefaultMode', 'codexFingerprintSessionIdentityPoolSize', 'codexFingerprintJA3', 'codexFingerprintForceHTTP1', 'codexFingerprintImagesForceHTTP1', 'codexEnforceSoftwareIdentity', 'codexHeaderDefaultsUserAgent', 'codexHeaderDefaultsBetaFeatures', 'codexHeaderDefaultsOriginator'])} errorCount={countErrors(['codexBaseUrl', 'codexFingerprintSessionIdentityPoolSize'])}
                   >
                   <SectionGrid>
+                    <Input
+                      id="config-codex-base-url"
+                      label={t('codex_upstream.global_label')}
+                      hint={t('codex_upstream.global_hint')}
+                      placeholder="https://chatgpt.com/backend-api/codex"
+                      value={values.codexBaseUrl}
+                      disabled={disabled}
+                      error={getValidationMessage(t, validationErrors?.codexBaseUrl)}
+                      onChange={(event) => onChange({ codexBaseUrl: event.target.value })}
+                    />
                     <ToggleRow
                       title={t('config_management.visual.sections.network.codex_identity_confuse')}
                       description={t(

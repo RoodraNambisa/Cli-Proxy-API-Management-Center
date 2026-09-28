@@ -23,6 +23,7 @@ export type PayloadParamValidationErrorCode =
   | 'payload_invalid_json';
 
 export type VisualConfigFieldPath =
+  | 'codexBaseUrl'
   | 'port'
   | 'rmAccessPath'
   | 'logsMaxTotalSizeMb'
@@ -93,6 +94,7 @@ export type VisualConfigFieldPath =
   | 'streaming.nonstreamKeepaliveInterval';
 
 export type VisualConfigValidationErrorCode =
+  | 'codex_base_url'
   | CodexLiveMediaValidationCode
   | 'port_range'
   | 'management_access_path'
@@ -352,6 +354,7 @@ export type VisualConfigValues = {
   proxyUrl: string;
   forceModelPrefix: boolean;
   codexIdentityConfuse: boolean;
+  codexBaseUrl: string;
   codexLiveEnabled: boolean;
   codexLiveMediaRelay: CodexLiveMediaVisualConfig;
   codexPassthroughPromptCacheKey: boolean;
@@ -494,6 +497,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   proxyUrl: '',
   forceModelPrefix: false,
   codexIdentityConfuse: false,
+  codexBaseUrl: '',
   codexLiveEnabled: false,
   codexLiveMediaRelay: DEFAULT_CODEX_LIVE_MEDIA,
   codexPassthroughPromptCacheKey: false,

@@ -980,6 +980,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       throw new Error('codex.live-enabled must be a boolean');
     }
     config.codex = {
+      baseUrl: normalizeString(codex['base-url'] ?? codex.baseUrl),
       liveEnabled: liveEnabled ?? false,
       liveMediaRelay: normalizeCodexLiveMedia(codexMediaField(codex, 'live-media-relay', 'liveMediaRelay')),
       optimizeMultiAgentV2: readCodexBooleanPolicy(codex, 'optimize-multi-agent-v2', 'optimizeMultiAgentV2'),

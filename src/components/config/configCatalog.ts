@@ -124,6 +124,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     descriptionKey: 'config_management.settings_center.pages.provider_codex.description',
     dirtyPrefixes: [
       'codexCustomModels',
+      'codexBaseUrl',
       'codexLiveEnabled',
       'codexLiveMediaRelay',
       'codexIdentityConfuse',
@@ -596,6 +597,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     pageId: 'provider-codex',
     labelKey: 'config_management.visual.codex_custom_models.title',
     yamlKeys: ['codex-custom-models'],
+  },
+  {
+    id: 'config-codex-base-url',
+    pageId: 'provider-codex',
+    labelKey: 'codex_upstream.global_label',
+    yamlKeys: ['codex.base-url'],
+    aliases: ['codex baseurl', 'codex base url', 'Codex 上游地址'],
   },
   {
     id: 'config-codex-fingerprint',

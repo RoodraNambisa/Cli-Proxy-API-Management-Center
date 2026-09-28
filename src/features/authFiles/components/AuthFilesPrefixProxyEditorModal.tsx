@@ -10,6 +10,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { GROK_UPSTREAM_MODES, normalizeGrokBaseUrl } from '@/utils/grokUpstream';
+import { DEFAULT_CODEX_BASE_URL } from '@/utils/codexUpstream';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import type {
   PrefixProxyEditorField,
@@ -46,10 +47,10 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
       ? editor.rawText
       : formatJsonText(updatedText);
   const invalidBaseUrl = Boolean(
-    editor?.isXaiFile &&
+    (editor?.isXaiFile || editor?.isCodexFile) &&
     editor.baseUrlTouched &&
     (normalizeGrokBaseUrl(editor.baseUrl) === null ||
-      (editor.grokUpstream === 'custom' && !editor.baseUrl.trim()))
+      (editor.isXaiFile && editor.grokUpstream === 'custom' && !editor.baseUrl.trim()))
   );
 
   return (
@@ -151,6 +152,17 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
               </div>
               {!editor.readOnly && (
                 <fieldset className={styles.prefixProxyFields} disabled={Boolean(editor.jsonError)}>
+                  {editor.isCodexFile && (
+                    <Input
+                      label={t('codex_upstream.account_label')}
+                      hint={t('codex_upstream.account_hint')}
+                      value={editor.baseUrl}
+                      placeholder={DEFAULT_CODEX_BASE_URL}
+                      disabled={disableControls || editor.saving || !editor.json}
+                      error={invalidBaseUrl ? t('codex_upstream.invalid_url') : undefined}
+                      onChange={(event) => onChange('baseUrl', event.target.value)}
+                    />
+                  )}
                   {editor.isXaiFile && (
                     <>
                       <div className="form-group">

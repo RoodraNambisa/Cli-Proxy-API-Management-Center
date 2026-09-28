@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { buildAuthFileFieldsPatch } from './useAuthFilesPrefixProxyEditor';
 
+describe('Codex credential base URL edits', () => {
+  it('patches and clears only the Codex URL, not Grok flags or tokens', () => {
+    const before = { access_token: 'fixture', base_url: 'https://old.test/codex' };
+    const next = { ...before, base_url: 'https://new.test/codex' };
+    expect(buildAuthFileFieldsPatch(before, next, true, false)).toEqual({ base_url: next.base_url });
+    expect(buildAuthFileFieldsPatch(next, { access_token: 'fixture' }, true, false)).toEqual({ base_url: '' });
+    expect(buildAuthFileFieldsPatch({}, { base_url: next.base_url }, false, false)).toEqual({});
+  });
+});
+
 describe('buildAuthFileFieldsPatch ChatGPT Web login settings', () => {
   it('preserves the API798 URL exactly when selecting API798', () => {
     const api798Url =

@@ -3061,6 +3061,7 @@
         "boolean_false": "false"
       },
       "validation": {
+        "codex_base_url": "请输入 HTTP(S) 基地址，不得包含用户名、密码、查询参数或片段。",
         "grok_image_tool_policy": "请选择移除、报错或允许。",
         "grok_headers": "请求头名称和值必须合法，同名头不能重复，最多 64 项。",
         "grok_parameter": "Grok 参数值不合法。",
@@ -4639,6 +4640,13 @@
       "unknown": "未知",
       "not_applicable": "不适用"
     }
+  },
+  "codex_upstream": {
+    "global_label": "Codex OAuth 默认 Base URL",
+    "global_hint": "留空使用官方地址；单凭证 base_url 优先。用于 Responses、Compact、图片与 Alpha Search，不改变 API Key、登录刷新、额度查询或原生 Realtime 地址。填写协议兼容的完整基地址，不要加 /responses。自定义服务会收到访问令牌，请仅使用可信地址。",
+    "account_label": "Codex Base URL（此凭证）",
+    "account_hint": "优先于全局默认地址，清空后恢复继承。需兼容 Codex 协议；自定义服务会收到该凭证的访问令牌，请仅使用可信地址。",
+    "invalid_url": "请输入 HTTP(S) 基地址，不得包含用户名、密码、查询参数或片段。"
   },
   "grok_upstream": {
     "title": "Grok 上游地址",

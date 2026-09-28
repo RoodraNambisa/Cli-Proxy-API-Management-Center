@@ -3061,6 +3061,7 @@
         "boolean_false": "false"
       },
       "validation": {
+        "codex_base_url": "Enter an HTTP(S) base URL without user information, query parameters or a fragment.",
         "grok_image_tool_policy": "Choose remove, reject or allow.",
         "grok_headers": "Use valid, unique HTTP header names and values (up to 64).",
         "grok_parameter": "Invalid Grok parameter value.",
@@ -4639,6 +4640,13 @@
       "unknown": "Unknown",
       "not_applicable": "Not applicable"
     }
+  },
+  "codex_upstream": {
+    "global_label": "Codex OAuth Default Base URL",
+    "global_hint": "Leave empty for the official endpoint; per-credential base_url takes precedence. Applies to Responses, Compact, images and Alpha Search, not API keys, login/refresh, quota queries or native Realtime. Use a Codex-compatible base without /responses. This server receives access tokens; use a trusted endpoint only.",
+    "account_label": "Codex Base URL (This Credential)",
+    "account_hint": "Overrides the global default. Clear to inherit. Requires the Codex protocol; this server receives the credential's access token. Use a trusted endpoint only.",
+    "invalid_url": "Enter an HTTP(S) base URL without user information, query parameters or a fragment."
   },
   "grok_upstream": {
     "title": "Grok upstream address",
