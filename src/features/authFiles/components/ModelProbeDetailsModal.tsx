@@ -100,18 +100,32 @@ export function ModelProbeDetailsModal({
         {result?.codex_response_guard && <section><h3>{t('response_guard.title')}</h3><ResponseGuardDetails record={result.codex_response_guard}/></section>}
         {result?.codex_cookie && (
           <section>
-            <h3>{t('model_probe.cookie_details')}</h3>
-            <dl>
-              <dt>{t('model_probe.cookie_mode')}</dt>
-              <dd>{t(`model_probe.cookie_modes.${result.codex_cookie.mode}`)}</dd>
-              <dt>{t('codex_auto_cookie.source')}</dt>
-              <dd>{t(`codex_auto_cookie.sources.${result.codex_cookie.source}`, {defaultValue: result.codex_cookie.source})}</dd>
-              <dt>{t('model_probe.cookie_sent')}</dt>
-              <dd>{result.codex_cookie.sent ? result.codex_cookie.names.join(', ') : '—'}</dd>
-              <dt>{t('model_probe.cookie_digest')}</dt>
-              <dd>{result.codex_cookie.digest || '—'}</dd>
-              <dt>{t('model_probe.cookie_version')}</dt>
-              <dd>{result.codex_cookie.version || '—'}</dd>
+            <strong>{t('model_probe.cookie_details')}</strong>
+            <dl className={styles.detailMetadata}>
+              <div>
+                <dt>{t('model_probe.cookie_mode')}</dt>
+                <dd>{t(`model_probe.cookie_modes.${result.codex_cookie.mode}`)}</dd>
+              </div>
+              <div>
+                <dt>{t('codex_auto_cookie.source')}</dt>
+                <dd>
+                  {t(`codex_auto_cookie.sources.${result.codex_cookie.source}`, {
+                    defaultValue: result.codex_cookie.source,
+                  })}
+                </dd>
+              </div>
+              <div>
+                <dt>{t('model_probe.cookie_sent')}</dt>
+                <dd>{result.codex_cookie.sent ? result.codex_cookie.names.join(', ') : '—'}</dd>
+              </div>
+              <div>
+                <dt>{t('model_probe.cookie_digest')}</dt>
+                <dd>{result.codex_cookie.digest || '—'}</dd>
+              </div>
+              <div>
+                <dt>{t('model_probe.cookie_version')}</dt>
+                <dd>{result.codex_cookie.version || '—'}</dd>
+              </div>
             </dl>
           </section>
         )}
