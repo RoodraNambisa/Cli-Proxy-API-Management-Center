@@ -1002,6 +1002,7 @@
     "websockets_hint": "Для запросов Responses WebSocket предпочитать upstream xAI WebSocket. Обычные HTTP-запросы не затрагиваются.",
     "xai_field_saved": "{{field}} сохранено",
     "cooldown_auth_until": "Вся учётная запись на cooldown до {{until}}",
+    "upload_cooldown_until": "Загрузка файлов на cooldown до {{until}}; приостановлены только запросы с загрузкой",
     "cooldown_models_until": "Моделей на cooldown: {{count}}; последнее восстановление {{until}}",
     "cooldown_models_view_details": "Показать сведения о cooldown моделей",
     "status_toggle_label": "Включено",

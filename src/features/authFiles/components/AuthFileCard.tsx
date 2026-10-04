@@ -298,6 +298,12 @@ export function AuthFileCard(props: AuthFileCardProps) {
       ? cooldownModelCountRaw
       : Number.parseInt(String(cooldownModelCountRaw ?? '0'), 10) || 0;
   const cooldownUntilText = cooldownActive ? formatDateTime(new Date(cooldownUntilMs)) : '';
+  const uploadUntilMs = parseTimestampMs(file.uploadCooldownUntil ?? file.upload_cooldown_until);
+  const uploadCooldownActive =
+    isChatGptWeb &&
+    (parseDisableCoolingValue(file.uploadCooldownActive ?? file.upload_cooldown_active) ?? false) &&
+    Number.isFinite(uploadUntilMs) &&
+    uploadUntilMs > cooldownAsOfMs;
   const noteValue = typeof file.note === 'string' ? file.note.trim() : '';
   const xaiUpstream = grokAccountUpstream(file.base_url);
   const xaiUpstreamMode = file.upstream_mode ?? (xaiUpstream === 'inherit' ? 'cli' : xaiUpstream);
@@ -1004,6 +1010,17 @@ export function AuthFileCard(props: AuthFileCardProps) {
                 <span className={styles.cooldownStatusText}>{cooldownStatusText}</span>
               </div>
             ))}
+
+          {uploadCooldownActive && (
+            <div className={styles.cooldownStatusNotice}>
+              <IconTimer size={14} />
+              <span className={styles.cooldownStatusText}>
+                {t('auth_files.upload_cooldown_until', {
+                  until: formatDateTime(new Date(uploadUntilMs)),
+                })}
+              </span>
+            </div>
+          )}
 
           {hasStatusWarning && (displayStatusMessage || hasLastErrorStatusCode) && (
             <div className={styles.healthStatusMessage} title={healthStatusTitle}>

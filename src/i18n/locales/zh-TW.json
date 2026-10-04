@@ -1000,6 +1000,7 @@
     "websockets_hint": "開啟後 Responses WebSocket 請求優先使用 xAI WebSocket 上游；一般 HTTP 請求不受影響。",
     "xai_field_saved": "{{field}} 已儲存",
     "cooldown_auth_until": "整個憑證冷卻至 {{until}}",
+    "upload_cooldown_until": "上傳冷卻至 {{until}}，僅暫停需要上傳的請求",
     "cooldown_models_until": "{{count}} 個模型冷卻中，最晚至 {{until}}",
     "cooldown_models_view_details": "檢視冷卻模型詳情",
     "status_toggle_label": "啟用",

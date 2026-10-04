@@ -695,6 +695,10 @@ export const normalizeAuthFileEntry = (entry: AuthFileEntry): AuthFileEntry => {
     normalized.lastErrorStatusCode = lastErrorStatusCode;
   }
   const cooldownActive = readBooleanValue(entry.cooldownActive ?? entry['cooldown_active']);
+  const uploadActive = readBooleanValue(entry.uploadCooldownActive ?? entry['upload_cooldown_active']);
+  if (uploadActive !== undefined) normalized.uploadCooldownActive = uploadActive;
+  const uploadUntil = readStringValue(entry.uploadCooldownUntil ?? entry['upload_cooldown_until']);
+  if (uploadUntil) normalized.uploadCooldownUntil = uploadUntil;
   if (cooldownActive !== undefined) {
     normalized.cooldownActive = cooldownActive;
   }

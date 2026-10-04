@@ -216,6 +216,10 @@ export interface AuthFileItem {
   cooldown_active?: boolean;
   cooldown_scope?: AuthCooldownScope | string;
   cooldown_until?: string;
+  upload_cooldown_active?: boolean;
+  upload_cooldown_until?: string;
+  uploadCooldownActive?: boolean;
+  uploadCooldownUntil?: string;
   cooldown_model_count?: number;
   cooldownActive?: boolean;
   cooldownScope?: AuthCooldownScope | string;

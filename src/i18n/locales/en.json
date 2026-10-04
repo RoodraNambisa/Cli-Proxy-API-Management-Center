@@ -1002,6 +1002,7 @@
     "websockets_hint": "Prefer the xAI WebSocket upstream for Responses WebSocket requests. Regular HTTP requests are unaffected.",
     "xai_field_saved": "{{field}} saved",
     "cooldown_auth_until": "Entire credential cooling down until {{until}}",
+    "upload_cooldown_until": "Uploads cooling down until {{until}}; only requests requiring uploads are paused",
     "cooldown_models_until": "{{count}} models cooling down; latest recovery {{until}}",
     "cooldown_models_view_details": "View model cooldown details",
     "status_toggle_label": "Enabled",
