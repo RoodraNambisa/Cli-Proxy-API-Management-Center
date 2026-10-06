@@ -10,6 +10,8 @@ export interface CodexQuotaDisableRule {
   credentialIds: string[];
   weeklyRemainingPercent: string;
   fiveHourRemainingPercent: string;
+  creditsEnabled: boolean;
+  creditsMinimumBalance: string;
 }
 export interface CodexQuotaAutoDisableConfig {
   enabled: boolean;
@@ -42,10 +44,19 @@ export function readCodexQuotaAutoDisable(raw: unknown): CodexQuotaAutoDisableCo
             credentialIds: list(rule['credential-ids']),
             weeklyRemainingPercent: String(rule['weekly-remaining-percent'] ?? ''),
             fiveHourRemainingPercent: String(rule['five-hour-remaining-percent'] ?? ''),
+            creditsEnabled: record(rule.credits).enabled === true,
+            creditsMinimumBalance: String(record(rule.credits)['minimum-balance'] ?? ''),
           };
         })
       : [],
   };
+}
+
+export function creditsBalanceError(value: string): boolean {
+  if (!value.trim()) return false;
+  return (
+    !/^\d+(?:\.\d+)?$/.test(value.trim()) || !Number.isFinite(Number(value)) || Number(value) < 0
+  );
 }
 
 export function quotaThresholdError(value: string): boolean {
@@ -64,6 +75,7 @@ export function codexQuotaAutoDisableError(value: CodexQuotaAutoDisableConfig): 
         (!rule.weeklyRemainingPercent.trim() && !rule.fiveHourRemainingPercent.trim()) ||
         quotaThresholdError(rule.weeklyRemainingPercent) ||
         quotaThresholdError(rule.fiveHourRemainingPercent) ||
+        creditsBalanceError(rule.creditsMinimumBalance) ||
         [rule.providers, rule.credentialIds].some(
           (values) =>
             values.length > 128 ||
@@ -105,17 +117,35 @@ export function writeCodexQuotaAutoDisable(
   doc.setIn(path, {
     ...previous,
     enabled: value.enabled,
-    rules: value.rules.map((rule) => ({
-      ...(rule.sourceIndex === undefined ? {} : record(oldRules[rule.sourceIndex])),
-      providers: clean(rule.providers).map((provider) => provider.toLowerCase()),
-      'auth-priorities': [...new Set(rule.authPriorities.map(Number))],
-      'credential-ids': clean(rule.credentialIds),
-      'weekly-remaining-percent': rule.weeklyRemainingPercent.trim()
-        ? Number(rule.weeklyRemainingPercent)
-        : null,
-      'five-hour-remaining-percent': rule.fiveHourRemainingPercent.trim()
-        ? Number(rule.fiveHourRemainingPercent)
-        : null,
-    })),
+    rules: value.rules.map((rule) => {
+      const previousRule = rule.sourceIndex === undefined ? {} : record(oldRules[rule.sourceIndex]);
+      const credits =
+        rule.creditsEnabled ||
+        rule.creditsMinimumBalance.trim() ||
+        previousRule.credits !== undefined
+          ? {
+              credits: {
+                ...record(previousRule.credits),
+                enabled: rule.creditsEnabled,
+                'minimum-balance': rule.creditsMinimumBalance.trim()
+                  ? Number(rule.creditsMinimumBalance)
+                  : null,
+              },
+            }
+          : {};
+      return {
+        ...previousRule,
+        providers: clean(rule.providers).map((provider) => provider.toLowerCase()),
+        'auth-priorities': [...new Set(rule.authPriorities.map(Number))],
+        'credential-ids': clean(rule.credentialIds),
+        'weekly-remaining-percent': rule.weeklyRemainingPercent.trim()
+          ? Number(rule.weeklyRemainingPercent)
+          : null,
+        'five-hour-remaining-percent': rule.fiveHourRemainingPercent.trim()
+          ? Number(rule.fiveHourRemainingPercent)
+          : null,
+        ...credits,
+      };
+    }),
   });
 }

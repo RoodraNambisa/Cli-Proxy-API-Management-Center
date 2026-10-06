@@ -46,6 +46,9 @@ export const configFileApi = {
     }
     const state = root?.codex?.['state-override'];
     const autoCookie = root?.codex?.['auto-cookie'] === true;
+    const quotaCredits = root?.codex?.['quota-auto-disable']?.rules?.some?.(
+      (rule: { credits?: { enabled?: boolean } }) => rule?.credits?.enabled === true
+    ) === true;
     const conflict = autoCookie && autoCookieConflict(readCodexState(state));
     if (conflict) throw new Error(i18n.t('codex_auto_cookie.conflict', { rule: conflict }));
     const rules: Array<Record<string, unknown>> = Array.isArray(state?.rules) ? state.rules : [];
@@ -94,10 +97,11 @@ export const configFileApi = {
             (!key.startsWith('cookie-') || s[key] !== 0)
         )
     );
-    if (autoCookie || modelOverrides || retryRounds || cookieFeatures) {
+    if (quotaCredits || autoCookie || modelOverrides || retryRounds || cookieFeatures) {
       const options = await apiClient.get<{
         features?: {
           auto_cookie?: boolean;
+          quota_auto_disable_credits?: boolean;
           rule_model_overrides?: boolean;
           state_retry_rounds?: boolean;
           cookie_model_rules?: boolean;
@@ -107,10 +111,14 @@ export const configFileApi = {
         };
       }>('/auth-files/codex/state/options').catch((error: unknown) => {
         const status = (error as { status?: number })?.status;
+        if (quotaCredits && (status === 404 || status === 405))
+          throw new Error(i18n.t('codex_quota_auto_disable.credits_upgrade'));
         if (autoCookie && (status === 404 || status === 405))
           throw new Error(i18n.t('codex_auto_cookie.upgrade'));
         throw error;
       });
+      if (quotaCredits && options.features?.quota_auto_disable_credits !== true)
+        throw new Error(i18n.t('codex_quota_auto_disable.credits_upgrade'));
       if (
         cookieFeatures &&
         (options.features?.cookie_only !== true || options.features?.state_seconds !== true)

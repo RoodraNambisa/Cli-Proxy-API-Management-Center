@@ -59,8 +59,17 @@
     "window_help": "Only the main pool: 300 minutes is 5 hours, 10080 is one week. Spark, gpt-reserve and missing usage never trigger.",
     "threshold_help": "0–100 or blank. Triggers strictly below the value; use 1 to stop at 0% remaining.",
     "range_error": "Enter a percentage from 0 to 100, or leave blank.",
-    "invalid": "Each rule needs a threshold (0–100), integer priorities and nonempty matchers.",
-    "help": "Off by default; requires quota observation. Filter groups use AND, entries use OR; empty filters match all. Only new main-pool observations are evaluated, never stored history. Either configured window can trigger. Currently only Codex supplies these signals. Disabled state and reason are saved; current responses finish normally. Re-enable credentials manually. Hot updates apply to new requests; in-flight requests keep their original rules."
+    "invalid": "Each rule needs a threshold (0–100), integer priorities and nonempty matchers. Enter a finite credit amount of 0 or more, or leave blank.",
+    "help": "Off by default; requires quota observation. Filter groups use AND, entries use OR; empty filters match all. Only new main-pool observations are evaluated, never stored history. Either configured window can trigger. Currently only Codex supplies these signals. Disabled state and reason are saved; current responses finish normally. Re-enable credentials manually. Hot updates apply to new requests; in-flight requests keep their original rules.",
+    "credits_label": "Credit condition",
+    "credits_enabled": "Keep enabled while credits are available",
+    "credits_help": "Checked only after this rule’s main quota falls below its threshold. Unlimited credits pass; other matching rules can still disable the credential. Off by default to preserve existing behavior.",
+    "credits_threshold": "Disable when credit balance is below",
+    "credits_threshold_help": "Enter a credit amount, not a percentage. Blank or 0 disables only when credits are exhausted or explicitly unavailable. A positive threshold uses a strict comparison; equality passes. Only data from the same response is used. Insufficient credit information postpones automatic disabling.",
+    "credits_available_summary": "Allow while credits are available",
+    "credits_summary": "Allow available balance ≥ {{balance}}",
+    "credits_range_error": "Enter a finite credit amount of 0 or more, or leave blank.",
+    "credits_upgrade": "This backend does not support credit conditions for automatic disabling. Upgrade the backend first."
   },
   "response_model_rewrite": {
     "title": "Response Model Name",
@@ -3093,7 +3102,7 @@
         "json_object": "Enter a valid JSON object",
         "auth_model_exclusion_models_required": "Fill at least one model unless image generation is disabled",
         "auth_model_exclusion_match_required": "Fill at least one provider, priority, or keyword matcher",
-        "codex_quota_auto_disable": "Each rule needs a threshold (0–100), integer priorities and nonempty matchers.",
+        "codex_quota_auto_disable": "Each rule needs a threshold (0–100), integer priorities and nonempty matchers. Enter a finite credit amount of 0 or more, or leave blank.",
         "integer_list": "Enter integers separated by commas or line breaks",
         "http_status_range": "Enter an HTTP status code between 400 and 599",
         "http_status_list": "Enter HTTP status codes between 100 and 599",

@@ -33,7 +33,7 @@ export interface GrokCatalogRefreshInfo {
 type StatusError = { status?: number };
 export type CodexStateOptions = {
   auto_cookie_enabled?: boolean;
-  features?: {auto_cookie?: boolean; rule_model_overrides?: boolean; state_retry_rounds?: boolean; cookie_model_rules?: boolean; cookie_backup_pool?: boolean; cookie_only?: boolean; state_seconds?: boolean; response_guard?: boolean};
+  features?: {quota_auto_disable_credits?: boolean; auto_cookie?: boolean; rule_model_overrides?: boolean; state_retry_rounds?: boolean; cookie_model_rules?: boolean; cookie_backup_pool?: boolean; cookie_only?: boolean; state_seconds?: boolean; response_guard?: boolean};
   credentials: Array<{id: string; name: string; alias?: string; priority: number; plan: string; disabled: boolean}>;
   models: Array<{id: string; upstream_id: string}>;
   priorities: number[];

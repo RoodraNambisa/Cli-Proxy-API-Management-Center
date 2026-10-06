@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { CodexQuotaAutoDisableEditor } from './CodexQuotaAutoDisableEditor';
 import { readCodexQuotaAutoDisable } from '@/utils/codexQuotaAutoDisable';
@@ -45,5 +46,45 @@ describe('Codex quota auto-disable editor', () => {
     expect(
       screen.getAllByRole('button', { name: /Choose providers|选择提供方|選擇提供方/ })
     ).toHaveLength(1);
+  });
+
+  it('keeps credits subordinate and retains the balance setting through toggles', () => {
+    function Fixture() {
+      const [value, onChange] = useState(
+        readCodexQuotaAutoDisable({ enabled: true, rules: [{ 'weekly-remaining-percent': 3 }] })
+      );
+      return (
+        <CodexQuotaAutoDisableEditor
+          observing
+          value={value}
+          onChange={onChange}
+          focusTarget="config-codex-quota-auto-disable"
+        />
+      );
+    }
+    render(<Fixture />);
+    fireEvent.click(screen.getByRole('button', { name: /#1/, expanded: false }));
+    expect(screen.getAllByRole('spinbutton')).toHaveLength(2);
+    const toggle = screen.getByRole('checkbox', {
+      name: /Keep enabled while credits|有可用积分|有可用積分/,
+    });
+    expect((toggle as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(toggle);
+    const creditInput = screen.getByRole('spinbutton', {
+      name: /credit balance|积分余额|積分餘額/,
+    });
+    fireEvent.change(creditInput, { target: { value: '1000' } });
+    expect(screen.getAllByRole('spinbutton')).toHaveLength(3);
+    fireEvent.click(toggle);
+    expect(screen.getAllByRole('spinbutton')).toHaveLength(2);
+    fireEvent.click(toggle);
+    expect(
+      (
+        screen.getByRole('spinbutton', {
+          name: /credit balance|积分余额|積分餘額/,
+        }) as HTMLInputElement
+      ).value
+    ).toBe('1000');
+    expect((screen.getAllByRole('spinbutton')[0] as HTMLInputElement).value).toBe('3');
   });
 });

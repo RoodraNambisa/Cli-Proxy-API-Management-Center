@@ -9,6 +9,7 @@ import {
   type CodexQuotaDisableRule,
   codexQuotaAutoDisableError,
   quotaThresholdError,
+  creditsBalanceError,
 } from '@/utils/codexQuotaAutoDisable';
 import { makeClientId } from '@/types/visualConfig';
 import { ConfigHelp } from './ConfigHelp';
@@ -75,6 +76,8 @@ export function CodexQuotaAutoDisableEditor({
                   credentialIds: [],
                   weeklyRemainingPercent: '',
                   fiveHourRemainingPercent: '',
+                  creditsEnabled: false,
+                  creditsMinimumBalance: '',
                 },
               ],
             })
@@ -123,6 +126,18 @@ export function CodexQuotaAutoDisableEditor({
                         ? `< ${rule.fiveHourRemainingPercent}%`
                         : text('ignored'),
                     ],
+                    ...(rule.creditsEnabled
+                      ? ([
+                          [
+                            text('credits_label'),
+                            rule.creditsMinimumBalance.trim()
+                              ? t('codex_quota_auto_disable.credits_summary', {
+                                  balance: rule.creditsMinimumBalance,
+                                })
+                              : text('credits_available_summary'),
+                          ],
+                        ] as [string, string][])
+                      : []),
                   ]}
                 />,
               ]}
@@ -187,6 +202,35 @@ export function CodexQuotaAutoDisableEditor({
                       onChange={(event) => update(rule.id, { [field]: event.target.value })}
                     />
                   )
+                )}
+              </div>
+              <div className={styles.credits}>
+                <ToggleSwitch
+                  checked={rule.creditsEnabled}
+                  disabled={disabled}
+                  label={text('credits_enabled')}
+                  onChange={(creditsEnabled) => update(rule.id, { creditsEnabled })}
+                />
+                <p className="hint">{text('credits_help')}</p>
+                {rule.creditsEnabled && (
+                  <Input
+                    type="number"
+                    min={0}
+                    step="any"
+                    disabled={disabled}
+                    label={text('credits_threshold')}
+                    placeholder={text('credits_available_summary')}
+                    value={rule.creditsMinimumBalance}
+                    hint={text('credits_threshold_help')}
+                    error={
+                      creditsBalanceError(rule.creditsMinimumBalance)
+                        ? text('credits_range_error')
+                        : undefined
+                    }
+                    onChange={(event) =>
+                      update(rule.id, { creditsMinimumBalance: event.target.value })
+                    }
+                  />
                 )}
               </div>
             </ConfigTableRow>

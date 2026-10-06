@@ -157,4 +157,74 @@ codex:
     expect(saved.defaults['quota-auto-disable'].rules[0]['weekly-remaining-percent']).toBe(12);
     expect(saved.codex['quota-auto-disable'].rules[0]['weekly-remaining-percent']).toBe(7);
   });
+
+  it('round-trips secondary credit conditions, zero and unknown fields without changing quota thresholds', () => {
+    const yaml = source.replace(
+      '        future-rule: preserved',
+      `        future-rule: preserved
+        credits:
+          enabled: true
+          minimum-balance: 62500
+          future-credit: keep`
+    );
+    const { result } = renderHook(() => useVisualConfig());
+    act(() => result.current.loadVisualValuesFromYaml(yaml));
+    const initial = result.current.visualValues.codexQuotaAutoDisable;
+    expect(initial.rules[0]).toMatchObject({
+      creditsEnabled: true,
+      creditsMinimumBalance: '62500',
+    });
+    act(() =>
+      result.current.setVisualValues({
+        codexQuotaAutoDisable: {
+          ...initial,
+          rules: [{ ...initial.rules[0], creditsMinimumBalance: '0' }],
+        },
+      })
+    );
+    const output = parse(result.current.applyVisualChangesToYaml(yaml)).codex['quota-auto-disable'];
+    expect(output.rules[0]).toMatchObject({
+      'weekly-remaining-percent': 10,
+      'five-hour-remaining-percent': null,
+      credits: { enabled: true, 'minimum-balance': 0, 'future-credit': 'keep' },
+    });
+    act(() =>
+      result.current.setVisualValues({
+        codexQuotaAutoDisable: {
+          ...initial,
+          rules: [{ ...initial.rules[0], creditsEnabled: false }],
+        },
+      })
+    );
+    expect(
+      parse(result.current.applyVisualChangesToYaml(yaml)).codex['quota-auto-disable'].rules[0]
+        .credits
+    ).toMatchObject({ enabled: false, 'minimum-balance': 62500, 'future-credit': 'keep' });
+    for (const balance of ['-1', 'NaN', 'Infinity', '0x10']) {
+      act(() =>
+        result.current.setVisualValues({
+          codexQuotaAutoDisable: {
+            ...initial,
+            rules: [{ ...initial.rules[0], creditsMinimumBalance: balance }],
+          },
+        })
+      );
+      expect(
+        getVisualConfigValidationErrors(result.current.visualValues).codexQuotaAutoDisable
+      ).toBeTruthy();
+    }
+    for (const balance of ['', '0', '62500.5']) {
+      act(() =>
+        result.current.setVisualValues({
+          codexQuotaAutoDisable: {
+            ...initial,
+            rules: [{ ...initial.rules[0], creditsMinimumBalance: balance }],
+          },
+        })
+      );
+      expect(
+        getVisualConfigValidationErrors(result.current.visualValues).codexQuotaAutoDisable
+      ).toBeUndefined();
+    }
+  });
 });
