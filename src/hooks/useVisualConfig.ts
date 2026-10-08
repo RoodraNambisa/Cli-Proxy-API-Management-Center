@@ -4371,13 +4371,17 @@ export function useVisualConfig() {
             preserveEmpty: docHas(doc, ['no-cooldown-status-codes']),
           });
         }
-        if (values.fixedErrorCooldowns.length > 0) {
-          doc.setIn(
-            ['fixed-error-cooldowns'],
-            serializeFixedErrorCooldownsForYaml(values.fixedErrorCooldowns)
-          );
-        } else if (docHas(doc, ['fixed-error-cooldowns'])) {
-          doc.deleteIn(['fixed-error-cooldowns']);
+        if (
+          !areFixedErrorCooldownsEqual(values.fixedErrorCooldowns, baselineValues.fixedErrorCooldowns)
+        ) {
+          if (values.fixedErrorCooldowns.length > 0) {
+            doc.setIn(
+              ['fixed-error-cooldowns'],
+              serializeFixedErrorCooldownsForYaml(values.fixedErrorCooldowns)
+            );
+          } else if (docHas(doc, ['fixed-error-cooldowns'])) {
+            doc.deleteIn(['fixed-error-cooldowns']);
+          }
         }
         if (
           !areErrorResponseRewritesEqual(
@@ -4395,10 +4399,9 @@ export function useVisualConfig() {
           }
         }
         if (
-          docHas(doc, ['non-retryable-errors']) ||
           !areNonRetryableErrorsEqual(
             values.nonRetryableErrors,
-            DEFAULT_VISUAL_VALUES.nonRetryableErrors
+            baselineValues.nonRetryableErrors
           )
         ) {
           doc.setIn(
@@ -5159,7 +5162,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [state.dirtyFields, baselineValues.codexBaseUrl, baselineValues.codexAutoCookie, baselineValues.codexAutoCookieOverride, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [state.dirtyFields, baselineValues.codexBaseUrl, baselineValues.codexAutoCookie, baselineValues.codexAutoCookieOverride, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.fixedErrorCooldowns, baselineValues.nonRetryableErrors, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {
