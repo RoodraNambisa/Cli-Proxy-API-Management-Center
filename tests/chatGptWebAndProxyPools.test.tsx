@@ -530,6 +530,96 @@ describe('ChatGPT Web management compatibility', () => {
     );
   });
 
+  test.each(['password_reset_required', 'incorrect_code'])(
+    'shows a localized manual verification reason for %s in task results and credential cards',
+    async (code) => {
+      vi.spyOn(chatGptWebApi, 'startLoginTaskText').mockResolvedValue({
+        ...createLoginTask(),
+        state: 'completed_with_errors',
+        processed: 1,
+        failed: 1,
+        results: [
+          {
+            line: 1,
+            email: 'fixture@example.com',
+            status: 'failed',
+            error_category: code,
+            error: 'RAW_VERIFICATION_BODY_MUST_NOT_RENDER',
+            lifecycle_state:
+              code === 'password_reset_required' ? 'interaction_required' : 'reauth_required',
+            http_status: 409,
+            upstream_http_status: code === 'password_reset_required' ? 401 : 403,
+            failure_stage: code === 'password_reset_required' ? 'password_verify' : 'mfa_verify',
+          },
+        ],
+      });
+      render(
+        <MemoryRouter>
+          <ChatGptWebPage />
+        </MemoryRouter>
+      );
+      fireEvent.change(screen.getByRole('textbox', { name: 'chatgpt_web.manual_input_label' }), {
+        target: { value: 'fixture@example.com---password---' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /chatgpt_web.start_task/ }));
+      await waitFor(() =>
+        expect(screen.getByText(new RegExp(`chatgpt_web\\.errors\\.${code}`))).not.toBeNull()
+      );
+      expect(document.body.textContent).not.toContain('RAW_VERIFICATION_BODY_MUST_NOT_RENDER');
+      expect(document.body.textContent).toContain('chatgpt_web.diagnostics_upstream_status');
+
+      render(
+        <AuthFileCard
+          {...createCardProps({
+            name: 'fixture.json',
+            type: 'chatgpt-web',
+            lifecycle_state: 'interaction_required',
+            lifecycle_reason: code,
+          })}
+        />
+      );
+      expect(screen.getByText(`chatgpt_web.errors.${code}`)).not.toBeNull();
+      for (const locale of [zhCNLocale, zhTWLocale, enLocale, ruLocale]) {
+        expect(
+          getChatGptWebErrorMessage({ error_category: code }, (key) =>
+            key === `chatgpt_web.errors.${code}`
+              ? locale.chatgpt_web.errors[code as 'password_reset_required' | 'incorrect_code']
+              : key
+          )
+        ).toBe(locale.chatgpt_web.errors[code as 'password_reset_required' | 'incorrect_code']);
+        expect(
+          locale.chatgpt_web.errors[code as 'password_reset_required' | 'incorrect_code'].length
+        ).toBeGreaterThan(10);
+      }
+    }
+  );
+
+  test('preserves the upstream status without confusing it with the management response status', () => {
+    const messages = getChatGptWebErrorDiagnosticMessages(
+      {
+        status: 409,
+        data: {
+          error_category: 'password_reset_required',
+          upstream_http_status: 401,
+          failure_stage: 'password_verify',
+        },
+      },
+      (key, options) => {
+        if (key === 'chatgpt_web.diagnostics_upstream_status')
+          return `Upstream HTTP ${options?.status}`;
+        if (key === 'chatgpt_web.failure_stages.password_verify') return 'Password verification';
+        if (key === 'chatgpt_web.diagnostics_stage') return `Stage: ${options?.stage}`;
+        return key;
+      }
+    );
+    expect(messages).toEqual(['Upstream HTTP 401', 'Stage: Password verification']);
+    for (const upstream_http_status of [NaN, -1, 200, 600, '401']) {
+      expect(getChatGptWebErrorDiagnosticMessages({ upstream_http_status }, (key) => key)).toEqual(
+        []
+      );
+    }
+  });
+
   test('extracts safe stage and attempt diagnostics from nested management errors', () => {
     const messages = getChatGptWebErrorDiagnosticMessages(
       {

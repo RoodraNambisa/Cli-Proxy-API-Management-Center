@@ -687,6 +687,8 @@ export function ChatGptWebPage() {
                     const diagnostics = getChatGptWebErrorDiagnostics(result);
                     const categorized =
                       diagnostics.category === 'cloudflare_challenge' ||
+                      diagnostics.category === 'password_reset_required' ||
+                      diagnostics.category === 'incorrect_code' ||
                       diagnostics.category === 'login_proxy_invalid';
                     const message = sentinelBusy
                       ? t('chatgpt_web.errors.sentinel_sdk_busy')

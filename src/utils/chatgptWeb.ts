@@ -8,6 +8,7 @@ export type ChatGptWebErrorDiagnostics = {
   failureStage: string;
   attempts: number;
   status?: number;
+  upstreamStatus?: number;
 };
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -28,6 +29,7 @@ export const getChatGptWebErrorDiagnostics = (value: unknown): ChatGptWebErrorDi
   const failureStageValue = payload.failure_stage ?? source.failure_stage;
   const attemptsValue = payload.attempts ?? source.attempts;
   const statusValue = source.status ?? payload.http_status ?? payload.status;
+  const upstreamStatusValue = payload.upstream_http_status ?? source.upstream_http_status;
   return {
     category: typeof categoryValue === 'string' ? categoryValue.trim() : '',
     failureStage: typeof failureStageValue === 'string' ? failureStageValue.trim() : '',
@@ -36,6 +38,13 @@ export const getChatGptWebErrorDiagnostics = (value: unknown): ChatGptWebErrorDi
         ? attemptsValue
         : 0,
     status: typeof statusValue === 'number' ? statusValue : undefined,
+    upstreamStatus:
+      typeof upstreamStatusValue === 'number' &&
+      Number.isInteger(upstreamStatusValue) &&
+      upstreamStatusValue >= 400 &&
+      upstreamStatusValue <= 599
+        ? upstreamStatusValue
+        : undefined,
   };
 };
 
@@ -50,6 +59,11 @@ export const getChatGptWebErrorDiagnosticMessages = (
 ): string[] => {
   const diagnostics = getChatGptWebErrorDiagnostics(value);
   const messages: string[] = [];
+  if (diagnostics.upstreamStatus) {
+    messages.push(
+      translate('chatgpt_web.diagnostics_upstream_status', { status: diagnostics.upstreamStatus })
+    );
+  }
   if (diagnostics.failureStage) {
     const stage = translateOrFallback(
       translate,
@@ -100,6 +114,12 @@ export const getChatGptWebErrorMessage = (error: unknown, translate: Translate):
   }
   if (diagnostics.category === 'login_proxy_invalid') {
     return translate('chatgpt_web.errors.login_proxy_invalid');
+  }
+  if (
+    diagnostics.category === 'password_reset_required' ||
+    diagnostics.category === 'incorrect_code'
+  ) {
+    return translate(`chatgpt_web.errors.${diagnostics.category}`);
   }
   return error instanceof Error ? error.message : String(error ?? '');
 };

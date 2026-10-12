@@ -3982,11 +3982,14 @@
     },
     "errors": {
       "sentinel_sdk_busy": "SDK 求解池繁忙",
+      "password_reset_required": "官方要求重置密码，现有密码无法继续登录；请人工更改密码后重新登录。",
+      "incorrect_code": "认证器验证码被官方拒绝；请人工核对 TOTP 后重试，原凭证仍保留。",
       "cloudflare_challenge": "Cloudflare 验证阻止了登录",
       "authorization_completion_required": "未检测到可确认的 Cloudflare 验证；OAuth 登录未返回继续地址，可能需要额外的人工验证",
       "login_proxy_invalid": "登录代理配置无效"
     },
     "diagnostics_stage": "阶段：{{stage}}",
+    "diagnostics_upstream_status": "上游 HTTP 状态：{{status}}",
     "diagnostics_attempts": "完整流程尝试：{{count}} 次",
     "failure_stages": {
       "client_initialization": "初始化登录客户端",

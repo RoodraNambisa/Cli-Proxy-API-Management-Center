@@ -693,7 +693,14 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   </span>
                   <strong>{chatGptWebStateLabel}</strong>
                 </div>
-                {lifecycleReason ? <span>{lifecycleReason}</span> : null}
+                {lifecycleReason ? (
+                  <span>
+                    {lifecycleReason === 'password_reset_required' ||
+                    lifecycleReason === 'incorrect_code'
+                      ? t(`chatgpt_web.errors.${lifecycleReason}`)
+                      : lifecycleReason}
+                  </span>
+                ) : null}
               </div>
               {!compact ? (
                 <div className={styles.chatGptWebLifecycleGrid}>

@@ -27,6 +27,7 @@ export interface ChatGptWebLoginResult {
   error_category?: string;
   error?: string;
   http_status?: number;
+  upstream_http_status?: number;
   failure_stage?: string;
   attempts?: number;
 }

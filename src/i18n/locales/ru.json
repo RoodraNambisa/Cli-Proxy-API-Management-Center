@@ -3979,11 +3979,14 @@
     },
     "errors": {
       "sentinel_sdk_busy": "Пул решателей SDK занят",
+      "password_reset_required": "Сервис требует сбросить пароль. Текущий пароль не позволяет завершить вход; смените его вручную перед повторным входом.",
+      "incorrect_code": "Сервис отклонил код аутентификатора. Проверьте TOTP вручную перед повтором; исходные учётные данные сохранены.",
       "cloudflare_challenge": "Проверка Cloudflare заблокировала вход",
       "authorization_completion_required": "Подтверждённая проверка Cloudflare не обнаружена; OAuth-вход не вернул адрес продолжения и может требовать дополнительной проверки",
       "login_proxy_invalid": "Недопустимая конфигурация прокси входа"
     },
     "diagnostics_stage": "Этап: {{stage}}",
+    "diagnostics_upstream_status": "HTTP-статус сервиса: {{status}}",
     "diagnostics_attempts": "Полных попыток: {{count}}",
     "failure_stages": {
       "client_initialization": "Инициализация клиента входа",
