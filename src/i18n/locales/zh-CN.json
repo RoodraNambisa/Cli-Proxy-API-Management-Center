@@ -1486,6 +1486,8 @@
     "reset_hint": "{{hint}} 后重置"
   },
   "xai_quota": {
+    "product_details": "产品用量详情",
+    "product_details_hint": "产品用量是统一额度的分项统计，不是额外额度。",
     "title": "Grok 额度",
     "empty_title": "暂无 xAI/Grok 认证",
     "empty_desc": "使用 xAI OAuth 登录后即可查看 Grok 额度。",
@@ -2092,6 +2094,15 @@
   },
   "config_management": {
     "grok": {
+      "officialBuild": "使用官方 Build 风格默认请求头",
+      "officialBuild_hint": "CLI 网关使用 grok-shell 用户代理与 headless／interactive 模式。显式请求头仍优先；公共 API 和自定义地址不自动添加 CLI 身份头。",
+      "clientMode": "客户端模式",
+      "requestCompression": "HTTP 请求压缩",
+      "compression_none": "关闭",
+      "compression_auto": "上游声明支持后自动使用 Zstd",
+      "compression_hint": "默认关闭；只有当前上游 settings 声明支持 Zstd 后，才压缩至少 64 KiB 的 HTTP JSON。WebSocket 不压缩。",
+      "version_auto": "自动获取稳定版（失败时使用缓存）",
+      "agent_auto": "根据客户端版本自动生成",
       "dynamicHeaders": "动态请求头",
       "dynamicHeaders_hint": "默认关闭，按字面值发送。开启后支持 $HeaderName 和 $CPA-SESSION-ID，后者使用本次请求的统一会话指纹；缺少来源时省略。凭证头优先，全局头其次，受控身份字段仍服从身份策略。",
       "imageToolPolicy": "Responses 图片工具",

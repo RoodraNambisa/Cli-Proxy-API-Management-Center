@@ -1483,6 +1483,8 @@
     "reset_hint": "сброс через {{hint}}"
   },
   "xai_quota": {
+    "product_details": "Product usage details",
+    "product_details_hint": "Product usage breaks down the unified allowance; it is not an additional allowance.",
     "title": "Квота Grok",
     "empty_title": "Файлы авторизации xAI/Grok отсутствуют",
     "empty_desc": "Войдите через xAI OAuth, чтобы увидеть квоту Grok.",
@@ -2089,6 +2091,15 @@
   },
   "config_management": {
     "grok": {
+      "officialBuild": "Official Build default headers",
+      "officialBuild_hint": "Use grok-shell and headless/interactive for the CLI gateway. Explicit headers retain priority. Public APIs and custom endpoints receive no automatic CLI identity headers.",
+      "clientMode": "Client mode",
+      "requestCompression": "HTTP request compression",
+      "compression_none": "Disabled",
+      "compression_auto": "Zstd after upstream negotiation",
+      "compression_hint": "Disabled by default. Compress HTTP JSON of at least 64 KiB only after this upstream settings advertises Zstd. WebSocket messages are unchanged.",
+      "version_auto": "Automatic stable version (cached fallback)",
+      "agent_auto": "Generated from the current client version",
       "dynamicHeaders": "Динамические заголовки",
       "dynamicHeaders_hint": "По умолчанию выключены: значения передаются буквально. Поддерживаются $HeaderName и $CPA-SESSION-ID (отпечаток сеанса запроса); отсутствующие источники пропускаются. Заголовки аккаунта имеют приоритет, политика идентификаторов сохраняется.",
       "imageToolPolicy": "Инструмент изображений Responses",
