@@ -180,3 +180,39 @@ test('late save completion cannot replace another connection configuration', asy
   await act(async () => finish({}));
   expect(update).not.toHaveBeenCalled();
 });
+
+test('Build headers, compression and service tier round-trip only edited fields', () => {
+  const doc = parseDocument(
+    'xai:\n  future: kept\n  header-defaults:\n    future-header: retained\n  request-defaults:\n    temperature: 0\n'
+  );
+  const baseline = readGrokConfig(doc.toJS().xai);
+  expect(baseline.officialBuild).toBe(false);
+  expect(baseline.requestCompression).toBe('none');
+  writeGrokConfig(doc, baseline, baseline);
+  expect(doc.toJS().xai['header-defaults']).toEqual({ 'future-header': 'retained' });
+  const next = {
+    ...baseline,
+    officialBuild: true,
+    clientMode: 'interactive',
+    requestCompression: 'auto',
+    defaults: { ...baseline.defaults, service_tier: 'priority' },
+  };
+  expect(grokConfigErrors(next)).toEqual({});
+  writeGrokConfig(doc, next, baseline);
+  expect(doc.toJS().xai).toMatchObject({
+    future: 'kept',
+    'header-defaults': {
+      'future-header': 'retained',
+      'official-build': true,
+      'client-mode': 'interactive',
+    },
+    'request-compression': 'auto',
+    'request-defaults': { temperature: 0, service_tier: 'priority' },
+  });
+  expect(readGrokConfig(doc.toJS().xai)).toEqual(next);
+  expect(
+    grokConfigErrors({ ...next, defaults: { ...next.defaults, service_tier: 'flex' } })[
+      'grok.service_tier'
+    ]
+  ).toBeTruthy();
+});

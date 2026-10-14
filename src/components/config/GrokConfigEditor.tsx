@@ -41,7 +41,14 @@ export function GrokConfigEditor({
       ? t(`config_management.visual.validation.${errors[`grok.${name}`]}`)
       : undefined;
   const toggle = (
-    name: 'passthrough' | 'spoof' | 'convergence' | 'confuse' | 'webSearch' | 'xSearch' | 'dynamicHeaders'
+    name:
+      | 'passthrough'
+      | 'spoof'
+      | 'convergence'
+      | 'confuse'
+      | 'webSearch'
+      | 'xSearch'
+      | 'dynamicHeaders'
   ) => (
     <div key={name} className={styles.toggle} id={`config-grok-${name}`}>
       <div>
@@ -106,7 +113,11 @@ export function GrokConfigEditor({
             />
           </div>
         </div>
-        {error('chatMode') && <p role="alert" className={styles.error}>{error('chatMode')}</p>}
+        {error('chatMode') && (
+          <p role="alert" className={styles.error}>
+            {error('chatMode')}
+          </p>
+        )}
         <ConfigHelp title={key('chat_mode')} text={key('chat_mode_hint')} />
       </SettingsDisclosure>
       <SettingsDisclosure
@@ -117,16 +128,40 @@ export function GrokConfigEditor({
         dirty={changed('routing')}
         errorCount={errorCount('routing')}
       >
-        <GrokModelRoutingEditor value={value.routing} disabled={disabled} onChange={(routing) => patch({routing})} />
+        <GrokModelRoutingEditor
+          value={value.routing}
+          disabled={disabled}
+          onChange={(routing) => patch({ routing })}
+        />
       </SettingsDisclosure>
       <SettingsDisclosure
         id="config-grok-headers"
         title={key('headers')}
         description={key('global_hint')}
         focusTarget={focusTarget}
-        targetIds={['config-grok-dynamicHeaders']}
-        dirty={changed('userAgent', 'clientVersion', 'clientIdentifier', 'headers', 'dynamicHeaders')}
-        errorCount={errorCount('userAgent', 'clientVersion', 'clientIdentifier', 'headers')}
+        targetIds={[
+          'config-grok-dynamicHeaders',
+          'config-grok-officialBuild',
+          'config-grok-requestCompression',
+        ]}
+        dirty={changed(
+          'userAgent',
+          'clientVersion',
+          'clientIdentifier',
+          'headers',
+          'dynamicHeaders',
+          'officialBuild',
+          'clientMode',
+          'requestCompression'
+        )}
+        errorCount={errorCount(
+          'userAgent',
+          'clientVersion',
+          'clientIdentifier',
+          'headers',
+          'clientMode',
+          'requestCompression'
+        )}
       >
         <div className={styles.grid}>
           {(['userAgent', 'clientVersion', 'clientIdentifier'] as const).map((name) => (
@@ -136,10 +171,10 @@ export function GrokConfigEditor({
               value={value[name]}
               placeholder={
                 name === 'clientVersion'
-                  ? '0.2.120'
+                  ? key('version_auto')
                   : name === 'clientIdentifier'
                     ? 'grok-shell'
-                    : 'xai-grok-workspace/0.2.120'
+                    : key('agent_auto')
               }
               error={error(name)}
               disabled={disabled}
@@ -148,6 +183,45 @@ export function GrokConfigEditor({
           ))}
         </div>
         <ConfigHelp title={key('headers')} text={key('headers_hint')} />
+        <div className={styles.toggle} id="config-grok-officialBuild">
+          <div>
+            <strong>{key('officialBuild')}</strong>
+            <ConfigHelp title={key('officialBuild')} text={key('officialBuild_hint')} />
+          </div>
+          <ToggleSwitch
+            checked={value.officialBuild}
+            onChange={(officialBuild) => patch({ officialBuild })}
+            disabled={disabled}
+            ariaLabel={key('officialBuild')}
+          />
+        </div>
+        <div className={styles.grid}>
+          <div className="form-group">
+            <label>{key('clientMode')}</label>
+            <Select
+              ariaLabel={key('clientMode')}
+              value={value.clientMode}
+              disabled={disabled || !value.officialBuild}
+              onChange={(clientMode) => patch({ clientMode })}
+              options={['headless', 'interactive'].map((mode) => ({ value: mode, label: mode }))}
+            />
+          </div>
+          <div className="form-group" id="config-grok-requestCompression">
+            <label>{key('requestCompression')}</label>
+            <Select
+              ariaLabel={key('requestCompression')}
+              value={value.requestCompression}
+              disabled={disabled}
+              onChange={(requestCompression) => patch({ requestCompression })}
+              options={['none', 'auto'].map((mode) => ({
+                value: mode,
+                label: key(`compression_${mode}`),
+              }))}
+            />
+          </div>
+        </div>
+        <ConfigHelp title={key('requestCompression')} text={key('compression_hint')} />
+
         {toggle('dynamicHeaders')}
         <div className={styles.headers}>
           <HeaderInputList
@@ -207,9 +281,29 @@ export function GrokConfigEditor({
           )}
         </p>
       </SettingsDisclosure>
-      <SettingsDisclosure id="config-grok-image-tool" title={key('imageToolPolicy')} description={key('imageToolPolicy_hint')} dirty={changed('imageToolPolicy')} errorCount={errorCount('imageToolPolicy')} focusTarget={focusTarget}>
-        <Select ariaLabel={key('imageToolPolicy')} value={value.imageToolPolicy} disabled={disabled} onChange={(imageToolPolicy) => patch({imageToolPolicy})} options={['remove','error','allow'].map(mode => ({value:mode,label:key(`imageToolPolicy_${mode}`)}))} />
-        {error('imageToolPolicy') && <p role="alert" className={styles.error}>{error('imageToolPolicy')}</p>}
+      <SettingsDisclosure
+        id="config-grok-image-tool"
+        title={key('imageToolPolicy')}
+        description={key('imageToolPolicy_hint')}
+        dirty={changed('imageToolPolicy')}
+        errorCount={errorCount('imageToolPolicy')}
+        focusTarget={focusTarget}
+      >
+        <Select
+          ariaLabel={key('imageToolPolicy')}
+          value={value.imageToolPolicy}
+          disabled={disabled}
+          onChange={(imageToolPolicy) => patch({ imageToolPolicy })}
+          options={['remove', 'error', 'allow'].map((mode) => ({
+            value: mode,
+            label: key(`imageToolPolicy_${mode}`),
+          }))}
+        />
+        {error('imageToolPolicy') && (
+          <p role="alert" className={styles.error}>
+            {error('imageToolPolicy')}
+          </p>
+        )}
       </SettingsDisclosure>
       <SettingsDisclosure
         id="config-grok-parameters"
@@ -259,7 +353,9 @@ export function GrokConfigEditor({
           {toggle('webSearch')}
           {toggle('xSearch')}
         </div>
-        {value.chatMode === 'direct' && <p className={styles.notice}>{key('direct_search_hint')}</p>}
+        {value.chatMode === 'direct' && (
+          <p className={styles.notice}>{key('direct_search_hint')}</p>
+        )}
       </SettingsDisclosure>
     </div>
   );

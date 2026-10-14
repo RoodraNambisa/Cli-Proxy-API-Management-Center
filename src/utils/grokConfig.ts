@@ -1,4 +1,9 @@
-import { readGrokModelRouting, grokModelRoutingError, serializeGrokCatalogSources, serializeGrokModelRoutes } from './grokModelRouting';
+import {
+  readGrokModelRouting,
+  grokModelRoutingError,
+  serializeGrokCatalogSources,
+  serializeGrokModelRoutes,
+} from './grokModelRouting';
 import { isAlias, isMap, type Document } from 'yaml';
 import { DEFAULT_GROK_CONFIG, GROK_DEFAULT_KEYS, type GrokVisualConfig } from '@/types/grok';
 import type { VisualConfigValidationErrors } from '@/types/visualConfig';
@@ -52,6 +57,9 @@ export function readGrokConfig(raw: unknown): GrokVisualConfig {
     out[key as keyof typeof flags] = data[field] === true;
   for (const [key, field] of Object.entries(profiles))
     out[key as keyof typeof profiles] = text(profile[field]);
+  out.officialBuild = profile['official-build'] === true;
+  out.clientMode = text(profile['client-mode']) || 'headless';
+  out.requestCompression = text(data['request-compression']) || 'none';
   out.poolSize = text(data['session-identity-pool-size'] ?? 4);
   out.upstreamMode = text(data['default-base-url-mode']).trim().toLowerCase() || 'cli';
   out.imageToolPolicy = text(data['image-generation-tool-policy']).trim() || 'remove';
@@ -65,7 +73,8 @@ export function readGrokConfig(raw: unknown): GrokVisualConfig {
 
 export function grokConfigErrors(values: GrokVisualConfig): VisualConfigValidationErrors {
   const errors: VisualConfigValidationErrors = {};
-  if (!['remove', 'error', 'allow'].includes(values.imageToolPolicy)) errors['grok.imageToolPolicy'] = 'grok_image_tool_policy';
+  if (!['remove', 'error', 'allow'].includes(values.imageToolPolicy))
+    errors['grok.imageToolPolicy'] = 'grok_image_tool_policy';
   if (!['responses', 'direct'].includes(values.chatMode))
     errors['grok.chatMode'] = 'grok_chat_mode';
   if (grokModelRoutingError(values.routing)) errors['grok.routing'] = 'grok_model_routing';
@@ -73,6 +82,10 @@ export function grokConfigErrors(values: GrokVisualConfig): VisualConfigValidati
     errors['grok.upstreamMode'] = 'grok_upstream_mode';
   if (!/^\d+$/.test(values.poolSize) || Number(values.poolSize) < 1 || Number(values.poolSize) > 64)
     errors['grok.poolSize'] = 'integer_range_1_64';
+  if (!['headless', 'interactive'].includes(values.clientMode))
+    errors['grok.clientMode'] = 'grok_parameter';
+  if (!['none', 'auto'].includes(values.requestCompression))
+    errors['grok.requestCompression'] = 'grok_parameter';
   const seen = new Set<string>();
   if (values.headers.length > 64) errors['grok.headers'] = 'grok_headers';
   values.headers.forEach(({ key, value }) => {
@@ -106,6 +119,8 @@ export function grokConfigErrors(values: GrokVisualConfig): VisualConfigValidati
       (key === 'parallel_tool_calls' || key === 'stream_tool_calls') &&
       !['true', 'false'].includes(raw)
     )
+      errors[`grok.${key}`] = 'grok_parameter';
+    if (key === 'service_tier' && !['default', 'priority'].includes(raw))
       errors[`grok.${key}`] = 'grok_parameter';
     if (key === 'tool_choice' && !['auto', 'none', 'required'].includes(raw)) {
       try {
@@ -144,15 +159,25 @@ export function writeGrokConfig(
   for (const key of Object.keys(profiles) as Array<keyof typeof profiles>)
     if (values[key] !== baseline[key])
       write(['xai', 'header-defaults', profiles[key]], values[key].trim() || undefined);
+  if (values.officialBuild !== baseline.officialBuild)
+    write(['xai', 'header-defaults', 'official-build'], values.officialBuild);
+  if (values.clientMode !== baseline.clientMode)
+    write(['xai', 'header-defaults', 'client-mode'], values.clientMode);
+  if (values.requestCompression !== baseline.requestCompression)
+    write(['xai', 'request-compression'], values.requestCompression);
   if (values.poolSize !== baseline.poolSize)
     write(['xai', 'session-identity-pool-size'], Number(values.poolSize));
-  if (JSON.stringify(values.routing.catalogSources) !== JSON.stringify(baseline.routing.catalogSources))
+  if (
+    JSON.stringify(values.routing.catalogSources) !==
+    JSON.stringify(baseline.routing.catalogSources)
+  )
     write(['xai', 'model-catalog-sources'], serializeGrokCatalogSources(values.routing));
   if (JSON.stringify(values.routing.modelRoutes) !== JSON.stringify(baseline.routing.modelRoutes))
     write(['xai', 'model-routes'], serializeGrokModelRoutes(values.routing));
   if (values.upstreamMode !== baseline.upstreamMode)
     write(['xai', 'default-base-url-mode'], values.upstreamMode);
-  if (values.imageToolPolicy !== baseline.imageToolPolicy) write(['xai', 'image-generation-tool-policy'], values.imageToolPolicy);
+  if (values.imageToolPolicy !== baseline.imageToolPolicy)
+    write(['xai', 'image-generation-tool-policy'], values.imageToolPolicy);
   if (values.chatMode !== baseline.chatMode)
     write(['xai', 'chat-completions-mode'], values.chatMode);
   if (JSON.stringify(values.headers) !== JSON.stringify(baseline.headers))
@@ -168,7 +193,9 @@ export function writeGrokConfig(
     const path = ['xai', 'request-defaults', ...key.split('.')];
     const value = !raw
       ? undefined
-      : key === 'reasoning.effort' || (key === 'tool_choice' && !raw.startsWith('{'))
+      : key === 'reasoning.effort' ||
+          key === 'service_tier' ||
+          (key === 'tool_choice' && !raw.startsWith('{'))
         ? raw
         : ['max_output_tokens', 'temperature', 'top_p'].includes(key)
           ? Number(raw)

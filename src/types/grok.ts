@@ -6,6 +6,7 @@ export const GROK_DEFAULT_KEYS = [
   'reasoning.effort',
   'temperature',
   'top_p',
+  'service_tier',
   'tool_choice',
   'parallel_tool_calls',
   'stream_tool_calls',
@@ -15,6 +16,9 @@ export interface GrokVisualConfig {
   chatMode: string;
   imageToolPolicy: string;
   dynamicHeaders: boolean;
+  officialBuild: boolean;
+  clientMode: string;
+  requestCompression: string;
   upstreamMode: string;
   routing: GrokModelRoutingDraft;
   userAgent: string;
@@ -34,6 +38,9 @@ export const DEFAULT_GROK_CONFIG: GrokVisualConfig = {
   chatMode: 'responses',
   imageToolPolicy: 'remove',
   dynamicHeaders: false,
+  officialBuild: false,
+  clientMode: 'headless',
+  requestCompression: 'none',
   upstreamMode: 'cli',
   routing: emptyGrokModelRouting(),
   userAgent: '',
@@ -52,6 +59,7 @@ export const DEFAULT_GROK_CONFIG: GrokVisualConfig = {
     'reasoning.effort': '',
     temperature: '',
     top_p: '',
+    service_tier: '',
     tool_choice: '',
     parallel_tool_calls: '',
     stream_tool_calls: '',
