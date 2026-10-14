@@ -53,6 +53,7 @@ export type ModelProbeUsage = {
   cached_tokens?: number; reasoning_tokens?: number; cache_creation_tokens?: number;
 };
 export type ModelProbeResult = {
+  xai_diagnostics?: import('@/types/grokDiagnostics').GrokTransmission[];
   codex_response_guard?: import('@/utils/codexResponseGuard').GuardRecord;
  codex_cookie?: { mode: string; source: string; sent: boolean; digest?: string; version?: number; names: string[] };
   success: boolean; name: string; provider?: string; model: string; upstream_model?: string;
@@ -1328,6 +1329,12 @@ export const authFilesApi = {
   // Fetch models supported by a credential
   refreshXAIModels(name: string, connection: ApiClientConnectionSnapshot, signal?: AbortSignal) {
     return apiClient.postAtConnection<GrokCatalogRefreshInfo & { models: AuthFileModelItem[] }>(connection, '/auth-files/xai/models/refresh', { name }, { signal });
+  },
+  getGrokOptions(connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+    return apiClient.getAtConnection<import('@/types/grokDiagnostics').GrokOptions>(connection, '/auth-files/xai/options', {signal});
+  },
+  previewGrokHeaders(input: import('@/types/grokDiagnostics').GrokHeaderPreviewRequest, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+    return apiClient.postAtConnection<import('@/types/grokDiagnostics').GrokTransmission>(connection, '/auth-files/xai/headers/preview', input, {signal});
   },
 
   async getModelsForAuthFile(

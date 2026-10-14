@@ -965,6 +965,7 @@ export function ConfigPage() {
 
           <div hidden={activeTab !== 'visual'}>
             <VisualConfigEditor
+              sourceYaml={content}
               values={visualValues}
               baselineValues={baselineValues}
               validationErrors={visualValidationErrors}

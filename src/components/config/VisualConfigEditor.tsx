@@ -133,6 +133,7 @@ const CONFIG_PAGE_ICONS: Record<ConfigPageId, ComponentType<IconProps>> = {
 const CONFIG_PAGE_GROUPS: ConfigPageGroupId[] = ['global', 'providers', 'advanced'];
 
 interface VisualConfigEditorProps {
+  sourceYaml?: string;
   values: VisualConfigValues;
   baselineValues: VisualConfigValues;
   validationErrors?: VisualConfigValidationErrors;
@@ -653,6 +654,7 @@ function LegacyImagesSettings({
 }
 
 export function VisualConfigEditor({
+  sourceYaml,
   values,
   baselineValues,
   validationErrors,
@@ -3053,6 +3055,7 @@ export function VisualConfigEditor({
 
             {activePageId === 'provider-grok' && (
               <GrokConfigEditor
+                sourceYaml={sourceYaml}
                 value={values.grok}
                 baselineValue={baselineValues.grok}
                 focusTarget={focusTarget}

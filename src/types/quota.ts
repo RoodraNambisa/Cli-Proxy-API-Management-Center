@@ -307,6 +307,7 @@ export interface XaiProductUsageSummary {
 }
 
 export interface XaiBillingSummary {
+  usageSource?: 'creditUsagePercent' | 'amounts' | 'compatibility-zero';
   isCreditsConfig?: boolean;
   isUnifiedBillingUser?: boolean | null;
   prepaidBalanceCents?: number | null;

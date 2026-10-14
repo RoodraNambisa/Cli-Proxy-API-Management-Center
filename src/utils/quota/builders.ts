@@ -430,6 +430,7 @@ export function buildXaiBillingSummary(
   summary.prepaidBalanceCents = prepaidBalanceCents;
   summary.periodType = isCreditsConfig ? periodType : 'monthly';
   summary.usagePercent = usagePercent;
+  summary.usageSource = creditUsagePercent !== null ? 'creditUsagePercent' : rawMonthlyLimitCents !== null && rawMonthlyLimitCents > 0 ? 'amounts' : 'compatibility-zero';
   summary.periodStart = isCreditsConfig ? periodStart : billingPeriodStart;
   summary.periodEnd = isCreditsConfig ? periodEnd : billingPeriodEnd;
   summary.productUsage = productUsage;

@@ -24,6 +24,27 @@ export const configFileApi = {
 
   async saveConfigYaml(content: string): Promise<void> {
     const root = parseDocument(content).toJS();
+    const imageDeclarations =
+      Array.isArray(root?.['xai-api-key']) &&
+      root['xai-api-key'].some(
+        (key: { models?: Array<Record<string, unknown>> }) =>
+          Array.isArray(key.models) &&
+          key.models.some((model) => model['image-capabilities'] !== undefined)
+      );
+    if (imageDeclarations) {
+      const connection = apiClient.captureConnection();
+      let supported = false;
+      try {
+        const options = await apiClient.getAtConnection<{
+          capabilities?: { image_capability_declarations?: boolean };
+        }>(connection, '/auth-files/xai/options');
+        supported = options.capabilities?.image_capability_declarations === true;
+      } catch (error) {
+        const status = (error as { status?: number })?.status;
+        if (status !== 404 && status !== 405) throw error;
+      }
+      if (!supported) throw new Error(i18n.t('grok_diagnostics.upgrade'));
+    }
     const needsGuard =
       root?.codex?.['response-guard'] !== undefined ||
       root?.['api-key-groups']?.some?.(

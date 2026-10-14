@@ -4,6 +4,43 @@
   gap: 16px;
   padding-top: 20px;
 }
+.preview,
+.diagnostics {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 14px 0;
+}
+.preview {
+  grid-column: 1 / -1;
+}
+.diagnosticHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.diagnosticTable {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+.diagnosticTable table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.diagnosticTable th,
+.diagnosticTable td {
+  text-align: left;
+  padding: 9px;
+  border-bottom: 1px solid var(--border-color);
+  overflow-wrap: anywhere;
+  min-width: 100px;
+  max-width: 360px;
+}
+.preview summary,
+.diagnostics summary {
+  cursor: pointer;
+}
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
