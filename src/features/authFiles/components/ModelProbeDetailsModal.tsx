@@ -1,4 +1,5 @@
 import { ResponseGuardDetails } from './ResponseGuardDetails';
+import { GrokDiagnostics } from '@/components/config/GrokDiagnostics';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -98,6 +99,7 @@ export function ModelProbeDetailsModal({
           ))}
         </dl>
         {result?.codex_response_guard && <section><h3>{t('response_guard.title')}</h3><ResponseGuardDetails record={result.codex_response_guard}/></section>}
+        {result?.xai_diagnostics?.length ? <GrokDiagnostics values={result.xai_diagnostics}/> : null}
         {result?.codex_cookie && (
           <section>
             <strong>{t('model_probe.cookie_details')}</strong>

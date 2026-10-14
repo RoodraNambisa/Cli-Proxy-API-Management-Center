@@ -1504,11 +1504,12 @@ const renderXaiItems = (
           })
         )
       : null,
-    billing.productUsage.length > 0
+    billing.productUsage.length > 0 || billing.usageSource
       ? h(
           'details',
           { key: 'product-details', className: styleMap.quotaRow },
           h('summary', null, t('xai_quota.product_details')),
+          billing.usageSource ? h('p', {className: styleMap.quotaMessage}, t(`xai_quota.usage_sources.${billing.usageSource}`)) : null,
           h('p', { className: styleMap.quotaMessage }, t('xai_quota.product_details_hint')),
           ...billing.productUsage.map((item) => {
             const used =

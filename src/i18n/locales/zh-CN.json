@@ -1515,7 +1515,12 @@
     "plan_supergrok": "SuperGrok",
     "plan_supergrok_heavy": "SuperGrok Heavy",
     "pay_as_you_go_label": "按量付费",
-    "pay_as_you_go_disabled": "未启用"
+    "pay_as_you_go_disabled": "未启用",
+    "usage_sources": {
+      "creditUsagePercent": "比例来源：上游 creditUsagePercent。",
+      "amounts": "比例来源：本次响应金额 used ÷ monthlyLimit；缺少 used 时按客户端默认 0 计算。",
+      "compatibility-zero": "比例来源：官方客户端兼容默认 0%，并非上游明确返回的零用量。"
+    }
   },
   "vertex_import": {
     "title": "Vertex JSON 登录",
@@ -5430,5 +5435,92 @@
       "managed": "旧托管主用 Cookie",
       "candidate": "旧候选 Cookie"
     }
+  },
+  "grok_diagnostics": {
+    "title": "Grok 实际出站诊断",
+    "preview": "预览最终请求头",
+    "preview_hint": "使用当前未保存的 Grok 配置。不发送网络请求、不刷新令牌、不保存配置。生成的会话身份标为示例；压缩只读取已有能力缓存，未知时不预测下次请求是否压缩。",
+    "redacted_hint": "令牌、Cookie、账户标识及敏感自定义值已脱敏，复制结果也只包含脱敏数据。字节数不包含 TLS 与 HTTP 协议开销。",
+    "copy": "复制脱敏诊断",
+    "no_status": "暂无响应状态",
+    "version": "客户端版本",
+    "credential": "凭证",
+    "model": "请求模型",
+    "purpose": "请求用途",
+    "protocol": "协议",
+    "stream": "流式",
+    "client_headers": "模拟客户端请求头",
+    "add_header": "添加请求头",
+    "request_body": "可选请求 JSON",
+    "loading": "加载中…",
+    "failed": "预览失败",
+    "upgrade": "当前后端不支持 Grok 请求头预览，请升级后端。",
+    "invalid_config": "YAML 配置无效",
+    "invalid_body": "请求内容必须是 JSON 对象",
+    "compression": "请求体压缩",
+    "settings": "协商入口",
+    "original_bytes": "最终 JSON 字节数",
+    "sent_bytes": "发送体字节数",
+    "capabilities": "当前凭证模型能力",
+    "thinking": "思考参数",
+    "images": "参考图上限",
+    "header": "请求头",
+    "value": "最终值",
+    "source": "来源",
+    "missing": "缺少来源",
+    "example": "示例值",
+    "unverified": "能力未验证",
+    "supported": "支持",
+    "unsupported": "不支持",
+    "stages": {
+      "http": "HTTP 请求",
+      "settings": "Settings 查询",
+      "websocket_handshake": "WebSocket 握手",
+      "websocket_reuse": "WebSocket 复用 · 原握手头"
+    },
+    "purposes": {
+      "inference": "推理",
+      "quota": "额度查询",
+      "models": "模型目录",
+      "device-login": "设备登录",
+      "token-exchange": "换票／轮询"
+    },
+    "reasons": {
+      "disabled": "已关闭",
+      "ineligible": "请求不适用",
+      "below_threshold": "不足 64 KiB",
+      "unknown_support": "支持状态未知",
+      "preview_support_unknown": "无能力缓存，预览不发起协商",
+      "unsupported": "上游未声明支持 zstd",
+      "compressed": "已使用 zstd 压缩",
+      "redirect_plain": "重定向发送普通 JSON",
+      "negotiation_failed": "协商失败，回退普通 JSON",
+      "compression_failed": "压缩失败，回退普通 JSON",
+      "canceled": "协商已取消",
+      "websocket": "不适用 HTTP 请求体压缩",
+      "settings-query": "独立协商请求"
+    },
+    "sources": {
+      "builtin": "内置默认",
+      "version-cache": "版本缓存",
+      "global-default": "全局默认",
+      "global-config": "全局配置",
+      "credential-config": "凭证配置",
+      "credential-auth": "凭证认证",
+      "client-passthrough": "客户端透传",
+      "dynamic-template": "动态模板",
+      "identity-policy": "身份策略",
+      "model-route": "模型路由",
+      "protocol": "协议",
+      "transport": "传输层",
+      "transport-generated": "传输层生成",
+      "compression-negotiation": "压缩协商",
+      "login-protocol": "登录协议",
+      "api-key-declaration": "API Key 能力声明",
+      "credential-catalog": "当前凭证与节点目录",
+      "compatibility": "兼容回退 · 未验证",
+      "unverified": "能力未验证"
+    },
+    "endpoint_missing": "登录入口由上游发现接口提供；当前凭证未保存该地址，预览仅展示发行者及请求头。"
   }
 }

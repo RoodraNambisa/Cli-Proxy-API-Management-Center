@@ -1,4 +1,5 @@
 import { GrokModelRoutingEditor } from './GrokModelRoutingEditor';
+import { GrokHeadersPreview } from './GrokHeadersPreview';
 import { useTranslation } from 'react-i18next';
 import { SettingsDisclosure } from './SettingsDisclosure';
 import { ConfigHelp } from './ConfigHelp';
@@ -16,12 +17,14 @@ import {
 import styles from './GrokConfigEditor.module.scss';
 
 export function GrokConfigEditor({
+  sourceYaml,
   value,
   baselineValue,
   focusTarget,
   disabled,
   onChange,
 }: {
+  sourceYaml?: string;
   value: GrokVisualConfig;
   baselineValue: GrokVisualConfig;
   focusTarget?: string;
@@ -164,6 +167,12 @@ export function GrokConfigEditor({
         )}
       >
         <div className={styles.grid}>
+          <GrokHeadersPreview
+            sourceYaml={sourceYaml}
+            value={value}
+            baselineValue={baselineValue}
+            disabled={disabled || Object.keys(errors).length > 0}
+          />
           {(['userAgent', 'clientVersion', 'clientIdentifier'] as const).map((name) => (
             <Input
               key={name}
