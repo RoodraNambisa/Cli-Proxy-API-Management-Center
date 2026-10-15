@@ -60,6 +60,31 @@ beforeEach(() => {
   vi.mocked(authFilesApi.previewGrokHeaders).mockResolvedValue(result);
 });
 describe('Grok header preview', () => {
+  it('allows another preview after closing an in-flight request and reopening', async () => {
+    vi.mocked(authFilesApi.previewGrokHeaders).mockImplementationOnce(() => new Promise(() => {}));
+    render(<GrokHeadersPreview value={DEFAULT_GROK_CONFIG} baselineValue={DEFAULT_GROK_CONFIG} />);
+    await openPreview();
+    await screen.findByDisplayValue('grok-4.7');
+    fireEvent.click(screen.getByRole('button', { name: 'grok_diagnostics.preview' }));
+    await waitFor(() => expect(authFilesApi.previewGrokHeaders).toHaveBeenCalledOnce());
+    const signal = vi.mocked(authFilesApi.previewGrokHeaders).mock.calls[0][2];
+    const details = screen.getByText('grok_diagnostics.loading').closest('details')!;
+    act(() => {
+      details.open = false;
+      fireEvent(details, new Event('toggle'));
+    });
+    expect(signal.aborted).toBe(true);
+    await openPreview();
+    await waitFor(() => expect(authFilesApi.getGrokOptions).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('button', { name: 'grok_diagnostics.preview' }) as HTMLButtonElement)
+          .disabled
+      ).toBe(false)
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'grok_diagnostics.preview' }));
+    await waitFor(() => expect(authFilesApi.previewGrokHeaders).toHaveBeenCalledTimes(2));
+  });
   it('previews the editor YAML without fetching another configuration snapshot', async () => {
     render(
       <GrokHeadersPreview

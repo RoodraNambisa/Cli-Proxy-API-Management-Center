@@ -28,30 +28,41 @@ export const configFileApi = {
       Array.isArray(root?.['xai-api-key']) &&
       root['xai-api-key'].some(
         (key: { models?: Array<Record<string, unknown>> }) =>
-          Array.isArray(key.models) &&
-          key.models.some((model) => model['image-capabilities'] !== undefined)
+          Array.isArray(key?.models) &&
+          key.models.some((model) => model?.['image-capabilities'] !== undefined)
       );
-    if (imageDeclarations) {
-      const connection = apiClient.captureConnection();
+    const officialBuild = root?.xai?.['header-defaults']?.['official-build'] === true;
+    const compression = root?.xai?.['request-compression'] === 'auto';
+    const needsGrok = imageDeclarations || officialBuild || compression;
+    const needsGuard =
+      root?.codex?.['response-guard'] !== undefined ||
+      root?.['api-key-groups']?.some?.(
+        (g: Record<string, unknown>) => g?.['credential-target-response-guard'] === true
+      );
+    const connection = needsGrok || needsGuard ? apiClient.captureConnection() : undefined;
+    if (needsGrok) {
       let supported = false;
       try {
         const options = await apiClient.getAtConnection<{
-          capabilities?: { image_capability_declarations?: boolean };
-        }>(connection, '/auth-files/xai/options');
-        supported = options.capabilities?.image_capability_declarations === true;
+          capabilities?: {
+            image_capability_declarations?: boolean;
+            official_build_headers?: boolean;
+            request_compression_diagnostics?: boolean;
+          };
+        }>(connection!, '/auth-files/xai/options');
+        supported =
+          (!imageDeclarations || options.capabilities?.image_capability_declarations === true) &&
+          (!officialBuild || options.capabilities?.official_build_headers === true) &&
+          (!compression || options.capabilities?.request_compression_diagnostics === true);
       } catch (error) {
         const status = (error as { status?: number })?.status;
         if (status !== 404 && status !== 405) throw error;
       }
       if (!supported) throw new Error(i18n.t('grok_diagnostics.upgrade'));
     }
-    const needsGuard =
-      root?.codex?.['response-guard'] !== undefined ||
-      root?.['api-key-groups']?.some?.(
-        (g: Record<string, unknown>) => g?.['credential-target-response-guard'] === true
-      );
-    const connection = needsGuard ? apiClient.captureConnection() : undefined;
-    await requireRoutingCredentialSupport(root?.routing?.['priority-overrides']);
+    if (connection)
+      await requireRoutingCredentialSupport(root?.routing?.['priority-overrides'], connection);
+    else await requireRoutingCredentialSupport(root?.routing?.['priority-overrides']);
     if (needsGuard) {
       let supported = false;
       try {
@@ -67,9 +78,10 @@ export const configFileApi = {
     }
     const state = root?.codex?.['state-override'];
     const autoCookie = root?.codex?.['auto-cookie'] === true;
-    const quotaCredits = root?.codex?.['quota-auto-disable']?.rules?.some?.(
-      (rule: { credits?: { enabled?: boolean } }) => rule?.credits?.enabled === true
-    ) === true;
+    const quotaCredits =
+      root?.codex?.['quota-auto-disable']?.rules?.some?.(
+        (rule: { credits?: { enabled?: boolean } }) => rule?.credits?.enabled === true
+      ) === true;
     const conflict = autoCookie && autoCookieConflict(readCodexState(state));
     if (conflict) throw new Error(i18n.t('codex_auto_cookie.conflict', { rule: conflict }));
     const rules: Array<Record<string, unknown>> = Array.isArray(state?.rules) ? state.rules : [];
@@ -119,7 +131,7 @@ export const configFileApi = {
         )
     );
     if (quotaCredits || autoCookie || modelOverrides || retryRounds || cookieFeatures) {
-      const options = await apiClient.get<{
+      type StateOptions = {
         features?: {
           auto_cookie?: boolean;
           quota_auto_disable_credits?: boolean;
@@ -130,7 +142,12 @@ export const configFileApi = {
           cookie_only?: boolean;
           state_seconds?: boolean;
         };
-      }>('/auth-files/codex/state/options').catch((error: unknown) => {
+      };
+      const options = await (
+        connection
+          ? apiClient.getAtConnection<StateOptions>(connection, '/auth-files/codex/state/options')
+          : apiClient.get<StateOptions>('/auth-files/codex/state/options')
+      ).catch((error: unknown) => {
         const status = (error as { status?: number })?.status;
         if (quotaCredits && (status === 404 || status === 405))
           throw new Error(i18n.t('codex_quota_auto_disable.credits_upgrade'));

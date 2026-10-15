@@ -91,7 +91,20 @@ export function GrokHeadersPreview({
     setBusy(false);
     setResult(undefined);
     return () => request.current?.abort();
-  }, [value, sourceYaml, name, model, purpose, protocol, stream, headers, body, scope]);
+  }, [
+    open,
+    value,
+    baselineValue,
+    sourceYaml,
+    name,
+    model,
+    purpose,
+    protocol,
+    stream,
+    headers,
+    body,
+    scope,
+  ]);
   const preview = async () => {
     request.current?.abort();
     const controller = new AbortController();

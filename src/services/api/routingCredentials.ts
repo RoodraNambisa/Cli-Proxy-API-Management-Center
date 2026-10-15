@@ -1,8 +1,11 @@
-import { apiClient } from './client';
+import { apiClient, type ApiClientConnectionSnapshot } from './client';
 import i18n from '@/i18n';
 
 // Old backends ignore unknown selectors, which would widen a credential rule.
-export async function requireRoutingCredentialSupport(rules: unknown): Promise<void> {
+export async function requireRoutingCredentialSupport(
+  rules: unknown,
+  connection?: ApiClientConnectionSnapshot
+): Promise<void> {
   if (
     !Array.isArray(rules) ||
     !rules.some((rule) => {
@@ -15,9 +18,10 @@ export async function requireRoutingCredentialSupport(rules: unknown): Promise<v
   )
     return;
   try {
-    const result = await apiClient.get<{ features?: { credential_request_limits?: boolean } }>(
-      '/routing/priority-overrides'
-    );
+    type Options = { features?: { credential_request_limits?: boolean } };
+    const result = await (connection
+      ? apiClient.getAtConnection<Options>(connection, '/routing/priority-overrides')
+      : apiClient.get<Options>('/routing/priority-overrides'));
     if (result.features?.credential_request_limits === true) return;
   } catch {
     /* Use a clear compatibility message for missing capability endpoints. */
