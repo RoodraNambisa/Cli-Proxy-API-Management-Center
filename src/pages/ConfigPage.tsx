@@ -40,6 +40,10 @@ import {
   type ChatGptWebLoginProxyPanelHandle,
 } from '@/features/chatgptWeb/components/ChatGptWebLoginProxyPanel';
 import {
+  ChatGptWebBrowserRegionPanel,
+  type ChatGptWebBrowserRegionPanelHandle,
+} from '@/features/chatgptWeb/components/ChatGptWebBrowserRegionPanel';
+import {
   ChatGptWebUsageCachePanel,
   type ChatGptWebUsageCachePanelHandle,
 } from '@/features/chatgptWeb/components/ChatGptWebUsageCachePanel';
@@ -59,6 +63,7 @@ type ConfigSidecarPanelId =
   | 'config-chatgpt-web-import'
   | 'config-chatgpt-web-account-info'
   | 'config-chatgpt-web-login-proxy'
+  | 'config-chatgpt-web-browser-region'
   | 'config-chatgpt-web-sentinel'
   | 'config-chatgpt-web-usage-cache';
 
@@ -68,6 +73,7 @@ type ConfigSidecarDirtySnapshot = {
   importSettings: boolean;
   accountInfo: boolean;
   loginProxy: boolean;
+  browserRegion: boolean;
   sentinel: boolean;
   usageCache: boolean;
 };
@@ -143,6 +149,7 @@ export function ConfigPage() {
   const [chatGptWebImportDirty, setChatGptWebImportDirty] = useState(false);
   const [chatGptWebAccountInfoDirty, setChatGptWebAccountInfoDirty] = useState(false);
   const [chatGptWebLoginProxyDirty, setChatGptWebLoginProxyDirty] = useState(false);
+  const [chatGptWebBrowserRegionDirty, setChatGptWebBrowserRegionDirty] = useState(false);
   const [chatGptWebSentinelDirty, setChatGptWebSentinelDirty] = useState(false);
   const [chatGptWebUsageCacheDirty, setChatGptWebUsageCacheDirty] = useState(false);
   const [requestBodyReleaseErrorCount, setRequestBodyReleaseErrorCount] = useState(0);
@@ -150,6 +157,7 @@ export function ConfigPage() {
   const [chatGptWebImportErrorCount, setChatGptWebImportErrorCount] = useState(0);
   const [chatGptWebAccountInfoErrorCount, setChatGptWebAccountInfoErrorCount] = useState(0);
   const [chatGptWebLoginProxyErrorCount, setChatGptWebLoginProxyErrorCount] = useState(0);
+  const [chatGptWebBrowserRegionErrorCount, setChatGptWebBrowserRegionErrorCount] = useState(0);
   const [chatGptWebSentinelErrorCount, setChatGptWebSentinelErrorCount] = useState(0);
   const [chatGptWebUsageCacheErrorCount, setChatGptWebUsageCacheErrorCount] = useState(0);
   const [diffModalOpen, setDiffModalOpen] = useState(false);
@@ -170,6 +178,7 @@ export function ConfigPage() {
   const chatGptWebImportRef = useRef<ChatGptWebImportPanelHandle | null>(null);
   const chatGptWebAccountInfoRef = useRef<ChatGptWebAccountInfoPanelHandle | null>(null);
   const chatGptWebLoginProxyRef = useRef<ChatGptWebLoginProxyPanelHandle | null>(null);
+  const chatGptWebBrowserRegionRef = useRef<ChatGptWebBrowserRegionPanelHandle | null>(null);
   const chatGptWebSentinelRef = useRef<ChatGptWebSentinelPanelHandle | null>(null);
   const chatGptWebUsageCacheRef = useRef<ChatGptWebUsageCachePanelHandle | null>(null);
 
@@ -183,6 +192,7 @@ export function ConfigPage() {
     chatGptWebImportDirty ||
     chatGptWebAccountInfoDirty ||
     chatGptWebLoginProxyDirty ||
+    chatGptWebBrowserRegionDirty ||
     chatGptWebSentinelDirty ||
     chatGptWebUsageCacheDirty;
   const shouldRenderFloatingActions = isCurrentLayer;
@@ -236,6 +246,8 @@ export function ConfigPage() {
       !chatGptWebAccountInfoDirty || chatGptWebAccountInfoRef.current?.validate() !== false;
     const loginProxyValid =
       !chatGptWebLoginProxyDirty || chatGptWebLoginProxyRef.current?.validate() !== false;
+    const browserRegionValid =
+      !chatGptWebBrowserRegionDirty || chatGptWebBrowserRegionRef.current?.validate() !== false;
     const sentinelValid =
       !chatGptWebSentinelDirty || chatGptWebSentinelRef.current?.validate() !== false;
     const usageCacheValid =
@@ -246,6 +258,7 @@ export function ConfigPage() {
       importValid &&
       accountInfoValid &&
       loginProxyValid &&
+      browserRegionValid &&
       sentinelValid &&
       usageCacheValid
     )
@@ -262,9 +275,11 @@ export function ConfigPage() {
             ? 'config-chatgpt-web-account-info'
             : !loginProxyValid
               ? 'config-chatgpt-web-login-proxy'
-              : !sentinelValid
-                ? 'config-chatgpt-web-sentinel'
-                : 'config-chatgpt-web-usage-cache';
+              : !browserRegionValid
+                ? 'config-chatgpt-web-browser-region'
+                : !sentinelValid
+                  ? 'config-chatgpt-web-sentinel'
+                  : 'config-chatgpt-web-usage-cache';
     navigate(`/config?section=${invalidSection}`, { replace: true });
     showNotification(t('config_management.settings_center.sidecar_validation_failed'), 'error');
     return false;
@@ -272,6 +287,7 @@ export function ConfigPage() {
     chatGptWebAccountInfoDirty,
     chatGptWebImportDirty,
     chatGptWebLoginProxyDirty,
+    chatGptWebBrowserRegionDirty,
     chatGptWebSentinelDirty,
     chatGptWebUsageCacheDirty,
     navigate,
@@ -299,6 +315,7 @@ export function ConfigPage() {
       reloadImport = false,
       reloadAccountInfo = false,
       reloadLoginProxy = false,
+      reloadBrowserRegion = false,
       reloadSentinel = false,
       reloadUsageCache = false,
     } = {}) => {
@@ -319,6 +336,9 @@ export function ConfigPage() {
             : Promise.resolve(),
           reloadLoginProxy
             ? (chatGptWebLoginProxyRef.current?.reload() ?? Promise.resolve())
+            : Promise.resolve(),
+          reloadBrowserRegion
+            ? (chatGptWebBrowserRegionRef.current?.reload() ?? Promise.resolve())
             : Promise.resolve(),
           reloadSentinel
             ? (chatGptWebSentinelRef.current?.reload() ?? Promise.resolve())
@@ -402,6 +422,13 @@ export function ConfigPage() {
           success: panel ? await panel.save() : false,
         });
       }
+      if (snapshot.browserRegion) {
+        const panel = chatGptWebBrowserRegionRef.current;
+        results.push({
+          id: 'config-chatgpt-web-browser-region',
+          success: panel ? await panel.save() : false,
+        });
+      }
       if (snapshot.sentinel) {
         const panel = chatGptWebSentinelRef.current;
         results.push({
@@ -468,6 +495,7 @@ export function ConfigPage() {
       importSettings: chatGptWebImportDirty,
       accountInfo: chatGptWebAccountInfoDirty,
       loginProxy: chatGptWebLoginProxyDirty,
+      browserRegion: chatGptWebBrowserRegionDirty,
       sentinel: chatGptWebSentinelDirty,
       usageCache: chatGptWebUsageCacheDirty,
     };
@@ -488,6 +516,7 @@ export function ConfigPage() {
         reloadImport: !sidecarSnapshot.importSettings,
         reloadAccountInfo: !sidecarSnapshot.accountInfo,
         reloadLoginProxy: !sidecarSnapshot.loginProxy,
+        reloadBrowserRegion: !sidecarSnapshot.browserRegion,
         reloadSentinel: !sidecarSnapshot.sentinel,
         reloadUsageCache: !sidecarSnapshot.usageCache,
       });
@@ -524,6 +553,7 @@ export function ConfigPage() {
         chatGptWebImportDirty ||
         chatGptWebAccountInfoDirty ||
         chatGptWebLoginProxyDirty ||
+        chatGptWebBrowserRegionDirty ||
         chatGptWebSentinelDirty ||
         chatGptWebUsageCacheDirty)
     ) {
@@ -533,6 +563,7 @@ export function ConfigPage() {
         importSettings: chatGptWebImportDirty,
         accountInfo: chatGptWebAccountInfoDirty,
         loginProxy: chatGptWebLoginProxyDirty,
+        browserRegion: chatGptWebBrowserRegionDirty,
         sentinel: chatGptWebSentinelDirty,
         usageCache: chatGptWebUsageCacheDirty,
       };
@@ -595,6 +626,7 @@ export function ConfigPage() {
           chatGptWebImportDirty ||
           chatGptWebAccountInfoDirty ||
           chatGptWebLoginProxyDirty ||
+          chatGptWebBrowserRegionDirty ||
           chatGptWebSentinelDirty ||
           chatGptWebUsageCacheDirty
         ) {
@@ -604,6 +636,7 @@ export function ConfigPage() {
             importSettings: chatGptWebImportDirty,
             accountInfo: chatGptWebAccountInfoDirty,
             loginProxy: chatGptWebLoginProxyDirty,
+            browserRegion: chatGptWebBrowserRegionDirty,
             sentinel: chatGptWebSentinelDirty,
             usageCache: chatGptWebUsageCacheDirty,
           });
@@ -844,6 +877,7 @@ export function ConfigPage() {
         chatGptWebImportRef.current?.reload(),
         chatGptWebAccountInfoRef.current?.reload(),
         chatGptWebLoginProxyRef.current?.reload(),
+        chatGptWebBrowserRegionRef.current?.reload(),
         chatGptWebSentinelRef.current?.reload(),
         chatGptWebUsageCacheRef.current?.reload(),
       ]);
@@ -864,6 +898,7 @@ export function ConfigPage() {
           chatGptWebImportRef.current?.reload(),
           chatGptWebAccountInfoRef.current?.reload(),
           chatGptWebLoginProxyRef.current?.reload(),
+          chatGptWebBrowserRegionRef.current?.reload(),
           chatGptWebSentinelRef.current?.reload(),
           chatGptWebUsageCacheRef.current?.reload(),
         ]);
@@ -979,6 +1014,7 @@ export function ConfigPage() {
                 chatGptWebImportDirty ||
                 chatGptWebAccountInfoDirty ||
                 chatGptWebLoginProxyDirty ||
+                chatGptWebBrowserRegionDirty ||
                 chatGptWebSentinelDirty ||
                 chatGptWebUsageCacheDirty
               }
@@ -986,6 +1022,7 @@ export function ConfigPage() {
                 chatGptWebImportErrorCount +
                 chatGptWebAccountInfoErrorCount +
                 chatGptWebLoginProxyErrorCount +
+                chatGptWebBrowserRegionErrorCount +
                 chatGptWebSentinelErrorCount +
                 chatGptWebUsageCacheErrorCount
               }
@@ -1036,13 +1073,23 @@ export function ConfigPage() {
                   />
                   <ChatGptWebLoginProxyPanel
                     ref={chatGptWebLoginProxyRef}
-                    active={active}
+                    active={active && activeTab === 'visual' && isCurrentLayer}
                     disabled={disableControls}
                     connectionGenerationKey={connectionGenerationKey}
                     externalSaving={saving}
                     focusTarget={focusTarget}
                     onDirtyChange={setChatGptWebLoginProxyDirty}
                     onErrorCountChange={setChatGptWebLoginProxyErrorCount}
+                  />
+                  <ChatGptWebBrowserRegionPanel
+                    ref={chatGptWebBrowserRegionRef}
+                    active={active}
+                    disabled={disableControls}
+                    connectionGenerationKey={connectionGenerationKey}
+                    externalSaving={saving}
+                    focusTarget={focusTarget}
+                    onDirtyChange={setChatGptWebBrowserRegionDirty}
+                    onErrorCountChange={setChatGptWebBrowserRegionErrorCount}
                   />
                   <ChatGptWebUsageCachePanel
                     ref={chatGptWebUsageCacheRef}

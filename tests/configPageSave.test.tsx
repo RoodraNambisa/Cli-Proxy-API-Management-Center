@@ -13,6 +13,7 @@ const harness = vi.hoisted(() => ({
   importDirty: false,
   accountInfoDirty: false,
   loginProxyDirty: false,
+  browserRegionDirty: false,
   sentinelDirty: false,
   usageCacheDirty: false,
   mergedYaml: 'request-retry: 1\n',
@@ -29,7 +30,9 @@ const harness = vi.hoisted(() => ({
   accountInfoSave: vi.fn(),
   accountInfoReload: vi.fn(),
   loginProxySave: vi.fn(),
+  browserRegionSave: vi.fn(),
   loginProxyReload: vi.fn(),
+  browserRegionReload: vi.fn(),
   sentinelSave: vi.fn(),
   sentinelReload: vi.fn(),
   usageCacheSave: vi.fn(),
@@ -436,6 +439,49 @@ vi.mock('@/features/chatgptWeb/components/ChatGptWebLoginProxyPanel', async () =
   };
 });
 
+vi.mock('@/features/chatgptWeb/components/ChatGptWebBrowserRegionPanel', async () => {
+  const React = await import('react');
+  type Props = {
+    onDirtyChange?: (dirty: boolean) => void;
+    onErrorCountChange?: (count: number) => void;
+  };
+  type Handle = {
+    save: () => Promise<boolean>;
+    reload: () => Promise<void>;
+    reset: () => void;
+    validate: () => boolean;
+  };
+
+  return {
+    ChatGptWebBrowserRegionPanel: React.forwardRef<Handle, Props>(function MockBrowserRegionPanel(
+      { onDirtyChange, onErrorCountChange },
+      ref
+    ) {
+      React.useEffect(() => {
+        onDirtyChange?.(harness.browserRegionDirty);
+        onErrorCountChange?.(0);
+      }, [onDirtyChange, onErrorCountChange]);
+      React.useImperativeHandle(
+        ref,
+        () => ({
+          save: async () => {
+            const success = (await harness.browserRegionSave()) !== false;
+            if (success) onDirtyChange?.(false);
+            return success;
+          },
+          reload: async () => {
+            await harness.browserRegionReload();
+          },
+          reset: vi.fn(),
+          validate: () => true,
+        }),
+        [onDirtyChange]
+      );
+      return <div>browser-region-panel</div>;
+    }),
+  };
+});
+
 vi.mock('@/components/config/DiffModal', () => ({
   DiffModal: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
     open ? (
@@ -469,6 +515,7 @@ describe('ConfigPage save coordination', () => {
     harness.importDirty = false;
     harness.accountInfoDirty = false;
     harness.loginProxyDirty = false;
+    harness.browserRegionDirty = false;
     harness.sentinelDirty = false;
     harness.usageCacheDirty = false;
     harness.pageTransitionLayer = null;
@@ -489,7 +536,9 @@ describe('ConfigPage save coordination', () => {
     harness.accountInfoSave.mockResolvedValue(true);
     harness.accountInfoReload.mockResolvedValue(undefined);
     harness.loginProxySave.mockResolvedValue(true);
+    harness.browserRegionSave.mockResolvedValue(true);
     harness.loginProxyReload.mockResolvedValue(undefined);
+    harness.browserRegionReload.mockResolvedValue(undefined);
     harness.sentinelSave.mockResolvedValue(true);
     harness.sentinelReload.mockResolvedValue(undefined);
     harness.usageCacheSave.mockResolvedValue(true);
@@ -692,6 +741,22 @@ describe('ConfigPage save coordination', () => {
     expect(harness.saveYaml).not.toHaveBeenCalled();
     expect(harness.loadVisualValues).toHaveBeenLastCalledWith(
       'chatgpt-web:\n  login-proxy:\n    enabled: true\n'
+    );
+  });
+
+  test('saves the ChatGPT Web browser region through the unified sidecar flow', async () => {
+    harness.browserRegionDirty = true;
+    harness.fetchYaml
+      .mockResolvedValueOnce('chatgpt-web: {}\n')
+      .mockResolvedValueOnce('chatgpt-web:\n  browser-region:\n    auto-timezone: true\n');
+
+    renderPage();
+    await clickSave();
+
+    await waitFor(() => expect(harness.browserRegionSave).toHaveBeenCalledTimes(1));
+    expect(harness.saveYaml).not.toHaveBeenCalled();
+    expect(harness.loadVisualValues).toHaveBeenLastCalledWith(
+      'chatgpt-web:\n  browser-region:\n    auto-timezone: true\n'
     );
   });
 

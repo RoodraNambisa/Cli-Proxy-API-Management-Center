@@ -1,0 +1,94 @@
+@use '../../../styles/variables' as *;
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+.toggle,
+.actions {
+  display: flex;
+  gap: $spacing-md;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.toggle {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  padding: 10px 0;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+}
+.content label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.content input,
+.content select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+}
+.content input:focus-visible,
+.content select:focus-visible,
+.content summary:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+.content input:disabled,
+.content select:disabled {
+  opacity: 0.6;
+}
+.hint {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 80ch;
+}
+.error {
+  color: var(--failure-badge-text);
+}
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid var(--border-color);
+  padding-top: $spacing-md;
+}
+.preview h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.results dt {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.results dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 768px) {
+  .grid,
+  .results {
+    grid-template-columns: 1fr;
+  }
+}
