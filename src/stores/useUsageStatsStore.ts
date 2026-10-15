@@ -118,15 +118,20 @@ const createUnsupportedCapabilityError = (): Error & { status: number } =>
 const requestUsageCapability = async <T>(
   scopeKey: string,
   capability: 'meta' | 'summary' | 'details' | 'auths',
-  request: () => Promise<T>
+  request: () => Promise<T>,
+  signal?: AbortSignal
 ): Promise<T> => {
+  signal?.throwIfAborted();
   const key = `${scopeKey}::${capability}`;
   if (unsupportedUsageCapabilities.has(key)) {
     throw createUnsupportedCapabilityError();
   }
   try {
-    return await request();
+    const response = await request();
+    signal?.throwIfAborted();
+    return response;
   } catch (error: unknown) {
+    signal?.throwIfAborted();
     if (isNotFoundError(error)) {
       unsupportedUsageCapabilities.add(key);
       throw createUnsupportedCapabilityError();
@@ -508,8 +513,11 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
     set({ detailsLoading: true, detailsError: null, scopeKey });
 
     try {
-      const response = await requestUsageCapability(scopeKey, 'details', () =>
-        usageApi.getUsageDetails(query, { signal: options.signal })
+      const response = await requestUsageCapability(
+        scopeKey,
+        'details',
+        () => usageApi.getUsageDetails(query, { signal: options.signal }),
+        options.signal
       );
       const detailsRaw = Array.isArray(response.items)
         ? response.items
@@ -551,6 +559,10 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
             totalMatched: null,
           }
         );
+      }
+      if (options.signal?.aborted) {
+        set({ detailsLoading: false, detailsError: null });
+        throw error;
       }
       const message = getErrorMessage(error);
       set({

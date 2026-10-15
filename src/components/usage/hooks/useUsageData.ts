@@ -341,15 +341,19 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
     async <T>(
       capability: UsageCapability,
       request: () => Promise<T>,
-      isEmpty: (value: T) => boolean
+      isEmpty: (value: T) => boolean,
+      signal?: AbortSignal
     ): Promise<UsageResource<T>> => {
+      signal?.throwIfAborted();
       if (unsupportedCapabilitiesRef.current.has(capability)) {
         return terminalResource('unsupported');
       }
       try {
         const data = await request();
+        signal?.throwIfAborted();
         return resourceStatusForData(data, isEmpty);
       } catch (error: unknown) {
+        signal?.throwIfAborted();
         if (isAbortError(error)) throw error;
         if (errorStatus(error) === 404) {
           unsupportedCapabilitiesRef.current.add(capability);
@@ -368,6 +372,7 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
       authRequestControllerRef.current = controller;
       const abortFromParent = () => controller.abort();
       parentSignal?.addEventListener('abort', abortFromParent, { once: true });
+      if (parentSignal?.aborted) controller.abort();
       setAuthResource((current) => loadingResource(current));
 
       try {
@@ -386,7 +391,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
               },
               { signal: controller.signal }
             ),
-          (response) => (response.auths ?? []).length === 0
+          (response) => (response.auths ?? []).length === 0,
+          controller.signal
         );
         if (controller.signal.aborted) return;
         if (!result.data) {
@@ -504,7 +510,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
       const pricesTask = requestResource(
         'prices',
         () => usageApi.getUsagePrices({ signal: controller.signal }),
-        (response) => Object.keys(response.models ?? {}).length === 0
+        (response) => Object.keys(response.models ?? {}).length === 0,
+        controller.signal
       )
         .then((pricesResult) => {
           if (controller.signal.aborted) return;
@@ -520,7 +527,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
       const metaResult = await requestResource(
         'meta',
         () => usageApi.getUsageMeta({ signal: controller.signal }),
-        () => false
+        () => false,
+        controller.signal
       );
       if (controller.signal.aborted) return;
 
@@ -597,7 +605,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
                 { ...range, include_sources: false },
                 { signal: controller.signal }
               ),
-            (response) => (readUsageEnvelope(response).total_requests ?? 0) === 0
+            (response) => (readUsageEnvelope(response).total_requests ?? 0) === 0,
+            controller.signal
           ).then((result) => {
             if (result.data) {
               const data = { ...meta, ...readUsageEnvelope(result.data) };
@@ -628,7 +637,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
           requestResource(
             'failures',
             () => usageApi.getUsageFailureSummary(range, { signal: controller.signal }),
-            (response) => !response.failures || Number(response.failures.total) <= 0
+            (response) => !response.failures || Number(response.failures.total) <= 0,
+            controller.signal
           ).then((result) =>
             result.data
               ? { ...result, data: result.data.failures ?? null }
@@ -644,7 +654,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
                 { ...healthRange, bucket: '15m', group_by: 'none' },
                 { signal: controller.signal }
               ),
-            (response) => !(response.items ?? []).some((item) => Number(item.requests) > 0)
+            (response) => !(response.items ?? []).some((item) => Number(item.requests) > 0),
+            controller.signal
           ),
           setHealthResource
         ),
@@ -656,7 +667,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
                 { window_minutes: 30, sparkline_minutes: 60 },
                 { signal: controller.signal }
               ),
-            (response) => Number(response.request_count) <= 0 && Number(response.token_count) <= 0
+            (response) => Number(response.request_count) <= 0 && Number(response.token_count) <= 0,
+            controller.signal
           ),
           setRatesResource
         ),
@@ -668,7 +680,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
                 { ...range, bucket: aggregateBucket, group_by: 'none' },
                 { signal: controller.signal }
               ),
-            (response) => Number(response.total_tokens) <= 0
+            (response) => Number(response.total_tokens) <= 0,
+            controller.signal
           ),
           setTokensResource
         ),
@@ -683,7 +696,8 @@ export function useUsageData({ timeRange }: UseUsageDataOptions): UseUsageDataRe
             (response) =>
               Number(response.total?.amount_micros) === 0 &&
               (response.by_model ?? []).length === 0 &&
-              (response.unpriced_models ?? []).length === 0
+              (response.unpriced_models ?? []).length === 0,
+            controller.signal
           ),
           setCostsResource
         ),

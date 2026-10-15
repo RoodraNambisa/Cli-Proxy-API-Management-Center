@@ -282,6 +282,35 @@ describe('lightweight usage management API', () => {
     });
   });
 
+  test('cancels failure queries across ranges, refresh, and unmount without caching late 404s', async () => {
+    vi.spyOn(usageApi, 'getUsageMeta').mockResolvedValue({ usage: { enabled: true, available: true } });
+    vi.spyOn(usageApi, 'getUsageSummary').mockResolvedValue({ usage: { total_requests: 2 } });
+    vi.spyOn(usageApi, 'getUsageAuths').mockResolvedValue({ auths: [] });
+    vi.spyOn(usageApi, 'getUsageHealth').mockResolvedValue({ items: [] });
+    vi.spyOn(usageApi, 'getUsageRates').mockResolvedValue({});
+    vi.spyOn(usageApi, 'getUsageTokens').mockResolvedValue({});
+    vi.spyOn(usageApi, 'getUsageCosts').mockResolvedValue({});
+    vi.spyOn(usageApi, 'getUsagePrices').mockResolvedValue({ models: {} });
+    let rejectOld!: (error: unknown) => void;
+    const failures = vi.spyOn(usageApi, 'getUsageFailureSummary')
+      .mockReturnValueOnce(new Promise((_resolve, reject) => { rejectOld = reject; }))
+      .mockResolvedValue({});
+    const { result, rerender, unmount } = renderHook(({ timeRange }: { timeRange: '24h' | '7d' }) => useUsageData({ timeRange }), { initialProps: { timeRange: '24h' } });
+    await waitFor(() => expect(failures).toHaveBeenCalledTimes(1));
+    const oldSignal = failures.mock.calls[0][1]?.signal;
+    rerender({ timeRange: '7d' });
+    await waitFor(() => expect(failures).toHaveBeenCalledTimes(2));
+    expect(oldSignal?.aborted).toBe(true);
+    await act(async () => { rejectOld(Object.assign(new Error('late 404'), { status: 404 })); });
+    await waitFor(() => expect(result.current.failureResource.status).toBe('empty'));
+    await act(async () => { await result.current.loadUsage(); });
+    expect(failures).toHaveBeenCalledTimes(3);
+    expect(result.current.summaryResource.status).toBe('ready');
+    const currentSignal = failures.mock.calls.at(-1)?.[1]?.signal;
+    unmount();
+    expect(currentSignal?.aborted).toBe(true);
+  });
+
   test('falls back to local search and paging when the backend returns the legacy auth shape', async () => {
     vi.spyOn(usageApi, 'getUsageMeta').mockResolvedValue({
       usage: { enabled: true, available: true, version: 'legacy-auth-v1' },

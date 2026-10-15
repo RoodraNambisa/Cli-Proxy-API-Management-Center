@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { RequestEventsDetailsCard } from '@/components/usage/RequestEventsDetailsCard';
 import { downloadBlob } from '@/utils/download';
@@ -54,6 +54,37 @@ const readBlob = (blob: Blob): Promise<string> => new Promise((resolve, reject) 
 beforeEach(() => { vi.clearAllMocks(); });
 
 describe('usage response metrics display and export', () => {
+  test('aborts replaced filters and ignores their late 404 before aborting on unmount', async () => {
+    let rejectOld!: (error: unknown) => void;
+    state.loadUsageDetails.mockReturnValueOnce(new Promise((_resolve, reject) => { rejectOld = reject; }));
+    state.loadUsageDetails.mockResolvedValue({ details: [detail('latest-model')], offset: 0, limit: 50, totalMatched: 1 });
+    const props = { loading: false, geminiKeys: [], interactionsKeys: [], claudeConfigs: [], codexConfigs: [], vertexConfigs: [], openaiProviders: [], availableModels: [], availableSources: [], authSummaries: [], availabilityStatus: 'ready' as const };
+    const rendered = render(<RequestEventsDetailsCard {...props} range={{ from: '2026-10-14T00:00:00Z' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'usage_stats.request_events_load' }));
+    await waitFor(() => expect(state.loadUsageDetails).toHaveBeenCalledTimes(1));
+    const oldSignal: AbortSignal = state.loadUsageDetails.mock.calls[0][0].signal;
+    rendered.rerender(<RequestEventsDetailsCard {...props} range={{ from: '2026-10-15T00:00:00Z' }} />);
+    await screen.findByText('latest-model');
+    expect(oldSignal.aborted).toBe(true);
+    await act(async () => { rejectOld(Object.assign(new Error('late unsupported'), { status: 404 })); });
+    expect(screen.getByText('latest-model')).toBeTruthy();
+    expect(screen.queryByText('usage_stats.state_unsupported')).toBeNull();
+
+    state.loadUsageDetails.mockReturnValue(new Promise(() => {}));
+    fireEvent.click(screen.getByRole('button', { name: 'usage_stats.refresh' }));
+    const pendingSignal: AbortSignal = state.loadUsageDetails.mock.calls.at(-1)![0].signal;
+    rendered.unmount();
+    expect(pendingSignal.aborted).toBe(true);
+  });
+
+  test('does not start deferred detail work after unmount', async () => {
+    const rendered = render(<RequestEventsDetailsCard loading={false} geminiKeys={[]} interactionsKeys={[]} claudeConfigs={[]} codexConfigs={[]} vertexConfigs={[]} openaiProviders={[]} range={{}} availableModels={[]} availableSources={[]} authSummaries={[]} availabilityStatus="ready" />);
+    fireEvent.click(screen.getByRole('button', { name: 'usage_stats.request_events_load' }));
+    rendered.unmount();
+    await act(async () => {});
+    expect(state.loadUsageDetails).not.toHaveBeenCalled();
+  });
+
   test('shows and exports request routes while leaving legacy paths unknown', async () => {
     const table = await showDetails([
       detail('search-model', { request_method: 'POST', request_path: '/v1/alpha/search' }),

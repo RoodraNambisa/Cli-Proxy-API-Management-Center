@@ -373,6 +373,7 @@ export function RequestEventsDetailsCard({
           setDetailsPage(page);
         }
       } catch (error: unknown) {
+        if (controller.signal.aborted) return;
         const status =
           error && typeof error === 'object' && 'status' in error
             ? Number((error as { status?: unknown }).status)
@@ -447,9 +448,16 @@ export function RequestEventsDetailsCard({
   useEffect(() => {
     const canLoad = availabilityStatus === 'ready' || availabilityStatus === 'empty';
     if (!detailsOpened || !canLoad || detailsUnsupported) return;
+    let disposed = false;
     void Promise.resolve()
-      .then(() => loadDetailsPage(currentFilters, 0, false))
+      .then(() => {
+        if (!disposed) return loadDetailsPage(currentFilters, 0, false);
+      })
       .catch(() => {});
+    return () => {
+      disposed = true;
+      detailsControllerRef.current?.abort();
+    };
   }, [availabilityStatus, currentFilters, detailsOpened, detailsUnsupported, loadDetailsPage]);
 
   const handleOpenDetails = () => {
