@@ -110,4 +110,28 @@ describe('ChatGPT Web region panel', () => {
     await act(async () => resolve({ ...browserRegionDefaults, language: 'ja-JP' }));
     expect((screen.getByLabelText(key('language')) as HTMLInputElement).value).toBe('');
   });
+  it('keeps supported settings available when a credential disappears', async () => {
+    api.preview.mockRejectedValue({ status: 404 });
+    render(<ChatGptWebBrowserRegionPanel />);
+    await open();
+    await screen.findByRole('option', { name: 'fixture' });
+    fireEvent.change(screen.getByLabelText(key('credential')), { target: { value: 'index-a' } });
+    await screen.findByRole('alert');
+    expect(screen.queryByText(key('unsupported'))).toBeNull();
+    expect((screen.getByLabelText(key('auto-timezone')) as HTMLInputElement).disabled).toBe(false);
+  });
+  it('shows safe backpressure reasons and rejects incomplete settings responses', async () => {
+    api.refresh.mockRejectedValue({ status: 429, details: { reason: 'queue_full' } });
+    const view = render(<ChatGptWebBrowserRegionPanel />);
+    await open();
+    await screen.findByRole('option', { name: 'fixture' });
+    fireEvent.change(screen.getByLabelText(key('credential')), { target: { value: 'index-a' } });
+    fireEvent.click(screen.getByRole('button', { name: key('refresh') }));
+    await screen.findByText(key('values.queue_full'));
+    view.unmount();
+    api.get.mockResolvedValue({ 'auto-timezone': true, 'auto-language': false });
+    render(<ChatGptWebBrowserRegionPanel />);
+    fireEvent.click(screen.getByText(key('title')));
+    await screen.findByText(key('unsupported'));
+  });
 });

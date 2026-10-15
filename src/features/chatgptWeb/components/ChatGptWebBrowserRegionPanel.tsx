@@ -75,6 +75,7 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
     const mounted = useRef(true);
     const requests = useRef(new Set<AbortController>());
     const loadedConnection = useRef<typeof connection | null>(null);
+    const loadVersion = useRef(0);
     const [expanded, setExpanded] = useState(false);
     const [baseline, setBaseline] = useState<BrowserRegionConfig | null>(null);
     const [draft, setDraft] = useState<BrowserRegionDraft>(() =>
@@ -114,23 +115,44 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
       return abort;
     }, []);
     const reportError = useCallback(
-      (err: unknown) => {
+      (err: unknown, capabilityCheck = false) => {
         const status = (err as { status?: number })?.status;
-        if (status === 404 || status === 405 || status === 501) setUnsupported(true);
-        else setError(t('chatgpt_web.browser_region.request_failed'));
+        if (capabilityCheck && (status === 404 || status === 405 || status === 501)) {
+          setUnsupported(true);
+          return;
+        }
+        const reason = (err as { details?: { reason?: unknown } })?.details?.reason;
+        const known = [
+          'queue_full',
+          'refresh_cooldown',
+          'route_unresolved',
+          'closed',
+          'unavailable',
+        ];
+        setError(
+          typeof reason === 'string' && known.includes(reason)
+            ? t(`chatgpt_web.browser_region.values.${reason}`)
+            : t('chatgpt_web.browser_region.request_failed')
+        );
       },
       [t]
     );
     const reload = useCallback(async () => {
+      const version = ++loadVersion.current;
       const abort = newRequest();
       setLoading(true);
       setError('');
       try {
         const config = await browserRegionApi.get(connection.api, abort.signal);
-        if (!isCurrent() || abort.signal.aborted) return;
+        if (!isCurrent() || abort.signal.aborted || version !== loadVersion.current) return;
         if (
-          typeof config['auto-timezone'] !== 'boolean' ||
-          typeof config['auto-language'] !== 'boolean'
+          !config ||
+          !Object.entries(browserRegionDefaults).every(([key, defaultValue]) => {
+            const value = config[key as keyof BrowserRegionConfig];
+            if (key === 'timezone-offset-minutes')
+              return value === null || (typeof value === 'number' && Number.isFinite(value));
+            return typeof value === typeof defaultValue;
+          })
         ) {
           setUnsupported(true);
           return;
@@ -140,10 +162,11 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
         setUnsupported(false);
         loadedConnection.current = connection;
       } catch (err) {
-        if (isCurrent() && !abort.signal.aborted) reportError(err);
+        if (isCurrent() && !abort.signal.aborted && version === loadVersion.current)
+          reportError(err, true);
       } finally {
         requests.current.delete(abort);
-        if (isCurrent()) setLoading(false);
+        if (isCurrent() && version === loadVersion.current) setLoading(false);
       }
     }, [connection, isCurrent, newRequest, reportError]);
     useEffect(() => {
