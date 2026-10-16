@@ -24,6 +24,12 @@ export const configFileApi = {
 
   async saveConfigYaml(content: string): Promise<void> {
     const root = parseDocument(content).toJS();
+    const needsRegion=Boolean(root?.['proxy-ip']||root?.codex?.['time-context']?.enabled===true);
+    const saveConnection=needsRegion?apiClient.captureConnection():undefined;
+    if(needsRegion){
+      const caps=await apiClient.getAtConnection<{capabilities?:Record<string,boolean>}>(saveConnection!,'/proxy-ip');
+      if(!caps.capabilities?.proxy_ip||!caps.capabilities?.codex_time_context)throw new Error(i18n.t('proxy_ip.upgrade'));
+    }
     const imageDeclarations =
       Array.isArray(root?.['xai-api-key']) &&
       root['xai-api-key'].some(
@@ -39,7 +45,7 @@ export const configFileApi = {
       root?.['api-key-groups']?.some?.(
         (g: Record<string, unknown>) => g?.['credential-target-response-guard'] === true
       );
-    const connection = needsGrok || needsGuard ? apiClient.captureConnection() : undefined;
+    const connection = saveConnection ?? (needsGrok || needsGuard ? apiClient.captureConnection() : undefined);
     if (needsGrok) {
       let supported = false;
       try {

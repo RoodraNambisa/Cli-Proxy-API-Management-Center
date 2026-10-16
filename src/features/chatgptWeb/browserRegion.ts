@@ -36,8 +36,8 @@ export const browserRegionDefaults: BrowserRegionConfig = {
   'lookup-url': 'https://ipwho.is/{ip}',
   'lookup-timeout-seconds': 8,
   'cache-ttl-seconds': 21600,
-  'route-cache-size': 4096,
-  'ip-cache-size': 4096,
+  'route-cache-size': 100000,
+  'ip-cache-size': 100000,
 };
 
 export type BrowserRegionDraft = {

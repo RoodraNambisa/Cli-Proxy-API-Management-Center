@@ -1,3 +1,5 @@
+import { proxyIPApi } from '@/services/api/proxyIp';
+import { apiClient } from '@/services/api/client';
 import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
@@ -605,6 +607,12 @@ export function ConfigPage() {
       const nextMergedYaml =
         activeTab === 'source' ? content : applyVisualChangesToYaml(latestServerYaml);
 
+      const oldTime = (parseYaml(latestServerYaml) as {codex?:Record<string,unknown>} | null)?.codex?.['time-context'];
+      const newTime = (parseYaml(nextMergedYaml) as {codex?:Record<string,unknown>} | null)?.codex?.['time-context'];
+      if(JSON.stringify(oldTime)!==JSON.stringify(newTime)) {
+        try {const capability=await proxyIPApi.timeContext(apiClient.captureConnection());if(!capability.capabilities.codex_time_context)throw new Error();}
+        catch {showNotification(t('proxy_ip.upgrade'),'error');return;}
+      }
       // In visual mode, applyVisualChangesToYaml re-serializes YAML via parseDocument → toString,
       // which may reformat comments/whitespace. Normalize the server YAML through the same pipeline
       // so the diff only shows actual value changes, not cosmetic reformatting.

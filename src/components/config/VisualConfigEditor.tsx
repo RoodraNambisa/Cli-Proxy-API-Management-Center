@@ -1,3 +1,4 @@
+import { TimeContextEditor } from '@/features/proxyIp/TimeContextEditor';
 import { CodexAutoCookieEditor } from './CodexAutoCookieEditor';
 import { CodexResponseGuardEditor } from './CodexResponseGuardEditor';
 import { RoutingCredentialPicker } from './RoutingCredentialPicker';
@@ -3333,6 +3334,7 @@ export function VisualConfigEditor({
                 </PageGroup>
                 <PageGroup active={activePageId === 'provider-codex'}>
                   <CodexResponseGuardEditor value={values.codexResponseGuard} onChange={codexResponseGuard=>onChange({codexResponseGuard})} disabled={disabled} dirty={hasDirtyConfigField(dirtyFields,['codexResponseGuard'])} focusTarget={focusTarget}/>
+                  <TimeContextEditor value={values.codexTimeContext} onChange={codexTimeContext=>onChange({codexTimeContext})} disabled={disabled} dirty={hasDirtyConfigField(dirtyFields,['codexTimeContext'])} focusTarget={focusTarget} />
                   <CodexAutoCookieEditor
                     enabled={values.codexAutoCookie}
                     override={values.codexAutoCookieOverride}

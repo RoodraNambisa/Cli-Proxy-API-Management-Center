@@ -1,0 +1,39 @@
+.panel {
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  min-width: 0;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 18px;
+  padding: 0;
+  border: 0;
+  margin: 18px 0;
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+.scroll {
+  overflow-x: auto;
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
+}

@@ -133,6 +133,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'codexEstimateClaudeInputTokens',
       'codexObserveQuota',
       'codexQuotaAutoDisable',
+      'codexTimeContext',
       'codexAutoCookie',
       'codexAutoCookieOverride',
       'codexStateOverride',

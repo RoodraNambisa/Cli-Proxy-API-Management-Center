@@ -1,3 +1,4 @@
+import {proxyIPApi} from '@/services/api/proxyIp';
 import {
   emptyGrokModelRouting,
   readGrokModelRouting,
@@ -53,6 +54,8 @@ export type AuthFileHeadersErrorKey =
 export type ChatGptWebLoginMethod = 'auto' | 'passkey' | 'password_totp' | 'api798';
 
 export type PrefixProxyEditorField =
+  | 'timeContextText'
+  | 'webRegionText'
   | 'rawText'
   | 'proxyBindingText'
   | 'grokRouting'
@@ -79,6 +82,8 @@ export type PrefixProxyEditorFieldValue =
   | GrokModelRoutingDraft;
 
 export type PrefixProxyEditorState = {
+ timeContextText?: string;
+ webRegionText?: string;
   fileName: string;
   fileInfoText: string;
   isCodexFile: boolean;
@@ -238,6 +243,9 @@ export const buildAuthFileFieldsPatch = (
     patch.api798_url = typeof next.api798_url === 'string' ? next.api798_url : '';
   }
 
+  for(const [key,enabled] of [['codex_time_context',isCodexFile],['chatgpt_web_browser_region',isChatGptWebFile]] as const) {
+    if(enabled&&!jsonValuesEqual(previous[key],next[key])) patch[key]=(next[key] as Record<string,unknown>|undefined)??null;
+  }
   return patch;
 };
 
@@ -364,6 +372,9 @@ const buildPrefixProxyUpdatedText = (
       }
     }
   }
+  for(const [field,key,enabled] of [['timeContextText','codex_time_context',editor.isCodexFile],['webRegionText','chatgpt_web_browser_region',editor.isChatGptWebFile]] as const) {
+    if(enabled&&editor.touchedFields?.includes(field)){const policy=JSON.parse(editor[field]||'{}') as Record<string,unknown>;if(Object.keys(policy).length===0||policy.mode==='inherit')delete next[key];else next[key]=policy;}
+  }
   if (editor.isCodexFile && editor.codexFingerprintModeTouched) {
     next.codex_fingerprint_mode = editor.codexFingerprintMode;
   }
@@ -419,6 +430,8 @@ const readEditorFields = (json: Record<string, unknown>, t: (key: string) => str
     excludedModelsText: excludedModels.join('\n'),
     disableCooling: disableCoolingValue === undefined ? '' : disableCoolingValue ? 'true' : 'false',
     websockets: websocketsValue,
+    timeContextText: JSON.stringify(json.codex_time_context??{mode:"inherit"}),
+    webRegionText: JSON.stringify(json.chatgpt_web_browser_region??{}),
     codexFingerprintMode,
     codexFingerprintModeTouched: false,
     note,
@@ -682,6 +695,7 @@ export function useAuthFilesPrefixProxyEditor(
           headersError: errorKey ? t(errorKey) : null,
         };
       }
+      if(field==='timeContextText'||field==='webRegionText')return {...prev,[field]:String(value)};
       if (field === 'loginMethod') {
         return isChatGptWebLoginMethod(value) ? { ...prev, loginMethod: value } : prev;
       }
@@ -792,6 +806,10 @@ export function useAuthFilesPrefixProxyEditor(
 
     try {
       const nextJson = JSON.parse(payload) as Record<string, unknown>;
+      const original=JSON.parse(prefixProxyEditor.originalText) as Record<string,unknown>;
+      if(['codex_time_context','chatgpt_web_browser_region'].some(key=>!jsonValuesEqual(original[key],nextJson[key]))) {
+        const caps=await proxyIPApi.get(connection);if(!caps.capabilities.credential_region)throw new Error(t('proxy_ip.upgrade'));
+      }
       if (prefixProxyEditor.sourceEdited) {
         await authFilesApi.replaceContent(
           name,
@@ -807,7 +825,9 @@ export function useAuthFilesPrefixProxyEditor(
           prefixProxyEditor.isChatGptWebFile,
           prefixProxyEditor.isXaiFile
         );
-        const result = await authFilesApi.patchFieldsBatch([name], fieldsPatch);
+        const result = (fieldsPatch.codex_time_context !== undefined || fieldsPatch.chatgpt_web_browser_region !== undefined)
+          ? await authFilesApi.patchFieldsBatch([name], fieldsPatch, connection)
+          : await authFilesApi.patchFieldsBatch([name], fieldsPatch);
         if (result.failed.length > 0 || result.updated !== 1) {
           throw new Error(result.failed[0]?.error || t('notification.upload_failed'));
         }

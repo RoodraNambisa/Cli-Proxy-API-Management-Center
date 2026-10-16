@@ -43,13 +43,7 @@ type Props = {
 };
 const panelID = 'config-chatgpt-web-browser-region';
 const textFields = ['timezone', 'timezone-offset-minutes', 'language'] as const;
-const advancedFields = [
-  'lookup-url',
-  'lookup-timeout-seconds',
-  'cache-ttl-seconds',
-  'route-cache-size',
-  'ip-cache-size',
-] as const;
+
 
 export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPanelHandle, Props>(
   function ChatGptWebBrowserRegionPanel(
@@ -361,7 +355,7 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
         if (isCurrent()) setRefreshing(false);
       }
     };
-    const field = (key: (typeof textFields)[number] | (typeof advancedFields)[number]) => (
+    const field = (key: (typeof textFields)[number]) => (
       <label key={key}>
         <span>{label(key)}</span>
         <input
@@ -406,12 +400,7 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
               ))}
               <div className={styles.grid}>{textFields.map(field)}</div>
               <p className={styles.hint}>{label('fallback_hint')}</p>
-              <details>
-                <summary>{label('advanced')}</summary>
-                <div className={styles.grid}>{advancedFields.map(field)}</div>
-                <p className={styles.hint}>{label('lookup_hint')}</p>
-                <p className={styles.hint}>{label('cache_hint')}</p>
-              </details>
+              <p className={styles.hint}><a href="#/proxy-pools">{t('proxy_ip.shared_link')}</a></p>
               {dirty && !valid && (
                 <p role="alert" className={styles.error}>
                   {label('validation')}

@@ -1,3 +1,4 @@
+import { ProxyIPPanel } from '@/features/proxyIp/ProxyIPPanel';
 import { ProxyEntriesTransfer } from '@/components/proxyPools/ProxyEntriesTransfer';
 import { exportProxyEntries } from '@/utils/proxyTransfer';
 import { copyToClipboard } from '@/utils/clipboard';
@@ -41,7 +42,7 @@ import { formatDateTime } from '@/utils/format';
 import { RUNTIME_PROVIDER_OPTIONS } from '@/utils/providers';
 import styles from './ProxyPoolsPage.module.scss';
 
-type ViewId = 'pools' | 'rules' | 'bindings';
+type ViewId = 'pools' | 'rules' | 'bindings' | 'ip';
 
 type PoolEditorState = {
   original: ProxyPool | null;
@@ -1030,7 +1031,7 @@ export function ProxyPoolsPage() {
       </header>
 
       <div className={styles.viewTabs} role="tablist" aria-label={t('proxy_pools.title')}>
-        {(['pools', 'rules', 'bindings'] as const).map((item) => (
+        {(['pools', 'rules', 'bindings', 'ip'] as const).map((item) => (
           <button
             key={item}
             type="button"
@@ -1039,13 +1040,14 @@ export function ProxyPoolsPage() {
             className={view === item ? styles.viewTabActive : ''}
             onClick={() => setView(item)}
           >
-            {t(`proxy_pools.tabs.${item}`)}
+            {item === 'ip' ? t('proxy_ip.title') : t(`proxy_pools.tabs.${item}`)}
           </button>
         ))}
       </div>
 
       {error ? <div className="error-box">{error}</div> : null}
 
+      {view === 'ip' && <ProxyIPPanel />}
       {view === 'pools' ? (
         <section className={styles.viewSection}>
           {healthSupported === false ? (

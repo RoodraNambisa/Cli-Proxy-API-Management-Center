@@ -53,6 +53,7 @@ export type ModelProbeUsage = {
   cached_tokens?: number; reasoning_tokens?: number; cache_creation_tokens?: number;
 };
 export type ModelProbeResult = {
+ codex_time_context?: {mode:string;timezone?:string;current_date?:string;source:string;reason?:string;changed:string[];region:import("./proxyIp").RegionSnapshot}[];
   xai_diagnostics?: import('@/types/grokDiagnostics').GrokTransmission[];
   codex_response_guard?: import('@/utils/codexResponseGuard').GuardRecord;
  codex_cookie?: { mode: string; source: string; sent: boolean; digest?: string; version?: number; names: string[] };
@@ -72,6 +73,8 @@ type AuthFileStatusResponse = { status: string; disabled: boolean };
 type AuthFileEntry = AuthFilesResponse['files'][number];
 export type XaiAuthFileField = 'using_api' | 'websockets';
 export type AuthFileFieldsPatch = {
+ codex_time_context?: Record<string,unknown>|null;
+ chatgpt_web_browser_region?:Record<string,unknown>|null;
   routing_alias?: string;
   base_url?: string;
   xai_model_catalog_sources?: string[];
@@ -1062,9 +1065,14 @@ export const authFilesApi = {
 
   patchFieldsBatch: async (
     names: string[],
-    fields: AuthFileFieldsPatch
+    fields: AuthFileFieldsPatch,
+    connection?: ApiClientConnectionSnapshot
   ): Promise<AuthFileFieldsBatchResult> => {
     const requestedNames = normalizeRequestedAuthFileNames(names);
+    if(connection){
+      const data=await apiClient.patchAtConnection<AuthFileFieldsBatchResponse>(connection,'/auth-files/fields',{names:requestedNames,fields:serializeAuthFileFields(fields)},{timeout:AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS,validateStatus:status=>status===200||status===207});
+      return normalizeAuthFileFieldsBatchResponse(data,requestedNames);
+    }
     const response = await apiClient.requestRaw({
       url: '/auth-files/fields',
       method: 'PATCH',

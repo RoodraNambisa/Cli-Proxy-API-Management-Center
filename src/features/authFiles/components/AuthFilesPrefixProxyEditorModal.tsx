@@ -1,3 +1,4 @@
+import {CredentialRegionEditor} from '@/features/proxyIp/CredentialRegionEditor';
 import { GrokModelRoutingEditor } from '@/components/config/GrokModelRoutingEditor';
 import { SettingsDisclosure } from '@/components/config/SettingsDisclosure';
 import { emptyGrokModelRouting } from '@/utils/grokModelRouting';
@@ -152,6 +153,7 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
               </div>
               {!editor.readOnly && (
                 <fieldset className={styles.prefixProxyFields} disabled={Boolean(editor.jsonError)}>
+                  {(editor.isCodexFile||editor.isChatGptWebFile)&&<CredentialRegionEditor codex={editor.isCodexFile} connection={editor.connection} value={(editor.isCodexFile?editor.timeContextText:editor.webRegionText)||'{}'} disabled={disableControls||editor.saving||!editor.json} onChange={value=>onChange(editor.isCodexFile?'timeContextText':'webRegionText',value)}/>}
                   {editor.isCodexFile && (
                     <Input
                       label={t('codex_upstream.account_label')}

@@ -131,6 +131,7 @@ export function ModelProbeDetailsModal({
             </dl>
           </section>
         )}
+        {result?.codex_time_context?.length ? <section><h3>{t('time_context.diagnostics')}</h3>{result.codex_time_context.map((value,index)=><pre key={index}>{JSON.stringify(value,null,2)}</pre>)}</section> : null}
         {result?.codex_state && (
           <section>
             <strong>{t('model_probe.state_details')}</strong>

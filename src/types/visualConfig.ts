@@ -1,3 +1,4 @@
+import {timeContextDefaults, type TimeContext} from '@/features/proxyIp/settings';
 import { readResponseGuard, type CodexResponseGuard } from '@/utils/codexResponseGuard';
 import { DEFAULT_CODEX_STATE, type CodexStateOverride } from '@/utils/codexStateOverride';
 import { DEFAULT_CODEX_QUOTA_AUTO_DISABLE, type CodexQuotaAutoDisableConfig } from '@/utils/codexQuotaAutoDisable';
@@ -68,6 +69,7 @@ export type VisualConfigFieldPath =
   | 'errorResponseRewrites'
   | 'responseModelRewrite'
   | 'codexQuotaAutoDisable'
+  | 'codexTimeContext'
   | 'codexAutoCookie'
   | 'codexAutoCookieOverride'
   | 'codexStateOverride'
@@ -94,6 +96,7 @@ export type VisualConfigFieldPath =
   | 'streaming.nonstreamKeepaliveInterval';
 
 export type VisualConfigValidationErrorCode =
+  | 'codex_time_context'
   | 'codex_base_url'
   | CodexLiveMediaValidationCode
   | 'port_range'
@@ -362,6 +365,7 @@ export type VisualConfigValues = {
   codexEstimateClaudeInputTokens: boolean;
   codexObserveQuota: boolean;
   codexQuotaAutoDisable: CodexQuotaAutoDisableConfig;
+  codexTimeContext: TimeContext;
   codexAutoCookie: boolean;
   codexAutoCookieOverride: boolean;
   codexStateOverride: CodexStateOverride;
@@ -505,6 +509,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexEstimateClaudeInputTokens: false,
   codexObserveQuota: false,
   codexQuotaAutoDisable: DEFAULT_CODEX_QUOTA_AUTO_DISABLE,
+  codexTimeContext: timeContextDefaults,
   codexAutoCookie: false,
   codexAutoCookieOverride: true,
   codexStateOverride: DEFAULT_CODEX_STATE,

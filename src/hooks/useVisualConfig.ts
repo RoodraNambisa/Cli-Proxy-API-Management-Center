@@ -1,3 +1,4 @@
+import { readTimeContext, validTimeContext } from '@/features/proxyIp/settings';
 import { autoCookieConflict } from '@/utils/codexAutoCookie';
 import { normalizeCodexBaseUrl, readCodexBaseUrl } from '@/utils/codexUpstream';
 import { readResponseGuard, writeResponseGuard, responseGuardError, responseGuardEqual } from '@/utils/codexResponseGuard';
@@ -1757,6 +1758,7 @@ export function getVisualConfigValidationErrors(
     ...errorResponseRewriteErrors,
     ...codexLiveMediaErrors(values.codexLiveMediaRelay),
     ...grokConfigErrors(values.grok),
+    codexTimeContext: validTimeContext(values.codexTimeContext) ? undefined : 'codex_time_context',
     codexAutoCookie: values.codexAutoCookie && autoCookieConflict(values.codexStateOverride)
       ? 'codex_auto_cookie_conflict' : undefined,
     codexStateOverride: codexStateError(values.codexStateOverride) || (values.codexStateOverride.enabled && values.codexTurnStatePolicy === 'strip' && stateNeedsTurnState(values.codexStateOverride)) ? 'codex_state_override' : undefined,
@@ -2448,6 +2450,7 @@ function getNextDirtyFields(
       nextValues.codexEstimateClaudeInputTokens === baselineValues.codexEstimateClaudeInputTokens
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexTimeContext')) updateDirty('codexTimeContext', JSON.stringify(nextValues.codexTimeContext)===JSON.stringify(baselineValues.codexTimeContext));
   for (const field of ['codexAutoCookie', 'codexAutoCookieOverride'] as const) {
     if (Object.prototype.hasOwnProperty.call(patch, field))
       updateDirty(field, nextValues[field] === baselineValues[field]);
@@ -3541,6 +3544,7 @@ export function useVisualConfig() {
         codexStreamBootstrapBuffering: codexStreamBootstrapBuffering ?? false,
         codexEstimateClaudeInputTokens: codexEstimateClaudeInputTokens ?? false,
         codexObserveQuota: codexObserveQuota ?? false,
+        codexTimeContext: readTimeContext(codex?.['time-context']),
         codexAutoCookie: codex?.['auto-cookie'] === true,
         codexAutoCookieOverride: codex?.['auto-cookie-override'] !== false,
         codexStateOverride: readCodexState(codex?.['state-override']),
@@ -4134,6 +4138,11 @@ export function useVisualConfig() {
         const stateChanged = !codexStateEqual(values.codexStateOverride,baselineValues.codexStateOverride);
         const quotaDisableChanged = !codexQuotaAutoDisableEqual(values.codexQuotaAutoDisable, baselineValues.codexQuotaAutoDisable);
         const mediaChanged = !codexLiveMediaEqual(values.codexLiveMediaRelay, baselineValues.codexLiveMediaRelay);
+        if (JSON.stringify(values.codexTimeContext)!==JSON.stringify(baselineValues.codexTimeContext)) {
+          for(const [key,value] of Object.entries(values.codexTimeContext)) {
+            if (value !== baselineValues.codexTimeContext[key as keyof typeof values.codexTimeContext]) doc.setIn(['codex','time-context',key],value);
+          }
+        }
         if (
           docHas(doc, ['codex']) ||
           inheritedCodex ||
@@ -5162,7 +5171,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [state.dirtyFields, baselineValues.codexBaseUrl, baselineValues.codexAutoCookie, baselineValues.codexAutoCookieOverride, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.fixedErrorCooldowns, baselineValues.nonRetryableErrors, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [state.dirtyFields, baselineValues.codexTimeContext, baselineValues.codexBaseUrl, baselineValues.codexAutoCookie, baselineValues.codexAutoCookieOverride, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.fixedErrorCooldowns, baselineValues.nonRetryableErrors, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {
