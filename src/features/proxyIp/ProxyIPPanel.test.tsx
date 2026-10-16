@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProxyIPPanel } from './ProxyIPPanel';
 import { proxyIPDefaults } from './settings';
@@ -7,6 +7,7 @@ const mock = vi.hoisted(() => ({
   save: vi.fn(),
   status: vi.fn(),
   preview: vi.fn(),
+  credentials: vi.fn(),
   generation: 1,
 }));
 const t = vi.hoisted(() => (key: string) => key);
@@ -39,6 +40,10 @@ describe('Proxy IP shared settings', () => {
       capabilities: { proxy_ip: true, region_lifecycle: true },
     });
     mock.save.mockResolvedValue({});
+    mock.credentials.mockResolvedValue({
+      credentials: [],
+      pagination: { page: 1, page_size: 20, total: 0, total_pages: 1 },
+    });
     mock.status.mockResolvedValue({ entries: [], route_count: 0, ip_count: 0 });
   });
   it('saves only chosen metadata policy without changing pool intervals', async () => {
@@ -143,9 +148,16 @@ describe('Proxy IP shared settings', () => {
     mock.status.mockResolvedValueOnce({ entries: [], route_count: 1, ip_count: 1 });
     mock.status.mockResolvedValueOnce({ entries: [entry], route_count: 1, ip_count: 1 });
     render(<ProxyIPPanel />);
-    fireEvent.click(await screen.findByRole('button', { name: 'proxy_ip.next_page' }));
+    fireEvent.click(
+      await within(screen.getByRole('region', { name: 'proxy_ip.cache' })).findByRole('button', {
+        name: 'proxy_ip.next_page',
+      })
+    );
     await screen.findByText('proxy_ip.empty_title');
-    const previous = screen.getByRole('button', { name: 'proxy_ip.previous_page' });
+    const previous = within(screen.getByRole('region', { name: 'proxy_ip.cache' })).getByRole(
+      'button',
+      { name: 'proxy_ip.previous_page' }
+    );
     expect((previous as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(previous);
     await screen.findByText('203.0.113.1');

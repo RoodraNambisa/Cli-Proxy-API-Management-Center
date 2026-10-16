@@ -1,3 +1,4 @@
+import { ProxyBindingsPanel } from '@/features/proxyIp/ProxyBindingsPanel';
 import { ProxyRegionFields, useProxyRegionCapability, validProxyRegion } from '@/features/proxyIp/ProxyRegionFields';
 import { ProxyIPPanel } from '@/features/proxyIp/ProxyIPPanel';
 import { ProxyEntriesTransfer } from '@/components/proxyPools/ProxyEntriesTransfer';
@@ -26,7 +27,6 @@ import {
 import { proxyPoolsApi } from '@/services/api';
 import { useAuthStore, useNotificationStore } from '@/stores';
 import type {
-  ProxyBindingStatus,
   ApiError,
   ProxyCheckResult,
   ProxyCheckTask,
@@ -379,8 +379,7 @@ export function ProxyPoolsPage() {
   const [baselineRules, setBaselineRules] = useState<ProxyRule[]>([]);
   const [rulesSchemaVersion, setRulesSchemaVersion] = useState(1);
   const [rulesEditable, setRulesEditable] = useState(true);
-  const [bindings, setBindings] = useState<ProxyBindingStatus[]>([]);
-  const [selectedAuthIds, setSelectedAuthIds] = useState<Set<string>>(new Set());
+  const [bindingRevision, setBindingRevision] = useState(0);
   const [checkResults, setCheckResults] = useState<Record<string, ProxyCheckResult[]>>({});
   const [checkTasks, setCheckTasks] = useState<Record<string, ProxyCheckTask>>({});
   const [asyncTasksSupported, setAsyncTasksSupported] = useState<boolean | null>(null);
@@ -392,7 +391,6 @@ export function ProxyPoolsPage() {
   const [loading, setLoading] = useState(true);
   const [savingPool, setSavingPool] = useState(false);
   const [savingRules, setSavingRules] = useState(false);
-  const [rebinding, setRebinding] = useState(false);
   const [error, setError] = useState('');
   const [healthConfig, setHealthConfig] = useState<ProxyHealthCheckConfig>(
     cloneHealthCheck(DEFAULT_HEALTH_CHECK)
@@ -480,10 +478,9 @@ export function ProxyPoolsPage() {
     setLoading(true);
     setError('');
     try {
-      const [nextPools, nextRulesConfig, nextBindings] = await Promise.all([
+      const [nextPools, nextRulesConfig] = await Promise.all([
         proxyPoolsApi.getPools(),
         proxyPoolsApi.getRulesConfig(),
-        proxyPoolsApi.getBindings(),
       ]);
       const effectiveSchemaVersion = nextRulesConfig.legacyTargetsUnsupported
         ? 2
@@ -497,11 +494,7 @@ export function ProxyPoolsPage() {
       setBaselineRules(normalizedRules);
       setRulesSchemaVersion(effectiveSchemaVersion);
       setRulesEditable(!nextRulesConfig.legacyTargetsUnsupported);
-      setBindings(nextBindings);
-      setSelectedAuthIds((current) => {
-        const available = new Set(nextBindings.map((binding) => binding.auth_id));
-        return new Set(Array.from(current).filter((authId) => available.has(authId)));
-      });
+      setBindingRevision((n) => n + 1);
       void loadStatuses(nextPools);
       void loadCheckTasks(nextPools);
       void loadHealthCheck().catch((loadError) => {
@@ -979,44 +972,6 @@ export function ProxyPoolsPage() {
       );
     } finally {
       setSavingRules(false);
-    }
-  };
-
-  const toggleBinding = (authId: string) => {
-    setSelectedAuthIds((current) => {
-      const next = new Set(current);
-      if (next.has(authId)) next.delete(authId);
-      else next.add(authId);
-      return next;
-    });
-  };
-
-  const rebindSelected = async () => {
-    if (selectedAuthIds.size === 0) return;
-    setRebinding(true);
-    try {
-      const results = await proxyPoolsApi.rebind({ auth_ids: Array.from(selectedAuthIds) });
-      const failed = results.filter((result) => !result.updated);
-      if (failed.length > 0) {
-        showNotification(
-          t('proxy_pools.rebind_partial', { failed: failed.length, total: results.length }),
-          'warning'
-        );
-        setSelectedAuthIds(new Set(failed.map((result) => result.auth_id)));
-      } else {
-        showNotification(t('proxy_pools.rebind_success'), 'success');
-        setSelectedAuthIds(new Set());
-      }
-      const nextBindings = await proxyPoolsApi.getBindings();
-      setBindings(nextBindings);
-      void loadStatuses(pools);
-    } catch (rebindError) {
-      showNotification(
-        `${t('proxy_pools.rebind_failed')}: ${getErrorMessage(rebindError)}`,
-        'error'
-      );
-    } finally {
-      setRebinding(false);
     }
   };
 
@@ -1608,103 +1563,7 @@ export function ProxyPoolsPage() {
         </section>
       ) : null}
 
-      {view === 'bindings' ? (
-        <section className={styles.viewSection}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2>{t('proxy_pools.bindings_title')}</h2>
-              <p>{t('proxy_pools.bindings_description')}</p>
-            </div>
-            <Button
-              onClick={() => void rebindSelected()}
-              loading={rebinding}
-              disabled={disabled || selectedAuthIds.size === 0}
-            >
-              <IconRefreshCw size={16} />
-              {t('proxy_pools.rebind_selected', { count: selectedAuthIds.size })}
-            </Button>
-          </div>
-          {bindings.length === 0 ? (
-            <div className={styles.emptyState}>{t('proxy_pools.bindings_empty')}</div>
-          ) : (
-            <div className={styles.bindingTableWrap}>
-              <table className={styles.bindingTable}>
-                <thead>
-                  <tr>
-                    <th>
-                      <SelectionCheckbox
-                        checked={selectedAuthIds.size === bindings.length && bindings.length > 0}
-                        onChange={(checked) =>
-                          setSelectedAuthIds(
-                            checked
-                              ? new Set(bindings.map((binding) => binding.auth_id))
-                              : new Set()
-                          )
-                        }
-                        ariaLabel={t('proxy_pools.select_all_bindings')}
-                      />
-                    </th>
-                    <th>{t('proxy_pools.binding_auth')}</th>
-                    <th>{t('proxy_pools.binding_pool')}</th>
-                    <th>{t('proxy_pools.binding_health')}</th>
-                    <th>{t('proxy_pools.binding_exit')}</th>
-                    <th>{t('proxy_pools.binding_latency')}</th>
-                    <th>{t('proxy_pools.binding_last_check')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bindings.map((binding) => (
-                    <tr key={binding.binding_id || binding.auth_id}>
-                      <td>
-                        <SelectionCheckbox
-                          checked={selectedAuthIds.has(binding.auth_id)}
-                          onChange={() => toggleBinding(binding.auth_id)}
-                          ariaLabel={binding.auth_index || binding.auth_id}
-                        />
-                      </td>
-                      <td>
-                        <strong>{binding.auth_index || binding.auth_id}</strong>
-                        <span>{binding.provider || '-'}</span>
-                      </td>
-                      <td>
-                        {binding.direct
-                          ? t('proxy_pools.rule_target_direct')
-                          : `${binding.pool || '-'} / ${binding.entry || '-'}${binding.port ? `:${binding.port}` : ''}`}
-                      </td>
-                      <td>
-                        <span
-                          className={
-                            binding.healthy === true
-                              ? styles.healthGood
-                              : binding.healthy === false
-                                ? styles.healthBad
-                                : styles.healthUnknown
-                          }
-                        >
-                          {binding.direct
-                            ? t('proxy_pools.health.not_applicable')
-                            : binding.healthy === true
-                              ? t('proxy_pools.health.healthy')
-                              : binding.healthy === false
-                                ? t('proxy_pools.health.unhealthy')
-                                : t('proxy_pools.health.unknown')}
-                        </span>
-                      </td>
-                      <td>
-                        {binding.direct
-                          ? '-'
-                          : [binding.ip, binding.loc].filter(Boolean).join(' / ') || '-'}
-                      </td>
-                      <td>{binding.direct ? '-' : `${binding.elapsed_ms ?? '-'} ms`}</td>
-                      <td>{binding.direct ? '-' : formatTime(binding.last_check_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      ) : null}
+      {view === 'bindings' && <ProxyBindingsPanel revision={bindingRevision} onRebound={() => void loadStatuses(pools)} />}
 
       <Modal
         open={Boolean(editor)}

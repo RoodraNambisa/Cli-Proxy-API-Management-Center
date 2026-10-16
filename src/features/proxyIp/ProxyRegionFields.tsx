@@ -96,13 +96,15 @@ export function GlobalProxyRegionEditor({ disabled = false }: { disabled?: boole
     [base, setBase] = useState<ProxyRegion>({}),
     [supported, setSupported] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [saved, setSaved] = useState(false);
   useEffect(() => {
     const a = new AbortController();
     setSupported(false);
     setValue({});
     setBase({});
     setError('');
+    setSaved(false);
     setBusy(false);
     void proxyIPApi
       .get(connection, a.signal)
@@ -121,7 +123,10 @@ export function GlobalProxyRegionEditor({ disabled = false }: { disabled?: boole
     setError('');
     try {
       await apiClient.patchAtConnection(connection, '/proxy-ip', { 'proxy-region': value });
-      if (current.current === connection) setBase(value);
+      if (current.current === connection) {
+        setBase(value);
+        setSaved(true);
+      }
     } catch (e) {
       if (current.current === connection) setError((e as Error).message);
     } finally {
@@ -132,7 +137,10 @@ export function GlobalProxyRegionEditor({ disabled = false }: { disabled?: boole
     <section className={styles.editor}>
       <ProxyRegionFields
         value={value}
-        onChange={setValue}
+        onChange={(next) => {
+          setValue(next);
+          setSaved(false);
+        }}
         disabled={disabled || !supported || busy}
       />
       {error && (
@@ -141,7 +149,9 @@ export function GlobalProxyRegionEditor({ disabled = false }: { disabled?: boole
         </p>
       )}
       <div className={styles.footer}>
-        <p className={styles.hint}>{t('proxy_ip.manual_save_hint')}</p>
+        <p className={styles.hint} role={saved ? 'status' : undefined}>
+          {t(saved ? 'region_status.saved' : 'proxy_ip.manual_save_hint')}
+        </p>
         <Button
           type="button"
           size="sm"

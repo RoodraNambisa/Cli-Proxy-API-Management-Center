@@ -47,6 +47,8 @@ export interface ProxyRulesConfig {
 }
 
 export interface ProxyBindingStatus {
+  name?: string;
+  application?: import('@/services/api/proxyIp').ProxyRegionApplication;
   auth_id: string;
   auth_index?: string;
   provider?: string;

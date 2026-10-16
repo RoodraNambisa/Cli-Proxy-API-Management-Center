@@ -12,6 +12,7 @@ export type BrowserRegionConfig = {
 };
 
 export type BrowserRegionPreview = {
+  application?: import('@/services/api/proxyIp').ProxyRegionApplication;
   timezone: string;
   timezone_offset_minutes: number;
   language: string;

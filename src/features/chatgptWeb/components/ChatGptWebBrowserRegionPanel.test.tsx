@@ -9,7 +9,7 @@ const notify = vi.hoisted(() => vi.fn());
 const capture = vi.hoisted(() => vi.fn(() => ({ id: 'connection' })));
 const translate = vi.hoisted(() => (key: string) => key);
 vi.mock('@/services/api/browserRegion', () => ({ browserRegionApi: api }));
-vi.mock('@/services/api/authFiles', () => ({ authFilesApi: { listPaged: files } }));
+vi.mock('@/services/api/proxyIp', () => ({ proxyIPApi: { credentials: files } }));
 vi.mock('@/services/api/client', () => ({ apiClient: { captureConnection: capture } }));
 vi.mock('@/stores', () => ({
   useNotificationStore: (selector: (value: { showNotification: typeof notify }) => unknown) =>
@@ -31,8 +31,16 @@ describe('ChatGPT Web region panel', () => {
     api.get.mockResolvedValue(browserRegionDefaults);
     api.save.mockResolvedValue({});
     files.mockResolvedValue({
-      files: [{ name: 'fixture', authIndex: 'index-a' }],
-      pagination: { total_pages: 2 },
+      credentials: [
+        {
+          name: 'fixture',
+          auth_index: 'index-a',
+          auth_id: 'auth-a',
+          provider: 'chatgpt-web',
+          bound: true,
+        },
+      ],
+      pagination: { page: 1, page_size: 20, total: 21, total_pages: 2 },
     });
     api.preview.mockResolvedValue({
       timezone: 'UTC',
@@ -63,10 +71,10 @@ describe('ChatGPT Web region panel', () => {
     api.save.mockRejectedValue(new Error('failed'));
     const { rerender } = render(<ChatGptWebBrowserRegionPanel />);
     await open();
-    fireEvent.change(screen.getByLabelText(key('language')), { target: { value: 'ja-JP' } });
+    fireEvent.change(screen.getByLabelText(key('fixed_language')), { target: { value: 'ja-JP' } });
     fireEvent.click(save());
     await screen.findByRole('alert');
-    expect((screen.getByLabelText(key('language')) as HTMLInputElement).value).toBe('ja-JP');
+    expect((screen.getByLabelText(key('fixed_language')) as HTMLInputElement).value).toBe('ja-JP');
     rerender(<ChatGptWebBrowserRegionPanel disabled />);
     expect((save() as HTMLButtonElement).disabled).toBe(true);
   });
@@ -83,11 +91,13 @@ describe('ChatGPT Web region panel', () => {
     await open();
     await screen.findByRole('option', { name: 'fixture' });
     expect(files).toHaveBeenCalledWith(
-      expect.objectContaining({ provider: 'chatgpt-web', pageSize: 20 }),
       expect.anything(),
+      expect.objectContaining({ provider: 'chatgpt-web', page_size: 20, scope: 'bound' }),
       expect.any(AbortSignal)
     );
-    fireEvent.change(screen.getByLabelText(key('credential')), { target: { value: 'index-a' } });
+    fireEvent.change(screen.getByLabelText('region_status.credential'), {
+      target: { value: 'index-a' },
+    });
     await waitFor(() => expect(api.preview).toHaveBeenCalled());
     expect(api.refresh).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: key('refresh') }));
@@ -108,14 +118,16 @@ describe('ChatGPT Web region panel', () => {
     await open();
     expect(signal.aborted).toBe(true);
     await act(async () => resolve({ ...browserRegionDefaults, language: 'ja-JP' }));
-    expect((screen.getByLabelText(key('language')) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(key('fixed_language')) as HTMLInputElement).value).toBe('');
   });
   it('keeps supported settings available when a credential disappears', async () => {
     api.preview.mockRejectedValue({ status: 404 });
     render(<ChatGptWebBrowserRegionPanel />);
     await open();
     await screen.findByRole('option', { name: 'fixture' });
-    fireEvent.change(screen.getByLabelText(key('credential')), { target: { value: 'index-a' } });
+    fireEvent.change(screen.getByLabelText('region_status.credential'), {
+      target: { value: 'index-a' },
+    });
     await screen.findByRole('alert');
     expect(screen.queryByText(key('unsupported'))).toBeNull();
     expect((screen.getByLabelText(key('auto-timezone')) as HTMLInputElement).disabled).toBe(false);
@@ -125,7 +137,9 @@ describe('ChatGPT Web region panel', () => {
     const view = render(<ChatGptWebBrowserRegionPanel />);
     await open();
     await screen.findByRole('option', { name: 'fixture' });
-    fireEvent.change(screen.getByLabelText(key('credential')), { target: { value: 'index-a' } });
+    fireEvent.change(screen.getByLabelText('region_status.credential'), {
+      target: { value: 'index-a' },
+    });
     fireEvent.click(screen.getByRole('button', { name: key('refresh') }));
     await screen.findByText(key('values.queue_full'));
     view.unmount();

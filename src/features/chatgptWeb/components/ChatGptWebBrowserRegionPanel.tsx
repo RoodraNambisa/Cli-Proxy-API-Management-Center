@@ -12,10 +12,10 @@ import { ConfigDisclosure } from '@/components/config/ConfigDisclosure';
 import { Button } from '@/components/ui/Button';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { browserRegionApi } from '@/services/api/browserRegion';
-import { authFilesApi } from '@/services/api/authFiles';
+import { ProxyRegionCredentialSelect } from '@/features/proxyIp/ProxyRegionCredentialSelect';
+import { ProxyRegionApplicationDetails } from '@/features/proxyIp/ProxyRegionApplication';
 import { apiClient } from '@/services/api/client';
 import { useNotificationStore } from '@/stores';
-import type { AuthFileItem } from '@/types';
 import {
   browserRegionDefaults,
   parseBrowserRegionDraft,
@@ -43,7 +43,6 @@ type Props = {
 };
 const panelID = 'config-chatgpt-web-browser-region';
 const textFields = ['timezone', 'timezone-offset-minutes', 'language'] as const;
-
 
 export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPanelHandle, Props>(
   function ChatGptWebBrowserRegionPanel(
@@ -79,10 +78,6 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
-    const [search, setSearch] = useState('');
-    const [page, setPage] = useState(1);
-    const [pages, setPages] = useState(1);
-    const [files, setFiles] = useState<AuthFileItem[]>([]);
     const [authIndex, setAuthIndex] = useState('');
     const [preview, setPreview] = useState<BrowserRegionPreview | null>(null);
     const [refreshing, setRefreshing] = useState(false);
@@ -177,9 +172,6 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
       setDraft(regionToDraft(browserRegionDefaults));
       setPreview(null);
       setAuthIndex('');
-      setFiles([]);
-      setSearch('');
-      setPage(1);
       setUnsupported(false);
       setError('');
       setRefreshing(false);
@@ -264,45 +256,6 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
     );
 
     useEffect(() => {
-      if (!active || !expanded || !baseline || unsupported) return;
-      const abort = newRequest();
-      const pending = requests.current;
-      const timer = window.setTimeout(() => {
-        void authFilesApi
-          .listPaged(
-            { page, pageSize: 20, provider: 'chatgpt-web', search },
-            connection.api,
-            abort.signal
-          )
-          .then((result) => {
-            if (!isCurrent() || abort.signal.aborted) return;
-            setFiles(result.files.slice(0, 20));
-            setPages(result.pagination?.total_pages ?? 1);
-          })
-          .catch((err) => {
-            if (isCurrent() && !abort.signal.aborted) reportError(err);
-          })
-          .finally(() => pending.delete(abort));
-      }, 250);
-      return () => {
-        window.clearTimeout(timer);
-        abort.abort();
-        pending.delete(abort);
-      };
-    }, [
-      active,
-      baseline,
-      connection,
-      expanded,
-      isCurrent,
-      newRequest,
-      page,
-      reportError,
-      search,
-      unsupported,
-    ]);
-
-    useEffect(() => {
       setPreview(null);
       setPollStopped(false);
       if (!active || !expanded || !authIndex || unsupported) return;
@@ -332,6 +285,7 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
     }, [
       active,
       authIndex,
+      baseline,
       connection,
       expanded,
       isCurrent,
@@ -355,11 +309,17 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
         if (isCurrent()) setRefreshing(false);
       }
     };
+    const fieldLabel = (key: (typeof textFields)[number]) =>
+      key === 'language'
+        ? label(draft['auto-language'] ? 'fallback_language' : 'fixed_language')
+        : key === 'timezone'
+          ? label(draft['auto-timezone'] ? 'fallback_timezone' : 'fixed_timezone')
+          : label(key);
     const field = (key: (typeof textFields)[number]) => (
       <label key={key}>
-        <span>{label(key)}</span>
+        <span>{fieldLabel(key)}</span>
         <input
-          aria-label={label(key)}
+          aria-label={fieldLabel(key)}
           value={draft[key]}
           disabled={readOnly}
           inputMode={
@@ -400,7 +360,9 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
               ))}
               <div className={styles.grid}>{textFields.map(field)}</div>
               <p className={styles.hint}>{label('fallback_hint')}</p>
-              <p className={styles.hint}><a href="#/proxy-pools">{t('proxy_ip.shared_link')}</a></p>
+              <p className={styles.hint}>
+                <a href="#/proxy-pools">{t('proxy_ip.shared_link')}</a>
+              </p>
               {dirty && !valid && (
                 <p role="alert" className={styles.error}>
                   {label('validation')}
@@ -409,57 +371,15 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
               <div className={styles.preview}>
                 <h3>{label('preview')}</h3>
                 <p className={styles.hint}>{label('saved_only')}</p>
-                <label>
-                  {label('search')}
-                  <input
-                    value={search}
-                    disabled={readOnly}
-                    onChange={(event) => {
-                      setSearch(event.target.value);
-                      setPage(1);
-                    }}
-                  />
-                </label>
-                <label>
-                  {label('credential')}
-                  <select
-                    aria-label={label('credential')}
-                    value={authIndex}
-                    disabled={readOnly}
-                    onChange={(event) => setAuthIndex(event.target.value)}
-                  >
-                    <option value="">{label('select')}</option>
-                    {files.map((file) => (
-                      <option
-                        key={file.name}
-                        value={String(file.authIndex ?? '')}
-                        disabled={!file.authIndex}
-                      >
-                        {file.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <ProxyRegionCredentialSelect
+                  connection={connection.api}
+                  provider="chatgpt-web"
+                  value={authIndex}
+                  onChange={setAuthIndex}
+                  disabled={readOnly}
+                  active={active && expanded && !!baseline && !unsupported}
+                />
                 <div className={styles.actions}>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={readOnly || page <= 1}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    {label('previous')}
-                  </Button>
-                  <span>
-                    {page} / {pages}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={readOnly || page >= pages}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    {label('next')}
-                  </Button>
                   <Button
                     size="sm"
                     disabled={readOnly || !authIndex || refreshing}
@@ -468,6 +388,9 @@ export const ChatGptWebBrowserRegionPanel = forwardRef<ChatGptWebBrowserRegionPa
                     {label('refresh')}
                   </Button>
                 </div>
+                {preview?.application && (
+                  <ProxyRegionApplicationDetails value={preview.application} />
+                )}
                 {preview && (
                   <dl className={styles.results}>
                     {(

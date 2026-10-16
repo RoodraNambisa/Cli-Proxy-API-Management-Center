@@ -1,6 +1,7 @@
 import { apiClient, type ApiClientConnectionSnapshot } from './client';
 import type { ProxyIPConfig, TimeContext } from '@/features/proxyIp/settings';
 export type RegionSnapshot = {
+  application?: ProxyRegionApplication;
   route_id: string;
   ip: string;
   timezone: string;
@@ -20,6 +21,15 @@ export type RegionSnapshot = {
   language_source?: string;
 };
 export const proxyIPApi = {
+  credentials: (
+    connection: ApiClientConnectionSnapshot,
+    params: { scope: string; provider?: string; search: string; page: number; page_size: number },
+    signal?: AbortSignal
+  ) =>
+    apiClient.getAtConnection<{
+      credentials: ProxyRegionCredential[];
+      pagination: RegionPagination;
+    }>(connection, '/proxy-ip/credentials', { params, signal }),
   get: (connection: ApiClientConnectionSnapshot, signal?: AbortSignal) =>
     apiClient.getAtConnection<{
       config: ProxyIPConfig;
@@ -57,4 +67,42 @@ export const proxyIPApi = {
       '/codex/time-context',
       { signal }
     ),
+};
+
+export type ProxyRegionField = {
+  value: string;
+  source: string;
+  state: string;
+  follow_proxy: boolean;
+  proxy_value?: string;
+  proxy_source?: string;
+};
+export type ProxyRegionApplication = {
+  kind: 'configuration_preview';
+  evaluated_at: string;
+  auth_disabled: boolean;
+  binding_id?: string;
+  route_source?: string;
+  scope?: string;
+  timezone: ProxyRegionField;
+  language: ProxyRegionField;
+  cache_state?: string;
+  refresh_state?: string;
+  reason?: string;
+};
+export type ProxyRegionCredential = {
+  auth_id: string;
+  auth_index: string;
+  name: string;
+  provider: string;
+  disabled: boolean;
+  pool?: string;
+  entry?: string;
+  bound: boolean;
+};
+export type RegionPagination = {
+  page: number;
+  page_size: number;
+  total_pages: number;
+  total: number;
 };

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { ProxyRegionCredentialSelect } from './ProxyRegionCredentialSelect';
+import { ProxyRegionApplicationDetails } from './ProxyRegionApplication';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useAuthStore } from '@/stores';
 import { apiClient } from '@/services/api/client';
@@ -399,10 +400,15 @@ export function ProxyIPPanel() {
         <h3>{t('proxy_ip.preview_section')}</h3>
         <p className={styles.hint}>{t('proxy_ip.preview_hint')}</p>
         <div className={styles.previewForm}>
-          <Input
-            label={t('proxy_ip.auth_index')}
+          <ProxyRegionCredentialSelect
+            connection={connection}
             value={index}
-            onChange={(e) => setIndex(e.target.value)}
+            onChange={(value) => {
+              setIndex(value);
+              setPreview(null);
+            }}
+            disabled={!supported || busy}
+            active={supported}
           />
           <div className={styles.actions}>
             <Button disabled={!supported || !index || busy} onClick={() => void lookup(false)}>
@@ -417,7 +423,13 @@ export function ProxyIPPanel() {
             </Button>
           </div>
         </div>
-        {preview && <pre className={styles.previewResult}>{JSON.stringify(preview, null, 2)}</pre>}
+        {preview?.application && <ProxyRegionApplicationDetails value={preview.application} />}
+        {preview && (
+          <details className={styles.advanced}>
+            <summary>{t('region_status.raw_diagnostics')}</summary>
+            <pre className={styles.previewResult}>{JSON.stringify(preview, null, 2)}</pre>
+          </details>
+        )}
       </section>
     </section>
   );

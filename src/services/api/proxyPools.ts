@@ -12,7 +12,8 @@ import type {
   ProxyRule,
   ProxyRulesConfig,
 } from '@/types';
-import { apiClient } from './client';
+import { apiClient, type ApiClientConnectionSnapshot } from './client';
+import type { RegionPagination } from './proxyIp';
 
 export const proxyPoolsApi = {
   async getHealthCheck(): Promise<{
@@ -113,7 +114,8 @@ export const proxyPoolsApi = {
       rules,
       schemaVersion,
       legacyTargetsUnsupported:
-        schemaVersion < 2 && rules.some((rule) => Array.isArray(rule.targets) && rule.targets.length > 0),
+        schemaVersion < 2 &&
+        rules.some((rule) => Array.isArray(rule.targets) && rule.targets.length > 0),
     };
   },
 
@@ -129,6 +131,37 @@ export const proxyPoolsApi = {
     return Array.isArray(response?.['proxy-rules']) ? response['proxy-rules'] : rules;
   },
 
+  async getBindingsPage(
+    connection: ApiClientConnectionSnapshot,
+    page: number,
+    search: string,
+    signal?: AbortSignal
+  ) {
+    const response = await apiClient.getAtConnection<{
+      bindings: ProxyBindingStatus[];
+      pagination?: RegionPagination;
+      capabilities?: { region_application?: boolean };
+    }>(connection, '/proxy-bindings', {
+      signal,
+      params: { paged: true, page, page_size: 50, search },
+    });
+    if (response.pagination) return response;
+    const query = search.trim().toLowerCase();
+    const matches = (response.bindings ?? []).filter(
+      (b) =>
+        !query ||
+        [b.auth_id, b.auth_index, b.name, b.pool, b.entry, b.ip].some((v) =>
+          v?.toLowerCase().includes(query)
+        )
+    );
+    const total = matches.length;
+    const pages = Math.max(1, Math.ceil(total / 50));
+    const actualPage = Math.min(page, pages);
+    return {
+      bindings: matches.slice((actualPage - 1) * 50, actualPage * 50),
+      pagination: { page: actualPage, page_size: 50, total, total_pages: pages },
+    };
+  },
   async getBindings(): Promise<ProxyBindingStatus[]> {
     const response = await apiClient.get<{ bindings?: ProxyBindingStatus[] }>('/proxy-bindings');
     return Array.isArray(response?.bindings) ? response.bindings : [];
