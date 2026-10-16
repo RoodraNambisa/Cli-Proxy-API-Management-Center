@@ -1,4 +1,5 @@
-import {GlobalProxyRegionEditor} from '@/features/proxyIp/ProxyRegionFields';
+import { GlobalProxyRegionEditor } from '@/features/proxyIp/ProxyRegionFields';
+import { ChatGptWebTLSSwitch } from '@/features/chatgptWeb/components/ChatGptWebTLSSwitch';
 import { TimeContextEditor } from '@/features/proxyIp/TimeContextEditor';
 import { CodexAutoCookieEditor } from './CodexAutoCookieEditor';
 import { CodexResponseGuardEditor } from './CodexResponseGuardEditor';
@@ -2124,6 +2125,13 @@ export function VisualConfigEditor({
                   <p>{t('config_management.settings_center.chatgpt_web.description')}</p>
                 </div>
               </div>
+              <ChatGptWebTLSSwitch
+                enabled={values.chatgptWebTLSTrustAnchorsEnabled}
+                disabled={disabled}
+                active={activePageId === 'provider-chatgpt-web'}
+                connectionKey={chatGptWebConnectionGenerationKey}
+                onChange={(chatgptWebTLSTrustAnchorsEnabled) => onChange({ chatgptWebTLSTrustAnchorsEnabled })}
+              />
               <ToggleRow
                 title={t('config_management.settings_center.chatgpt_web.auto_relogin')}
                 description={t(

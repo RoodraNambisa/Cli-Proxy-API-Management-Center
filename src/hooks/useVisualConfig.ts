@@ -1,3 +1,4 @@
+import { readTLSTrustAnchors } from '@/features/chatgptWeb/tlsTrustAnchors';
 import { readTimeContext, validTimeContext } from '@/features/proxyIp/settings';
 import { autoCookieConflict } from '@/utils/codexAutoCookie';
 import { normalizeCodexBaseUrl, readCodexBaseUrl } from '@/utils/codexUpstream';
@@ -2577,6 +2578,9 @@ function getNextDirtyFields(
         baselineValues.chatgptWebSessionCookieRefreshOnTokenFailure
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebTLSTrustAnchorsEnabled')) {
+    updateDirty('chatgptWebTLSTrustAnchorsEnabled', nextValues.chatgptWebTLSTrustAnchorsEnabled === baselineValues.chatgptWebTLSTrustAnchorsEnabled);
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebForceSessionRefreshOnImport')) {
     updateDirty(
       'chatgptWebForceSessionRefreshOnImport',
@@ -3607,6 +3611,7 @@ export function useVisualConfig() {
           chatgptWeb?.['session-cookie-refresh-on-token-failure'] ??
           chatgptWeb?.sessionCookieRefreshOnTokenFailure
         ),
+        chatgptWebTLSTrustAnchorsEnabled: readTLSTrustAnchors(chatgptWeb?.['tls-trust-anchors-enabled']),
         chatgptWebForceSessionRefreshOnImport:
           (chatgptWeb?.['force-session-refresh-on-import'] ??
             chatgptWeb?.forceSessionRefreshOnImport) !== false,
@@ -4258,6 +4263,10 @@ export function useVisualConfig() {
             values.codexHeaderDefaultsOriginator
           );
           deleteIfMapEmpty(doc, ['codex-header-defaults']);
+        }
+        if (state.dirtyFields.has('chatgptWebTLSTrustAnchorsEnabled')) {
+          ensureMapInDoc(doc, ['chatgpt-web']);
+          doc.setIn(['chatgpt-web', 'tls-trust-anchors-enabled'], values.chatgptWebTLSTrustAnchorsEnabled);
         }
         if (
           docHas(doc, ['chatgpt-web']) ||

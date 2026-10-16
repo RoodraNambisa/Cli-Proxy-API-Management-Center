@@ -3822,6 +3822,15 @@
     "author": "Author"
   },
   "chatgpt_web": {
+    "tls_trust_anchors": {
+      "title": "Send TLS Trust Anchors extension",
+      "enabled_description": "Original Chrome 146 template (default): sends trust_anchors (0xca34). Certificate verification stays enabled. Saved changes apply to new flows.",
+      "disabled_description": "Compatibility mode: omits only trust_anchors (0xca34). Other TLS parameters and certificate verification remain unchanged. Saved changes apply to new flows.",
+      "loading": "Checking backend support. This setting is temporarily unavailable.",
+      "unsupported": "This backend does not support the switch. Upgrade the backend first.",
+      "error": "Could not verify backend support. Refresh and try again.",
+      "connection_changed": "The connection changed. Reload configuration before saving."
+    },
     "browser_region": {
       "title": "Browser region",
       "description": "Request-only timezone and language; stable device identity stays unchanged.",

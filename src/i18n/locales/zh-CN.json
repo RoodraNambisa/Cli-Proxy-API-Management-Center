@@ -3822,6 +3822,15 @@
     "author": "作者"
   },
   "chatgpt_web": {
+    "tls_trust_anchors": {
+      "title": "发送 TLS Trust Anchors 扩展",
+      "enabled_description": "原始 Chrome 146 模板（默认）：发送 trust_anchors（0xca34）。证书验证保持开启；保存后对新流程生效。",
+      "disabled_description": "兼容模式：仅省略 trust_anchors（0xca34）。其他 TLS 参数和证书验证不变；保存后对新流程生效。",
+      "loading": "正在检查后端支持情况，暂不可修改。",
+      "unsupported": "当前后端不支持此开关，请先升级后端。",
+      "error": "无法确认后端支持情况，请刷新后重试。",
+      "connection_changed": "连接已切换，请重新读取配置后保存。"
+    },
     "browser_region": {
       "title": "出口地区与语言",
       "description": "仅覆盖请求时区和语言，保留稳定设备身份。",

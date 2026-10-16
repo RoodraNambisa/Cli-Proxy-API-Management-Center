@@ -389,6 +389,7 @@ export type VisualConfigValues = {
   chatgptWebManualReloginConcurrency: string;
   chatgptWebApi798AutoLoginEnabled: boolean;
   chatgptWebSessionCookieRefreshOnTokenFailure: boolean;
+  chatgptWebTLSTrustAnchorsEnabled: boolean;
   chatgptWebForceSessionRefreshOnImport: boolean;
   chatgptWebAutoDeleteDeadAuths: boolean;
   chatgptWebInvalidPasskeyResponseAsDead: boolean;
@@ -533,6 +534,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebManualReloginConcurrency: '4',
   chatgptWebApi798AutoLoginEnabled: false,
   chatgptWebSessionCookieRefreshOnTokenFailure: false,
+  chatgptWebTLSTrustAnchorsEnabled: true,
   chatgptWebForceSessionRefreshOnImport: true,
   chatgptWebAutoDeleteDeadAuths: false,
   chatgptWebInvalidPasskeyResponseAsDead: false,

@@ -7,6 +7,7 @@ import { apiClient } from '@/services/api/client';
 import { apiKeysApi } from '@/services/api/apiKeys';
 
 const harness = vi.hoisted(() => ({
+  connectionGeneration: 0,
   visualDirty: false,
   releaseDirty: false,
   auditDirty: false,
@@ -100,7 +101,7 @@ vi.mock('@/stores', () => {
         showConfirmation: harness.showConfirmation,
       }),
     useAuthStore: (selector: (state: Record<string, unknown>) => unknown) =>
-      selector({ connectionStatus: 'connected' }),
+      selector({ connectionStatus: 'connected', connectionGeneration: harness.connectionGeneration }),
     useThemeStore: (selector: (state: Record<string, unknown>) => unknown) =>
       selector({ resolvedTheme: 'light' }),
     useConfigStore,
@@ -509,6 +510,7 @@ describe('ConfigPage save coordination', () => {
   beforeEach(() => {
     localStorage.clear();
     useStartupStatusStore.getState().reset();
+    harness.connectionGeneration = 0;
     harness.visualDirty = false;
     harness.releaseDirty = false;
     harness.auditDirty = false;
@@ -569,7 +571,7 @@ describe('ConfigPage save coordination', () => {
         harness.applyVisualChanges.mockImplementation((yaml: string) => yaml.replace('request-retry: 0', 'request-retry: 1'));
         await act(async () => { finish(); await update; });
         fireEvent.click(await screen.findByRole('button', { name: 'confirm-diff' }));
-        await waitFor(() => expect(harness.saveYaml).toHaveBeenCalledWith(latest.replace('request-retry: 0', 'request-retry: 1')));
+        await waitFor(() => expect(harness.saveYaml).toHaveBeenCalledWith(latest.replace('request-retry: 0', 'request-retry: 1'), expect.objectContaining({ previousContent: expect.any(String), signal: expect.any(AbortSignal), connection: expect.any(Object) })));
       } finally {
         finish();
         await update;
@@ -593,7 +595,7 @@ describe('ConfigPage save coordination', () => {
       expect(harness.fetchYaml).toHaveBeenCalledTimes(1);
       await act(async () => { reject(failure); expect(await update).toBe(failure); });
       fireEvent.click(await screen.findByRole('button', { name: 'confirm-diff' }));
-      await waitFor(() => expect(harness.saveYaml).toHaveBeenCalledWith(harness.mergedYaml));
+      await waitFor(() => expect(harness.saveYaml).toHaveBeenCalledWith(harness.mergedYaml, expect.objectContaining({ previousContent: expect.any(String), signal: expect.any(AbortSignal), connection: expect.any(Object) })));
     } finally {
       reject(failure);
       await update;
@@ -761,6 +763,7 @@ describe('ConfigPage save coordination', () => {
   });
 
   test.each([
+    { section: 'chatgpt-web', field: 'tls-trust-anchors-enabled' },
     { section: 'codex', field: 'passthrough-prompt-cache-key' },
     { section: 'codex', field: 'optimize-multi-agent-v2' },
     { section: 'codex', field: 'estimate-claude-input-tokens' },
@@ -804,7 +807,7 @@ describe('ConfigPage save coordination', () => {
         'notification.save_failed: configuration rejected', 'error'
       )
     );
-    expect(harness.saveYaml).toHaveBeenLastCalledWith(harness.mergedYaml);
+    expect(harness.saveYaml).toHaveBeenLastCalledWith(harness.mergedYaml, expect.objectContaining({ previousContent: expect.any(String), signal: expect.any(AbortSignal), connection: expect.any(Object) }));
     expect(harness.loadVisualValues).toHaveBeenCalledTimes(loadedBeforeSave);
     expect(harness.showNotification).not.toHaveBeenCalledWith(
       'config_management.save_success', 'success'
@@ -820,6 +823,59 @@ describe('ConfigPage save coordination', () => {
     );
     expect(harness.saveYaml).toHaveBeenCalledTimes(2);
     expect(harness.loadVisualValues).toHaveBeenLastCalledWith(harness.mergedYaml);
+  });
+
+  test('cancels old configuration reads after switching connection', async () => {
+    let finish!: (value: string) => void;
+    harness.fetchYaml.mockReturnValueOnce(new Promise<string>((resolve) => { finish = resolve; }));
+    const page = renderPage();
+    await waitFor(() => expect(harness.fetchYaml).toHaveBeenCalledOnce());
+    const signal = harness.fetchYaml.mock.calls[0][1] as AbortSignal;
+    harness.connectionGeneration++;
+    page.rerender(<MemoryRouter><ConfigPage /></MemoryRouter>);
+    await waitFor(() => expect(harness.loadVisualValues).toHaveBeenCalledWith('request-retry: 0\n'));
+    expect(signal.aborted).toBe(true);
+    await act(async () => finish('chatgpt-web:\n  tls-trust-anchors-enabled: false\n'));
+    expect(harness.loadVisualValues).not.toHaveBeenCalledWith('chatgpt-web:\n  tls-trust-anchors-enabled: false\n');
+  });
+
+  test('does not publish a late save result to the new connection', async () => {
+    harness.visualDirty = true;
+    let finish!: () => void;
+    harness.saveYaml.mockReturnValueOnce(new Promise<void>((resolve) => { finish = resolve; }));
+    const page = renderPage();
+    await clickSave();
+    fireEvent.click(await screen.findByRole('button', {name: 'confirm-diff'}));
+    await waitFor(() => expect(harness.saveYaml).toHaveBeenCalledOnce());
+    const signal = harness.saveYaml.mock.calls[0][1].signal as AbortSignal;
+    harness.connectionGeneration++;
+    page.rerender(<MemoryRouter><ConfigPage /></MemoryRouter>);
+    await waitFor(() => expect(signal.aborted).toBe(true));
+    const loaded = harness.loadVisualValues.mock.calls.length;
+    await act(async () => finish());
+    expect(harness.loadVisualValues).toHaveBeenCalledTimes(loaded);
+    expect(harness.showNotification).not.toHaveBeenCalledWith('config_management.save_success', 'success');
+  });
+
+  test('discards a post-save refresh after switching connection', async () => {
+    harness.visualDirty = true;
+    let finish!: (value: string) => void;
+    harness.fetchYaml
+      .mockResolvedValueOnce('request-retry: 0\n')
+      .mockResolvedValueOnce('request-retry: 0\n')
+      .mockReturnValueOnce(new Promise<string>((resolve) => { finish = resolve; }));
+    const page = renderPage();
+    await clickSave();
+    fireEvent.click(await screen.findByRole('button', { name: 'confirm-diff' }));
+    await waitFor(() => expect(harness.fetchYaml).toHaveBeenCalledTimes(3));
+    const signal = harness.fetchYaml.mock.calls[2][1] as AbortSignal;
+    harness.connectionGeneration++;
+    page.rerender(<MemoryRouter><ConfigPage /></MemoryRouter>);
+    await waitFor(() => expect(harness.fetchYaml).toHaveBeenCalledTimes(4));
+    expect(signal.aborted).toBe(true);
+    await act(async () => finish('chatgpt-web:\n  tls-trust-anchors-enabled: false\n'));
+    expect(harness.loadVisualValues).not.toHaveBeenCalledWith('chatgpt-web:\n  tls-trust-anchors-enabled: false\n');
+    expect(harness.showNotification).not.toHaveBeenCalledWith('config_management.save_success', 'success');
   });
 
   test('reloads clean request-body panels after saving YAML', async () => {

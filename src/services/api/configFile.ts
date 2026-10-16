@@ -5,25 +5,45 @@ import { STATE_STRATEGY_KEYS } from '@/utils/codexStateStrategy';
  * Configuration file API (/config.yaml).
  */
 
-import { apiClient } from './client';
+import { apiClient, type ApiClientConnectionSnapshot } from './client';
+import { readTLSTrustAnchors, supportsTLSTrustAnchors, TLS_TRUST_ANCHORS_KEY } from '@/features/chatgptWeb/tlsTrustAnchors';
 import { requireRoutingCredentialSupport } from './routingCredentials';
 import { parseDocument } from 'yaml';
 import i18n from '@/i18n';
 
 export const configFileApi = {
-  async fetchConfigYaml(): Promise<string> {
-    const response = await apiClient.getRaw('/config.yaml', {
-      responseType: 'text',
-      headers: { Accept: 'application/yaml, text/yaml, text/plain' },
-    });
-    const data: unknown = response.data;
+  async fetchConfigYaml(connection?: ApiClientConnectionSnapshot, signal?: AbortSignal): Promise<string> {
+    const request = { responseType: 'text' as const, headers: { Accept: 'application/yaml, text/yaml, text/plain' }, signal };
+    const data: unknown = connection
+      ? await apiClient.getAtConnection(connection, '/config.yaml', request)
+      : (await apiClient.getRaw('/config.yaml', request)).data;
     if (typeof data === 'string') return data;
     if (data === undefined || data === null) return '';
     return String(data);
   },
 
-  async saveConfigYaml(content: string): Promise<void> {
+  async saveConfigYaml(content: string, options: {
+    previousContent?: string;
+    connection?: ApiClientConnectionSnapshot;
+    signal?: AbortSignal;
+  } = {}): Promise<void> {
     const root = parseDocument(content).toJS();
+    const tlsValue = root?.['chatgpt-web']?.[TLS_TRUST_ANCHORS_KEY];
+    const previousTLSValue = options.previousContent === undefined ? undefined
+      : parseDocument(options.previousContent).toJS()?.['chatgpt-web']?.[TLS_TRUST_ANCHORS_KEY];
+    const needsTLS = options.previousContent === undefined
+      ? tlsValue !== undefined
+      : tlsValue !== previousTLSValue;
+    readTLSTrustAnchors(tlsValue);
+    const tlsConnection = needsTLS ? options.connection ?? apiClient.captureConnection() : undefined;
+    if (tlsConnection) {
+      let supported = false;
+      try { supported = await supportsTLSTrustAnchors(tlsConnection, options.signal); }
+      catch (error) {
+        if (![404, 405, 501].includes((error as { status?: number }).status ?? 0)) throw error;
+      }
+      if (!supported) throw new Error(i18n.t('chatgpt_web.tls_trust_anchors.unsupported'));
+    }
     const needsManualRegion = Boolean(
       root?.['proxy-region'] ||
       root?.['proxy-pools']?.some?.(
@@ -35,11 +55,11 @@ export const configFileApi = {
     const needsRegion = Boolean(
       needsManualRegion || root?.['proxy-ip'] || root?.codex?.['time-context']?.enabled === true
     );
-    const saveConnection = needsRegion ? apiClient.captureConnection() : undefined;
+    const saveConnection = options.connection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
     if (needsRegion) {
       const caps = await apiClient.getAtConnection<{ capabilities?: Record<string, boolean> }>(
         saveConnection!,
-        '/proxy-ip'
+        '/proxy-ip', {signal:options.signal}
       );
       if (
         !caps.capabilities?.proxy_ip ||
@@ -48,6 +68,7 @@ export const configFileApi = {
         (root?.['proxy-ip'] && !caps.capabilities?.region_lifecycle)
       )
         throw new Error(i18n.t('proxy_ip.upgrade'));
+
     }
     const imageDeclarations =
       Array.isArray(root?.['xai-api-key']) &&
@@ -199,8 +220,15 @@ export const configFileApi = {
       if (retryRounds && options.features?.state_retry_rounds !== true)
         throw new Error(i18n.t('codex_state.retry_round_upgrade'));
     }
+    if (tlsConnection) {
+      const current = apiClient.captureConnection();
+      if (current.apiBase !== tlsConnection.apiBase || current.managementKey !== tlsConnection.managementKey)
+        throw new Error(i18n.t('chatgpt_web.tls_trust_anchors.connection_changed'));
+    }
+    if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     if (connection) {
       await apiClient.putAtConnection(connection, '/config.yaml', content, {
+        signal: options.signal,
         headers: {
           'Content-Type': 'application/yaml',
           Accept: 'application/json, text/plain, */*',
@@ -209,6 +237,7 @@ export const configFileApi = {
       return;
     }
     await apiClient.put('/config.yaml', content, {
+      signal: options.signal,
       headers: {
         'Content-Type': 'application/yaml',
         Accept: 'application/json, text/plain, */*',
