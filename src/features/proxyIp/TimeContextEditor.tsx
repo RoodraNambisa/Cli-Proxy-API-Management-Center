@@ -22,71 +22,77 @@ export function TimeContextFields({
 }) {
   const { t } = useTranslation();
   return (
-    <fieldset className={styles.fields} disabled={disabled}>
+    <fieldset className={styles.timeContext} disabled={disabled}>
       {!credential && (
-        <ToggleSwitch
-          label={t('time_context.enabled')}
-          checked={value.enabled}
-          onChange={(enabled) => onChange({ ...value, enabled })}
-        />
-      )}
-      <label>
-        {t('time_context.mode')}
-        <select
-          className="input"
-          value={value.mode}
-          onChange={(e) => onChange({ ...value, mode: e.target.value as TimeContext['mode'] })}
-        >
-          {(credential ? ['inherit', 'off', 'proxy', 'manual'] : ['proxy', 'manual']).map(
-            (mode) => (
-              <option key={mode} value={mode}>
-                {t(`time_context.${mode}`)}
-              </option>
-            )
-          )}
-        </select>
-      </label>
-      {value.mode === 'manual' && (
-        <label>
-          {t('time_context.timezone')}
-          <input
-            className="input"
-            value={value.timezone}
-            onChange={(e) => onChange({ ...value, timezone: e.target.value })}
-            placeholder="Asia/Tokyo"
+        <div className={styles.timeContextToggle}>
+          <ToggleSwitch
+            label={t('time_context.enabled')}
+            labelPosition="left"
+            checked={value.enabled}
+            disabled={disabled}
+            onChange={(enabled) => onChange({ ...value, enabled })}
           />
+        </div>
+      )}
+      <div className={styles.fields}>
+        <label>
+          {t('time_context.mode')}
+          <select
+            className="input"
+            value={value.mode}
+            onChange={(e) => onChange({ ...value, mode: e.target.value as TimeContext['mode'] })}
+          >
+            {(credential ? ['inherit', 'off', 'proxy', 'manual'] : ['proxy', 'manual']).map(
+              (mode) => (
+                <option key={mode} value={mode}>
+                  {t(`time_context.${mode}`)}
+                </option>
+              )
+            )}
+          </select>
         </label>
-      )}
-      {value.mode === 'proxy' && (
-        <>
+        {value.mode === 'manual' && (
           <label>
-            {t('time_context.lookup-failure')}
-            <select
+            {t('time_context.timezone')}
+            <input
               className="input"
-              value={value['lookup-failure']}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  'lookup-failure': e.target.value as TimeContext['lookup-failure'],
-                })
-              }
-            >
-              <option value="preserve">{t('time_context.preserve')}</option>
-              <option value="fallback">{t('time_context.fallback')}</option>
-            </select>
+              value={value.timezone}
+              onChange={(e) => onChange({ ...value, timezone: e.target.value })}
+              placeholder="Asia/Tokyo"
+            />
           </label>
-          {value['lookup-failure'] === 'fallback' && (
+        )}
+        {value.mode === 'proxy' && (
+          <>
             <label>
-              {t('time_context.fallback-timezone')}
-              <input
+              {t('time_context.lookup-failure')}
+              <select
                 className="input"
-                value={value['fallback-timezone']}
-                onChange={(e) => onChange({ ...value, 'fallback-timezone': e.target.value })}
-              />
+                value={value['lookup-failure']}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    'lookup-failure': e.target.value as TimeContext['lookup-failure'],
+                  })
+                }
+              >
+                <option value="preserve">{t('time_context.preserve')}</option>
+                <option value="fallback">{t('time_context.fallback')}</option>
+              </select>
             </label>
-          )}
-        </>
-      )}
+            {value['lookup-failure'] === 'fallback' && (
+              <label>
+                {t('time_context.fallback-timezone')}
+                <input
+                  className="input"
+                  value={value['fallback-timezone']}
+                  onChange={(e) => onChange({ ...value, 'fallback-timezone': e.target.value })}
+                />
+              </label>
+            )}
+          </>
+        )}
+      </div>
     </fieldset>
   );
 }
@@ -130,11 +136,21 @@ export function TimeContextEditor({
       focusTarget={focusTarget}
       errorCount={validTimeContext(value) ? 0 : 1}
     >
-      {!supported && <p role="status">{t('proxy_ip.upgrade')}</p>}
+      {!supported && (
+        <p className={styles.hint} role="status">
+          {t('proxy_ip.upgrade')}
+        </p>
+      )}
       <TimeContextFields value={value} onChange={onChange} disabled={disabled || !supported} />
-      {!validTimeContext(value) && <p role="alert">{t('time_context.invalid')}</p>}
-      <p className="hint">{t('time_context.hint')}</p>
-      <Link to="/proxy-pools">{t('proxy_ip.shared_link')}</Link>
+      {!validTimeContext(value) && (
+        <p className={styles.error} role="alert">
+          {t('time_context.invalid')}
+        </p>
+      )}
+      <p className={styles.hint}>{t('time_context.hint')}</p>
+      <Link className={styles.sharedLink} to="/proxy-pools">
+        {t('proxy_ip.shared_link')}
+      </Link>
     </SettingsDisclosure>
   );
 }

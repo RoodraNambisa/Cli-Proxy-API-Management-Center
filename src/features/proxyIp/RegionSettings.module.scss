@@ -6,15 +6,92 @@
 }
 .fields {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 24px;
+  min-width: 0;
   padding: 0;
   border: 0;
-  margin: 18px 0;
-  label {
+  margin: 0;
+
+  > label {
     display: flex;
     flex-direction: column;
+    min-width: 0;
     gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  :global(.input) {
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 400;
+  }
+}
+
+.timeContext,
+.credential {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  container-type: inline-size;
+}
+
+.credential > h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.timeContextToggle {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+
+  > label {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 20px;
+    min-height: 32px;
+    font-size: 14px;
+  }
+
+  input:focus-visible + span {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 3px;
+  }
+}
+
+.hint {
+  margin: 0;
+  max-width: 80ch;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.sharedLink {
+  width: fit-content;
+  max-width: 100%;
+  font-size: 13px;
+  line-height: 1.65;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.error {
+  margin: 0;
+  color: var(--failure-badge-text);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+@container (max-width: 640px) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 .actions {

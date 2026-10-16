@@ -44,7 +44,7 @@ export function CredentialRegionEditor({
     onChange(JSON.stringify(next));
   };
   return (
-    <section>
+    <section className={styles.credential}>
       <h3>{t('time_context.credential')}</h3>
       {!supported && <p>{t('proxy_ip.upgrade')}</p>}
       {codex ? (
