@@ -629,6 +629,14 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-lg;
+  container-type: inline-size;
+
+  :global(.form-group) {
+    min-width: 0;
+    margin-bottom: 0;
+    gap: 8px;
+    font-size: 13px;
+  }
 }
 
 .editorGrid {
@@ -638,6 +646,7 @@
 }
 
 .entryHeader {
+  flex-wrap: wrap;
   padding-top: $spacing-md;
   border-top: 1px solid var(--border-color);
 
@@ -645,11 +654,19 @@
     margin: 0 0 4px;
     font-size: 16px;
   }
+
+  > div:first-child {
+    flex: 1 1 300px;
+  }
+
+  p {
+    font-size: 13px;
+  }
 }
 
 .entryItem {
   display: grid;
-  grid-template-columns: minmax(120px, 0.65fr) minmax(260px, 1.8fr) minmax(130px, 0.8fr) 38px;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(0, 1.8fr) minmax(100px, 0.65fr) 38px;
   align-items: start;
   gap: $spacing-sm;
   padding: $spacing-md;
@@ -712,4 +729,36 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.entryRegion {
+  grid-column: 1 / -1;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.poolRegion {
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+@container (max-width: 640px) {
+  .entryItem {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    > :global(.form-group) {
+      grid-column: 1 / -1;
+    }
+
+    > :global(.form-group):first-child {
+      grid-column: 1;
+      grid-row: 1;
+    }
+  }
+
+  .entryActions {
+    grid-column: 2;
+    grid-row: 1;
+    flex-direction: row;
+  }
 }

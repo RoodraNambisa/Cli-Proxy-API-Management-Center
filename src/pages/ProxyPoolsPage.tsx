@@ -1711,7 +1711,7 @@ export function ProxyPoolsPage() {
         title={editor?.original ? t('proxy_pools.edit_pool') : t('proxy_pools.add_pool')}
         onClose={() => !savingPool && setEditor(null)}
         closeDisabled={savingPool}
-        width={760}
+        width={900}
         footer={
           <>
             <Button variant="secondary" onClick={() => setEditor(null)} disabled={savingPool}>
@@ -1725,7 +1725,6 @@ export function ProxyPoolsPage() {
       >
         {editor ? (
           <div className={styles.poolEditor}>
-            <ProxyRegionFields value={editor.draft.region} onChange={region => updatePoolDraft({region})} disabled={!regionSupported || savingPool} />
             <div className={styles.editorGrid}>
               <Input
                 label={t('proxy_pools.pool_name')}
@@ -1782,6 +1781,14 @@ export function ProxyPoolsPage() {
                   ariaLabel={t('proxy_pools.spread_bindings')}
                 />
               </div>
+            </div>
+            <div className={styles.poolRegion}>
+              <ProxyRegionFields
+                scope="pool"
+                value={editor.draft.region}
+                onChange={(region) => updatePoolDraft({ region })}
+                disabled={!regionSupported || savingPool}
+              />
             </div>
             <div className={styles.entryHeader}>
               <div>
@@ -1875,7 +1882,6 @@ export function ProxyPoolsPage() {
                     onChange={(event) => updatePoolEntry(index, { ports: event.target.value })}
                     hint={t('proxy_pools.ports_hint')}
                   />
-                  <ProxyRegionFields value={entry.region} onChange={region => updatePoolEntry(index, {region})} disabled={!regionSupported || savingPool} />
                   <div className={styles.entryActions}>
                     <Button
                       variant="ghost"
@@ -1902,6 +1908,14 @@ export function ProxyPoolsPage() {
                     >
                       <IconTrash2 size={15} />
                     </Button>
+                  </div>
+                  <div className={styles.entryRegion}>
+                    <ProxyRegionFields
+                      scope="entry"
+                      value={entry.region}
+                      onChange={(region) => updatePoolEntry(index, { region })}
+                      disabled={!regionSupported || savingPool}
+                    />
                   </div>
                 </div>
               ))}

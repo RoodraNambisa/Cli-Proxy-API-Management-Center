@@ -119,4 +119,36 @@ describe('Proxy IP shared settings', () => {
     await screen.findByText('proxy_ip.failed');
     expect(screen.queryByText('proxy_ip.upgrade')).toBeNull();
   });
+  it('distinguishes a status read failure from an empty cache and allows retry', async () => {
+    mock.status.mockRejectedValueOnce(new Error('unavailable'));
+    render(<ProxyIPPanel />);
+    await screen.findByText('proxy_ip.status_failed');
+    expect(screen.queryByText('proxy_ip.empty_title')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'common.refresh' }));
+    await screen.findByText('proxy_ip.empty_title');
+    expect(screen.queryByText('proxy_ip.status_failed')).toBeNull();
+  });
+  it('keeps previous-page navigation when refreshed records no longer fill the last page', async () => {
+    const entry = {
+      route_id: 'route',
+      ip: '203.0.113.1',
+      timezone: 'Asia/Tokyo',
+      suggested_language: 'ja-JP',
+      cache_state: 'fresh',
+      cache_age_seconds: 10,
+      refresh_state: 'idle',
+      detected_at: '2026-10-16T01:00:00Z',
+    };
+    mock.status.mockResolvedValueOnce({ entries: [entry], route_count: 51, ip_count: 1 });
+    mock.status.mockResolvedValueOnce({ entries: [], route_count: 1, ip_count: 1 });
+    mock.status.mockResolvedValueOnce({ entries: [entry], route_count: 1, ip_count: 1 });
+    render(<ProxyIPPanel />);
+    fireEvent.click(await screen.findByRole('button', { name: 'proxy_ip.next_page' }));
+    await screen.findByText('proxy_ip.empty_title');
+    const previous = screen.getByRole('button', { name: 'proxy_ip.previous_page' });
+    expect((previous as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(previous);
+    await screen.findByText('203.0.113.1');
+    expect(mock.status).toHaveBeenLastCalledWith(expect.anything(), 0, expect.any(AbortSignal));
+  });
 });

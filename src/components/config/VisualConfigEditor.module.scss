@@ -698,6 +698,10 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: end;
+
+  > :global(.form-group) {
+    margin-bottom: 0;
+  }
 }
 
 .proxyCheckButton {

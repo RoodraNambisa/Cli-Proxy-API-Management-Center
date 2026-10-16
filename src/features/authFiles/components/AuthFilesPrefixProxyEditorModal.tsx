@@ -290,6 +290,8 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                       onChange={(v) => onChange('proxyRegionText', JSON.stringify(v))}
                       disabled={!regionSupported || disableControls || editor.saving}
                     />
+                  </div>
+                  <div className="form-group">
                     <label htmlFor="auth-file-proxy-binding">
                       {t('auth_files.proxy_binding_label')}
                     </label>

@@ -684,7 +684,15 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
               onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
               disabled={disableControls || saving}
             />
- {provider==='codex'&&<ProxyRegionFields value={form.proxyRegion} onChange={proxyRegion=>setForm(p=>({...p,proxyRegion}))} disabled={!regionSupported||disableControls||saving}/>}
+            {provider === 'codex' && (
+              <div className="form-group">
+                <ProxyRegionFields
+                  value={form.proxyRegion}
+                  onChange={(proxyRegion) => setForm((prev) => ({ ...prev, proxyRegion }))}
+                  disabled={!regionSupported || disableControls || saving}
+                />
+              </div>
+            )}
             <HeaderInputList
               entries={form.headers}
               onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}

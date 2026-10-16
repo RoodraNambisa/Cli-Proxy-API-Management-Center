@@ -4,7 +4,9 @@ import { useAuthStore } from '@/stores';
 import { apiClient } from '@/services/api/client';
 import { proxyIPApi } from '@/services/api/proxyIp';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { validTimezone } from './settings';
+import styles from './ProxyRegionFields.module.scss';
 
 export type ProxyRegion = { timezone?: string; language?: string };
 export function readProxyRegion(raw: string): ProxyRegion {
@@ -46,28 +48,39 @@ export function ProxyRegionFields({
   value = {},
   onChange,
   disabled = false,
+  scope = 'proxy',
 }: {
   value?: ProxyRegion;
   onChange: (value: ProxyRegion) => void;
   disabled?: boolean;
+  scope?: 'proxy' | 'pool' | 'entry';
 }) {
   const { t } = useTranslation();
   return (
-    <fieldset disabled={disabled}>
-      <legend>{t('proxy_ip.manual_region')}</legend>
-      <p className="hint">{t('proxy_ip.manual_hint')}</p>
-      {(['timezone', 'language'] as const).map((key) => (
-        <label key={key}>
-          {t(`proxy_ip.manual_${key}`)}
-          <input
-            className="input"
+    <fieldset disabled={disabled} className={styles.fields}>
+      <legend>
+        {t(scope === 'proxy' ? 'proxy_ip.manual_region' : `proxy_ip.manual_${scope}`)}
+      </legend>
+      <p className={styles.hint}>
+        {t(scope === 'proxy' ? 'proxy_ip.manual_hint' : `proxy_ip.manual_${scope}_hint`)}
+      </p>
+      <div className={styles.grid}>
+        {(['timezone', 'language'] as const).map((key) => (
+          <Input
+            key={key}
+            label={t(`proxy_ip.manual_${key}`)}
             value={value[key] ?? ''}
             placeholder={key === 'timezone' ? 'Asia/Tokyo' : 'ja-JP'}
             onChange={(e) => onChange({ ...value, [key]: e.target.value })}
+            spellCheck={false}
           />
-        </label>
-      ))}
-      {!validProxyRegion(value) && <p role="alert">{t('proxy_ip.manual_invalid')}</p>}
+        ))}
+      </div>
+      {!validProxyRegion(value) && (
+        <p className={styles.error} role="alert">
+          {t('proxy_ip.manual_invalid')}
+        </p>
+      )}
     </fieldset>
   );
 }
@@ -116,25 +129,35 @@ export function GlobalProxyRegionEditor({ disabled = false }: { disabled?: boole
     }
   };
   return (
-    <section>
+    <section className={styles.editor}>
       <ProxyRegionFields
         value={value}
         onChange={setValue}
         disabled={disabled || !supported || busy}
       />
-      {error && <p role="alert">{error}</p>}
-      <Button
-        disabled={
-          disabled ||
-          !supported ||
-          busy ||
-          !validProxyRegion(value) ||
-          JSON.stringify(base) === JSON.stringify(value)
-        }
-        onClick={() => void save()}
-      >
-        {t('common.save')}
-      </Button>
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
+      <div className={styles.footer}>
+        <p className={styles.hint}>{t('proxy_ip.manual_save_hint')}</p>
+        <Button
+          type="button"
+          size="sm"
+          loading={busy}
+          disabled={
+            disabled ||
+            !supported ||
+            busy ||
+            !validProxyRegion(value) ||
+            JSON.stringify(base) === JSON.stringify(value)
+          }
+          onClick={() => void save()}
+        >
+          {t('proxy_ip.manual_save')}
+        </Button>
+      </div>
     </section>
   );
 }
