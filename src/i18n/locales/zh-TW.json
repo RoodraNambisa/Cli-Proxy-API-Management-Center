@@ -3807,6 +3807,15 @@
     "author": "作者"
   },
   "chatgpt_web": {
+    "tls_trust_anchors": {
+      "title": "傳送 TLS Trust Anchors 擴充",
+      "enabled_description": "原始 Chrome 146 範本（預設）：傳送 trust_anchors（0xca34）。憑證驗證維持啟用；儲存後對新流程生效。",
+      "disabled_description": "相容模式：僅省略 trust_anchors（0xca34）。其他 TLS 參數與憑證驗證不變；儲存後對新流程生效。",
+      "loading": "正在檢查後端支援情況，暫時無法修改。",
+      "unsupported": "目前後端不支援此開關，請先升級後端。",
+      "error": "無法確認後端支援情況，請重新整理後再試。",
+      "connection_changed": "連線已切換，請重新讀取設定後儲存。"
+    },
     "browser_region": {
       "title": "出口地區與語言",
       "description": "僅覆蓋請求時區和語言，保留穩定裝置身分。",

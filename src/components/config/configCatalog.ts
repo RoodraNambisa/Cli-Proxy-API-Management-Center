@@ -167,6 +167,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebApi798AutoLoginEnabled',
       'chatgptWebSessionCookieRefreshOnTokenFailure',
       'chatgptWebForceSessionRefreshOnImport',
+      'chatgptWebTLSTrustAnchorsEnabled',
       'chatgptWebAutoDeleteDead',
       'chatgptWebInvalidPasskeyResponseAsDead',
       'chatgptWebImageUpstreamModel',
@@ -801,6 +802,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     pageId: 'provider-antigravity',
     labelKey: 'config_management.visual.sections.quota.antigravity_credits',
     yamlKeys: ['quota-exceeded.antigravity-credits'],
+  },
+  {
+    id: 'config-chatgpt-web-tls-trust-anchors',
+    pageId: 'provider-chatgpt-web',
+    labelKey: 'chatgpt_web.tls_trust_anchors.title',
+    yamlKeys: ['chatgpt-web.tls-trust-anchors-enabled'],
+    aliases: ['TLS', 'trust_anchors', 'Trust Anchors', '0xca34', 'Chrome 146'],
   },
   {
     id: 'config-chatgpt-web-auto-relogin',

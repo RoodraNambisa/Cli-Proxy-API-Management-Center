@@ -165,6 +165,12 @@ export function ConfigPage() {
   const [diffModalOpen, setDiffModalOpen] = useState(false);
   const [serverYaml, setServerYaml] = useState('');
   const [mergedYaml, setMergedYaml] = useState('');
+  const currentConnectionKey = useRef(connectionGenerationKey);
+  currentConnectionKey.current = connectionGenerationKey;
+  const loadedConnectionKey = useRef('');
+  const diffConnectionKey = useRef('');
+  const configLoadAbort = useRef<AbortController | null>(null);
+  const configSaveAbort = useRef<AbortController | null>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -185,7 +191,7 @@ export function ConfigPage() {
   const chatGptWebUsageCacheRef = useRef<ChatGptWebUsageCachePanelHandle | null>(null);
 
   const startupWriteBlocked = startupMutationsBlocked(startup);
-  const disableControls = connectionStatus !== 'connected' || startupWriteBlocked;
+  const disableControls = connectionStatus !== 'connected' || startupWriteBlocked || loadedConnectionKey.current !== connectionGenerationKey;
   const yamlDirty = dirty || visualDirty;
   const isDirty =
     yamlDirty ||
@@ -206,10 +212,17 @@ export function ConfigPage() {
       visualHasPayloadValidationErrors);
 
   const loadConfig = useCallback(async () => {
+    configLoadAbort.current?.abort();
+    const controller = new AbortController();
+    configLoadAbort.current = controller;
+    const connection = apiClient.captureConnection();
+    const key = connectionGenerationKey;
     setLoading(true);
     setError('');
     try {
-      const data = await configFileApi.fetchConfigYaml();
+      const data = await configFileApi.fetchConfigYaml(connection, controller.signal);
+      if (controller.signal.aborted || key !== currentConnectionKey.current) return;
+      loadedConnectionKey.current = key;
       setContent(data);
       setDirty(false);
       setDiffModalOpen(false);
@@ -217,15 +230,21 @@ export function ConfigPage() {
       setMergedYaml(data);
       loadVisualValuesFromYaml(data);
     } catch (err: unknown) {
+      if (controller.signal.aborted || key !== currentConnectionKey.current) return;
       const message = err instanceof Error ? err.message : t('notification.refresh_failed');
       setError(message);
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted && key === currentConnectionKey.current) setLoading(false);
     }
-  }, [loadVisualValuesFromYaml, t]);
+  }, [connectionGenerationKey, loadVisualValuesFromYaml, t]);
 
   useEffect(() => {
-    loadConfig();
+    setSaving(false);
+    void loadConfig();
+    return () => {
+      configLoadAbort.current?.abort();
+      configSaveAbort.current?.abort();
+    };
   }, [loadConfig]);
 
   useEffect(() => {
@@ -321,9 +340,15 @@ export function ConfigPage() {
       reloadSentinel = false,
       reloadUsageCache = false,
     } = {}) => {
+      const key = connectionGenerationKey;
+      if (key !== currentConnectionKey.current) return false;
+      const connection = apiClient.captureConnection();
+      configLoadAbort.current?.abort();
+      const controller = new AbortController();
+      configLoadAbort.current = controller;
       try {
         const [latestContent] = await Promise.all([
-          configFileApi.fetchConfigYaml(),
+          configFileApi.fetchConfigYaml(connection, controller.signal),
           reloadRelease
             ? (requestBodyReleaseRef.current?.reload() ?? Promise.resolve())
             : Promise.resolve(),
@@ -349,9 +374,11 @@ export function ConfigPage() {
             ? (chatGptWebUsageCacheRef.current?.reload() ?? Promise.resolve())
             : Promise.resolve(),
         ]);
+        if (controller.signal.aborted || key !== currentConnectionKey.current) return false;
         applyYamlSnapshot(latestContent);
         return true;
       } catch (refreshError: unknown) {
+        if (controller.signal.aborted || key !== currentConnectionKey.current) return false;
         const message =
           refreshError instanceof Error
             ? refreshError.message
@@ -365,7 +392,7 @@ export function ConfigPage() {
         return false;
       }
     },
-    [applyYamlSnapshot, showNotification, t]
+    [connectionGenerationKey, applyYamlSnapshot, showNotification, t]
   );
 
   const refreshSharedConfig = useCallback(async () => {
@@ -486,6 +513,15 @@ export function ConfigPage() {
   );
 
   const handleConfirmSave = async () => {
+    const key = connectionGenerationKey;
+    if (diffConnectionKey.current !== key || loadedConnectionKey.current !== key) {
+      showNotification(t('chatgpt_web.tls_trust_anchors.connection_changed'), 'error');
+      return;
+    }
+    const connection = apiClient.captureConnection();
+    configSaveAbort.current?.abort();
+    const controller = new AbortController();
+    configSaveAbort.current = controller;
     if (startupWriteBlocked) {
       showNotification(t('config_management.startup_read_only'), 'warning');
       return;
@@ -507,11 +543,13 @@ export function ConfigPage() {
       const nextCommercialMode = readCommercialModeFromYaml(mergedYaml);
       const commercialModeChanged = previousCommercialMode !== nextCommercialMode;
 
-      await configFileApi.saveConfigYaml(mergedYaml);
+      await configFileApi.saveConfigYaml(mergedYaml, { previousContent: serverYaml, connection, signal: controller.signal });
+      if (controller.signal.aborted || key !== currentConnectionKey.current) return;
       setDiffModalOpen(false);
       applyYamlSnapshot(mergedYaml);
 
       const sidecarResult = await saveDirtySidecars(sidecarSnapshot);
+      if (controller.signal.aborted || key !== currentConnectionKey.current) return;
       await refreshSavedSnapshots({
         reloadRelease: !sidecarSnapshot.release,
         reloadAudit: !sidecarSnapshot.audit,
@@ -522,7 +560,9 @@ export function ConfigPage() {
         reloadSentinel: !sidecarSnapshot.sentinel,
         reloadUsageCache: !sidecarSnapshot.usageCache,
       });
+      if (controller.signal.aborted || key !== currentConnectionKey.current) return;
       await refreshSharedConfig();
+      if (controller.signal.aborted || key !== currentConnectionKey.current) return;
 
       if (commercialModeChanged) {
         showNotification(t('notification.commercial_mode_restart_required'), 'warning');
@@ -534,14 +574,21 @@ export function ConfigPage() {
         showNotification(t('config_management.save_success'), 'success');
       }
     } catch (err: unknown) {
+      if (controller.signal.aborted || key !== currentConnectionKey.current) return;
       const message = err instanceof Error ? err.message : '';
       showNotification(`${t('notification.save_failed')}: ${message}`, 'error');
     } finally {
-      setSaving(false);
+      if (key === currentConnectionKey.current) setSaving(false);
     }
   };
 
   const handleSave = async () => {
+    const key = connectionGenerationKey;
+    if (loadedConnectionKey.current !== key) return;
+    const connection = apiClient.captureConnection();
+    configSaveAbort.current?.abort();
+    const controller = new AbortController();
+    configSaveAbort.current = controller;
     if (startupWriteBlocked) {
       showNotification(t('config_management.startup_read_only'), 'warning');
       return;
@@ -586,7 +633,9 @@ export function ConfigPage() {
     setSaving(true);
     try {
       await apiKeysApi.waitForGroupUpdates();
-      const latestServerYaml = await configFileApi.fetchConfigYaml();
+      if (controller.signal.aborted || key !== currentConnectionKey.current) return;
+      const latestServerYaml = await configFileApi.fetchConfigYaml(connection, controller.signal);
+      if (controller.signal.aborted || key !== currentConnectionKey.current) return;
 
       if (yamlDirty && activeTab !== 'source') {
         const latestDocument = parseDocument(latestServerYaml);
@@ -613,6 +662,7 @@ export function ConfigPage() {
         try {const capability=await proxyIPApi.timeContext(apiClient.captureConnection());if(!capability.capabilities.codex_time_context)throw new Error();}
         catch {showNotification(t('proxy_ip.upgrade'),'error');return;}
       }
+      if (controller.signal.aborted || key !== currentConnectionKey.current) return;
       // In visual mode, applyVisualChangesToYaml re-serializes YAML via parseDocument → toString,
       // which may reformat comments/whitespace. Normalize the server YAML through the same pipeline
       // so the diff only shows actual value changes, not cosmetic reformatting.
@@ -654,14 +704,17 @@ export function ConfigPage() {
         return;
       }
 
+      if (key !== currentConnectionKey.current) return;
+      diffConnectionKey.current = key;
       setServerYaml(diffOriginal);
       setMergedYaml(nextMergedYaml);
       setDiffModalOpen(true);
     } catch (err: unknown) {
+      if (key !== currentConnectionKey.current) return;
       const message = err instanceof Error ? err.message : '';
       showNotification(`${t('notification.save_failed')}: ${message}`, 'error');
     } finally {
-      setSaving(false);
+      if (key === currentConnectionKey.current) setSaving(false);
     }
   };
 
