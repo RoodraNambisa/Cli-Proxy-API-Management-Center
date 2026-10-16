@@ -1,3 +1,4 @@
+import {GlobalProxyRegionEditor} from '@/features/proxyIp/ProxyRegionFields';
 import { TimeContextEditor } from '@/features/proxyIp/TimeContextEditor';
 import { CodexAutoCookieEditor } from './CodexAutoCookieEditor';
 import { CodexResponseGuardEditor } from './CodexResponseGuardEditor';
@@ -3917,7 +3918,8 @@ export function VisualConfigEditor({
                             {t('config_management.visual.sections.network.proxy_check')}
                           </Button>
                         </div>
-                        {(proxyCheckResult || proxyCheckError) && (
+                        <GlobalProxyRegionEditor disabled={disabled}/>
+ {(proxyCheckResult || proxyCheckError) && (
                           <div
                             className={`${styles.proxyCheckResult} ${
                               proxyCheckResult?.ok

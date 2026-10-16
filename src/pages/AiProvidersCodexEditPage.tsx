@@ -1,3 +1,4 @@
+import {ProxyRegionFields,useProxyRegionCapability,validProxyRegion} from '@/features/proxyIp/ProxyRegionFields';
 import { CredentialRequestRetryInput } from '@/components/providers/CredentialRequestRetryInput';
 import { CredentialRequestScopedErrorsEditor } from '@/components/providers/RequestScopedErrorsEditor';
 import { validateRequestScopedErrorRule } from '@/utils/requestScopedErrors';
@@ -85,6 +86,7 @@ type CodexFormBaseline = {
   websockets: boolean;
   alphaSearch: boolean;
   proxyUrl: string;
+ proxyRegion:string;
   headers: ReturnType<typeof normalizeHeaderEntries>;
   models: ReturnType<typeof normalizeModelEntries>;
   excludedModels: string[];
@@ -102,13 +104,15 @@ const buildCodexBaseline = (form: ProviderFormState): CodexFormBaseline => ({
   websockets: Boolean(form.websockets),
   alphaSearch: Boolean(form.alphaSearch),
   proxyUrl: String(form.proxyUrl ?? '').trim(),
+ proxyRegion:JSON.stringify(form.proxyRegion??{}),
   headers: normalizeHeaderEntries(form.headers),
   models: normalizeModelEntries(form.modelEntries),
   excludedModels: parseExcludedModels(form.excludedText ?? ''),
 });
 
 export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'codex' | 'xai' } = {}) {
-  const configKey = provider === 'xai' ? 'xai-api-key' : 'codex-api-key';
+  const regionSupported=useProxyRegionCapability();
+ const configKey = provider === 'xai' ? 'xai-api-key' : 'codex-api-key';
   const { t } = useTranslation();
   const editorActive = useRef(true);
   useEffect(() => { editorActive.current = true; return () => { editorActive.current = false; }; }, []);
@@ -266,6 +270,7 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
     baseline.websockets !== Boolean(form.websockets) ||
     baseline.alphaSearch !== Boolean(form.alphaSearch) ||
     baseline.proxyUrl !== String(form.proxyUrl ?? '').trim() ||
+ baseline.proxyRegion!==JSON.stringify(form.proxyRegion??{}) ||
     isHeadersDirty ||
     isModelsDirty ||
     isExcludedModelsDirty;
@@ -464,6 +469,7 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
   };
 
   const handleSave = useCallback(async () => {
+ if(provider==='codex'&&!validProxyRegion(form.proxyRegion??{})){showNotification(t('proxy_ip.manual_invalid'),'error');return}
     if (form.modelEntries.some((entry) => !isValidModelThinking(entry.thinking))) {
       showNotification(t('model_thinking.invalid'), 'error');
       return;
@@ -508,6 +514,7 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
         websockets: Boolean(form.websockets),
         alphaSearch: Boolean(form.alphaSearch),
         proxyUrl: form.proxyUrl?.trim() || undefined,
+ proxyRegion:form.proxyRegion,
         headers: buildHeaderObject(form.headers),
         models: entriesToModels(form.modelEntries),
         excludedModels: parseExcludedModels(form.excludedText),
@@ -677,6 +684,7 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
               onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
               disabled={disableControls || saving}
             />
+ {provider==='codex'&&<ProxyRegionFields value={form.proxyRegion} onChange={proxyRegion=>setForm(p=>({...p,proxyRegion}))} disabled={!regionSupported||disableControls||saving}/>}
             <HeaderInputList
               entries={form.headers}
               onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}

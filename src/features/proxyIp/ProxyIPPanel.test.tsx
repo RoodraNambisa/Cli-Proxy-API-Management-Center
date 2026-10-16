@@ -34,7 +34,10 @@ describe('Proxy IP shared settings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mock.generation = 1;
-    mock.get.mockResolvedValue({ config: proxyIPDefaults, capabilities: { proxy_ip: true } });
+    mock.get.mockResolvedValue({
+      config: proxyIPDefaults,
+      capabilities: { proxy_ip: true, region_lifecycle: true },
+    });
     mock.save.mockResolvedValue({});
     mock.status.mockResolvedValue({ entries: [], route_count: 0, ip_count: 0 });
   });
@@ -57,6 +60,26 @@ describe('Proxy IP shared settings', () => {
     );
     expect(mock.preview).not.toHaveBeenCalled();
   });
+  it('groups the two initial-cache policies under lazy refresh', async () => {
+    render(<ProxyIPPanel />);
+    await ready();
+    expect(screen.getByLabelText('proxy_ip.lazy_initial')).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'proxy_ip.lazy_wait' })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('proxy_ip.lazy_initial'), { target: { value: 'wait' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common.save' }));
+    await waitFor(() =>
+      expect(mock.save).toHaveBeenCalledWith(
+        expect.anything(),
+        { 'cold-cache-mode': 'wait' },
+        expect.any(AbortSignal)
+      )
+    );
+    fireEvent.change(screen.getByLabelText('proxy_ip.refresh-mode'), {
+      target: { value: 'scheduled' },
+    });
+    expect(screen.queryByLabelText('proxy_ip.lazy_initial')).toBeNull();
+    expect(screen.getByLabelText('proxy_ip.cold-cache-mode')).toBeTruthy();
+  });
   it('ignores stale connection responses', async () => {
     let finish!: (v: unknown) => void;
     mock.get.mockImplementationOnce(
@@ -74,7 +97,7 @@ describe('Proxy IP shared settings', () => {
     await act(async () =>
       finish({
         config: { ...proxyIPDefaults, 'ip-cache-size': 1 },
-        capabilities: { proxy_ip: true },
+        capabilities: { proxy_ip: true, region_lifecycle: true },
       })
     );
     expect(signal.aborted).toBe(true);

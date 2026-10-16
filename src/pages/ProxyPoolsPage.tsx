@@ -1,3 +1,4 @@
+import { ProxyRegionFields, useProxyRegionCapability, validProxyRegion } from '@/features/proxyIp/ProxyRegionFields';
 import { ProxyIPPanel } from '@/features/proxyIp/ProxyIPPanel';
 import { ProxyEntriesTransfer } from '@/components/proxyPools/ProxyEntriesTransfer';
 import { exportProxyEntries } from '@/utils/proxyTransfer';
@@ -367,6 +368,7 @@ function RuleTargetsEditor({
 }
 
 export function ProxyPoolsPage() {
+  const regionSupported = useProxyRegionCapability();
   const { t } = useTranslation();
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const { showNotification, showConfirmation } = useNotificationStore();
@@ -789,7 +791,7 @@ export function ProxyPoolsPage() {
       showNotification(t('proxy_pools.save_rules_before_pool_change'), 'warning');
       return;
     }
-    const validationError = validatePool(editor);
+    const validationError = !validProxyRegion(editor.draft.region ?? {}) || editor.draft.entries.some(e => !validProxyRegion(e.region ?? {})) ? t('proxy_ip.manual_invalid') : validatePool(editor);
     if (validationError) {
       showNotification(validationError, 'error');
       return;
@@ -802,6 +804,7 @@ export function ProxyPoolsPage() {
         'placeholder-charset': editor.draft['placeholder-charset']?.trim() || undefined,
         entries: editor.draft.entries.map((entry) => ({
           id: entry.id.trim(),
+          region: entry.region,
           'url-template': entry['url-template'].trim(),
           ports: entry.ports?.trim() || undefined,
         })),
@@ -810,6 +813,7 @@ export function ProxyPoolsPage() {
         const nextIds = new Set(draft.entries.map((entry) => entry.id.toLowerCase()));
         await proxyPoolsApi.updatePool(editor.original.name, {
           name: draft.name,
+          region: draft.region,
           'placeholder-charset': draft['placeholder-charset'] ?? '',
           'check-interval-seconds': draft['check-interval-seconds'] ?? 0,
           'bind-attempts': draft['bind-attempts'] ?? 0,
@@ -1721,6 +1725,7 @@ export function ProxyPoolsPage() {
       >
         {editor ? (
           <div className={styles.poolEditor}>
+            <ProxyRegionFields value={editor.draft.region} onChange={region => updatePoolDraft({region})} disabled={!regionSupported || savingPool} />
             <div className={styles.editorGrid}>
               <Input
                 label={t('proxy_pools.pool_name')}
@@ -1870,6 +1875,7 @@ export function ProxyPoolsPage() {
                     onChange={(event) => updatePoolEntry(index, { ports: event.target.value })}
                     hint={t('proxy_pools.ports_hint')}
                   />
+                  <ProxyRegionFields value={entry.region} onChange={region => updatePoolEntry(index, {region})} disabled={!regionSupported || savingPool} />
                   <div className={styles.entryActions}>
                     <Button
                       variant="ghost"

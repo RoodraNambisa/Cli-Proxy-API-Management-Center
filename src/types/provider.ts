@@ -48,6 +48,7 @@ export interface GeminiKeyConfig {
 }
 
 export interface ProviderKeyConfig {
+  proxyRegion?: import('@/features/proxyIp/ProxyRegionFields').ProxyRegion;
   apiKey: string;
   weight?: number;
   requestRetry?: number;

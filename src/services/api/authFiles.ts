@@ -73,6 +73,7 @@ type AuthFileStatusResponse = { status: string; disabled: boolean };
 type AuthFileEntry = AuthFilesResponse['files'][number];
 export type XaiAuthFileField = 'using_api' | 'websockets';
 export type AuthFileFieldsPatch = {
+ proxy_region?:Record<string,unknown>|null;
  codex_time_context?: Record<string,unknown>|null;
  chatgpt_web_browser_region?:Record<string,unknown>|null;
   routing_alias?: string;

@@ -1,4 +1,10 @@
-import {CredentialRegionEditor} from '@/features/proxyIp/CredentialRegionEditor';
+import {
+  ProxyRegionFields,
+  useProxyRegionCapability,
+  readProxyRegion,
+  validProxyRegion,
+} from '@/features/proxyIp/ProxyRegionFields';
+import { CredentialRegionEditor } from '@/features/proxyIp/CredentialRegionEditor';
 import { GrokModelRoutingEditor } from '@/components/config/GrokModelRoutingEditor';
 import { SettingsDisclosure } from '@/components/config/SettingsDisclosure';
 import { emptyGrokModelRouting } from '@/utils/grokModelRouting';
@@ -32,6 +38,7 @@ export type AuthFilesPrefixProxyEditorModalProps = {
 };
 
 export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEditorModalProps) {
+  const regionSupported = useProxyRegionCapability();
   const { t } = useTranslation();
   const { disableControls, editor, updatedText, dirty, onClose, onCopyText, onSave, onChange } =
     props;
@@ -91,6 +98,7 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                 !updatedText ||
                 !editor?.json ||
                 invalidBaseUrl ||
+                !validProxyRegion(readProxyRegion(editor?.proxyRegionText ?? '{}')) ||
                 Boolean(editor?.jsonError || editor?.proxyBindingError) ||
                 Boolean(editor?.headersTouched && editor.headersError) ||
                 Boolean(
@@ -153,7 +161,19 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
               </div>
               {!editor.readOnly && (
                 <fieldset className={styles.prefixProxyFields} disabled={Boolean(editor.jsonError)}>
-                  {(editor.isCodexFile||editor.isChatGptWebFile)&&<CredentialRegionEditor codex={editor.isCodexFile} connection={editor.connection} value={(editor.isCodexFile?editor.timeContextText:editor.webRegionText)||'{}'} disabled={disableControls||editor.saving||!editor.json} onChange={value=>onChange(editor.isCodexFile?'timeContextText':'webRegionText',value)}/>}
+                  {(editor.isCodexFile || editor.isChatGptWebFile) && (
+                    <CredentialRegionEditor
+                      codex={editor.isCodexFile}
+                      connection={editor.connection}
+                      value={
+                        (editor.isCodexFile ? editor.timeContextText : editor.webRegionText) || '{}'
+                      }
+                      disabled={disableControls || editor.saving || !editor.json}
+                      onChange={(value) =>
+                        onChange(editor.isCodexFile ? 'timeContextText' : 'webRegionText', value)
+                      }
+                    />
+                  )}
                   {editor.isCodexFile && (
                     <Input
                       label={t('codex_upstream.account_label')}
@@ -265,6 +285,11 @@ export function AuthFilesPrefixProxyEditorModal(props: AuthFilesPrefixProxyEdito
                     onChange={(e) => onChange('proxyUrl', e.target.value)}
                   />
                   <div className="form-group">
+                    <ProxyRegionFields
+                      value={readProxyRegion(editor.proxyRegionText ?? '{}')}
+                      onChange={(v) => onChange('proxyRegionText', JSON.stringify(v))}
+                      disabled={!regionSupported || disableControls || editor.saving}
+                    />
                     <label htmlFor="auth-file-proxy-binding">
                       {t('auth_files.proxy_binding_label')}
                     </label>

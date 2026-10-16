@@ -164,7 +164,8 @@ const serializeProviderKey = (config: ProviderKeyConfig, patch = false) => {
 
 const serializeCodexKey = (config: ProviderKeyConfig, patch = false) => {
   const payload = serializeProviderKey(config, patch);
-  const alphaSearch = normalizeCodexAlphaSearch(config.alphaSearch);
+  if(config.proxyRegion!==undefined)payload['proxy-region']=config.proxyRegion;
+ const alphaSearch = normalizeCodexAlphaSearch(config.alphaSearch);
   if (alphaSearch !== undefined) payload['alpha-search'] = alphaSearch;
   return payload;
 };

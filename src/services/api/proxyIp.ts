@@ -14,11 +14,16 @@ export type RegionSnapshot = {
   retry_after_seconds?: number;
   detected_at: string;
   observed_at: string;
+  last_failure?: string;
+  next_retry?: string;
+  timezone_source?: string;
+  language_source?: string;
 };
 export const proxyIPApi = {
   get: (connection: ApiClientConnectionSnapshot, signal?: AbortSignal) =>
     apiClient.getAtConnection<{
       config: ProxyIPConfig;
+      proxy_region?: import('@/features/proxyIp/ProxyRegionFields').ProxyRegion;
       legacy: boolean;
       capabilities: Record<string, boolean>;
     }>(connection, '/proxy-ip', { signal }),
@@ -28,11 +33,12 @@ export const proxyIPApi = {
     signal?: AbortSignal
   ) => apiClient.patchAtConnection(connection, '/proxy-ip', config, { signal }),
   status: (connection: ApiClientConnectionSnapshot, offset = 0, signal?: AbortSignal) =>
-    apiClient.getAtConnection<{ entries: RegionSnapshot[]; route_count: number; ip_count: number }>(
-      connection,
-      '/proxy-ip/status',
-      { signal, params: { offset, limit: 50 } }
-    ),
+    apiClient.getAtConnection<{
+      entries: RegionSnapshot[];
+      route_count: number;
+      ip_count: number;
+      counts?: Record<string, number>;
+    }>(connection, '/proxy-ip/status', { signal, params: { offset, limit: 50 } }),
   preview: (
     connection: ApiClientConnectionSnapshot,
     index: string,

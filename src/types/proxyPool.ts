@@ -1,10 +1,12 @@
 export interface ProxyPoolEntry {
+  region?: import('@/features/proxyIp/ProxyRegionFields').ProxyRegion;
   id: string;
   'url-template': string;
   ports?: string;
 }
 
 export interface ProxyPool {
+  region?: import('@/features/proxyIp/ProxyRegionFields').ProxyRegion;
   name: string;
   'placeholder-charset'?: string;
   'check-interval-seconds'?: number;
@@ -14,6 +16,7 @@ export interface ProxyPool {
 }
 
 export interface ProxyPoolPatch {
+  region?: import('@/features/proxyIp/ProxyRegionFields').ProxyRegion;
   name?: string;
   'placeholder-charset'?: string;
   'check-interval-seconds'?: number;

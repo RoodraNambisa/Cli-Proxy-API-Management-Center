@@ -643,7 +643,8 @@ const normalizeProviderKeyConfig = (
   if (!trimmed) return null;
 
   const config: ProviderKeyConfig = { apiKey: trimmed, weight: normalizeCredentialWeight(record?.weight) };
-  config.requestRetry = normalizeRequestRetryOverride(record);
+  config.proxyRegion = isRecord(record?.['proxy-region']) ? record!['proxy-region'] as import('@/features/proxyIp/ProxyRegionFields').ProxyRegion : undefined;
+ config.requestRetry = normalizeRequestRetryOverride(record);
   config.requestScopedErrors = normalizeErrorRulesOverride(record);
   const priority = record?.priority ?? record?.['priority'];
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') {

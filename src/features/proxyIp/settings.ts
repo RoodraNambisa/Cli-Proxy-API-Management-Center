@@ -1,6 +1,7 @@
 export type ProxyIPConfig = {
   'temporary-route-check-interval-seconds': number;
   'temporary-route-cache-size': number;
+  'lookup-concurrency': number;
   'lookup-url': string;
   'lookup-timeout-seconds': number;
   'ip-cache-ttl-seconds': number;
@@ -13,6 +14,7 @@ export type ProxyIPConfig = {
 export const proxyIPDefaults: ProxyIPConfig = {
   'temporary-route-check-interval-seconds': 300,
   'temporary-route-cache-size': 100000,
+  'lookup-concurrency': 8,
   'lookup-url': 'https://ipwho.is/{ip}',
   'lookup-timeout-seconds': 8,
   'ip-cache-ttl-seconds': 86400,
@@ -70,6 +72,8 @@ export function validProxyIP(value: ProxyIPConfig): boolean {
         typeof proxyIPDefaults[key as keyof ProxyIPConfig] !== 'number' ||
         (typeof v === 'number' && Number.isSafeInteger(v) && v > 0)
     ) &&
+    value['lookup-concurrency'] >= 1 &&
+    value['lookup-concurrency'] <= 256 &&
     value['refresh-batch-size'] <= 4096 &&
     value['refresh-interval-seconds'] <= 86400
   );

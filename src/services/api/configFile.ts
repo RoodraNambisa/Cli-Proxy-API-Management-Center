@@ -24,11 +24,30 @@ export const configFileApi = {
 
   async saveConfigYaml(content: string): Promise<void> {
     const root = parseDocument(content).toJS();
-    const needsRegion=Boolean(root?.['proxy-ip']||root?.codex?.['time-context']?.enabled===true);
-    const saveConnection=needsRegion?apiClient.captureConnection():undefined;
-    if(needsRegion){
-      const caps=await apiClient.getAtConnection<{capabilities?:Record<string,boolean>}>(saveConnection!,'/proxy-ip');
-      if(!caps.capabilities?.proxy_ip||!caps.capabilities?.codex_time_context)throw new Error(i18n.t('proxy_ip.upgrade'));
+    const needsManualRegion = Boolean(
+      root?.['proxy-region'] ||
+      root?.['proxy-pools']?.some?.(
+        (p: { region?: unknown; entries?: { region?: unknown }[] }) =>
+          p.region || p.entries?.some((e) => e.region)
+      ) ||
+      root?.['codex-api-key']?.some?.((k: Record<string, unknown>) => k['proxy-region'])
+    );
+    const needsRegion = Boolean(
+      needsManualRegion || root?.['proxy-ip'] || root?.codex?.['time-context']?.enabled === true
+    );
+    const saveConnection = needsRegion ? apiClient.captureConnection() : undefined;
+    if (needsRegion) {
+      const caps = await apiClient.getAtConnection<{ capabilities?: Record<string, boolean> }>(
+        saveConnection!,
+        '/proxy-ip'
+      );
+      if (
+        !caps.capabilities?.proxy_ip ||
+        !caps.capabilities?.codex_time_context ||
+        (needsManualRegion && !caps.capabilities?.proxy_region) ||
+        (root?.['proxy-ip'] && !caps.capabilities?.region_lifecycle)
+      )
+        throw new Error(i18n.t('proxy_ip.upgrade'));
     }
     const imageDeclarations =
       Array.isArray(root?.['xai-api-key']) &&
@@ -45,7 +64,8 @@ export const configFileApi = {
       root?.['api-key-groups']?.some?.(
         (g: Record<string, unknown>) => g?.['credential-target-response-guard'] === true
       );
-    const connection = saveConnection ?? (needsGrok || needsGuard ? apiClient.captureConnection() : undefined);
+    const connection =
+      saveConnection ?? (needsGrok || needsGuard ? apiClient.captureConnection() : undefined);
     if (needsGrok) {
       let supported = false;
       try {

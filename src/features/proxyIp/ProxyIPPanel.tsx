@@ -24,6 +24,7 @@ export function ProxyIPPanel() {
       entries: RegionSnapshot[];
       route_count: number;
       ip_count: number;
+      counts?: Record<string, number>;
     } | null>(null),
     [offset, setOffset] = useState(0);
   const [index, setIndex] = useState(''),
@@ -58,7 +59,12 @@ export function ProxyIPPanel() {
       .get(connection, a.signal)
       .then((r) => {
         if (!a.signal.aborted && current.current === connection) {
-          if (!r.capabilities?.proxy_ip || !r.config || !validProxyIP(r.config)) {
+          if (
+            !r.capabilities?.region_lifecycle ||
+            !r.capabilities?.proxy_ip ||
+            !r.config ||
+            !validProxyIP(r.config)
+          ) {
             setError(t('proxy_ip.upgrade'));
             return;
           }
@@ -127,39 +133,53 @@ export function ProxyIPPanel() {
         </p>
       )}
       <fieldset disabled={!supported || busy} className={styles.fields}>
-        {Object.entries(proxyIPDefaults).map(([key, value]) => (
-          <label key={key}>
-            {t(`proxy_ip.${key}`)}
-            {key === 'refresh-mode' || key === 'cold-cache-mode' ? (
-              <select
-                className="input"
-                value={String(draft[key])}
-                onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
-              >
-                {(key === 'refresh-mode' ? ['lazy', 'scheduled'] : ['fallback', 'wait']).map(
-                  (option) => (
-                    <option key={option} value={option}>
-                      {t(`proxy_ip.${option}`)}
-                    </option>
-                  )
-                )}
-              </select>
-            ) : (
-              <input
-                className="input"
-                type={typeof value === 'number' ? 'number' : 'text'}
-                min={typeof value === 'number' ? 1 : undefined}
-                value={draft[key as keyof ProxyIPConfig]}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    [key]: typeof value === 'number' ? Number(e.target.value) : e.target.value,
-                  })
-                }
-              />
-            )}
-          </label>
-        ))}
+        {Object.entries(proxyIPDefaults)
+          .sort(
+            ([a], [b]) =>
+              (['refresh-mode', 'cold-cache-mode'].includes(a) ? 0 : 1) -
+              (['refresh-mode', 'cold-cache-mode'].includes(b) ? 0 : 1)
+          )
+          .map(([key, value]) => (
+            <label key={key}>
+              {t(
+                key === 'cold-cache-mode' && draft['refresh-mode'] === 'lazy'
+                  ? 'proxy_ip.lazy_initial'
+                  : `proxy_ip.${key}`
+              )}
+              {key === 'refresh-mode' || key === 'cold-cache-mode' ? (
+                <select
+                  className="input"
+                  value={String(draft[key])}
+                  onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+                >
+                  {(key === 'refresh-mode' ? ['lazy', 'scheduled'] : ['fallback', 'wait']).map(
+                    (option) => (
+                      <option key={option} value={option}>
+                        {t(
+                          key === 'cold-cache-mode' && draft['refresh-mode'] === 'lazy'
+                            ? `proxy_ip.lazy_${option}`
+                            : `proxy_ip.${option}`
+                        )}
+                      </option>
+                    )
+                  )}
+                </select>
+              ) : (
+                <input
+                  className="input"
+                  type={typeof value === 'number' ? 'number' : 'text'}
+                  min={typeof value === 'number' ? 1 : undefined}
+                  value={draft[key as keyof ProxyIPConfig]}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      [key]: typeof value === 'number' ? Number(e.target.value) : e.target.value,
+                    })
+                  }
+                />
+              )}
+            </label>
+          ))}
       </fieldset>
       <p className="hint">{t('proxy_ip.refresh_hint')}</p>
       <p className="hint">{t('proxy_ip.cold_hint')}</p>
@@ -182,6 +202,7 @@ export function ProxyIPPanel() {
         {t('common.save')}
       </Button>
       <h3>{t('proxy_ip.cache')}</h3>
+      <p>{t('proxy_ip.lifecycle_counts', status?.counts ?? {})}</p>
       <p>
         {t('proxy_ip.counts', { routes: status?.route_count ?? 0, ips: status?.ip_count ?? 0 })}
       </p>
