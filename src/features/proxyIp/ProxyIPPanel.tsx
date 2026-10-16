@@ -233,11 +233,20 @@ export function ProxyIPPanel() {
         <table>
           <thead>
             <tr>
-              {['ip', 'timezone', 'language', 'cache_state', 'refresh_state', 'age', 'reason'].map(
-                (k) => (
-                  <th key={k}>{t(`proxy_ip.${k}`)}</th>
-                )
-              )}
+              {[
+                'ip',
+                'timezone',
+                'language',
+                'cache_state',
+                'refresh_state',
+                'age',
+                'last_success',
+                'last_failure',
+                'next_retry',
+                'reason',
+              ].map((k) => (
+                <th key={k}>{t(`proxy_ip.${k}`)}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -249,6 +258,11 @@ export function ProxyIPPanel() {
                 <td>{e.cache_state}</td>
                 <td>{e.refresh_state}</td>
                 <td>{e.cache_age_seconds}s</td>
+                {[e.detected_at, e.last_failure, e.next_retry].map((value, i) => (
+                  <td key={i}>
+                    {value && !value.startsWith('0001-') ? new Date(value).toLocaleString() : '—'}
+                  </td>
+                ))}
                 <td>
                   {e.reason || '—'}
                   {e.retry_after_seconds ? ` (${e.retry_after_seconds}s)` : ''}

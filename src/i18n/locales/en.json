@@ -5655,7 +5655,10 @@
     "manual_language": "Language",
     "manual_hint": "Applies only to this actual proxy. Empty fields inherit or use lookup. Provider switches still control application.",
     "manual_invalid": "Enter a valid IANA timezone and language tag.",
-    "lifecycle_counts": "Active IPs {{active_ips}} · idle {{idle_ips}} · pending {{pending}} · running {{running}}"
+    "lifecycle_counts": "Active IPs {{active_ips}} · idle {{idle_ips}} · pending {{pending}} · running {{running}}",
+    "last_success": "Last success",
+    "last_failure": "Last failure",
+    "next_retry": "Next retry"
   },
   "time_context": {
     "title": "Codex time context",

@@ -5655,7 +5655,10 @@
     "manual_language": "语言",
     "manual_hint": "仅实际使用此代理时生效；留空继承或自动补齐。提供者仍按自己的开关应用。",
     "manual_invalid": "请填写有效的 IANA 时区或语言标签。",
-    "lifecycle_counts": "活跃 IP {{active_ips}} · 闲置 IP {{idle_ips}} · 待调度 {{pending}} · 执行中 {{running}}"
+    "lifecycle_counts": "活跃 IP {{active_ips}} · 闲置 IP {{idle_ips}} · 待调度 {{pending}} · 执行中 {{running}}",
+    "last_success": "最近成功",
+    "last_failure": "最近失败",
+    "next_retry": "下次重试"
   },
   "time_context": {
     "title": "Codex 时间上下文",
