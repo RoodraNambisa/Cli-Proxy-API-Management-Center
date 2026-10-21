@@ -242,8 +242,12 @@ export interface ClientApiKeyGroup {
   excludedPriorities?: number[];
 }
 
+export type CodexRequestCompression = 'off' | 'zstd';
+
 export interface CodexConfig {
   baseUrl?: string;
+  allowClientServiceTier?: boolean;
+  upstreamRequestCompression?: CodexRequestCompression;
   autoCookie?: boolean;
   autoCookieOverride?: boolean;
   liveEnabled?: boolean;

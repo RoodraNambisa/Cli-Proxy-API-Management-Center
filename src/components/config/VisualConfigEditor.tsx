@@ -5304,11 +5304,29 @@ export function VisualConfigEditor({
                   <SettingsDisclosure id="config-codex-request-policies"
                     title={t('config_management.settings_center.codex_groups.requests')}
                     description={t('config_management.settings_center.codex_groups.requests_desc')}
-                    focusTarget={focusTarget} targetIds={['config-codex-prompt-cache', 'config-codex-stream-bootstrap', 'config-codex-input-token-estimate', 'config-codex-quota-observation', 'config-codex-quota-auto-disable']}
-                    dirty={hasDirtyConfigField(dirtyFields, ['codexPassthroughPromptCacheKey', 'codexStreamBootstrapBuffering', 'codexEstimateClaudeInputTokens', 'codexObserveQuota', 'codexQuotaAutoDisable'])}
+                    focusTarget={focusTarget} targetIds={['config-codex-service-tier', 'config-codex-request-compression', 'config-codex-prompt-cache', 'config-codex-stream-bootstrap', 'config-codex-input-token-estimate', 'config-codex-quota-observation', 'config-codex-quota-auto-disable']}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexAllowClientServiceTier', 'codexUpstreamRequestCompression', 'codexPassthroughPromptCacheKey', 'codexStreamBootstrapBuffering', 'codexEstimateClaudeInputTokens', 'codexObserveQuota', 'codexQuotaAutoDisable'])}
                     errorCount={countErrors(['codexQuotaAutoDisable'])}
                   >
                     <SectionGrid>
+                      <div id="config-codex-service-tier">
+                        <ToggleRow
+                          title={t('config_management.visual.sections.network.codex_allow_client_service_tier')}
+                          description={t('config_management.visual.sections.network.codex_allow_client_service_tier_desc')}
+                          checked={values.codexAllowClientServiceTier}
+                          disabled={disabled}
+                          onChange={(codexAllowClientServiceTier) => onChange({ codexAllowClientServiceTier })}
+                        />
+                      </div>
+                      <div id="config-codex-request-compression">
+                        <ToggleRow
+                          title={t('config_management.visual.sections.network.codex_upstream_request_compression')}
+                          description={t('config_management.visual.sections.network.codex_upstream_request_compression_desc')}
+                          checked={values.codexUpstreamRequestCompression === 'zstd'}
+                          disabled={disabled}
+                          onChange={(enabled) => onChange({ codexUpstreamRequestCompression: enabled ? 'zstd' : 'off' })}
+                        />
+                      </div>
                 <div id="config-codex-prompt-cache">
                     <ToggleRow
                       title={t(

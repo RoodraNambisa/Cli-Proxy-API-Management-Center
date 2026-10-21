@@ -7,6 +7,7 @@ import { DEFAULT_RESPONSE_MODEL_REWRITE, type ResponseModelRewriteConfig } from 
 import type {
   CodexCustomModelGroup,
   CodexFingerprintDefaultMode,
+  CodexRequestCompression,
   CodexTurnStatePolicy,
 } from './config';
 import type { OAuthRequestScopedErrors } from './requestScopedErrors';
@@ -358,6 +359,8 @@ export type VisualConfigValues = {
   forceModelPrefix: boolean;
   codexIdentityConfuse: boolean;
   codexBaseUrl: string;
+  codexAllowClientServiceTier: boolean;
+  codexUpstreamRequestCompression: CodexRequestCompression;
   codexLiveEnabled: boolean;
   codexLiveMediaRelay: CodexLiveMediaVisualConfig;
   codexPassthroughPromptCacheKey: boolean;
@@ -503,6 +506,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   forceModelPrefix: false,
   codexIdentityConfuse: false,
   codexBaseUrl: '',
+  codexAllowClientServiceTier: false,
+  codexUpstreamRequestCompression: 'off',
   codexLiveEnabled: false,
   codexLiveMediaRelay: DEFAULT_CODEX_LIVE_MEDIA,
   codexPassthroughPromptCacheKey: false,

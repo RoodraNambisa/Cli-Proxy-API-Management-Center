@@ -125,6 +125,8 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     dirtyPrefixes: [
       'codexCustomModels',
       'codexBaseUrl',
+      'codexAllowClientServiceTier',
+      'codexUpstreamRequestCompression',
       'codexLiveEnabled',
       'codexLiveMediaRelay',
       'codexIdentityConfuse',
@@ -656,6 +658,20 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.codex_media.title',
     yamlKeys: ['codex.live-media-relay.enabled', 'codex.live-media-relay.max-sessions', 'codex.live-media-relay.disable-private-remote-ips', 'codex.live-media-relay.public-ip', 'codex.live-media-relay.udp-port-min', 'codex.live-media-relay.udp-port-max', 'codex.live-media-relay.ice-servers'],
     aliases: ['WebRTC', 'STUN', 'TURN', 'ICE', 'media relay', '媒体中继', '媒體中繼', 'медиаретранслятор'],
+  },
+  {
+    id: 'config-codex-service-tier',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.network.codex_allow_client_service_tier',
+    yamlKeys: ['codex.allow-client-service-tier'],
+    aliases: ['service_tier', 'priority', 'flex', 'fast mode', '服务档位', '服務層級', 'уровень обслуживания'],
+  },
+  {
+    id: 'config-codex-request-compression',
+    pageId: 'provider-codex',
+    labelKey: 'config_management.visual.sections.network.codex_upstream_request_compression',
+    yamlKeys: ['codex.upstream-request-compression'],
+    aliases: ['zstd', 'Content-Encoding', 'request compression', '请求压缩', '請求壓縮', 'сжатие запросов'],
   },
   {
     id: 'config-codex-prompt-cache',

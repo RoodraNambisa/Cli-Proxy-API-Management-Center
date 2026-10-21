@@ -2196,7 +2196,7 @@
       "codex_groups": {
         "catalog_desc": "API Key 模型宣告、OAuth 別名與 Alpha Search。",
         "requests": "請求、快取與觀測",
-        "requests_desc": "快取身分透傳、過載處理、Token 估算與被動額度觀察。",
+        "requests_desc": "用戶端服務層級、上游請求壓縮、快取透傳、過載處理與額度觀測。",
         "collaboration": "子代理與協作相容",
         "collaboration_desc": "Multi-agent v2 與孤立委派結果相容。"
       },
@@ -2573,7 +2573,7 @@
           "auth_model_exclusions_keyword_contains_placeholder": "例如 free",
           "auth_model_exclusions_keyword_contains_empty": "暫無關鍵字",
           "disabled_image_tool_policy": "停用圖片 tool 處理方式",
-          "disabled_image_tool_policy_desc": "命中停用圖片規則的憑證處理普通文字請求時，如果請求仍攜帶 image_generation tool，則按這裡的全域策略處理。",
+          "disabled_image_tool_policy_desc": "命中停用圖片規則的憑證處理普通文字請求時，如果請求仍攜帶 image_generation tool，則按這裡的全域策略處理。 命中停用圖片規則時，Codex 上下文壓縮（compaction）請求會移除生圖工具宣告後繼續，不觸發停用圖片錯誤。",
           "disabled_image_tool_fallback": "智慧調度圖片 Tool",
           "disabled_image_tool_fallback_desc": "開啟後，普通文字請求攜帶 image_generation tool 且目前憑證命中停用圖片規則時，會優先調度到同優先級或更低優先級中支援圖片生成的 Codex 憑證；沒有可用支援憑證時再按下方兜底策略處理。",
           "disabled_image_tool_action": "處理方式 (disabled-image-generation-tool-action)",
@@ -2780,6 +2780,10 @@
           "codex_estimate_claude_input_tokens": "估算 Claude 首段輸入 token",
           "codex_estimate_claude_input_tokens_desc": "預設關閉。Claude 用戶端透過 Codex 接收串流回應時，以本機文字與工具估算值補齊第一個 message_start 中為零或缺少的輸入 token 數；既有數值、最終上游 Usage 與計費紀錄保持原樣。圖片、音訊、影片及不透明密文不納入估算。啟用會增加處理時間與記憶體配置，尤其是長對話及大型請求。熱更新從下一個請求生效，重試及傳輸回退共用相同估算值。",
           "codex_stream_bootstrap_buffering_desc": "預設關閉。開啟後暫存最多 16 個前導中繼資料事件、64 KiB，發現過載或限流時，在請求仍可重放且尚未提交輸出的情況下使用既有重試預算切換憑證；不會增加重試次數。實際內容或未知事件出現後恢復原有處理。增量 WebSocket 上下文不跨憑證重放，熱更新從下個請求或回合生效。",
+          "codex_allow_client_service_tier": "允許用戶端選擇服務層級",
+          "codex_allow_client_service_tier_desc": "預設關閉。開啟後保留用戶端傳入的 service_tier（如 priority、flex）；管理員設定的請求參數規則仍優先，層級是否可用由上游驗證。關閉時忽略用戶端層級選擇。",
+          "codex_upstream_request_compression": "上游請求 zstd 壓縮",
+          "codex_upstream_request_compression_desc": "預設關閉。對傳送至官方 Codex OAuth 介面的 HTTP 請求啟用 zstd，包含上下文壓縮請求；僅在請求至少 1 KiB 且壓縮後更小時使用。WebSocket、API Key 和非官方上游不使用。接收用戶端 zstd 請求時一律自動解碼。",
           "codex_passthrough_prompt_cache_key": "透傳使用者快取鍵與 Session ID",
           "codex_passthrough_prompt_cache_key_desc": "預設關閉。開啟後，在身份混淆、會話偽裝與指紋收斂之後，最終透傳明確提供的 prompt_cache_key 與 Session ID；缺少 Session ID 時以快取鍵補齊。正常 UUID 與合法的非 UUID 字串原樣保留。Session ID（含快取鍵補齊的值）若含首尾空白或非法請求標頭字元，本地回傳 HTTP 500 / invalid_prompt_cache_key，不存取上游、不輪換或冷卻憑證。已有合法獨立 Session ID 時，快取鍵仍保留原值。其他身份與隔離規則持續生效。熱更新從下個請求或 WebSocket 回合生效；會話身份變更時須重新連線並具備完整重放內容。",
           "codex_identity_confuse_desc": "按帳號穩定混淆 Codex session、window 和 turn 身份，上游返回後再恢復原始 ID",

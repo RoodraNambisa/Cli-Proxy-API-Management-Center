@@ -34,7 +34,7 @@ test.each([['en', en], ['ru', ru], ['zh-CN', zhCN], ['zh-TW', zhTW]] as const)('
   expect(screen.queryByRole('checkbox')).toBeNull();
   const group = document.getElementById('config-codex-request-policies')!;
   fireEvent.click(group.querySelector('button')!);
-  expect(within(group).getAllByRole('checkbox')).toHaveLength(4);
+  expect(within(group).getAllByRole('checkbox')).toHaveLength(6);
   fireEvent.click(group.querySelector('button')!);
   expect(within(group).queryByRole('checkbox')).toBeNull();
   expect(onChange).not.toHaveBeenCalled();

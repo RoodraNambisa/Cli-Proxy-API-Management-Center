@@ -2211,7 +2211,7 @@
       "codex_groups": {
         "catalog_desc": "API Key 模型声明、OAuth 别名与 Alpha Search。",
         "requests": "请求、缓存与观测",
-        "requests_desc": "缓存身份透传、过载处理、Token 估算与被动额度观察。",
+        "requests_desc": "客户端服务档位、上游请求压缩、缓存透传、过载处理与额度观测。",
         "collaboration": "子代理与协作兼容",
         "collaboration_desc": "Multi-agent v2 与孤立委派结果兼容。"
       },
@@ -2588,7 +2588,7 @@
           "auth_model_exclusions_keyword_contains_placeholder": "例如 free",
           "auth_model_exclusions_keyword_contains_empty": "暂无关键字",
           "disabled_image_tool_policy": "禁用图片 tool 处理方式",
-          "disabled_image_tool_policy_desc": "命中禁图规则的凭证处理普通文本请求时，如果请求仍携带 image_generation tool，则按这里的全局策略处理。",
+          "disabled_image_tool_policy_desc": "命中禁图规则的凭证处理普通文本请求时，如果请求仍携带 image_generation tool，则按这里的全局策略处理。 命中禁图规则时，Codex 上下文压缩（compaction）请求会移除生图工具声明后继续，不触发禁图报错。",
           "disabled_image_tool_fallback": "智能调度图片 Tool",
           "disabled_image_tool_fallback_desc": "开启后，普通文本请求携带 image_generation tool 且当前凭证命中禁图规则时，会优先调度到同优先级或更低优先级中支持图片生成的 Codex 凭证；没有可用支持凭证时再按下方兜底策略处理。",
           "disabled_image_tool_action": "处理方式 (disabled-image-generation-tool-action)",
@@ -2795,6 +2795,10 @@
           "codex_estimate_claude_input_tokens": "估算 Claude 首段输入 token",
           "codex_estimate_claude_input_tokens_desc": "默认关闭。Claude 客户端通过 Codex 接收流式响应时，用本地文本和工具估算值补齐首个 message_start 中为零或缺失的输入 token 数；已有数值、最终上游 Usage 和计费记录保持原样。图片、音视频和不透明密文不计入估算。开启后会增加处理耗时和内存分配，尤其是长对话和大请求。热更新从下个请求生效，重试和传输回退复用同一估算值。",
           "codex_stream_bootstrap_buffering_desc": "默认关闭。开启后暂存最多 16 个前导元数据事件、64 KiB，发现过载或限流时，在请求仍可重放且尚未提交输出的情况下使用现有重试预算切换凭证；不会增加重试次数。实际内容或未知事件出现后恢复原有处理。增量 WebSocket 上下文不跨凭证重放，热更新从下个请求或回合生效。",
+          "codex_allow_client_service_tier": "允许客户端选择服务档位",
+          "codex_allow_client_service_tier_desc": "默认关闭。开启后保留客户端传入的 service_tier（如 priority、flex）；管理员配置的请求参数规则仍优先，档位是否可用由上游校验。关闭时忽略客户端档位选择。",
+          "codex_upstream_request_compression": "上游请求 zstd 压缩",
+          "codex_upstream_request_compression_desc": "默认关闭。对发往官方 Codex OAuth 接口的 HTTP 请求启用 zstd，包含上下文压缩请求；仅在请求至少 1 KiB 且压缩后更小时使用。WebSocket、API Key 和非官方上游不使用。接收客户端 zstd 请求始终自动解码。",
           "codex_passthrough_prompt_cache_key": "透传用户缓存键与 Session ID",
           "codex_passthrough_prompt_cache_key_desc": "默认关闭。开启后，在身份混淆、会话伪装和指纹收敛之后，最终透传显式 prompt_cache_key 与 Session ID；缺少 Session ID 时用缓存键补齐。正常 UUID 和合法非 UUID 字符串原样保留。Session ID（包括缓存键兜底值）含首尾空白或非法请求头字符时，本地返回 HTTP 500 / invalid_prompt_cache_key，不访问上游、不轮换或冷却凭证。已有合法独立 Session ID 时，缓存键原值仍保留。其他身份和隔离规则继续生效。热更新从下个请求或 WebSocket 回合生效；会话身份变化时需重新建连并具备完整重放上下文。",
           "codex_identity_confuse_desc": "按账号稳定混淆 Codex session、window 和 turn 身份，上游返回后再恢复原始 ID",

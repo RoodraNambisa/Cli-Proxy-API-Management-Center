@@ -13,7 +13,7 @@ import { useCallback, useMemo, useReducer } from 'react';
 import { apiKeyNamesEqual, normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
 import { writeApiKeyNamesYaml } from '@/utils/apiKeyNamesYaml';
 import { readCodexLiveMediaYaml, codexLiveMediaErrors, codexLiveMediaEqual, writeCodexLiveMediaYaml } from '@/utils/codexLiveMedia';
-import { readCodexBooleanPolicy } from '@/utils/codexPolicy';
+import { readCodexBooleanPolicy, readCodexRequestCompression } from '@/utils/codexPolicy';
 import { preserveRoutingOverrideNodes } from '@/utils/routingYaml';
 import { detachErrorRuleAliases, readMergedYamlField, readOAuthErrorRulesYaml } from '@/utils/requestScopedErrorsYaml';
 import {
@@ -2427,6 +2427,11 @@ function getNextDirtyFields(
   if (Object.prototype.hasOwnProperty.call(patch, 'codexBaseUrl')) {
     updateDirty('codexBaseUrl', nextValues.codexBaseUrl === baselineValues.codexBaseUrl);
   }
+  for (const field of ['codexAllowClientServiceTier', 'codexUpstreamRequestCompression'] as const) {
+    if (Object.prototype.hasOwnProperty.call(patch, field)) {
+      updateDirty(field, nextValues[field] === baselineValues[field]);
+    }
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexPassthroughPromptCacheKey')) {
     updateDirty(
       'codexPassthroughPromptCacheKey',
@@ -3318,6 +3323,8 @@ export function useVisualConfig() {
       const remoteManagement = asRecord(parsed['remote-management']);
       const codex = asRecord(readMergedYamlField(document, ['codex']));
       const codexBaseUrl = readCodexBaseUrl(codex?.['base-url'] ?? codex?.baseUrl);
+      const codexAllowClientServiceTier = readCodexBooleanPolicy(codex, 'allow-client-service-tier', 'allowClientServiceTier');
+      const codexUpstreamRequestCompression = readCodexRequestCompression(codex);
       const codexLiveEnabled = codex && Object.prototype.hasOwnProperty.call(codex, 'live-enabled')
         ? codex['live-enabled'] : codex?.liveEnabled;
       if (codexLiveEnabled != null && typeof codexLiveEnabled !== 'boolean') {
@@ -3542,6 +3549,8 @@ export function useVisualConfig() {
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
         codexBaseUrl,
+        codexAllowClientServiceTier,
+        codexUpstreamRequestCompression,
         codexLiveEnabled: codexLiveEnabled ?? false,
         codexLiveMediaRelay: readCodexLiveMediaYaml(yamlContent),
         codexPassthroughPromptCacheKey: codexPassthroughPromptCacheKey ?? false,
@@ -4139,6 +4148,8 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
         const inheritedCodex = asRecord(readMergedYamlField(doc, ['codex']));
+        const serviceTierChanged = values.codexAllowClientServiceTier !== baselineValues.codexAllowClientServiceTier;
+        const compressionChanged = values.codexUpstreamRequestCompression !== baselineValues.codexUpstreamRequestCompression;
         const guardChanged = !responseGuardEqual(values.codexResponseGuard,baselineValues.codexResponseGuard);
         const stateChanged = !codexStateEqual(values.codexStateOverride,baselineValues.codexStateOverride);
         const quotaDisableChanged = !codexQuotaAutoDisableEqual(values.codexQuotaAutoDisable, baselineValues.codexQuotaAutoDisable);
@@ -4153,6 +4164,7 @@ export function useVisualConfig() {
           inheritedCodex ||
           values.codexBaseUrl ||
           values.codexBaseUrl !== baselineValues.codexBaseUrl ||
+          serviceTierChanged || compressionChanged ||
           values.codexLiveEnabled ||
           mediaChanged ||
           quotaDisableChanged || stateChanged || guardChanged ||
@@ -4176,6 +4188,14 @@ export function useVisualConfig() {
             doc.setIn(['codex'], doc.createNode(inheritedCodex));
           }
           ensureMapInDoc(doc, ['codex']);
+          if (serviceTierChanged) {
+            doc.setIn(['codex', 'allow-client-service-tier'], values.codexAllowClientServiceTier);
+            doc.deleteIn(['codex', 'allowClientServiceTier']);
+          }
+          if (compressionChanged) {
+            doc.setIn(['codex', 'upstream-request-compression'], values.codexUpstreamRequestCompression);
+            doc.deleteIn(['codex', 'upstreamRequestCompression']);
+          }
           if (values.codexBaseUrl || values.codexBaseUrl !== baselineValues.codexBaseUrl ||
               docHas(doc, ['codex', 'base-url']) || docHas(doc, ['codex', 'baseUrl'])) {
             doc.setIn(['codex', 'base-url'], normalizeCodexBaseUrl(values.codexBaseUrl) ?? values.codexBaseUrl);
@@ -5180,7 +5200,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [state.dirtyFields, baselineValues.codexTimeContext, baselineValues.codexBaseUrl, baselineValues.codexAutoCookie, baselineValues.codexAutoCookieOverride, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.fixedErrorCooldowns, baselineValues.nonRetryableErrors, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [state.dirtyFields, baselineValues.codexTimeContext, baselineValues.codexBaseUrl, baselineValues.codexAllowClientServiceTier, baselineValues.codexUpstreamRequestCompression, baselineValues.codexAutoCookie, baselineValues.codexAutoCookieOverride, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.fixedErrorCooldowns, baselineValues.nonRetryableErrors, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {
