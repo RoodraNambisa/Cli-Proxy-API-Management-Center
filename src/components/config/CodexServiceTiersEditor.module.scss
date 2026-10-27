@@ -1,0 +1,47 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.toolbar,
+.ruleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.rule {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.fields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(200px, 1fr);
+  gap: 20px;
+}
+.defaultField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+@media (max-width: 720px) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .toolbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}

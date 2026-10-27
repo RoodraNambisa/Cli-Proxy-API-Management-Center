@@ -1,3 +1,4 @@
+import { readCodexServiceTiers, writeCodexServiceTiers, codexServiceTiersEqual, codexServiceTiersError } from '@/utils/codexServiceTiers';
 import { readTLSTrustAnchors } from '@/features/chatgptWeb/tlsTrustAnchors';
 import { readTimeContext, validTimeContext } from '@/features/proxyIp/settings';
 import { autoCookieConflict } from '@/utils/codexAutoCookie';
@@ -1627,6 +1628,7 @@ export function getVisualConfigValidationErrors(
     requestRetry: getNonNegativeIntegerError(values.requestRetry),
     maxRetryCredentials: getNonNegativeIntegerError(values.maxRetryCredentials),
     maxRetryInterval: getNonNegativeIntegerError(values.maxRetryInterval),
+    codexServiceTierRules: codexServiceTiersError(values.codexServiceTierRules) ? 'codex_service_tiers' : undefined,
     codexBaseUrl: normalizeCodexBaseUrl(values.codexBaseUrl) === null ? 'codex_base_url' : undefined,
     codexFingerprintSessionIdentityPoolSize: getIntegerRangeError(
       values.codexFingerprintSessionIdentityPoolSize,
@@ -2423,6 +2425,9 @@ function getNextDirtyFields(
       'codexIdentityConfuse',
       nextValues.codexIdentityConfuse === baselineValues.codexIdentityConfuse
     );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'codexServiceTierRules')) {
+    updateDirty('codexServiceTierRules', codexServiceTiersEqual(nextValues.codexServiceTierRules, baselineValues.codexServiceTierRules));
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexBaseUrl')) {
     updateDirty('codexBaseUrl', nextValues.codexBaseUrl === baselineValues.codexBaseUrl);
@@ -3550,6 +3555,7 @@ export function useVisualConfig() {
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
         codexBaseUrl,
         codexAllowClientServiceTier,
+        codexServiceTierRules: readCodexServiceTiers(codex?.['service-tier-rules']),
         codexUpstreamRequestCompression,
         codexLiveEnabled: codexLiveEnabled ?? false,
         codexLiveMediaRelay: readCodexLiveMediaYaml(yamlContent),
@@ -4148,6 +4154,7 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['max-retry-credentials'], values.maxRetryCredentials);
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
         const inheritedCodex = asRecord(readMergedYamlField(doc, ['codex']));
+        const tierRulesChanged = !codexServiceTiersEqual(values.codexServiceTierRules, baselineValues.codexServiceTierRules);
         const serviceTierChanged = values.codexAllowClientServiceTier !== baselineValues.codexAllowClientServiceTier;
         const compressionChanged = values.codexUpstreamRequestCompression !== baselineValues.codexUpstreamRequestCompression;
         const guardChanged = !responseGuardEqual(values.codexResponseGuard,baselineValues.codexResponseGuard);
@@ -4164,7 +4171,7 @@ export function useVisualConfig() {
           inheritedCodex ||
           values.codexBaseUrl ||
           values.codexBaseUrl !== baselineValues.codexBaseUrl ||
-          serviceTierChanged || compressionChanged ||
+          tierRulesChanged || serviceTierChanged || compressionChanged ||
           values.codexLiveEnabled ||
           mediaChanged ||
           quotaDisableChanged || stateChanged || guardChanged ||
@@ -4188,6 +4195,7 @@ export function useVisualConfig() {
             doc.setIn(['codex'], doc.createNode(inheritedCodex));
           }
           ensureMapInDoc(doc, ['codex']);
+          if (tierRulesChanged) writeCodexServiceTiers(doc, values.codexServiceTierRules);
           if (serviceTierChanged) {
             doc.setIn(['codex', 'allow-client-service-tier'], values.codexAllowClientServiceTier);
             doc.deleteIn(['codex', 'allowClientServiceTier']);
@@ -5200,7 +5208,7 @@ export function useVisualConfig() {
         return currentYaml;
       }
     },
-    [state.dirtyFields, baselineValues.codexTimeContext, baselineValues.codexBaseUrl, baselineValues.codexAllowClientServiceTier, baselineValues.codexUpstreamRequestCompression, baselineValues.codexAutoCookie, baselineValues.codexAutoCookieOverride, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.fixedErrorCooldowns, baselineValues.nonRetryableErrors, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
+    [state.dirtyFields, baselineValues.codexTimeContext, baselineValues.codexBaseUrl, baselineValues.codexAllowClientServiceTier, baselineValues.codexServiceTierRules, baselineValues.codexUpstreamRequestCompression, baselineValues.codexAutoCookie, baselineValues.codexAutoCookieOverride, baselineValues.codexResponseGuard, baselineValues.codexStateOverride, baselineValues.codexQuotaAutoDisable, baselineValues.grok, baselineValues.apiKeysText, baselineValues.apiKeyNames, baselineValues.codexLiveMediaRelay, baselineValues.fixedErrorCooldowns, baselineValues.nonRetryableErrors, baselineValues.errorResponseRewrites, baselineValues.responseModelRewrite, baselineValues.oauthRequestScopedErrors, baselineValues.routingPriorityOverrides, visualValues]
   );
 
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {

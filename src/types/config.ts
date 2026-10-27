@@ -247,6 +247,7 @@ export type CodexRequestCompression = 'off' | 'zstd';
 export interface CodexConfig {
   baseUrl?: string;
   allowClientServiceTier?: boolean;
+  serviceTierRules?: Array<{ models: string[]; tiers: string[]; default: string }>;
   upstreamRequestCompression?: CodexRequestCompression;
   autoCookie?: boolean;
   autoCookieOverride?: boolean;

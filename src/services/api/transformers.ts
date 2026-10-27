@@ -1,3 +1,4 @@
+import { readCodexServiceTiers } from '@/utils/codexServiceTiers';
 import { normalizeCredentialWeight } from '@/utils/credentialWeight';
 import { normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
 import { readCodexBooleanPolicy, readCodexRequestCompression } from '@/utils/codexPolicy';
@@ -984,6 +985,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       baseUrl: normalizeString(codex['base-url'] ?? codex.baseUrl),
       allowClientServiceTier: readCodexBooleanPolicy(codex, 'allow-client-service-tier', 'allowClientServiceTier'),
       upstreamRequestCompression: readCodexRequestCompression(codex),
+      serviceTierRules: readCodexServiceTiers(codex['service-tier-rules']).map(({models, tiers, defaultTier}) => ({models, tiers, default: defaultTier})),
       liveEnabled: liveEnabled ?? false,
       liveMediaRelay: normalizeCodexLiveMedia(codexMediaField(codex, 'live-media-relay', 'liveMediaRelay')),
       optimizeMultiAgentV2: readCodexBooleanPolicy(codex, 'optimize-multi-agent-v2', 'optimizeMultiAgentV2'),

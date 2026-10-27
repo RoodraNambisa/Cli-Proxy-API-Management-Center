@@ -126,6 +126,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'codexCustomModels',
       'codexBaseUrl',
       'codexAllowClientServiceTier',
+      'codexServiceTierRules',
       'codexUpstreamRequestCompression',
       'codexLiveEnabled',
       'codexLiveMediaRelay',
@@ -665,6 +666,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.codex_allow_client_service_tier',
     yamlKeys: ['codex.allow-client-service-tier'],
     aliases: ['service_tier', 'priority', 'flex', 'fast mode', '服务档位', '服務層級', 'уровень обслуживания'],
+  },
+  {
+    id: 'config-codex-service-tier-rules',
+    pageId: 'provider-codex',
+    labelKey: 'codex_service_tiers.title',
+    yamlKeys: ['codex.service-tier-rules'],
+    aliases: ['service_tiers', 'additional_speed_tiers', 'default_service_tier', 'Fast', 'Ultrafast', 'Flex', '速度档位', '模型速度'],
   },
   {
     id: 'config-codex-request-compression',

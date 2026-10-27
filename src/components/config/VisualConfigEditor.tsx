@@ -1,3 +1,4 @@
+import { CodexServiceTiersEditor } from './CodexServiceTiersEditor';
 import { GlobalProxyRegionEditor } from '@/features/proxyIp/ProxyRegionFields';
 import { ChatGptWebTLSSwitch } from '@/features/chatgptWeb/components/ChatGptWebTLSSwitch';
 import { TimeContextEditor } from '@/features/proxyIp/TimeContextEditor';
@@ -1779,6 +1780,7 @@ export function VisualConfigEditor({
       'provider-codex':
         authSectionErrorCount +
         countErrors([
+          'codexServiceTierRules',
           'codexQuotaAutoDisable',
           'codexAutoCookie',
           'codexStateOverride',
@@ -5304,9 +5306,9 @@ export function VisualConfigEditor({
                   <SettingsDisclosure id="config-codex-request-policies"
                     title={t('config_management.settings_center.codex_groups.requests')}
                     description={t('config_management.settings_center.codex_groups.requests_desc')}
-                    focusTarget={focusTarget} targetIds={['config-codex-service-tier', 'config-codex-request-compression', 'config-codex-prompt-cache', 'config-codex-stream-bootstrap', 'config-codex-input-token-estimate', 'config-codex-quota-observation', 'config-codex-quota-auto-disable']}
-                    dirty={hasDirtyConfigField(dirtyFields, ['codexAllowClientServiceTier', 'codexUpstreamRequestCompression', 'codexPassthroughPromptCacheKey', 'codexStreamBootstrapBuffering', 'codexEstimateClaudeInputTokens', 'codexObserveQuota', 'codexQuotaAutoDisable'])}
-                    errorCount={countErrors(['codexQuotaAutoDisable'])}
+                    focusTarget={focusTarget} targetIds={['config-codex-service-tier', 'config-codex-service-tier-rules', 'config-codex-request-compression', 'config-codex-prompt-cache', 'config-codex-stream-bootstrap', 'config-codex-input-token-estimate', 'config-codex-quota-observation', 'config-codex-quota-auto-disable']}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexAllowClientServiceTier', 'codexServiceTierRules', 'codexUpstreamRequestCompression', 'codexPassthroughPromptCacheKey', 'codexStreamBootstrapBuffering', 'codexEstimateClaudeInputTokens', 'codexObserveQuota', 'codexQuotaAutoDisable'])}
+                    errorCount={countErrors(['codexServiceTierRules', 'codexQuotaAutoDisable'])}
                   >
                     <SectionGrid>
                       <div id="config-codex-service-tier">
@@ -5374,6 +5376,12 @@ export function VisualConfigEditor({
                 </div>
 
                     </SectionGrid>
+                    <CodexServiceTiersEditor
+                      rules={values.codexServiceTierRules} enabled={values.codexAllowClientServiceTier}
+                      onChange={(codexServiceTierRules) => onChange({ codexServiceTierRules })}
+                      disabled={disabled} focusTarget={focusTarget}
+                      dirty={hasDirtyConfigField(dirtyFields, ['codexServiceTierRules'])}
+                    />
                     <CodexQuotaAutoDisableEditor
                       value={values.codexQuotaAutoDisable}
                       observing={values.codexObserveQuota}

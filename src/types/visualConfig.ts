@@ -1,3 +1,4 @@
+import type { CodexServiceTierRule } from '@/utils/codexServiceTiers';
 import {timeContextDefaults, type TimeContext} from '@/features/proxyIp/settings';
 import { readResponseGuard, type CodexResponseGuard } from '@/utils/codexResponseGuard';
 import { DEFAULT_CODEX_STATE, type CodexStateOverride } from '@/utils/codexStateOverride';
@@ -26,6 +27,7 @@ export type PayloadParamValidationErrorCode =
 
 export type VisualConfigFieldPath =
   | 'codexBaseUrl'
+  | 'codexServiceTierRules'
   | 'port'
   | 'rmAccessPath'
   | 'logsMaxTotalSizeMb'
@@ -99,6 +101,7 @@ export type VisualConfigFieldPath =
 export type VisualConfigValidationErrorCode =
   | 'codex_time_context'
   | 'codex_base_url'
+  | 'codex_service_tiers'
   | CodexLiveMediaValidationCode
   | 'port_range'
   | 'management_access_path'
@@ -360,6 +363,7 @@ export type VisualConfigValues = {
   codexIdentityConfuse: boolean;
   codexBaseUrl: string;
   codexAllowClientServiceTier: boolean;
+  codexServiceTierRules: CodexServiceTierRule[];
   codexUpstreamRequestCompression: CodexRequestCompression;
   codexLiveEnabled: boolean;
   codexLiveMediaRelay: CodexLiveMediaVisualConfig;
@@ -507,6 +511,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   codexIdentityConfuse: false,
   codexBaseUrl: '',
   codexAllowClientServiceTier: false,
+  codexServiceTierRules: [],
   codexUpstreamRequestCompression: 'off',
   codexLiveEnabled: false,
   codexLiveMediaRelay: DEFAULT_CODEX_LIVE_MEDIA,
