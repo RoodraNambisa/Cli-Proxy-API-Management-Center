@@ -60,11 +60,19 @@ export function useTrafficStats() {
       tooltip: {
         ...themed.plugins?.tooltip,
         enabled: true,
+        padding: 3,
+        titleMarginBottom: 2,
+        bodySpacing: 0,
+        titleFont: { size: 12, lineHeight: 1 },
+        bodyFont: { size: 12, lineHeight: 1 },
+        displayColors: false,
+        caretSize: 3,
+        caretPadding: 2,
         callbacks: {
           title: (items) => {
             const point = points[items[0]?.dataIndex];
             return point
-              ? `${new Date(point.from).toLocaleString()} – ${new Date(point.to).toLocaleTimeString()}`
+              ? `${new Date(point.from).toLocaleDateString([], { month: '2-digit', day: '2-digit' })} ${new Date(point.from).toLocaleTimeString([], { hour12: false })} – ${new Date(point.to).toLocaleDateString() === new Date(point.from).toLocaleDateString() ? '' : new Date(point.to).toLocaleDateString([], { month: '2-digit', day: '2-digit' }) + ' '}${new Date(point.to).toLocaleTimeString([], { hour12: false })}`
               : '';
           },
           label: (item) => {
