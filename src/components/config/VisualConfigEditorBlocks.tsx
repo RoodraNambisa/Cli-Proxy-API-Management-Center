@@ -1,3 +1,6 @@
+import { KeyAdmissionEditor } from '@/features/traffic/KeyAdmissionEditor';
+import { TrafficSummary } from '@/features/traffic/TrafficSummary';
+import { useTrafficBatch } from '@/features/traffic/useTraffic';
 import {
   memo,
   useCallback,
@@ -251,6 +254,9 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
   const [targetingSupported, setTargetingSupported] = useState(false);
   const [targetOptionsSupported, setTargetOptionsSupported] = useState(false);
   const [guardOptionsSupported, setGuardOptionsSupported] = useState(false);
+  const [admissionSupported, setAdmissionSupported] = useState(false);
+  const [keyIds, setKeyIds] = useState<Record<string, string>>({});
+  const traffic = useTrafficBatch('api-keys', apiKeys.map(key => keyIds[key]).filter(Boolean), active && admissionSupported);
   const [availablePriorities, setAvailablePriorities] = useState<number[]>();
   const [providerGroups, setProviderGroups] = useState<Record<string, string[]>>({});
   const [providerGroupsLoading, setProviderGroupsLoading] = useState(false);
@@ -281,6 +287,8 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
     try {
       const snapshot = await apiKeysApi.getAccessSnapshot();
       setServerKeys(new Set(snapshot.keys));
+      setAdmissionSupported(snapshot.admissionSupported === true);
+      setKeyIds(snapshot.keyIds ?? {});
       setLastUsed(snapshot.lastUsed);
       setNamesSupported(snapshot.namesSupported === true);
       setTargetingSupported(snapshot.credentialTargetingSupported === true);
@@ -545,7 +553,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                 ]}
                 toggleLabel={t('config_management.visual.api_keys.restrictions')}
                 cells={[
-                  <div><strong>{title}</strong><div><code>{maskApiKey(String(key || ''))}</code></div></div>,
+                  <div><strong>{title}</strong><div><code>{maskApiKey(String(key || ''))}</code></div><TrafficSummary value={traffic.items[keyIds[key]]} stale={traffic.stale} /></div>,
                   <span title={restrictionsKnown ? providers : undefined}>{restrictionsKnown ? providers : '—'}</span>,
                   restrictionsKnown && availablePriorities !== undefined ? <div>
                     <div>{t('config_management.visual.api_keys.priority_allowed')}: {(keyPriorities?.allowedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.provider_unrestricted')}</div>
@@ -588,6 +596,7 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                       </div>
                       <ConfigHelp title={t('config_management.visual.api_keys.provider_column')} text={t('config_management.visual.api_keys.provider_hint')} />
                     </div>
+                    {admissionSupported && <KeyAdmissionEditor key={key + JSON.stringify(keyPriorities)} apiKey={key} value={keyPriorities} disabled={disabled || providerGroupsLoading} onSaved={() => void loadProviderGroups()} />}
                     {targetingSupported && <div>
                       <ToggleSwitch label={t('credential_target.allow')} checked={keyPriorities?.allowCredentialTargeting === true}
                         disabled={disabled || providerGroupsLoading || providerGroupUpdating !== null} onChange={(enabled) => void handleTargetingChange(key, enabled)} />

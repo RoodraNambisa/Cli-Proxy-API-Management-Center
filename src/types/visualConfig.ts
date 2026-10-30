@@ -1,3 +1,4 @@
+import type { RoutingAdmission, QueueSettings } from '@/features/traffic/types';
 import type { CodexServiceTierRule } from '@/utils/codexServiceTiers';
 import {timeContextDefaults, type TimeContext} from '@/features/proxyIp/settings';
 import { readResponseGuard, type CodexResponseGuard } from '@/utils/codexResponseGuard';
@@ -66,6 +67,7 @@ export type VisualConfigFieldPath =
   | 'chatgptWebImageMemoryFinalizerConcurrency'
   | 'routingFillFirstRange'
   | 'routingFillFirstPerAuthRpm'
+  | 'routingAdmission'
   | 'routingPerAuthRequestLimit'
   | 'routingPerAuthRequestWindowMinutes'
   | 'fixedErrorCooldowns'
@@ -300,17 +302,20 @@ export interface RoutingSubscriptionOverrideVisualEntry {
   clientId: string;
   providers: string[];
   planTypes: string[];
+  perAuthConcurrency?: string;
   perAuthRequestLimit: string;
   perAuthRequestWindowMinutes: string;
 }
 
 export interface RoutingPriorityOverrideVisualEntry {
+  queue?: QueueSettings;
   clientId: string;
   priority: string;
   strategy: RoutingPriorityOverrideStrategy;
   maxRetryCredentials: string;
   fillFirstRange: string;
   fillFirstPerAuthRpm: string;
+  perAuthConcurrency?: string;
   perAuthRequestLimit: string;
   perAuthRequestWindowMinutes: string;
   subscriptionOverrides: RoutingSubscriptionOverrideVisualEntry[];
@@ -451,6 +456,7 @@ export type VisualConfigValues = {
   routingStrategy: 'round-robin' | 'fill-first' | 'random' | 'weighted-round-robin';
   routingFillFirstRange: string;
   routingFillFirstPerAuthRpm: string;
+  routingAdmission?: RoutingAdmission;
   routingPerAuthRequestLimit: string;
   routingPerAuthRequestWindowMinutes: string;
   routingPriorityOverrides: RoutingPriorityOverrideVisualEntry[];

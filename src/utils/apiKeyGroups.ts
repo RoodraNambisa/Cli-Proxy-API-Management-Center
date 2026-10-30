@@ -54,6 +54,9 @@ export function normalizeClientApiKeyGroups(value: unknown): ClientApiKeyGroup[]
     if ('credential-target-response-model-rewrite' in record || 'credentialTargetResponseModelRewrite' in record) {
       group.credentialTargetResponseModelRewrite = (record['credential-target-response-model-rewrite'] ?? record.credentialTargetResponseModelRewrite) === true;
     }
+    if ('concurrency-limit' in record) group.concurrencyLimit = Number(record['concurrency-limit']);
+    if ('rpm-limit' in record) group.rpmLimit = Number(record['rpm-limit']);
+    if (record.queue && typeof record.queue === 'object') group.queue = record.queue as ClientApiKeyGroup['queue'];
     if ('name' in record) group.name = normalizeApiKeyName(record.name);
     if ('allowed-priorities' in record || 'allowedPriorities' in record) {
       group.allowedPriorities = normalizeApiKeyPriorities(Object.prototype.hasOwnProperty.call(record, 'allowed-priorities') ? record['allowed-priorities'] : record.allowedPriorities);

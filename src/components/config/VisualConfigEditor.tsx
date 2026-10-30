@@ -1,3 +1,7 @@
+import trafficStyles from '@/features/traffic/Traffic.module.scss';
+import { QueueFields } from '@/features/traffic/QueueFields';
+import { useAdmissionSupport } from '@/features/traffic/useTraffic';
+import { defaultRoutingAdmission, emptyQueue } from '@/features/traffic/types';
 import { CodexServiceTiersEditor } from './CodexServiceTiersEditor';
 import { GlobalProxyRegionEditor } from '@/features/proxyIp/ProxyRegionFields';
 import { ChatGptWebTLSSwitch } from '@/features/chatgptWeb/components/ChatGptWebTLSSwitch';
@@ -1077,6 +1081,8 @@ export function VisualConfigEditor({
     t,
     validationErrors?.routingFillFirstPerAuthRpm
   );
+  const admissionSupported = useAdmissionSupport();
+  const routingAdmission = values.routingAdmission ?? defaultRoutingAdmission();
   const routingPerAuthRequestLimitError = getValidationMessage(
     t,
     validationErrors?.routingPerAuthRequestLimit
@@ -1227,6 +1233,7 @@ export function VisualConfigEditor({
     'routingStrategy',
     'routingFillFirstRange',
     'routingFillFirstPerAuthRpm',
+    'routingAdmission',
     'routingPerAuthRequestLimit',
     'routingPerAuthRequestWindowMinutes',
   ]);
@@ -1307,6 +1314,7 @@ export function VisualConfigEditor({
     maxRetryIntervalError,
   ].filter(Boolean).length;
   const routingSettingsErrorCount = [
+    validationErrors?.routingAdmission,
     routingFillFirstRangeError,
     routingFillFirstPerAuthRpmError,
     routingPerAuthRequestLimitError,
@@ -1747,7 +1755,8 @@ export function VisualConfigEditor({
           'maxRetryInterval',
           'routingFillFirstRange',
           'routingFillFirstPerAuthRpm',
-          'routingPerAuthRequestLimit',
+          'routingAdmission',
+    'routingPerAuthRequestLimit',
           'routingPerAuthRequestWindowMinutes',
         ]) + routingPriorityOverridesErrorCount,
       'global-request':
@@ -4137,6 +4146,14 @@ export function VisualConfigEditor({
                           />
                         </FieldShell>
                       </div>
+                      {admissionSupported && <Input label={t('traffic.credential_limit')} type="number" min={0} value={routingAdmission.concurrency} disabled={disabled} error={getValidationMessage(t, validationErrors?.routingAdmission)} hint={t('traffic.zero_unlimited')} onChange={e => onChange({ routingAdmission: { ...routingAdmission, concurrency: Number(e.target.value) } })} />}
+                      {admissionSupported && <div style={{ gridColumn: '1 / -1', display: 'grid', gap: 20 }}>
+                        <QueueFields value={routingAdmission.queue} disabled={disabled} onChange={queue => onChange({ routingAdmission: { ...routingAdmission, queue: queue ?? emptyQueue() } })} />
+                        <div className={trafficStyles.fields}>
+                          <Input label={t('traffic.process_requests')} type="number" min={0} value={routingAdmission.maxQueuedRequests} disabled={disabled} hint={t('traffic.process_defaults')} onChange={e => onChange({ routingAdmission: { ...routingAdmission, maxQueuedRequests: Number(e.target.value) } })} />
+                          <Input label={t('traffic.process_bytes')} type="number" min={0} value={routingAdmission.maxQueuedBytes} disabled={disabled} onChange={e => onChange({ routingAdmission: { ...routingAdmission, maxQueuedBytes: Number(e.target.value) } })} />
+                        </div>
+                      </div>}
                       <Input
                         id="config-routing-per-auth-request-limit"
                         label={t(
@@ -4368,7 +4385,8 @@ export function VisualConfigEditor({
                                   disabled={disabled}
                                   error={maxRetryCredentialsError}
                                 />
-                                <Input
+                                {admissionSupported && <><Input label={t('traffic.credential_limit')} type="number" min={0} value={rule.perAuthConcurrency ?? ''} placeholder={t('traffic.inherit')} disabled={disabled} onChange={e => updateRoutingPriorityOverride(rule.clientId, { perAuthConcurrency: e.target.value })} /><QueueFields inherit value={rule.queue} disabled={disabled} onChange={queue => updateRoutingPriorityOverride(rule.clientId, { queue })} /></>}
+<Input
                                   label={t(
                                     'config_management.visual.sections.network.priority_overrides_per_auth_request_limit'
                                   )}
@@ -4656,7 +4674,8 @@ export function VisualConfigEditor({
                                                   }
                                                 />
                                               </FieldShell>
-                                              <Input
+                                              {admissionSupported && <Input label={t('traffic.credential_limit')} type="number" min={0} value={subscriptionRule.perAuthConcurrency ?? ''} placeholder={t('traffic.inherit')} disabled={disabled} onChange={e => updateRoutingSubscriptionOverride(rule.clientId, subscriptionRule.clientId, { perAuthConcurrency: e.target.value })} />}
+<Input
                                                 label={t(
                                                   'config_management.visual.sections.network.priority_subscription_overrides_limit'
                                                 )}

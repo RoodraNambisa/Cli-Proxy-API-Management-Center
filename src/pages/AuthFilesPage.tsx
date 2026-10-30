@@ -1,3 +1,4 @@
+import { useTrafficBatch } from '@/features/traffic/useTraffic';
 import {
   useCallback,
   type CSSProperties,
@@ -1090,6 +1091,7 @@ export function AuthFilesPage() {
     [pageItems]
   );
   const currentPageAuthIndexesKey = currentPageAuthIndexes.join(',');
+  const traffic = useTrafficBatch('auth-files', currentPageAuthIndexes, isCurrentLayer);
 
   useEffect(() => {
     pageAuthIndexesRef.current = currentPageAuthIndexes;
@@ -2007,6 +2009,7 @@ export function AuthFilesPage() {
               >
                 {pageItems.map((file) => (
                   <AuthFileCard
+                    traffic={traffic.items[normalizeAuthIndex(file.auth_index ?? file.authIndex) ?? ""]} trafficStale={traffic.stale}
                     key={file.name}
                     file={file}
                     cooldownAsOfMs={filesLoadedAtMs}

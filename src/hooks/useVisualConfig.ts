@@ -1,3 +1,4 @@
+import { defaultRoutingAdmission, emptyQueue, type QueueSettings } from '@/features/traffic/types';
 import { readCodexServiceTiers, writeCodexServiceTiers, codexServiceTiersEqual, codexServiceTiersError } from '@/utils/codexServiceTiers';
 import { readTLSTrustAnchors } from '@/features/chatgptWeb/tlsTrustAnchors';
 import { readTimeContext, validTimeContext } from '@/features/proxyIp/settings';
@@ -899,6 +900,7 @@ function parseRoutingSubscriptionOverrides(raw: unknown): RoutingSubscriptionOve
       planTypes: normalizeRoutingPlanTypes(
         parseStringList(record['plan-types'] ?? record.planTypes)
       ),
+      perAuthConcurrency: String(record['per-auth-concurrency'] ?? record.perAuthConcurrency ?? ''),
       perAuthRequestLimit:
         record['per-auth-request-limit'] === undefined && record.perAuthRequestLimit === undefined
           ? ''
@@ -946,6 +948,7 @@ function parseRoutingPriorityOverrides(raw: unknown): RoutingPriorityOverrideVis
         record['fill-first-per-auth-rpm'] === undefined && record.fillFirstPerAuthRpm === undefined
           ? ''
           : String(record['fill-first-per-auth-rpm'] ?? record.fillFirstPerAuthRpm ?? ''),
+      perAuthConcurrency: String(record['per-auth-concurrency'] ?? record.perAuthConcurrency ?? ''),
       perAuthRequestLimit:
         record['per-auth-request-limit'] === undefined && record.perAuthRequestLimit === undefined
           ? ''
@@ -957,6 +960,7 @@ function parseRoutingPriorityOverrides(raw: unknown): RoutingPriorityOverrideVis
           : String(
               record['per-auth-request-window-minutes'] ?? record.perAuthRequestWindowMinutes ?? ''
             ),
+      ...(asRecord(record.queue) ? { queue: { ...emptyQueue(), ...asRecord(record.queue) } as QueueSettings } : {}),
       subscriptionOverrides: parseRoutingSubscriptionOverrides(
         record['subscription-overrides'] ?? record.subscriptionOverrides
       ),
@@ -979,6 +983,8 @@ function areRoutingPriorityOverridesEqual(
       entry.maxRetryCredentials === other.maxRetryCredentials &&
       entry.fillFirstRange === other.fillFirstRange &&
       entry.fillFirstPerAuthRpm === other.fillFirstPerAuthRpm &&
+      (entry.perAuthConcurrency ?? '') === (other.perAuthConcurrency ?? '') &&
+      JSON.stringify(entry.queue) === JSON.stringify(other.queue) &&
       entry.perAuthRequestLimit === other.perAuthRequestLimit &&
       entry.perAuthRequestWindowMinutes === other.perAuthRequestWindowMinutes &&
       entry.subscriptionOverrides.length === other.subscriptionOverrides.length &&
@@ -989,6 +995,7 @@ function areRoutingPriorityOverridesEqual(
           areStringArraysEqual(subscription.providers, otherSubscription.providers) &&
           areStringArraysEqual(subscription.credentials ?? [], otherSubscription.credentials ?? []) &&
           areStringArraysEqual(subscription.planTypes, otherSubscription.planTypes) &&
+          (subscription.perAuthConcurrency ?? '') === (otherSubscription.perAuthConcurrency ?? '') &&
           subscription.perAuthRequestLimit === otherSubscription.perAuthRequestLimit &&
           subscription.perAuthRequestWindowMinutes === otherSubscription.perAuthRequestWindowMinutes
         );
@@ -1168,6 +1175,8 @@ function serializeRoutingPriorityOverridesForYaml(
       if (fillFirstPerAuthRpm === null) return result;
       entry['fill-first-per-auth-rpm'] = fillFirstPerAuthRpm;
     }
+    if (rule.perAuthConcurrency?.trim()) entry['per-auth-concurrency'] = Number(rule.perAuthConcurrency);
+    if (rule.queue !== undefined) entry.queue = rule.queue;
     if (rule.perAuthRequestLimit.trim()) {
       const perAuthRequestLimit = parseNonNegativeIntegerString(rule.perAuthRequestLimit);
       if (perAuthRequestLimit === null) return result;
@@ -1194,6 +1203,7 @@ function serializeRoutingPriorityOverridesForYaml(
         if (providers.length > 0) {
           subscriptionEntry.providers = providers;
         }
+        if (subscriptionRule.perAuthConcurrency?.trim()) subscriptionEntry['per-auth-concurrency'] = Number(subscriptionRule.perAuthConcurrency);
         if (subscriptionRule.perAuthRequestLimit.trim()) {
           const limit = parseNonNegativeIntegerString(subscriptionRule.perAuthRequestLimit);
           subscriptionEntry['per-auth-request-limit'] =
@@ -1370,6 +1380,8 @@ export function getVisualConfigValidationErrors(
   const routingFillFirstPerAuthRpmError = routingFillFirstControlsConflict
     ? 'fill_first_controls_conflict'
     : routingFillFirstPerAuthRpmBaseError;
+  const routingAdmission = values.routingAdmission ?? defaultRoutingAdmission();
+  const routingAdmissionError = [routingAdmission.concurrency, routingAdmission.maxQueuedRequests, routingAdmission.maxQueuedBytes, routingAdmission.queue['max-waiting'], routingAdmission.queue['wait-timeout-seconds']].some(n => !Number.isSafeInteger(n) || n < 0) || routingAdmission.queue['wait-timeout-seconds'] > 86400 ? getNonNegativeIntegerError('-1') : undefined;
   const routingPerAuthRequestLimitError = getNonNegativeIntegerError(
     values.routingPerAuthRequestLimit
   );
@@ -1416,6 +1428,8 @@ export function getVisualConfigValidationErrors(
         result[`routingPriorityOverrides.${rule.clientId}.fillFirstPerAuthRpm`] =
           fillFirstPerAuthRpmError;
       }
+      if (rule.perAuthConcurrency?.trim() && getNonNegativeIntegerError(rule.perAuthConcurrency)) result[`routingPriorityOverrides.${rule.clientId}.perAuthRequestLimit`] = getNonNegativeIntegerError(rule.perAuthConcurrency);
+      if (rule.queue && (rule.queue['wait-timeout-seconds'] > 86400 || [rule.queue['max-waiting'], rule.queue['wait-timeout-seconds']].some(n => !Number.isSafeInteger(n) || n < 0))) result[`routingPriorityOverrides.${rule.clientId}.perAuthRequestLimit`] = getNonNegativeIntegerError('-1');
       const perAuthRequestLimitError = rule.perAuthRequestLimit.trim()
         ? getNonNegativeIntegerError(rule.perAuthRequestLimit)
         : undefined;
@@ -1461,6 +1475,7 @@ export function getVisualConfigValidationErrors(
         if (planTypes.length === 0 && subscriptionRule.providers.every((provider) => !provider.trim()) && credentials.length === 0) {
           result[`${pathPrefix}.planTypes`] = 'routing_subscription_plan_required';
         }
+        if (subscriptionRule.perAuthConcurrency?.trim() && getNonNegativeIntegerError(subscriptionRule.perAuthConcurrency)) result[`${pathPrefix}.perAuthRequestLimit`] = getNonNegativeIntegerError(subscriptionRule.perAuthConcurrency);
         const subscriptionLimitError = subscriptionRule.perAuthRequestLimit.trim()
           ? getNonNegativeIntegerError(subscriptionRule.perAuthRequestLimit)
           : undefined;
@@ -1475,7 +1490,7 @@ export function getVisualConfigValidationErrors(
         }
         if (
           !subscriptionRule.perAuthRequestLimit.trim() &&
-          !subscriptionRule.perAuthRequestWindowMinutes.trim()
+          !subscriptionRule.perAuthRequestWindowMinutes.trim() && !subscriptionRule.perAuthConcurrency?.trim()
         ) {
           result[`${pathPrefix}.perAuthRequestLimit`] = 'routing_subscription_limit_required';
           result[`${pathPrefix}.perAuthRequestWindowMinutes`] =
@@ -1754,6 +1769,7 @@ export function getVisualConfigValidationErrors(
     ),
     routingFillFirstRange: routingFillFirstRangeError,
     routingFillFirstPerAuthRpm: routingFillFirstPerAuthRpmError,
+    routingAdmission: routingAdmissionError,
     routingPerAuthRequestLimit: routingPerAuthRequestLimitError,
     routingPerAuthRequestWindowMinutes: routingPerAuthRequestWindowMinutesError,
     ...routingPriorityOverrideErrors,
@@ -3085,6 +3101,12 @@ function getNextDirtyFields(
       nextValues.routingFillFirstPerAuthRpm === baselineValues.routingFillFirstPerAuthRpm
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'routingAdmission')) {
+    updateDirty(
+      'routingAdmission',
+      JSON.stringify(nextValues.routingAdmission) === JSON.stringify(baselineValues.routingAdmission)
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingPerAuthRequestLimit')) {
     updateDirty(
       'routingPerAuthRequestLimit',
@@ -3901,6 +3923,7 @@ export function useVisualConfig() {
             routing?.fillFirstPerAuthRpm ??
             DEFAULT_VISUAL_VALUES.routingFillFirstPerAuthRpm
         ),
+        routingAdmission: { concurrency: Number(routing?.['per-auth-concurrency'] ?? 0), queue: { ...emptyQueue(), ...asRecord(routing?.queue) } as QueueSettings, maxQueuedRequests: Number(asRecord(parsed.admission)?.['max-queued-requests'] ?? 1024), maxQueuedBytes: Number(asRecord(parsed.admission)?.['max-queued-bytes'] ?? 268435456) },
         routingPerAuthRequestLimit: String(
           routing?.['per-auth-request-limit'] ??
             routing?.perAuthRequestLimit ??
@@ -4979,6 +5002,14 @@ export function useVisualConfig() {
           deleteIfMapEmpty(doc, ['images']);
         }
 
+        if (values.routingAdmission && JSON.stringify(values.routingAdmission) !== JSON.stringify(baselineValues.routingAdmission)) {
+          ensureMapInDoc(doc, ['routing']); ensureMapInDoc(doc, ['admission']);
+          doc.setIn(['routing', 'per-auth-concurrency'], values.routingAdmission.concurrency);
+          ensureMapInDoc(doc, ['routing', 'queue']);
+          for (const [key, value] of Object.entries(values.routingAdmission.queue)) doc.setIn(['routing', 'queue', key], value);
+          doc.setIn(['admission', 'max-queued-requests'], values.routingAdmission.maxQueuedRequests);
+          doc.setIn(['admission', 'max-queued-bytes'], values.routingAdmission.maxQueuedBytes);
+        }
         const inheritedRouting = asRecord(readMergedYamlField(doc, ['routing']));
         if (
           docHas(doc, ['routing']) ||

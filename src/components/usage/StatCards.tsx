@@ -1,3 +1,5 @@
+import type { ChartOptions } from 'chart.js';
+import { useTrafficStats } from '@/features/traffic/TrafficCards';
 import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Line } from 'react-chartjs-2';
@@ -25,6 +27,8 @@ interface StatCardData {
   value: string;
   meta?: ReactNode;
   trend: SparklineBundle | null;
+  chartOptions?: ChartOptions<'line'>;
+  extraValue?: ReactNode;
 }
 
 export interface StatCardsProps {
@@ -63,6 +67,7 @@ export function StatCards({
   sparklines,
 }: StatCardsProps) {
   const { t } = useTranslation();
+  const traffic = useTrafficStats();
   const tokens = tokensResource.data?.tokens ?? {};
   const rates = ratesResource.data;
   const costs = costsResource.data;
@@ -108,8 +113,22 @@ export function StatCards({
             <span className={styles.statMetaDot} style={{ backgroundColor: '#c65746' }} />
             {t('usage_stats.failed_requests')}: {loading ? '-' : (usage?.failure_count ?? 0)}
           </span>
+          {traffic.enabled && (
+            <span className={styles.statMetaItem}>
+              {t('traffic.waiting')}: {traffic.value?.queued ?? '—'}
+            </span>
+          )}
+          {traffic.enabled && traffic.stale && (
+            <span className={styles.statSubtle}>{t('traffic.stale')}</span>
+          )}
         </>
       ),
+      extraValue: traffic.enabled ? (
+        <div className={styles.statValueSmall}>
+          <span className={styles.statValueLabel}>{t('traffic.current_concurrency')}</span>
+          <span className={styles.statValueNum}>{traffic.value?.active ?? '—'}</span>
+        </div>
+      ) : undefined,
       trend: sparklines.requests,
     },
     {
@@ -147,14 +166,30 @@ export function StatCards({
       accent: '#22c55e',
       accentSoft: 'rgba(34, 197, 94, 0.18)',
       accentBorder: 'rgba(34, 197, 94, 0.32)',
-      value: rateLoading ? '-' : formatPerMinuteValue(Number(rates?.rpm) || 0),
-      meta: (
+      value: traffic.enabled
+        ? traffic.value
+          ? formatPerMinuteValue(traffic.value.rpm)
+          : '—'
+        : rateLoading
+          ? '-'
+          : formatPerMinuteValue(Number(rates?.rpm) || 0),
+      meta: traffic.enabled ? (
+        <>
+          <span className={styles.statMetaItem}>
+            {traffic.basis} · {traffic.range}
+          </span>
+          <span className={styles.statMetaItem}>
+            {t('traffic.requests')}: {traffic.value?.requests ?? '—'}
+          </span>
+        </>
+      ) : (
         <span className={styles.statMetaItem}>
           {statusLabel(ratesResource.status) ||
             `${t('usage_stats.total_requests')}: ${(rates?.request_count ?? 0).toLocaleString()}`}
         </span>
       ),
-      trend: sparklines.rpm,
+      trend: traffic.enabled ? traffic.trend : sparklines.rpm,
+      chartOptions: traffic.enabled ? traffic.chartOptions : undefined,
     },
     {
       key: 'tpm',
@@ -202,40 +237,46 @@ export function StatCards({
   ];
 
   return (
-    <div className={styles.statsGrid}>
-      {statsCards.map((card) => (
-        <div
-          key={card.key}
-          className={styles.statCard}
-          style={
-            {
-              '--accent': card.accent,
-              '--accent-soft': card.accentSoft,
-              '--accent-border': card.accentBorder,
-            } as CSSProperties
-          }
-        >
-          <div className={styles.statCardHeader}>
-            <div className={styles.statLabelGroup}>
-              <span className={styles.statLabel}>{card.label}</span>
+    <>
+      {traffic.controls}
+      <div className={styles.statsGrid}>
+        {statsCards.map((card) => (
+          <div
+            key={card.key}
+            className={styles.statCard}
+            style={
+              {
+                '--accent': card.accent,
+                '--accent-soft': card.accentSoft,
+                '--accent-border': card.accentBorder,
+              } as CSSProperties
+            }
+          >
+            <div className={styles.statCardHeader}>
+              <div className={styles.statLabelGroup}>
+                <span className={styles.statLabel}>{card.label}</span>
+              </div>
+              <span className={styles.statIconBadge}>{card.icon}</span>
             </div>
-            <span className={styles.statIconBadge}>{card.icon}</span>
+            <div className={styles.statValueRow}>
+              <div className={styles.statValue}>{card.value}</div>
+              {card.extraValue}
+            </div>
+            {card.meta && <div className={styles.statMetaRow}>{card.meta}</div>}
+            <div className={styles.statTrend}>
+              {card.trend ? (
+                <Line
+                  className={styles.sparkline}
+                  data={card.trend.data}
+                  options={card.chartOptions ?? sparklineOptions}
+                />
+              ) : (
+                <div className={styles.statTrendPlaceholder} />
+              )}
+            </div>
           </div>
-          <div className={styles.statValue}>{card.value}</div>
-          {card.meta && <div className={styles.statMetaRow}>{card.meta}</div>}
-          <div className={styles.statTrend}>
-            {card.trend ? (
-              <Line
-                className={styles.sparkline}
-                data={card.trend.data}
-                options={sparklineOptions}
-              />
-            ) : (
-              <div className={styles.statTrendPlaceholder} />
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }

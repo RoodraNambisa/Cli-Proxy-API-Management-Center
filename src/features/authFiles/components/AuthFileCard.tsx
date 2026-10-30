@@ -1,3 +1,5 @@
+import { TrafficSummary } from '@/features/traffic/TrafficSummary';
+import type { TrafficSnapshot } from '@/features/traffic/types';
 import { AuthFileStateStatus } from './AuthFileStateStatus';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -62,6 +64,7 @@ const HEALTHY_STATUS_MESSAGES = new Set(['ok', 'healthy', 'ready', 'success', 'a
 const PREMIUM_CODEX_PLAN_TYPES = new Set(['plus', 'team', 'pro', 'prolite']);
 
 export type AuthFileCardProps = {
+  traffic?: TrafficSnapshot; trafficStale?: boolean;
   file: AuthFileItem;
   cooldownAsOfMs: number;
   compact: boolean;
@@ -522,6 +525,8 @@ export function AuthFileCard(props: AuthFileCardProps) {
               )}
             </div>
           </div>
+
+          <TrafficSummary value={props.traffic} stale={props.trafficStale} credential />
 
           {onTargetCredential && authIndexKey && !isRetiredGeminiCli && (
             <button

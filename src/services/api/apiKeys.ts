@@ -11,6 +11,8 @@ export type ApiKeyGroup = ClientApiKeyGroup;
 
 export type ApiKeyAccessSnapshot = {
   keys: string[];
+  keyIds?: Record<string, string>;
+  admissionSupported?: boolean;
   groups: ApiKeyGroup[];
   lastUsed?: Record<string, string>;
   availablePriorities?: number[];
@@ -55,12 +57,14 @@ export const apiKeysApi = {
     }
   },
 
-  async listDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'keys' | 'lastUsed'>> {
+  async listDetails(): Promise<Pick<ApiKeyAccessSnapshot, 'keys' | 'lastUsed' | 'keyIds' | 'admissionSupported'>> {
     const data = await apiClient.get<Record<string, unknown>>('/api-keys');
     const keys = data['api-keys'] ?? data.apiKeys;
-    const result: Pick<ApiKeyAccessSnapshot, 'keys' | 'lastUsed'> = {
+    const result: Pick<ApiKeyAccessSnapshot, 'keys' | 'lastUsed' | 'keyIds' | 'admissionSupported'> = {
       keys: Array.isArray(keys) ? keys.map((key) => String(key)) : [],
     };
+    if ('admission-supported' in data) result.admissionSupported = data['admission-supported'] === true;
+    if (result.admissionSupported) result.keyIds = data['key-ids'] as Record<string, string>;
     const usage = data['last-used'];
     if (usage && typeof usage === 'object' && !Array.isArray(usage)) {
       result.lastUsed = Object.fromEntries(
@@ -97,6 +101,8 @@ export const apiKeysApi = {
     const [details, groups] = await Promise.all([apiKeysApi.listDetails(), apiKeysApi.listGroupDetails()]);
     return { ...details, ...groups };
   },
+
+  updateAdmission: (apiKey: string, limits: { concurrencyLimit: number; rpmLimit: number; queue: import('@/features/traffic/types').QueueSettings }) => trackGroupUpdate(apiClient.patch('/api-key-groups', { 'api-key': apiKey, 'concurrency-limit': limits.concurrencyLimit, 'rpm-limit': limits.rpmLimit, queue: limits.queue })),
 
   updateGroup: (apiKey: string, providers: string[]) =>
     trackGroupUpdate(apiClient.patch('/api-key-groups', {

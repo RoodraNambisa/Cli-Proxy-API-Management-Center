@@ -3,6 +3,7 @@ import type { RoutingPriorityOverrideVisualEntry } from '@/types/visualConfig';
 
 const priorityFields = [
   'priority',
+  'queue',
   'strategy',
   'max-retry-credentials',
   'maxRetryCredentials',
@@ -10,6 +11,8 @@ const priorityFields = [
   'fillFirstRange',
   'fill-first-per-auth-rpm',
   'fillFirstPerAuthRpm',
+  'per-auth-concurrency',
+  'perAuthConcurrency',
   'per-auth-request-limit',
   'perAuthRequestLimit',
   'per-auth-request-window-minutes',
@@ -22,6 +25,8 @@ const subscriptionFields = [
   'providers',
   'plan-types',
   'planTypes',
+  'per-auth-concurrency',
+  'perAuthConcurrency',
   'per-auth-request-limit',
   'perAuthRequestLimit',
   'per-auth-request-window-minutes',

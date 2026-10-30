@@ -348,10 +348,14 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.routing_strategy',
     yamlKeys: [
       'routing.strategy',
+      'routing.per-auth-concurrency',
+      'routing.queue',
+      'admission.max-queued-requests',
+      'admission.max-queued-bytes',
       'routing.fill-first-range',
       'routing.fill-first-per-auth-rpm',
     ],
-    aliases: ['route', '路由', '填充范围', 'fill first', 'weighted-round-robin', 'weight', '加权', '權重', 'вес'],
+    aliases: ['concurrency', '并发', '並發', '排队', 'queue', 'route', '路由', '填充范围', 'fill first', 'weighted-round-robin', 'weight', '加权', '權重', 'вес'],
   },
   {
     id: 'config-routing-per-auth-request-limit',

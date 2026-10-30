@@ -1,3 +1,4 @@
+import type { QueueSettings } from '@/features/traffic/types';
 /**
  * 配置相关类型定义
  * 与基线 /config 返回结构保持一致（内部使用驼峰形式）
@@ -230,6 +231,7 @@ export const normalizeCodexTurnStatePolicy = (value: unknown): CodexTurnStatePol
 };
 
 export interface ClientApiKeyGroup {
+  concurrencyLimit?: number; rpmLimit?: number; queue?: QueueSettings;
   allowCredentialTargeting?: boolean;
   credentialTargetRespectStatePolicy?: boolean;
   credentialTargetRespectRequestLimit?: boolean;
