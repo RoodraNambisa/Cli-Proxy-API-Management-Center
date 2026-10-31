@@ -1,0 +1,36 @@
+.fields {
+  display: grid;
+  gap: 12px;
+  max-width: 640px;
+  margin-bottom: 24px;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  input {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.error {
+  color: var(--error-color, #c53030);
+  font-size: 13px;
+  margin-top: 8px;
+}

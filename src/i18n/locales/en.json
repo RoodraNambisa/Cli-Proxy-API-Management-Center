@@ -1,4 +1,20 @@
 {
+  "auth_image_priority": {
+    "description": "Disable Codex image generation within the scope below. Shared model exclusions apply independently.",
+    "models_hint": "Optional. Leave empty to restrict image generation only within the scope above.",
+    "scope": "Image generation restriction scope",
+    "all": "All matching priorities",
+    "selected": "Selected priorities",
+    "priorities": "Priorities with image generation disabled",
+    "priority": "Priority {{priority}}",
+    "placeholder": "For example, 3, 5",
+    "hint": "This only narrows this rule’s image restriction. Shared model exclusions and other rules still apply; excluded image models remain unavailable.",
+    "models_summary": "Model exclusions: {{priorities}}",
+    "image_summary": "Image generation disabled: {{priorities}}",
+    "empty": "No priorities selected",
+    "remove": "Remove invalid selection",
+    "upgrade": "Upgrade the backend before saving image priority scopes. This backend would ignore the scope and disable images for all matches."
+  },
   "codex_service_tiers": {
     "title": "Model speed tiers",
     "description": "Choose the speed tiers and initial default shown in Codex App.",
@@ -3145,6 +3161,8 @@
         "error_response_rewrite_result_required": "Fill at least a response status code or response body rewrite",
         "json_object": "Enter a valid JSON object",
         "auth_model_exclusion_models_required": "Fill at least one model unless image generation is disabled",
+        "auth_model_exclusion_image_priorities_required": "Select at least one priority",
+        "auth_model_exclusion_image_priorities_outside": "Selected image priorities are outside this rule. Remove invalid selections or update the rule priorities.",
         "auth_model_exclusion_match_required": "Fill at least one provider, priority, or keyword matcher",
         "codex_quota_auto_disable": "Each rule needs a threshold (0–100), integer priorities and nonempty matchers. Enter a finite credit amount of 0 or more, or leave blank.",
         "integer_list": "Enter integers separated by commas or line breaks",

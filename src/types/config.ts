@@ -44,6 +44,7 @@ export interface AuthModelExclusionConfig {
   priorities?: number[];
   keywordContains?: string[];
   disableImageGeneration?: boolean;
+  disableImageGenerationPriorities?: number[];
 }
 
 export type DisabledImageGenerationToolAction = 'remove' | 'error';

@@ -1,3 +1,32 @@
+import type {
+  AuthModelExclusionVisualEntry,
+  VisualConfigValidationErrorCode,
+} from '@/types/visualConfig';
+
+export const AUTH_IMAGE_PRIORITY_CAPABILITY = 'auth-model-exclusions-image-priority-supported';
+
+export function authImagePriorityScope(rule: AuthModelExclusionVisualEntry): 'all' | 'selected' {
+  return (
+    rule.disableImageGenerationScope ??
+    (rule.disableImageGenerationPriorities?.length ? 'selected' : 'all')
+  );
+}
+
+export function authImagePriorityError(
+  rule: AuthModelExclusionVisualEntry
+): VisualConfigValidationErrorCode | undefined {
+  if (!rule.disableImageGeneration || authImagePriorityScope(rule) !== 'selected') return;
+  const priorities = rule.disableImageGenerationPriorities ?? [];
+  if (!priorities.length) return 'auth_model_exclusion_image_priorities_required';
+  if (priorities.some((p) => !/^[+-]?\d+$/.test(p.trim()) || !Number.isSafeInteger(Number(p))))
+    return 'integer_list';
+  if (
+    rule.priorities.length &&
+    priorities.some((p) => !rule.priorities.some((allowed) => Number(allowed) === Number(p)))
+  )
+    return 'auth_model_exclusion_image_priorities_outside';
+}
+
 export function normalizeAuthModelExclusionProviders(providers: string[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];

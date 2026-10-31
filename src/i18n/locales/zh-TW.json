@@ -1,4 +1,20 @@
 {
+  "auth_image_priority": {
+    "description": "依下方範圍停用 Codex 圖片生成能力，共用的模型排除設定仍獨立生效。",
+    "models_hint": "可留空；留空時只依上方範圍停用生圖，不額外排除模型。",
+    "scope": "停用生圖的優先級範圍",
+    "all": "全部符合的優先級",
+    "selected": "指定優先級",
+    "priorities": "禁圖優先級",
+    "priority": "優先級 {{priority}}",
+    "placeholder": "例如 3、5",
+    "hint": "這裡只縮小此規則的禁圖範圍。共用模型排除及其他規則仍然生效，已排除的圖片模型不會因此重新開放。",
+    "models_summary": "模型排除：{{priorities}}",
+    "image_summary": "停用生圖：{{priorities}}",
+    "empty": "尚未選擇優先級",
+    "remove": "移除失效選擇",
+    "upgrade": "目前後端不支援按優先級限定禁圖範圍，請先升級後端，避免忽略範圍後擴大禁圖對象。"
+  },
   "codex_service_tiers": {
     "title": "模型速度層級",
     "description": "設定 Codex App 可選的速度層級與初始預設值。",
@@ -3130,6 +3146,8 @@
         "error_response_rewrite_result_required": "回傳狀態碼和回應內容改寫至少填寫一個",
         "json_object": "請輸入有效的 JSON 物件",
         "auth_model_exclusion_models_required": "未啟用停用圖片生成時至少填寫一個模型",
+        "auth_model_exclusion_image_priorities_required": "請至少選擇一個禁圖優先級",
+        "auth_model_exclusion_image_priorities_outside": "所選禁圖優先級已不在此規則範圍內，請移除失效選擇或調整規則優先級",
         "auth_model_exclusion_match_required": "至少填寫提供者、優先級或關鍵字匹配條件之一",
         "codex_quota_auto_disable": "每條規則至少填寫一個門檻（0–100）；優先順序須為整數，比對項不能為空。 請輸入大於或等於 0 的有效積分數量，或留空。",
         "integer_list": "請輸入用逗號或換行分隔的整數列表",

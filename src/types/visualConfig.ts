@@ -135,6 +135,8 @@ export type VisualConfigValidationErrorCode =
   | 'json_object'
   | 'auth_model_exclusion_models_required'
   | 'auth_model_exclusion_match_required'
+  | 'auth_model_exclusion_image_priorities_required'
+  | 'auth_model_exclusion_image_priorities_outside'
   | 'integer_list'
   | 'codex_quota_auto_disable'
   | 'codex_auto_cookie_conflict'
@@ -281,11 +283,14 @@ export interface ErrorResponseRewriteVisualEntry {
 
 export interface AuthModelExclusionVisualEntry {
   clientId: string;
+  sourceIndex?: number;
   providers: string[];
   models: string[];
   priorities: string[];
   keywordContains: string[];
   disableImageGeneration: boolean;
+  disableImageGenerationScope?: 'all' | 'selected';
+  disableImageGenerationPriorities?: string[];
 }
 
 export type DisabledImageGenerationToolAction = 'remove' | 'error';

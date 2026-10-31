@@ -169,6 +169,9 @@ const normalizeAuthModelExclusions = (
       disableImageGeneration: normalizeBoolean(
         item['disable-image-generation'] ?? item.disableImageGeneration
       ),
+      disableImageGenerationPriorities: normalizeIntegerArray(
+        item['disable-image-generation-priorities'] ?? item.disableImageGenerationPriorities
+      ),
     };
     if (providers !== undefined) {
       entry.providers = normalizeAuthModelExclusionProviders(providers);

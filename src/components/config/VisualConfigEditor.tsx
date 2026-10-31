@@ -4,6 +4,9 @@ import { QueueFields } from '@/features/traffic/QueueFields';
 import { useAdmissionSupport } from '@/features/traffic/useTraffic';
 import { defaultRoutingAdmission, emptyQueue } from '@/features/traffic/types';
 import { CodexServiceTiersEditor } from './CodexServiceTiersEditor';
+import { AuthImagePriorityFields } from './AuthImagePriorityFields';
+import { useConfigStore } from '@/stores/useConfigStore';
+import { AUTH_IMAGE_PRIORITY_CAPABILITY, authImagePriorityScope } from '@/utils/authModelExclusions';
 import { GlobalProxyRegionEditor } from '@/features/proxyIp/ProxyRegionFields';
 import { ChatGptWebTLSSwitch } from '@/features/chatgptWeb/components/ChatGptWebTLSSwitch';
 import { TimeContextEditor } from '@/features/proxyIp/TimeContextEditor';
@@ -1084,6 +1087,7 @@ export function VisualConfigEditor({
   );
   const admissionSupported = useAdmissionSupport();
   const codexIdentitySupported = useCodexIdentitySupport();
+  const imagePrioritySupported = useConfigStore(state => state.config?.raw?.[AUTH_IMAGE_PRIORITY_CAPABILITY] === true);
   const routingAdmission = values.routingAdmission ?? defaultRoutingAdmission();
   const routingPerAuthRequestLimitError = getValidationMessage(
     t,
@@ -1701,7 +1705,7 @@ export function VisualConfigEditor({
     [handleAuthModelExclusionsChange, values.authModelExclusions]
   );
   const getAuthModelExclusionError = useCallback(
-    (clientId: string, field: 'models' | 'priorities' | 'match') =>
+    (clientId: string, field: 'models' | 'priorities' | 'match' | 'disableImageGenerationPriorities') =>
       getValidationMessage(t, validationErrors?.[`authModelExclusions.${clientId}.${field}`]),
     [t, validationErrors]
   );
@@ -3458,6 +3462,14 @@ export function VisualConfigEditor({
                           const matchError = getAuthModelExclusionError(rule.clientId, 'match');
                           const modelTags = normalizeAuthModelExclusionModels(rule.models);
                           const allModelMode = isAuthModelExclusionAllMode(modelTags);
+                          const matchedPriorities = rule.priorities.length
+                            ? t('auth_image_priority.priority', { priority: rule.priorities.join('、') })
+                            : t('auth_image_priority.all');
+                          const imagePriorities = authImagePriorityScope(rule) === 'selected'
+                            ? rule.disableImageGenerationPriorities?.length
+                              ? t('auth_image_priority.priority', { priority: rule.disableImageGenerationPriorities.join('、') })
+                              : t('auth_image_priority.empty')
+                            : matchedPriorities;
 
                           return (
                             <ConfigTableRow key={rule.clientId}
@@ -3474,7 +3486,9 @@ export function VisualConfigEditor({
                                   ]} />,
                                   <div><ConfigSummary entries={[
                                     ['models', modelTags.join(', ')],
-                                  ]} />{rule.disableImageGeneration && <strong>{t('config_management.visual.sections.auth.auth_model_exclusions_disable_image_generation')}</strong>}</div>,
+                                  ]} />
+                                  {modelTags.length > 0 && <div>{t('auth_image_priority.models_summary', { priorities: matchedPriorities })}</div>}
+                                  {rule.disableImageGeneration && <strong>{t('auth_image_priority.image_summary', { priorities: imagePriorities })}</strong>}</div>,
                                 ]}
                                 actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}
                                   className={styles.destructiveAction} onClick={() => removeAuthModelExclusion(rule.clientId)}
@@ -3485,7 +3499,9 @@ export function VisualConfigEditor({
                                   'config_management.visual.sections.auth.auth_model_exclusions_disable_image_generation'
                                 )}
                                 description={t(
-                                  'config_management.visual.sections.auth.auth_model_exclusions_disable_image_generation_desc'
+                                  imagePrioritySupported
+                                    ? 'auth_image_priority.description'
+                                    : 'config_management.visual.sections.auth.auth_model_exclusions_disable_image_generation_desc'
                                 )}
                                 checked={rule.disableImageGeneration}
                                 disabled={disabled}
@@ -3495,13 +3511,26 @@ export function VisualConfigEditor({
                                   })
                                 }
                               />
+                              {rule.disableImageGeneration && imagePrioritySupported && (
+                                <AuthImagePriorityFields
+                                  rule={rule}
+                                  disabled={disabled}
+                                  error={getAuthModelExclusionError(rule.clientId, 'disableImageGenerationPriorities')}
+                                  onChange={patch => updateAuthModelExclusion(rule.clientId, patch)}
+                                />
+                              )}
+                              {rule.disableImageGeneration && !imagePrioritySupported && authImagePriorityScope(rule) === 'selected' && (
+                                <div className="error-box" role="alert">{t('auth_image_priority.upgrade')}</div>
+                              )}
                               <FieldShell
                                 label={t(
                                   'config_management.visual.sections.auth.auth_model_exclusions_models'
                                 )}
                                 hint={t(
                                   rule.disableImageGeneration
-                                    ? 'config_management.visual.sections.auth.auth_model_exclusions_models_hint_disable_image'
+                                    ? imagePrioritySupported
+                                      ? 'auth_image_priority.models_hint'
+                                      : 'config_management.visual.sections.auth.auth_model_exclusions_models_hint_disable_image'
                                     : 'config_management.visual.sections.auth.auth_model_exclusions_models_hint'
                                 )}
                                 error={modelsError}

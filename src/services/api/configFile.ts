@@ -10,6 +10,7 @@ import { readTLSTrustAnchors, supportsTLSTrustAnchors, TLS_TRUST_ANCHORS_KEY } f
 import { requireRoutingCredentialSupport } from './routingCredentials';
 import { parseDocument } from 'yaml';
 import i18n from '@/i18n';
+import { AUTH_IMAGE_PRIORITY_CAPABILITY } from '@/utils/authModelExclusions';
 
 export const configFileApi = {
   async fetchConfigYaml(connection?: ApiClientConnectionSnapshot, signal?: AbortSignal): Promise<string> {
@@ -28,6 +29,24 @@ export const configFileApi = {
     signal?: AbortSignal;
   } = {}): Promise<void> {
     const root = parseDocument(content).toJS();
+    const imageScopeRules = parseDocument(content, { merge: true }).toJS()?.['auth-model-exclusions'];
+    const needsImagePriority = Array.isArray(imageScopeRules) && imageScopeRules.some(
+      rule => rule && Array.isArray(rule['disable-image-generation-priorities']) &&
+        rule['disable-image-generation-priorities'].length > 0
+    );
+    const imagePriorityConnection = needsImagePriority ? options.connection ?? apiClient.captureConnection() : undefined;
+    if (imagePriorityConnection) {
+      let supported = false;
+      try {
+        const capabilities = await apiClient.getAtConnection<Record<string, unknown>>(
+          imagePriorityConnection, '/auth-model-exclusions', { signal: options.signal }
+        );
+        supported = capabilities[AUTH_IMAGE_PRIORITY_CAPABILITY] === true;
+      } catch (error) {
+        if (![404, 405, 501].includes((error as { status?: number }).status ?? 0)) throw error;
+      }
+      if (!supported) throw new Error(i18n.t('auth_image_priority.upgrade'));
+    }
     const tlsValue = root?.['chatgpt-web']?.[TLS_TRUST_ANCHORS_KEY];
     const previousTLSValue = options.previousContent === undefined ? undefined
       : parseDocument(options.previousContent).toJS()?.['chatgpt-web']?.[TLS_TRUST_ANCHORS_KEY];
@@ -55,7 +74,7 @@ export const configFileApi = {
     const needsRegion = Boolean(
       needsManualRegion || root?.['proxy-ip'] || root?.codex?.['time-context']?.enabled === true
     );
-    const saveConnection = options.connection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
+    const saveConnection = options.connection ?? imagePriorityConnection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
     if (needsRegion) {
       const caps = await apiClient.getAtConnection<{ capabilities?: Record<string, boolean> }>(
         saveConnection!,

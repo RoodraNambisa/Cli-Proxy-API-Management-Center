@@ -15,6 +15,8 @@ import { readResponseModelRewrite, responseModelRewriteEqual, responseModelRewri
 import { useCallback, useMemo, useReducer } from 'react';
 import { apiKeyNamesEqual, normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
 import { writeApiKeyNamesYaml } from '@/utils/apiKeyNamesYaml';
+import { writeAuthModelExclusionsYaml } from '@/utils/authModelExclusionsYaml';
+import { authImagePriorityError, authImagePriorityScope } from '@/utils/authModelExclusions';
 import { readCodexLiveMediaYaml, codexLiveMediaErrors, codexLiveMediaEqual, writeCodexLiveMediaYaml } from '@/utils/codexLiveMedia';
 import { readCodexBooleanPolicy, readCodexRequestCompression } from '@/utils/codexPolicy';
 import { preserveRoutingOverrideNodes } from '@/utils/routingYaml';
@@ -1015,11 +1017,12 @@ function areStringArraysEqual(left: string[], right: string[]): boolean {
 function parseAuthModelExclusions(raw: unknown): AuthModelExclusionVisualEntry[] {
   if (!Array.isArray(raw)) return [];
 
-  return raw.reduce<AuthModelExclusionVisualEntry[]>((result, item) => {
+  return raw.reduce<AuthModelExclusionVisualEntry[]>((result, item, sourceIndex) => {
     const record = asRecord(item);
     if (!record) return result;
     result.push({
       clientId: makeClientId(),
+      sourceIndex,
       providers: normalizeAuthModelExclusionProviders(parseStringList(record.providers)),
       models: normalizeAuthModelExclusionModels(parseStringList(record.models)),
       priorities: parseStringList(record.priorities),
@@ -1029,6 +1032,8 @@ function parseAuthModelExclusions(raw: unknown): AuthModelExclusionVisualEntry[]
       disableImageGeneration: parseBooleanValue(
         record['disable-image-generation'] ?? record.disableImageGeneration
       ),
+      disableImageGenerationScope: parseStringList(record['disable-image-generation-priorities'] ?? record.disableImageGenerationPriorities).length ? 'selected' : 'all',
+      disableImageGenerationPriorities: parseStringList(record['disable-image-generation-priorities'] ?? record.disableImageGenerationPriorities),
     });
     return result;
   }, []);
@@ -1085,6 +1090,9 @@ function serializeAuthModelExclusionsForYaml(
     if (priorities.length > 0) entry.priorities = Array.from(new Set(priorities));
     if (keywordContains.length > 0) entry['keyword-contains'] = keywordContains;
     if (rule.disableImageGeneration) entry['disable-image-generation'] = true;
+    if (authImagePriorityScope(rule) === 'selected') {
+      entry['disable-image-generation-priorities'] = Array.from(new Set((rule.disableImageGenerationPriorities ?? []).map(Number)));
+    }
     result.push(entry);
     return result;
   }, []);
@@ -1103,7 +1111,9 @@ function areAuthModelExclusionsEqual(
       areStringArraysEqual(entry.models, other.models) &&
       areStringArraysEqual(entry.priorities, other.priorities) &&
       areStringArraysEqual(entry.keywordContains, other.keywordContains) &&
-      entry.disableImageGeneration === other.disableImageGeneration
+      entry.disableImageGeneration === other.disableImageGeneration &&
+      authImagePriorityScope(entry) === authImagePriorityScope(other) &&
+      areStringArraysEqual(entry.disableImageGenerationPriorities ?? [], other.disableImageGenerationPriorities ?? [])
     );
   });
 }
@@ -1615,6 +1625,10 @@ export function getVisualConfigValidationErrors(
           'auth_model_exclusion_models_required';
       }
       const prioritiesError = getIntegerStringListError(rule.priorities);
+      const imagePrioritiesError = authImagePriorityError(rule);
+      if (imagePrioritiesError) {
+        result[`authModelExclusions.${rule.clientId}.disableImageGenerationPriorities`] = imagePrioritiesError;
+      }
       if (prioritiesError) {
         result[`authModelExclusions.${rule.clientId}.priorities`] = prioritiesError;
       }
@@ -3838,7 +3852,7 @@ export function useVisualConfig() {
             : DEFAULT_VISUAL_VALUES.nonRetryableErrors.map((rule) => ({ ...rule })),
         oauthRequestScopedErrors,
         authModelExclusions: parseAuthModelExclusions(
-          parsed['auth-model-exclusions'] ?? parsed.authModelExclusions
+          readMergedYamlField(document, ['auth-model-exclusions', 'authModelExclusions'])
         ),
         disabledImageGenerationToolFallback: parseBooleanValue(
           parsed['disabled-image-generation-tool-fallback'] ??
@@ -4508,10 +4522,7 @@ export function useVisualConfig() {
           writeResponseModelRewrite(doc, values.responseModelRewrite);
         }
         if (docHas(doc, ['auth-model-exclusions']) || values.authModelExclusions.length > 0) {
-          doc.setIn(
-            ['auth-model-exclusions'],
-            serializeAuthModelExclusionsForYaml(values.authModelExclusions)
-          );
+          writeAuthModelExclusionsYaml(doc, serializeAuthModelExclusionsForYaml(values.authModelExclusions), values.authModelExclusions.map(rule => rule.sourceIndex));
         }
         if (JSON.stringify(values.oauthRequestScopedErrors) !== JSON.stringify(baselineValues.oauthRequestScopedErrors)) {
           // An explicit empty map also shadows rules inherited through a YAML merge.

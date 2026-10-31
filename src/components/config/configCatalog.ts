@@ -296,7 +296,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-auth-model-exclusions',
     pageId: 'global-credentials',
     labelKey: 'config_management.visual.sections.auth.auth_model_exclusions',
-    yamlKeys: ['auth-model-exclusions'],
+    yamlKeys: ['auth-model-exclusions', 'auth-model-exclusions[].disable-image-generation-priorities'],
   },
   {
     id: 'config-proxy-url',
