@@ -1,3 +1,4 @@
+import type { CodexIdentityOverride } from './codexIdentity';
 import type { QueueSettings } from '@/features/traffic/types';
 /**
  * 配置相关类型定义
@@ -72,6 +73,7 @@ export interface RoutingSubscriptionOverrideConfig {
 }
 
 export interface RoutingPriorityOverrideConfig {
+  codex?: CodexIdentityOverride;
   priority: number;
   strategy?: RoutingStrategy | string;
   maxRetryCredentials?: number | null;
@@ -263,6 +265,8 @@ export interface CodexConfig {
   observeQuota?: boolean;
   orphanDelegationCompatibility?: boolean;
   identityConfuse?: boolean;
+  identityConfuseRequireSessionAffinity?: boolean;
+  identityConfuseRestoreResponse?: boolean;
   spoofSessionIdentity?: boolean;
   turnStatePolicy?: CodexTurnStatePolicy;
   enforceSoftwareIdentity?: boolean;

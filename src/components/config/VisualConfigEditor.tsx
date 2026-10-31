@@ -1,3 +1,4 @@
+import { CodexIdentityEditor, useCodexIdentitySupport } from '@/features/codexIdentity/CodexIdentityEditor';
 import trafficStyles from '@/features/traffic/Traffic.module.scss';
 import { QueueFields } from '@/features/traffic/QueueFields';
 import { useAdmissionSupport } from '@/features/traffic/useTraffic';
@@ -1082,6 +1083,7 @@ export function VisualConfigEditor({
     validationErrors?.routingFillFirstPerAuthRpm
   );
   const admissionSupported = useAdmissionSupport();
+  const codexIdentitySupported = useCodexIdentitySupport();
   const routingAdmission = values.routingAdmission ?? defaultRoutingAdmission();
   const routingPerAuthRequestLimitError = getValidationMessage(
     t,
@@ -4316,6 +4318,7 @@ export function VisualConfigEditor({
                                   <ConfigSummary entries={[['priority', rule.priority]]} />,
                                   <ConfigSummary empty={t('config_management.visual.common.inherit_global')} entries={[
                                     ['strategy', rule.strategy],
+                                    ['Codex', codexIdentitySupported && rule.codex && Object.keys(rule.codex).length ? t('codex_identity.overridden', {count:Object.keys(rule.codex).length}) : ''],
                                     ['max-retry-credentials', rule.maxRetryCredentials],
                                     ['fill-first-range', rule.fillFirstRange],
                                     ['fill-first-per-auth-rpm', rule.fillFirstPerAuthRpm],
@@ -4328,6 +4331,7 @@ export function VisualConfigEditor({
                                   className={styles.destructiveAction} onClick={() => removeRoutingPriorityOverride(rule.clientId)}
                                 >{t('config_management.visual.common.delete')}</Button>}
                               >
+                              {codexIdentitySupported && <CodexIdentityEditor id={`codex-identity-${rule.clientId}`} value={rule.codex} error={getValidationMessage(t,validationErrors?.[`routingPriorityOverrides.${rule.clientId}.codex`])} disabled={disabled} onChange={codex=>updateRoutingPriorityOverride(rule.clientId,{codex})}/>}
                               <div
                                 className={`${styles.priorityOverrideGrid} ${
                                   effectiveStrategy === 'fill-first'
@@ -5446,7 +5450,7 @@ export function VisualConfigEditor({
                 <PageGroup active={activePageId === 'provider-codex'}>
                   <SettingsDisclosure id="config-codex-fingerprint" title={t('config_management.settings_center.subsections.codex_transport')} description={t('config_management.settings_center.subsections.codex_transport_desc')}
                     focusTarget={focusTarget} targetIds={['config-codex-base-url', 'config-codex-headers', 'config-codex-turn-state-policy', 'config-codex-fingerprint-default-mode', 'config-codex-fingerprint-session-identity-pool-size']}
-                    dirty={hasDirtyConfigField(dirtyFields, ['codexBaseUrl', 'codexIdentityConfuse', 'codexSpoofSessionIdentity', 'codexTurnStatePolicy', 'codexFingerprintDefaultMode', 'codexFingerprintSessionIdentityPoolSize', 'codexFingerprintJA3', 'codexFingerprintForceHTTP1', 'codexFingerprintImagesForceHTTP1', 'codexEnforceSoftwareIdentity', 'codexHeaderDefaultsUserAgent', 'codexHeaderDefaultsBetaFeatures', 'codexHeaderDefaultsOriginator'])} errorCount={countErrors(['codexBaseUrl', 'codexFingerprintSessionIdentityPoolSize'])}
+                    dirty={hasDirtyConfigField(dirtyFields, ['codexBaseUrl', 'codexIdentityConfuseRequireSessionAffinity', 'codexIdentityConfuseRestoreResponse', 'codexIdentityConfuse', 'codexSpoofSessionIdentity', 'codexTurnStatePolicy', 'codexFingerprintDefaultMode', 'codexFingerprintSessionIdentityPoolSize', 'codexFingerprintJA3', 'codexFingerprintForceHTTP1', 'codexFingerprintImagesForceHTTP1', 'codexEnforceSoftwareIdentity', 'codexHeaderDefaultsUserAgent', 'codexHeaderDefaultsBetaFeatures', 'codexHeaderDefaultsOriginator'])} errorCount={countErrors(['codexBaseUrl', 'codexFingerprintSessionIdentityPoolSize'])}
                   >
                   <SectionGrid>
                     <Input
@@ -5468,6 +5472,10 @@ export function VisualConfigEditor({
                       disabled={disabled}
                       onChange={(codexIdentityConfuse) => onChange({ codexIdentityConfuse })}
                     />
+                    {codexIdentitySupported && <>
+                      <ToggleRow title={t('codex_identity.identity-confuse-require-session-affinity')} description={t('codex_identity.migration')} checked={values.codexIdentityConfuseRequireSessionAffinity} disabled={disabled} onChange={codexIdentityConfuseRequireSessionAffinity=>onChange({codexIdentityConfuseRequireSessionAffinity})}/>
+                      <ToggleRow title={t('codex_identity.identity-confuse-restore-response')} description={t('codex_identity.restore_hint')} checked={values.codexIdentityConfuseRestoreResponse} disabled={disabled} onChange={codexIdentityConfuseRestoreResponse=>onChange({codexIdentityConfuseRestoreResponse})}/>
+                    </>}
                     <ToggleRow
                       title={t(
                         'config_management.visual.sections.network.codex_spoof_session_identity'

@@ -1,3 +1,4 @@
+import { CodexIdentityPreview } from '@/features/codexIdentity/CodexIdentityPreview';
 import { TrafficSummary } from '@/features/traffic/TrafficSummary';
 import type { TrafficSnapshot } from '@/features/traffic/types';
 import { AuthFileStateStatus } from './AuthFileStateStatus';
@@ -585,6 +586,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   <span>{t('auth_files.codex_identity_mode_label')}</span>
                   <strong>{codexAuthMode.label}</strong>
                 </div>
+                <CodexIdentityPreview authIndex={String(file.auth_index ?? file.authIndex ?? '')}/>
                 {codexFingerprintMode && (
                   <div className={styles.codexAuthModeSummary}>
                     <span>{t('auth_files.codex_fingerprint_mode_label')}</span>

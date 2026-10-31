@@ -1,3 +1,4 @@
+import type { CodexIdentityOverride } from './codexIdentity';
 import type { RoutingAdmission, QueueSettings } from '@/features/traffic/types';
 import type { CodexServiceTierRule } from '@/utils/codexServiceTiers';
 import {timeContextDefaults, type TimeContext} from '@/features/proxyIp/settings';
@@ -103,6 +104,7 @@ export type VisualConfigFieldPath =
 export type VisualConfigValidationErrorCode =
   | 'codex_time_context'
   | 'codex_base_url'
+  | 'codex_identity_user_agent'
   | 'codex_service_tiers'
   | CodexLiveMediaValidationCode
   | 'port_range'
@@ -308,6 +310,7 @@ export interface RoutingSubscriptionOverrideVisualEntry {
 }
 
 export interface RoutingPriorityOverrideVisualEntry {
+  codex?: CodexIdentityOverride;
   queue?: QueueSettings;
   clientId: string;
   priority: string;
@@ -366,6 +369,8 @@ export type VisualConfigValues = {
   proxyUrl: string;
   forceModelPrefix: boolean;
   codexIdentityConfuse: boolean;
+  codexIdentityConfuseRequireSessionAffinity: boolean;
+  codexIdentityConfuseRestoreResponse: boolean;
   codexBaseUrl: string;
   codexAllowClientServiceTier: boolean;
   codexServiceTierRules: CodexServiceTierRule[];
@@ -515,6 +520,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   proxyUrl: '',
   forceModelPrefix: false,
   codexIdentityConfuse: false,
+  codexIdentityConfuseRequireSessionAffinity: true,
+  codexIdentityConfuseRestoreResponse: true,
   codexBaseUrl: '',
   codexAllowClientServiceTier: false,
   codexServiceTierRules: [],

@@ -1,3 +1,4 @@
+import { readCodexIdentityOverride } from '@/types/codexIdentity';
 import { requireRoutingCredentialSupport } from './routingCredentials';
 /**
  * 配置相关 API
@@ -267,7 +268,7 @@ const normalizeRoutingPriorityOverrides = (value: unknown): RoutingPriorityOverr
     )
       ? source['max-retry-credentials']
       : source.maxRetryCredentials;
-    const entry: RoutingPriorityOverrideConfig = { priority };
+    const entry: RoutingPriorityOverrideConfig = { priority, codex:readCodexIdentityOverride(source.codex) };
 
     if (strategyRaw && ROUTING_PRIORITY_OVERRIDE_STRATEGIES.has(strategyRaw)) {
       entry.strategy = strategyRaw;
@@ -421,6 +422,7 @@ const serializeRoutingPriorityOverrides = (
 ): Array<Record<string, unknown>> =>
   overrides.map((override) => {
     const entry: Record<string, unknown> = { priority: override.priority };
+    if(override.codex) entry.codex=override.codex;
     if (override.strategy) entry.strategy = override.strategy;
     if (override.maxRetryCredentials !== undefined) {
       entry['max-retry-credentials'] = override.maxRetryCredentials;

@@ -1,3 +1,4 @@
+import { readCodexIdentityOverride } from '@/types/codexIdentity';
 import { defaultRoutingAdmission, emptyQueue, type QueueSettings } from '@/features/traffic/types';
 import { readCodexServiceTiers, writeCodexServiceTiers, codexServiceTiersEqual, codexServiceTiersError } from '@/utils/codexServiceTiers';
 import { readTLSTrustAnchors } from '@/features/chatgptWeb/tlsTrustAnchors';
@@ -936,6 +937,7 @@ function parseRoutingPriorityOverrides(raw: unknown): RoutingPriorityOverrideVis
       priority:
         record.priority === undefined || record.priority === null ? '' : String(record.priority),
       strategy: normalizeRoutingPriorityOverrideStrategy(record.strategy),
+      codex: readCodexIdentityOverride(record.codex),
       maxRetryCredentials:
         maxRetryCredentialsRaw === undefined || maxRetryCredentialsRaw === null
           ? ''
@@ -980,6 +982,7 @@ function areRoutingPriorityOverridesEqual(
       Boolean(other) &&
       entry.priority === other.priority &&
       entry.strategy === other.strategy &&
+      JSON.stringify(entry.codex) === JSON.stringify(other.codex) &&
       entry.maxRetryCredentials === other.maxRetryCredentials &&
       entry.fillFirstRange === other.fillFirstRange &&
       entry.fillFirstPerAuthRpm === other.fillFirstPerAuthRpm &&
@@ -1157,6 +1160,7 @@ function serializeRoutingPriorityOverridesForYaml(
     if (priority === null) return result;
 
     const entry: Record<string, unknown> = { priority };
+    if (rule.codex && Object.keys(rule.codex).length) entry.codex = rule.codex;
     if (rule.strategy) {
       entry.strategy = rule.strategy;
     }
@@ -1400,6 +1404,11 @@ export function getVisualConfigValidationErrors(
   );
   const routingPriorityOverrideErrors =
     values.routingPriorityOverrides.reduce<VisualConfigValidationErrors>((result, rule) => {
+      if (rule.codex?.['session-identity-pool-size'] !== undefined) {
+        const error=getIntegerRangeError(String(rule.codex['session-identity-pool-size']),1,64,'integer_range_1_64');
+        if(error) result[`routingPriorityOverrides.${rule.clientId}.codex`]=error;
+      }
+      if (rule.codex?.['user-agent'] && /[\r\n\0]/.test(rule.codex['user-agent'])) result[`routingPriorityOverrides.${rule.clientId}.codex`]='codex_identity_user_agent';
       const priorityError = getIntegerError(rule.priority);
       const priority = parseIntegerString(rule.priority);
       if (priorityError) {
@@ -2440,6 +2449,16 @@ function getNextDirtyFields(
     updateDirty(
       'codexIdentityConfuse',
       nextValues.codexIdentityConfuse === baselineValues.codexIdentityConfuse
+    );
+  }  if (Object.prototype.hasOwnProperty.call(patch, 'codexIdentityConfuseRequireSessionAffinity')) {
+    updateDirty(
+      'codexIdentityConfuseRequireSessionAffinity',
+      nextValues.codexIdentityConfuseRequireSessionAffinity === baselineValues.codexIdentityConfuseRequireSessionAffinity
+    );
+  }  if (Object.prototype.hasOwnProperty.call(patch, 'codexIdentityConfuseRestoreResponse')) {
+    updateDirty(
+      'codexIdentityConfuseRestoreResponse',
+      nextValues.codexIdentityConfuseRestoreResponse === baselineValues.codexIdentityConfuseRestoreResponse
     );
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'codexServiceTierRules')) {
@@ -3575,6 +3594,8 @@ export function useVisualConfig() {
         proxyUrl: typeof parsed['proxy-url'] === 'string' ? parsed['proxy-url'] : '',
         forceModelPrefix: Boolean(parsed['force-model-prefix']),
         codexIdentityConfuse: Boolean(codex?.['identity-confuse'] ?? codex?.identityConfuse),
+        codexIdentityConfuseRequireSessionAffinity: codex?.['identity-confuse-require-session-affinity'] !== false,
+        codexIdentityConfuseRestoreResponse: codex?.['identity-confuse-restore-response'] !== false,
         codexBaseUrl,
         codexAllowClientServiceTier,
         codexServiceTierRules: readCodexServiceTiers(codex?.['service-tier-rules']),
@@ -4199,6 +4220,8 @@ export function useVisualConfig() {
           mediaChanged ||
           quotaDisableChanged || stateChanged || guardChanged ||
           values.codexIdentityConfuse ||
+          values.codexIdentityConfuseRequireSessionAffinity !== baselineValues.codexIdentityConfuseRequireSessionAffinity ||
+          values.codexIdentityConfuseRestoreResponse !== baselineValues.codexIdentityConfuseRestoreResponse ||
           values.codexPassthroughPromptCacheKey ||
           values.codexStreamBootstrapBuffering ||
           values.codexEstimateClaudeInputTokens ||
@@ -4243,6 +4266,9 @@ export function useVisualConfig() {
           if (quotaDisableChanged) writeCodexQuotaAutoDisable(doc, values.codexQuotaAutoDisable);
           if (mediaChanged) writeCodexLiveMediaYaml(doc, values.codexLiveMediaRelay);
           doc.setIn(['codex', 'identity-confuse'], values.codexIdentityConfuse);
+          if (values.codexIdentityConfuseRequireSessionAffinity !== baselineValues.codexIdentityConfuseRequireSessionAffinity) doc.setIn(['codex','identity-confuse-require-session-affinity'],values.codexIdentityConfuseRequireSessionAffinity);
+          if (values.codexIdentityConfuseRestoreResponse !== baselineValues.codexIdentityConfuseRestoreResponse) doc.setIn(['codex','identity-confuse-restore-response'],values.codexIdentityConfuseRestoreResponse);
+
           doc.setIn(['codex', 'passthrough-prompt-cache-key'], values.codexPassthroughPromptCacheKey);
           doc.deleteIn(['codex', 'passthroughPromptCacheKey']);
           doc.setIn(['codex', 'stream-bootstrap-buffering'], values.codexStreamBootstrapBuffering);

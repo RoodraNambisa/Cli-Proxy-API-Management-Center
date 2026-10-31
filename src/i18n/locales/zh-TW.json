@@ -2809,7 +2809,7 @@
           "codex_upstream_request_compression_desc": "預設關閉。對傳送至官方 Codex OAuth 介面的 HTTP 請求啟用 zstd，包含上下文壓縮請求；僅在請求至少 1 KiB 且壓縮後更小時使用。WebSocket、API Key 和非官方上游不使用。接收用戶端 zstd 請求時一律自動解碼。",
           "codex_passthrough_prompt_cache_key": "透傳使用者快取鍵與 Session ID",
           "codex_passthrough_prompt_cache_key_desc": "預設關閉。開啟後，在身份混淆、會話偽裝與指紋收斂之後，最終透傳明確提供的 prompt_cache_key 與 Session ID；缺少 Session ID 時以快取鍵補齊。正常 UUID 與合法的非 UUID 字串原樣保留。Session ID（含快取鍵補齊的值）若含首尾空白或非法請求標頭字元，本地回傳 HTTP 500 / invalid_prompt_cache_key，不存取上游、不輪換或冷卻憑證。已有合法獨立 Session ID 時，快取鍵仍保留原值。其他身份與隔離規則持續生效。熱更新從下個請求或 WebSocket 回合生效；會話身份變更時須重新連線並具備完整重放內容。",
-          "codex_identity_confuse_desc": "按帳號穩定混淆 Codex session、window 和 turn 身份，上游返回後再恢復原始 ID",
+          "codex_identity_confuse_desc": "按憑證穩定混淆協定中的裝置、工作階段、執行緒和回合身分。回應還原與黏性條件可個別設定。",
           "codex_spoof_session_identity": "偽裝 Codex 會話身份",
           "codex_spoof_session_identity_desc": "為 Codex OAuth 和 Agent Identity 請求補齊缺失的 Session、Thread、Window 與 Turn 身份；用戶端明確提供的值保持不變。",
           "codex_turn_state_policy": "Codex 回合狀態處理策略",
@@ -3164,7 +3164,8 @@
         "codex_state_override": "请检查数值范围、代理占位符和策略；提前续取时间必须小于有效期。",
         "codex_response_guard": "規則設定有誤，请檢查匹配條件、重複的模型覆盖和欄位值。",
         "codex_auto_cookie_conflict": "與已啟用的 Cookie-only 託管衝突。請關閉對應規則或自動補全後再儲存。",
-        "codex_time_context": "请填写有效的 IANA 时区。"
+        "codex_time_context": "请填写有效的 IANA 时区。",
+        "codex_identity_user_agent": "User-Agent 不可包含控制字元。"
       },
       "common": {
         "summary_providers": "提供者",
@@ -5845,5 +5846,52 @@
     "source_key": "此 Key",
     "waiting_credentials": "等待凭证位置",
     "source_fill_first": "填充優先"
+  },
+  "codex_identity": {
+    "title": "Codex 身分與工作階段",
+    "description": "覆寫此優先級憑證的身分處理、用戶端宣告和工作階段策略。",
+    "inherit": "繼承現有設定",
+    "overridden": "已覆寫 {{count}} 項",
+    "priority_hint": "按實際選中憑證的優先級生效，未填寫的項目繼續繼承。",
+    "reset": "恢復全部繼承",
+    "on": "開啟",
+    "off": "關閉",
+    "identity-confuse": "身分混淆",
+    "identity-confuse-require-session-affinity": "混淆要求開啟工作階段黏性",
+    "identity-confuse-restore-response": "還原回應中的原始身分",
+    "spoof-session-identity": "補齊缺失工作階段身分",
+    "enforce-software-identity": "規範化軟體身分",
+    "passthrough-prompt-cache-key": "透傳明確快取鍵和 Session",
+    "fingerprint-mode": "執行階段指紋收斂",
+    "session-identity-pool-size": "身分池大小（1–64）",
+    "user-agent": "User-Agent",
+    "turn-state-policy": "Turn-State 處理",
+    "ua_hint": "開啟軟體身分規範化時，Originator 和 Version 根據最終 User-Agent 同步產生。",
+    "migration": "混淆預設要求工作階段黏性；僅使用 fill-first 不會啟用混淆。需要獨立使用時可關閉此條件。",
+    "restore_hint": "關閉後傳回上游身分，並在本程序內限量識別回傳值。快取到期或重新啟動後，增量上下文可能需要完整重傳。",
+    "preview": "查看有效身分策略",
+    "priority": "實際優先級 {{priority}}",
+    "version": "設定版本：{{version}}",
+    "protected": "明確透傳保護欄位：{{fields}}",
+    "reason": {
+      "active": "混淆已生效",
+      "disabled": "混淆未開啟",
+      "session_affinity_required": "混淆未生效：需要工作階段黏性",
+      "api_key_route": "此 API Key 路由不套用 OAuth 身分處理"
+    },
+    "source": {
+      "global": "來源：全域",
+      "priority": "來源：優先級覆寫",
+      "credential": "來源：憑證",
+      "default": "來源：預設",
+      "derived": "來源：計算結果",
+      "route": "來源：路由適用範圍"
+    },
+    "turn": {
+      "guard-cross-account": "阻止跨帳號重用",
+      "same-account-only": "僅同帳號傳遞",
+      "passthrough": "透傳",
+      "strip": "移除"
+    }
   }
 }

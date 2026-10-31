@@ -997,6 +997,8 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       observeQuota: readCodexBooleanPolicy(codex, 'observe-quota', 'observeQuota'),
       orphanDelegationCompatibility: readCodexBooleanPolicy(codex, 'orphan-delegation-compatibility', 'orphanDelegationCompatibility'),
       identityConfuse: normalizeBoolean(codex['identity-confuse'] ?? codex.identityConfuse),
+      identityConfuseRequireSessionAffinity: codex['identity-confuse-require-session-affinity'] !== false,
+      identityConfuseRestoreResponse: codex['identity-confuse-restore-response'] !== false,
       spoofSessionIdentity: normalizeBoolean(
         codex['spoof-session-identity'] ?? codex.spoofSessionIdentity
       ),

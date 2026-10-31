@@ -131,6 +131,8 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'codexLiveEnabled',
       'codexLiveMediaRelay',
       'codexIdentityConfuse',
+      'codexIdentityConfuseRequireSessionAffinity',
+      'codexIdentityConfuseRestoreResponse',
       'codexPassthroughPromptCacheKey',
       'codexStreamBootstrapBuffering',
       'codexEstimateClaudeInputTokens',
@@ -377,6 +379,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.visual.sections.network.priority_overrides',
     yamlKeys: [
       'routing.priority-overrides',
+      'routing.priority-overrides[].codex',
       'routing.priority-overrides[].priority',
       'routing.priority-overrides[].strategy',
       'routing.priority-overrides[].max-retry-credentials',
@@ -619,7 +622,9 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     pageId: 'provider-codex',
     labelKey: 'config_management.visual.sections.network.codex_fingerprint_ja3',
     yamlKeys: [
-      'codex-identity-confuse',
+      'codex.identity-confuse',
+      'codex.identity-confuse-require-session-affinity',
+      'codex.identity-confuse-restore-response',
       'codex.spoof-session-identity',
       'codex.turn-state-policy',
       'codex-fingerprint',

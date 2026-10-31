@@ -1,3 +1,4 @@
+import { codexIdentityFields } from '@/types/codexIdentity';
 import { isAlias, isMap, isNode, isSeq, type Document, type YAMLMap } from 'yaml';
 import type { RoutingPriorityOverrideVisualEntry } from '@/types/visualConfig';
 
@@ -128,6 +129,19 @@ export function preserveRoutingOverrideNodes(
       values,
       original ? previousValues : undefined
     );
+    const oldCodex = original?.get('codex', true);
+    if (isMap(oldCodex) || values.codex) {
+      const node = (isMap(oldCodex) ? oldCodex.clone() : doc.createNode({})) as YAMLMap;
+      if (isMap(node)) {
+        const draft = (values.codex ?? {}) as Record<string, unknown>;
+        for (const key of codexIdentityFields) {
+          if (key in draft) node.set(key, draft[key]);
+          else node.delete(key);
+        }
+        if (node.items.length) map.set('codex', node);
+        else map.delete('codex');
+      }
+    }
     if (rule.subscriptionOverrides.length > 0) {
       const oldSubscriptions = sourceMaps(
         doc,
