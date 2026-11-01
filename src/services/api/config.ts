@@ -12,6 +12,7 @@ import type {
   RoutingPriorityOverrideConfig,
 } from '@/types';
 import { normalizeConfigResponse } from './transformers';
+import { parseDocument } from 'yaml';
 
 type NumericConfigKey = 'request-retry' | 'max-retry-credentials' | 'max-retry-interval';
 
@@ -464,12 +465,37 @@ const serializeRoutingPriorityOverrides = (
   });
 
 export const configApi = {
-  /**
-   * 获取配置（会进行字段规范化）
-   */
+  // Resolve display preferences from the same server as the configuration snapshot.
   async getConfig(): Promise<Config> {
-    const raw = await apiClient.get('/config');
-    return normalizeConfigResponse(raw);
+    const connection = apiClient.captureConnection();
+    const raw = await apiClient.getAtConnection(connection, '/config');
+    const config = normalizeConfigResponse(raw);
+    if (!Object.prototype.hasOwnProperty.call(config.raw ?? {}, 'management-ui')) {
+      try {
+        const yaml = await apiClient.getAtConnection<string>(connection, '/config.yaml', {
+          responseType: 'text', headers: { Accept: 'application/yaml' },
+        });
+        if (typeof yaml !== 'string') throw new Error('Invalid configuration response');
+        const document = parseDocument(yaml, { merge: true });
+        if (document.errors.length) throw document.errors[0];
+        const parsed = document.toJS() ?? {};
+        if (typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Invalid configuration mapping');
+        const preferences = parsed['management-ui'] ?? {};
+        if (typeof preferences !== 'object' || Array.isArray(preferences)) throw new Error('Invalid display preferences');
+        for (const key of ['api-key-traffic', 'credential-traffic']) {
+          if (preferences[key] !== undefined && typeof preferences[key] !== 'boolean') {
+            throw new Error('Invalid display preference');
+          }
+        }
+        config.raw = { ...config.raw, 'management-ui': {
+          'api-key-traffic': preferences['api-key-traffic'] !== false,
+          'credential-traffic': preferences['credential-traffic'] !== false,
+        } };
+      } catch {
+        config.managementUIReadFailed = true;
+      }
+    }
+    return config;
   },
 
   /**

@@ -1,4 +1,5 @@
 import { useTrafficBatch } from '@/features/traffic/useTraffic';
+import { hasCredentialConcurrencySummary } from '@/features/traffic/credentialSummary';
 import {
   useCallback,
   type CSSProperties,
@@ -1091,7 +1092,14 @@ export function AuthFilesPage() {
     [pageItems]
   );
   const currentPageAuthIndexesKey = currentPageAuthIndexes.join(',');
-  const traffic = useTrafficBatch('auth-files', currentPageAuthIndexes, isCurrentLayer);
+  const concurrencyFallbackIds = useMemo(() => Array.from(new Set(
+    pageItems.filter(file => !hasCredentialConcurrencySummary(file))
+      .map(file => normalizeAuthIndex(file.auth_index ?? file.authIndex))
+      .filter((value): value is string => Boolean(value))
+  )), [pageItems]);
+  const traffic = useTrafficBatch('auth-files', currentPageAuthIndexes, isCurrentLayer, {
+    ids: concurrencyFallbackIds, revision: pageItems,
+  });
 
   useEffect(() => {
     pageAuthIndexesRef.current = currentPageAuthIndexes;

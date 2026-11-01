@@ -5887,8 +5887,7 @@
     "waiting_credentials": "Waiting for a credential slot",
     "source_fill_first": "Fill-first",
     "visibility_title": "Live traffic display",
-    "visibility_server": "Save to share these settings across browsers connected to this server. Reopen the page or refresh configuration to sync. Both panels are visible by default.",
-    "visibility_unsupported": "This backend cannot save display settings. Upgrade the backend to configure them."
+    "visibility_server": "Save to share these settings across browsers connected to this server. Reopen the page or refresh configuration to sync. Both panels are visible by default."
   },
   "codex_identity": {
     "preview_short": "View policy",

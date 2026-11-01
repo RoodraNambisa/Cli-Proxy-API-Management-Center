@@ -272,13 +272,15 @@ describe('configuration settings center', () => {
     expect(localStorage.getItem(FRONTEND_FEATURE_VISIBILITY_STORAGE_KEY) ?? '').not.toContain('apiKeyTraffic');
   });
 
-  test('keeps server display controls disabled on an older backend', async () => {
+  test('allows YAML display preferences without a backend capability flag', async () => {
     vi.spyOn(apiClient, 'getAtConnection').mockResolvedValue({ features: { admission: true } });
     const onChange = vi.fn();
     renderEditor('/config?section=global-interface', { onChange });
     await act(async () => { await Promise.resolve(); });
-    expect((screen.getByRole('checkbox', { name: 'traffic.show_keys' }) as HTMLInputElement).disabled).toBe(true);
-    expect(onChange).not.toHaveBeenCalled();
+    const keys = screen.getByRole('checkbox', { name: 'traffic.show_keys' }) as HTMLInputElement;
+    expect(keys.disabled).toBe(false);
+    fireEvent.click(keys);
+    expect(onChange).toHaveBeenCalledWith({ trafficVisibility: { apiKeyTraffic: false, credentialTraffic: true } });
   });
 
   test('finds frontend visibility controls without treating them as backend YAML', () => {

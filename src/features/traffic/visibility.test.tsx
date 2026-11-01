@@ -88,6 +88,64 @@ describe('independent live traffic display preferences', () => {
     unmount();
   });
 
+  it('loads missing summaries once while live panels are hidden and refreshes on a new list snapshot', async () => {
+    setVisibility('credential-traffic', false);
+    const post = vi.spyOn(apiClient, 'postAtConnection').mockResolvedValue({
+      items: [{ id: 'old', concurrency_limit: 3, concurrency_source: 'priority' }],
+    });
+    const { result, rerender, unmount } = renderHook(
+      ({ revision }) => useTrafficBatch('auth-files', ['new', 'old'], true, { ids: ['old'], revision }),
+      { initialProps: { revision: 1 } }
+    );
+    await act(async () => { await Promise.resolve(); });
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post.mock.calls[0][2]).toEqual({ ids: ['old'] });
+    expect(result.current.visible).toBe(false);
+    expect(result.current.items.old.concurrency_limit).toBe(3);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60000);
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(post).toHaveBeenCalledTimes(1);
+    rerender({ revision: 2 });
+    await act(async () => { await Promise.resolve(); });
+    expect(post).toHaveBeenCalledTimes(2);
+    await act(async () => setVisibility('credential-traffic', true));
+    expect(post.mock.calls[post.mock.calls.length - 1]?.[2]).toEqual({ ids: ['new', 'old'] });
+    expect(result.current.visible).toBe(true);
+    await act(async () => vi.advanceTimersByTimeAsync(3000));
+    expect(post).toHaveBeenCalledTimes(4);
+    unmount();
+  });
+
+  it('cancels a pending summary batch after a page change and ignores its late response', async () => {
+    setVisibility('credential-traffic', false);
+    let finish!: (value: unknown) => void;
+    const post = vi.spyOn(apiClient, 'postAtConnection').mockImplementationOnce(
+      () => new Promise(resolve => { finish = resolve; })
+    ).mockResolvedValue({ items: [{ id: 'second', concurrency_limit: 4 }] });
+    const { result, rerender, unmount } = renderHook(
+      ({ id }) => useTrafficBatch('auth-files', [id], true, { ids: [id] }),
+      { initialProps: { id: 'first' } }
+    );
+    rerender({ id: 'second' });
+    expect(post.mock.calls[0][3]?.signal?.aborted).toBe(true);
+    await act(async () => finish({ items: [{ id: 'first', concurrency_limit: 99 }] }));
+    expect(result.current.items.first).toBeUndefined();
+    expect(result.current.items.second.concurrency_limit).toBe(4);
+    unmount();
+  });
+
+  it('does not enable live polling when the display settings could not be read', async () => {
+    useConfigStore.setState({ config: { raw: {}, managementUIReadFailed: true } });
+    const post = vi.spyOn(apiClient, 'postAtConnection').mockResolvedValue({ items: [] });
+    const { result, unmount } = renderHook(() => useTrafficBatch('api-keys', ['one']));
+    await act(async () => vi.advanceTimersByTimeAsync(10000));
+    expect(post).not.toHaveBeenCalled();
+    expect(result.current.stale).toBe(true);
+    unmount();
+  });
+
   it('persists independent switches in server YAML and preserves unknown fields and comments', () => {
     const yaml = '# shared UI\nmanagement-ui:\n  future: preserved\n  api-key-traffic: false\nport: 8317\n';
     const { result } = renderHook(() => useVisualConfig());

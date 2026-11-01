@@ -9,7 +9,8 @@ export function useTraffic<T>(
   path: string,
   body?: { ids: string[] },
   enabled = true,
-  once = false
+  once = false,
+  revision?: unknown
 ) {
   const connectionKey = useAuthStore(
     (s) => `${s.apiBase}:${s.managementAccessPath}:${s.connectionGeneration ?? 0}`
@@ -28,9 +29,10 @@ export function useTraffic<T>(
     let timer: ReturnType<typeof setTimeout> | undefined;
     let controller: AbortController | undefined;
     let unsupported = false;
+    let finished = false;
     const connection = apiClient.captureConnection();
     const poll = async () => {
-      if (stopped || document.hidden || unsupported) return;
+      if (stopped || document.hidden || unsupported || (once && finished)) return;
       controller?.abort();
       const request = new AbortController();
       controller = request;
@@ -40,6 +42,7 @@ export function useTraffic<T>(
           const ids = (JSON.parse(bodyKey) as { ids: string[] }).ids;
           const items: TrafficSnapshot[] = [];
           for (let offset = 0; offset < ids.length; offset += 200) {
+            if (stopped || request.signal.aborted) return;
             const response = await apiClient.postAtConnection<{ items: TrafficSnapshot[] }>(
               connection,
               path,
@@ -77,6 +80,7 @@ export function useTraffic<T>(
           unsupported,
         }));
       } finally {
+        if (!request.signal.aborted) finished = true;
         if (!once && !stopped && !document.hidden && !unsupported && !request.signal.aborted)
           timer = setTimeout(poll, 3000);
       }
@@ -94,22 +98,33 @@ export function useTraffic<T>(
       controller?.abort();
       document.removeEventListener('visibilitychange', visibility);
     };
-  }, [key, path, bodyKey, enabled, once]);
+  }, [key, path, bodyKey, enabled, once, revision]);
   return state.key === key ? state : { key, data: undefined, stale: false, unsupported: false };
 }
-export function useTrafficBatch(kind: 'auth-files' | 'api-keys', ids: string[], enabled = true) {
+export function useTrafficBatch(
+  kind: 'auth-files' | 'api-keys',
+  ids: string[],
+  enabled = true,
+  fallback?: { ids: string[]; revision?: unknown }
+) {
   const visible = useConfigStore(state =>
     state.config !== null && readTrafficVisibility(state.config.raw?.['management-ui'])[
       kind === 'auth-files' ? 'credentialTraffic' : 'apiKeyTraffic'
     ]
   );
+  const preferencesFailed = useConfigStore(state => state.config?.managementUIReadFailed === true);
+  const requestedIds = visible && !preferencesFailed ? ids : (fallback?.ids ?? []);
+  const once = !visible || preferencesFailed;
   const result = useTraffic<{ items: TrafficSnapshot[] }>(
     `/${kind}/traffic`,
-    { ids },
-    enabled && visible && ids.length > 0
+    { ids: requestedIds },
+    enabled && requestedIds.length > 0,
+    once,
+    once ? fallback?.revision : undefined
   );
   return {
     ...result,
+    stale: result.stale || preferencesFailed,
     visible,
     items: Object.fromEntries((result.data?.items ?? []).map((item) => [item.id, item])),
   };

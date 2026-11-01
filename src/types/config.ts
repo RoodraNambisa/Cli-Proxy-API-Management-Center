@@ -315,6 +315,7 @@ export interface CodexCustomModelConfig {
 }
 
 export interface Config {
+  managementUIReadFailed?: boolean;
   runtimeRole?: 'proxy' | 'sentinel-solver';
   sentinelSolver?: import('./sentinelCompute').SentinelSolverConfig;
   xai?: Record<string, unknown>;

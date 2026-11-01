@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthFileProxyStatus } from '@/features/authFiles/components/AuthFileProxyStatus';
+import type { TrafficSnapshot } from '@/features/traffic/types';
 import { authFilesApi } from '@/services/api/authFiles';
 import type { AuthFileItem, AuthFileProxyRoute } from '@/types/authFile';
 
@@ -48,6 +49,20 @@ describe('credential proxy and effective request limits', () => {
   it('does not invent a concurrency limit when an old backend omits it', () => {
     render(<AuthFileProxyStatus file={file} disabled={false} />);
     expect(screen.queryByText('credential_proxy.concurrency')).toBeNull();
+  });
+  it('fills a missing concurrency summary from traffic and keeps list policy fields authoritative', () => {
+    const traffic = { concurrency_limit: 3, concurrency_source: 'priority' } as TrafficSnapshot;
+    const view = render(<AuthFileProxyStatus file={file} disabled={false} traffic={traffic} trafficStale />);
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText('credential_proxy.limit_sources.priority')).toBeTruthy();
+    expect(screen.getByText('traffic.stale')).toBeTruthy();
+    view.rerender(<AuthFileProxyStatus file={{
+      ...file, request_limit: { ...file.request_limit!, concurrency_limit: 0, concurrency_source: 'credential' },
+    }} disabled={false} traffic={traffic} trafficStale />);
+    expect(screen.getByText('traffic.unlimited')).toBeTruthy();
+    expect(screen.getByText('credential_proxy.limit_sources.credential')).toBeTruthy();
+    expect(screen.queryByText('3')).toBeNull();
+    expect(screen.queryByText('traffic.stale')).toBeNull();
   });
   it('displays effective settings without network checks and preserves unknown IP', () => {
     const check = vi.spyOn(authFilesApi, 'checkProxy');

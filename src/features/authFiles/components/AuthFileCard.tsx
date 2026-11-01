@@ -563,7 +563,8 @@ export function AuthFileCard(props: AuthFileCardProps) {
             </div>
           </div>
 
-          <AuthFileProxyStatus file={file} disabled={disableControls || isRetiredGeminiCli} />
+          <AuthFileProxyStatus file={file} disabled={disableControls || isRetiredGeminiCli}
+            traffic={props.traffic} trafficStale={props.trafficStale} />
           <AuthFileStateStatus file={file} disabled={disableControls || isRetiredGeminiCli} />
           <AuthFileResponseModelStatus
             file={file}

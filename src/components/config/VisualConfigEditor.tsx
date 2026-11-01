@@ -2114,19 +2114,18 @@ export function VisualConfigEditor({
               description={t('traffic.visibility_server')}
             >
               <SectionStack>
-                {admissionOptions?.management_ui !== true && <div className="hint">{t('traffic.visibility_unsupported')}</div>}
                 <ToggleRow
                   title={t('traffic.show_keys')}
                   description={t('traffic.visibility_hint')}
                   checked={trafficVisibility.apiKeyTraffic}
-                  disabled={disabled || admissionOptions?.management_ui !== true}
+                  disabled={disabled}
                   onChange={visible => onChange({ trafficVisibility: { ...trafficVisibility, apiKeyTraffic: visible } })}
                 />
                 <ToggleRow
                   title={t('traffic.show_credentials')}
                   description={t('traffic.visibility_hint')}
                   checked={trafficVisibility.credentialTraffic}
-                  disabled={disabled || admissionOptions?.management_ui !== true}
+                  disabled={disabled}
                   onChange={visible => onChange({ trafficVisibility: { ...trafficVisibility, credentialTraffic: visible } })}
                 />
               </SectionStack>

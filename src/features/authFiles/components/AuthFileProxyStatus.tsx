@@ -7,8 +7,12 @@ import { useAuthStore } from '@/stores';
 import type { AuthFileItem, AuthFileProxyRoute } from '@/types/authFile';
 import { formatDateTime } from '@/utils/format';
 import styles from './AuthFileProxyStatus.module.scss';
+import { credentialConcurrencySummary } from '@/features/traffic/credentialSummary';
+import type { TrafficSnapshot } from '@/features/traffic/types';
 
-export function AuthFileProxyStatus({ file, disabled }: { file: AuthFileItem; disabled: boolean }) {
+export function AuthFileProxyStatus({ file, disabled, traffic, trafficStale }: {
+  file: AuthFileItem; disabled: boolean; traffic?: TrafficSnapshot; trafficStale?: boolean;
+}) {
   const { t } = useTranslation();
   const connectionKey = useAuthStore((state) =>
     JSON.stringify([
@@ -64,21 +68,20 @@ export function AuthFileProxyStatus({ file, disabled }: { file: AuthFileItem; di
     }
   };
 
-  if (!route && !file.request_limit) return null;
+  const concurrency = credentialConcurrencySummary(file, traffic);
+  if (!route && !file.request_limit && !concurrency) return null;
   const limit = file.request_limit;
-  const concurrency = limit?.concurrency_limit;
-  const concurrencyRow = typeof concurrency === 'number' &&
-    Number.isFinite(concurrency) &&
-    concurrency >= 0 && (
+  const concurrencyRow = concurrency && (
       <div className={styles.line} title={t('credential_proxy.concurrency_hint')}>
         <span className={styles.label}>{t('credential_proxy.concurrency')}</span>
-        <strong>{concurrency > 0 ? concurrency : t('traffic.unlimited')}</strong>
-        {limit?.concurrency_source && (
+        <strong>{concurrency.limit > 0 ? concurrency.limit : t('traffic.unlimited')}</strong>
+        {concurrency.source && (
           <span className={styles.source}>
-            {t(`credential_proxy.limit_sources.${limit.concurrency_source}`)}
-            {limit.concurrency_rule ? ` #${limit.concurrency_rule}` : ''}
+            {t(`credential_proxy.limit_sources.${concurrency.source}`)}
+            {concurrency.rule ? ` #${concurrency.rule}` : ''}
           </span>
         )}
+        {concurrency.fromTraffic && trafficStale && <span role="status">{t('traffic.stale')}</span>}
       </div>
     );
   const limitRow = limit && (
