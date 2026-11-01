@@ -3056,7 +3056,6 @@
         "add": "Add API Key",
         "generate": "Generate",
         "empty": "No API keys",
-        "hint": "Each entry represents an API key (consistent with 'API Key Management' page style)",
         "edit_title": "Edit API Key",
         "add_title": "Add API Key",
         "input_label": "API Key",

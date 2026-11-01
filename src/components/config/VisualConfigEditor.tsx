@@ -175,7 +175,7 @@ function getValidationMessage(
 }
 
 function concurrencyOverrideSummary(value: string | undefined, t: ReturnType<typeof useTranslation>['t']) {
-  if (!value?.trim()) return t('traffic.inherit');
+  if (!value?.trim()) return '';
   return Number(value) === 0 ? t('traffic.unlimited') : value;
 }
 
@@ -4386,7 +4386,7 @@ export function VisualConfigEditor({
                                     ['fill-first-per-auth-rpm', rule.fillFirstPerAuthRpm],
                                     ['per-auth-request-limit', rule.perAuthRequestLimit],
                                     ['per-auth-request-window-minutes', rule.perAuthRequestWindowMinutes],
-                                    ['per-auth-concurrency', admissionSupported || rule.perAuthConcurrency?.trim() ? concurrencyOverrideSummary(rule.perAuthConcurrency, t) : ''],
+                                    ['per-auth-concurrency', concurrencyOverrideSummary(rule.perAuthConcurrency, t)],
                                     ['subscription-overrides', rule.subscriptionOverrides.length ? t('config_management.settings_center.rules_summary', { count: rule.subscriptionOverrides.length }) : ''],
                                   ]} />,
                                 ]}
@@ -4630,7 +4630,7 @@ export function VisualConfigEditor({
                                               <ConfigSummary entries={[
                                                 ['per-auth-request-limit', subscriptionRule.perAuthRequestLimit],
                                                 ['per-auth-request-window-minutes', subscriptionRule.perAuthRequestWindowMinutes],
-                                                ['per-auth-concurrency', admissionSupported || subscriptionRule.perAuthConcurrency?.trim() ? concurrencyOverrideSummary(subscriptionRule.perAuthConcurrency, t) : ''],
+                                                ['per-auth-concurrency', concurrencyOverrideSummary(subscriptionRule.perAuthConcurrency, t)],
                                               ]} empty={t('config_management.visual.sections.network.priority_subscription_overrides_inherit_priority')} />,
                                             ]}
                                             actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}
