@@ -31,6 +31,12 @@
     border-color: var(--primary-color);
   }
 
+  :global(input.input),
+  :global(select.input) {
+    height: 40px;
+    padding-block: 0;
+  }
+
   :global(textarea.input) {
     min-height: 120px;
   }
@@ -1265,6 +1271,14 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   align-items: start;
+
+  :global(.form-group > label),
+  .fieldLabel {
+    min-height: 34px;
+    display: flex;
+    align-items: flex-end;
+    line-height: 1.35;
+  }
 }
 
 .codexCustomModelGroups {

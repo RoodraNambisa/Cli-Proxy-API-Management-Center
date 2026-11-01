@@ -19,6 +19,7 @@ import {
   configPageHasDirtyFields,
 } from '@/components/config/configCatalog';
 import { useVisualConfig } from '@/hooks/useVisualConfig';
+import { apiClient } from '@/services/api/client';
 import { chatGptWebApi } from '@/services/api/chatgptWeb';
 import {
   DEFAULT_FRONTEND_FEATURE_VISIBILITY,
@@ -254,6 +255,29 @@ describe('configuration settings center', () => {
       localStorage.getItem(FRONTEND_FEATURE_VISIBILITY_STORAGE_KEY) ?? '{}'
     ) as { state?: { visibility?: { codexAgentIdentityConversion?: boolean } } };
     expect(persisted.state?.visibility?.codexAgentIdentityConversion).toBe(true);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  test('edits independent server traffic settings through the configuration save flow', async () => {
+    vi.spyOn(apiClient, 'getAtConnection').mockResolvedValue({ features: { admission: true, management_ui: true } });
+    const onChange = vi.fn();
+    renderEditor('/config?section=global-interface', { onChange });
+    const keys = screen.getByRole('checkbox', { name: 'traffic.show_keys' }) as HTMLInputElement;
+    const credentials = screen.getByRole('checkbox', { name: 'traffic.show_credentials' }) as HTMLInputElement;
+    await waitFor(() => expect(keys.disabled).toBe(false));
+    expect(keys.checked).toBe(true);
+    expect(credentials.checked).toBe(true);
+    fireEvent.click(keys);
+    expect(onChange).toHaveBeenCalledWith({ trafficVisibility: { apiKeyTraffic: false, credentialTraffic: true } });
+    expect(localStorage.getItem(FRONTEND_FEATURE_VISIBILITY_STORAGE_KEY) ?? '').not.toContain('apiKeyTraffic');
+  });
+
+  test('keeps server display controls disabled on an older backend', async () => {
+    vi.spyOn(apiClient, 'getAtConnection').mockResolvedValue({ features: { admission: true } });
+    const onChange = vi.fn();
+    renderEditor('/config?section=global-interface', { onChange });
+    await act(async () => { await Promise.resolve(); });
+    expect((screen.getByRole('checkbox', { name: 'traffic.show_keys' }) as HTMLInputElement).disabled).toBe(true);
     expect(onChange).not.toHaveBeenCalled();
   });
 

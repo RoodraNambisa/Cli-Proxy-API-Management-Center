@@ -4,14 +4,23 @@ import styles from './Traffic.module.scss';
 export function TrafficSummary({
   value,
   stale,
+  unsupported,
   credential = false,
 }: {
   value?: TrafficSnapshot;
   stale?: boolean;
+  unsupported?: boolean;
   credential?: boolean;
 }) {
   const { t } = useTranslation();
-  if (!value) return null;
+  if (!value) {
+    if (!stale && !unsupported) return null;
+    return (
+      <div className={styles.summary} role="status">
+        {t(unsupported ? 'traffic.unsupported' : 'traffic.unavailable')}
+      </div>
+    );
+  }
   return (
     <details className={styles.summary}>
       <summary>

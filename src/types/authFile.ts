@@ -273,6 +273,9 @@ export interface AuthFileItem {
     source: string;
     priority: number;
     rule?: number;
+    concurrency_limit?: number;
+    concurrency_source?: string;
+    concurrency_rule?: number;
   };
   last_error?: AuthErrorSummary;
   last_diagnostic?: AuthErrorDiagnostic;

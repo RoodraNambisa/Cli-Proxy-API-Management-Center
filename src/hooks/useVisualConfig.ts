@@ -1,5 +1,6 @@
 import { readCodexIdentityOverride } from '@/types/codexIdentity';
 import { defaultRoutingAdmission, emptyQueue, type QueueSettings } from '@/features/traffic/types';
+import { readTrafficVisibility } from '@/features/traffic/visibility';
 import { readCodexServiceTiers, writeCodexServiceTiers, codexServiceTiersEqual, codexServiceTiersError } from '@/utils/codexServiceTiers';
 import { readTLSTrustAnchors } from '@/features/chatgptWeb/tlsTrustAnchors';
 import { readTimeContext, validTimeContext } from '@/features/proxyIp/settings';
@@ -3140,6 +3141,10 @@ function getNextDirtyFields(
       JSON.stringify(nextValues.routingAdmission) === JSON.stringify(baselineValues.routingAdmission)
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'trafficVisibility')) {
+    updateDirty('trafficVisibility',
+      JSON.stringify(nextValues.trafficVisibility) === JSON.stringify(baselineValues.trafficVisibility));
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingPerAuthRequestLimit')) {
     updateDirty(
       'routingPerAuthRequestLimit',
@@ -3959,6 +3964,7 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.routingFillFirstPerAuthRpm
         ),
         routingAdmission: { concurrency: Number(routing?.['per-auth-concurrency'] ?? 0), queue: { ...emptyQueue(), ...asRecord(routing?.queue) } as QueueSettings, maxQueuedRequests: Number(asRecord(parsed.admission)?.['max-queued-requests'] ?? 1024), maxQueuedBytes: Number(asRecord(parsed.admission)?.['max-queued-bytes'] ?? 268435456) },
+        trafficVisibility: readTrafficVisibility(parsed['management-ui']),
         routingPerAuthRequestLimit: String(
           routing?.['per-auth-request-limit'] ??
             routing?.perAuthRequestLimit ??
@@ -5046,6 +5052,16 @@ export function useVisualConfig() {
           for (const [key, value] of Object.entries(values.routingAdmission.queue)) doc.setIn(['routing', 'queue', key], value);
           doc.setIn(['admission', 'max-queued-requests'], values.routingAdmission.maxQueuedRequests);
           doc.setIn(['admission', 'max-queued-bytes'], values.routingAdmission.maxQueuedBytes);
+        }
+        if (values.trafficVisibility && JSON.stringify(values.trafficVisibility) !== JSON.stringify(baselineValues.trafficVisibility)) {
+          const previous = baselineValues.trafficVisibility ?? readTrafficVisibility(undefined);
+          ensureMapInDoc(doc, ['management-ui']);
+          if (values.trafficVisibility.apiKeyTraffic !== previous.apiKeyTraffic) {
+            doc.setIn(['management-ui', 'api-key-traffic'], values.trafficVisibility.apiKeyTraffic);
+          }
+          if (values.trafficVisibility.credentialTraffic !== previous.credentialTraffic) {
+            doc.setIn(['management-ui', 'credential-traffic'], values.trafficVisibility.credentialTraffic);
+          }
         }
         const inheritedRouting = asRecord(readMergedYamlField(doc, ['routing']));
         if (

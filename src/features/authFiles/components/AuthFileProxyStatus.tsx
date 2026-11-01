@@ -66,6 +66,21 @@ export function AuthFileProxyStatus({ file, disabled }: { file: AuthFileItem; di
 
   if (!route && !file.request_limit) return null;
   const limit = file.request_limit;
+  const concurrency = limit?.concurrency_limit;
+  const concurrencyRow = typeof concurrency === 'number' &&
+    Number.isFinite(concurrency) &&
+    concurrency >= 0 && (
+      <div className={styles.line} title={t('credential_proxy.concurrency_hint')}>
+        <span className={styles.label}>{t('credential_proxy.concurrency')}</span>
+        <strong>{concurrency > 0 ? concurrency : t('traffic.unlimited')}</strong>
+        {limit?.concurrency_source && (
+          <span className={styles.source}>
+            {t(`credential_proxy.limit_sources.${limit.concurrency_source}`)}
+            {limit.concurrency_rule ? ` #${limit.concurrency_rule}` : ''}
+          </span>
+        )}
+      </div>
+    );
   const limitRow = limit && (
     <div className={styles.line} title={t('credential_proxy.limit_hint')}>
       <span className={styles.label}>{t('credential_proxy.limit')}</span>
@@ -80,7 +95,13 @@ export function AuthFileProxyStatus({ file, disabled }: { file: AuthFileItem; di
       </span>
     </div>
   );
-  if (!route) return <div className={styles.root}>{limitRow}</div>;
+  if (!route)
+    return (
+      <div className={styles.root}>
+        {limitRow}
+        {concurrencyRow}
+      </div>
+    );
   const source = [
     'auth',
     'pool',
@@ -154,6 +175,7 @@ export function AuthFileProxyStatus({ file, disabled }: { file: AuthFileItem; di
         </span>
       )}
       {limitRow}
+      {concurrencyRow}
       {current?.error && (
         <span className={styles.failed} role="alert">
           {current.error}

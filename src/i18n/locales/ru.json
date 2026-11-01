@@ -2264,7 +2264,7 @@
         },
         "global_interface": {
           "title": "Интерфейс и функции",
-          "description": "Управление видимостью функций панели в этом браузере."
+          "description": "Настройка панелей текущего трафика и дополнительных инструментов управления."
         },
         "global_credentials": {
           "title": "Учётные данные и ключи",
@@ -3206,7 +3206,8 @@
         "summary_message_contains": "Сообщение",
         "summary_per_auth_request_limit": "Лимит запросов",
         "summary_per_auth_request_window_minutes": "Окно, мин",
-        "summary_max_retry_credentials": "Учётные данные",
+        "summary_max_retry_credentials": "Учётных данных за раунд",
+        "summary_per_auth_concurrency": "Лимит параллельности",
         "summary_plan_types": "Тарифы",
         "summary_match": "Текст",
         "summary_regex": "Regex",
@@ -5045,6 +5046,8 @@
     "limit_bypass_summary": "Лимиты запросов: обходить локальные лимиты без расхода счётчиков"
   },
   "credential_proxy": {
+    "concurrency": "Лимит параллельных запросов",
+    "concurrency_hint": "Действующий лимит одновременных запросов для этих учётных данных, независимо от лимита частоты запросов.",
     "invalid": "Некорректные настройки прокси",
     "label": "Прокси",
     "ip": "Внешний IP",
@@ -5826,6 +5829,11 @@
     }
   },
   "traffic": {
+    "show_keys": "Показывать текущую параллельность и RPM ключей API",
+    "show_credentials": "Показывать текущую параллельность и RPM учётных данных",
+    "visibility_hint": "При отключении панель скрывается, а опрос прекращается. Настроенные ограничения продолжают действовать.",
+    "unavailable": "Не удалось загрузить текущую параллельность и RPM.",
+    "unsupported": "Сервер не поддерживает текущую параллельность и RPM. Обновите сервер.",
     "live": "Live traffic",
     "concurrency": "Concurrency",
     "current_concurrency": "Current concurrency",
@@ -5875,9 +5883,13 @@
     "source_credential": "Credential",
     "source_key": "This key",
     "waiting_credentials": "Waiting for a credential slot",
-    "source_fill_first": "Заполнение по порядку"
+    "source_fill_first": "Заполнение по порядку",
+    "visibility_title": "Показ текущего трафика",
+    "visibility_server": "Сохранённые настройки общие для всех браузеров этого сервера. Для синхронизации откройте страницу заново или обновите конфигурацию. По умолчанию обе панели видны.",
+    "visibility_unsupported": "Этот сервер не поддерживает сохранение настроек отображения. Обновите сервер."
   },
   "codex_identity": {
+    "preview_short": "Политика",
     "title": "Идентификация и сеансы Codex",
     "description": "Переопределение идентификаторов, данных клиента и обработки сеансов для этого приоритета.",
     "inherit": "Наследовать настройки",

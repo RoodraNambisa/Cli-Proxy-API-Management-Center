@@ -57,7 +57,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
     group: 'global',
     titleKey: 'config_management.settings_center.pages.global_interface.title',
     descriptionKey: 'config_management.settings_center.pages.global_interface.description',
-    dirtyPrefixes: [],
+    dirtyPrefixes: ['trafficVisibility'],
   },
   {
     id: 'global-credentials',
@@ -234,6 +234,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     labelKey: 'config_management.settings_center.frontend_features.title',
     yamlKeys: ['local:frontend-feature-visibility'],
     aliases: ['feature visibility', 'frontend features', '功能显示', '功能顯示', 'Agent Identity'],
+  },
+  {
+    id: 'config-traffic-visibility',
+    pageId: 'global-interface',
+    labelKey: 'traffic.visibility_title',
+    yamlKeys: ['management-ui', 'management-ui.api-key-traffic', 'management-ui.credential-traffic'],
+    aliases: ['实时并发', '即時並發', 'RPM', 'live traffic'],
   },
   {
     id: 'config-host',

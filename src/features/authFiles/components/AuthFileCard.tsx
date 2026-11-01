@@ -65,7 +65,7 @@ const HEALTHY_STATUS_MESSAGES = new Set(['ok', 'healthy', 'ready', 'success', 'a
 const PREMIUM_CODEX_PLAN_TYPES = new Set(['plus', 'team', 'pro', 'prolite']);
 
 export type AuthFileCardProps = {
-  traffic?: TrafficSnapshot; trafficStale?: boolean;
+  traffic?: TrafficSnapshot; trafficStale?: boolean; trafficUnsupported?: boolean; trafficVisible?: boolean;
   file: AuthFileItem;
   cooldownAsOfMs: number;
   compact: boolean;
@@ -527,7 +527,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
             </div>
           </div>
 
-          <TrafficSummary value={props.traffic} stale={props.trafficStale} credential />
+          {props.trafficVisible !== false && <TrafficSummary value={props.traffic} stale={props.trafficStale} unsupported={props.trafficUnsupported} credential />}
 
           {onTargetCredential && authIndexKey && !isRetiredGeminiCli && (
             <button
@@ -586,7 +586,6 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   <span>{t('auth_files.codex_identity_mode_label')}</span>
                   <strong>{codexAuthMode.label}</strong>
                 </div>
-                <CodexIdentityPreview authIndex={String(file.auth_index ?? file.authIndex ?? '')}/>
                 {codexFingerprintMode && (
                   <div className={styles.codexAuthModeSummary}>
                     <span>{t('auth_files.codex_fingerprint_mode_label')}</span>
@@ -596,10 +595,12 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   </div>
                 )}
               </div>
-              {codexIdentityConversionVisible &&
+              <div className={styles.codexAuthModeActions}>
+                <CodexIdentityPreview authIndex={String(file.auth_index ?? file.authIndex ?? '')} disabled={disableControls}/>
+                {codexIdentityConversionVisible &&
                 onConvertCodexAuthMode &&
                 (codexAuthMode.canConvertToAgentIdentity || codexAuthMode.canConvertToOauth) && (
-                  <div className={styles.codexAuthModeActions}>
+                  <>
                     {codexAuthMode.canConvertToAgentIdentity && (
                       <Button
                         variant="secondary"
@@ -622,8 +623,9 @@ export function AuthFileCard(props: AuthFileCardProps) {
                         {t('auth_files.codex_identity_convert_to_oauth')}
                       </Button>
                     )}
-                  </div>
+                  </>
                 )}
+              </div>
             </div>
           )}
 

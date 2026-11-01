@@ -2267,7 +2267,7 @@
         },
         "global_interface": {
           "title": "界面与功能",
-          "description": "控制当前浏览器中管理功能的显示与隐藏。"
+          "description": "配置管理界面的实时数据显示及可选功能入口。"
         },
         "global_credentials": {
           "title": "凭证与密钥",
@@ -3209,7 +3209,8 @@
         "summary_message_contains": "消息包含",
         "summary_per_auth_request_limit": "请求上限",
         "summary_per_auth_request_window_minutes": "窗口分钟",
-        "summary_max_retry_credentials": "凭据上限",
+        "summary_max_retry_credentials": "每轮凭证上限",
+        "summary_per_auth_concurrency": "并发上限",
         "summary_plan_types": "套餐",
         "summary_match": "文本",
         "summary_regex": "正则",
@@ -5048,6 +5049,8 @@
     "limit_bypass_summary": "请求限额：跳过本地限额，不占用次数"
   },
   "credential_proxy": {
+    "concurrency": "并发上限",
+    "concurrency_hint": "该凭证实际生效的同时执行数量上限，与请求次数限额分别计算。",
     "invalid": "代理配置无效",
     "label": "代理",
     "ip": "出口 IP",
@@ -5829,6 +5832,11 @@
     "saved": "地区设置已保存；是否应用由提供者和凭证的跟随开关决定。"
   },
   "traffic": {
+    "show_keys": "显示 API Key 实时并发与 RPM",
+    "show_credentials": "显示凭证实时并发与 RPM",
+    "visibility_hint": "关闭后隐藏对应实时面板并停止轮询；已配置的并发上限和请求限额仍然生效。",
+    "unavailable": "实时并发和 RPM 读取失败，暂不可用",
+    "unsupported": "当前后端不支持实时并发和 RPM，请升级后端",
     "live": "实时流量",
     "concurrency": "并发",
     "current_concurrency": "当前并发",
@@ -5878,9 +5886,13 @@
     "source_credential": "指定凭证",
     "source_key": "此 Key",
     "waiting_credentials": "等待凭证位置",
-    "source_fill_first": "填充优先"
+    "source_fill_first": "填充优先",
+    "visibility_title": "实时数据显示",
+    "visibility_server": "保存后写入服务器配置，所有浏览器共用。重新打开页面或刷新配置后同步；默认显示。",
+    "visibility_unsupported": "当前后端暂不支持保存显示设置，请升级后端。"
   },
   "codex_identity": {
+    "preview_short": "查看策略",
     "title": "Codex 身份与会话",
     "description": "覆盖此优先级凭证的身份处理、客户端声明和会话策略。",
     "inherit": "继承现有配置",

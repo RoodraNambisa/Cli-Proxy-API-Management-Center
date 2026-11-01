@@ -553,11 +553,15 @@ export const ApiKeysCardEditor = memo(function ApiKeysCardEditor({
                 ]}
                 toggleLabel={t('config_management.visual.api_keys.restrictions')}
                 cells={[
-                  <div><strong>{title}</strong><div><code>{maskApiKey(String(key || ''))}</code></div><TrafficSummary value={traffic.items[keyIds[key]]} stale={traffic.stale} /></div>,
+                  <div><strong>{title}</strong><div><code>{maskApiKey(String(key || ''))}</code></div>{traffic.visible && <TrafficSummary value={traffic.items[keyIds[key]]} stale={traffic.stale} unsupported={traffic.unsupported} />}</div>,
                   <span title={restrictionsKnown ? providers : undefined}>{restrictionsKnown ? providers : '—'}</span>,
                   restrictionsKnown && availablePriorities !== undefined ? <div>
                     <div>{t('config_management.visual.api_keys.priority_allowed')}: {(keyPriorities?.allowedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.provider_unrestricted')}</div>
                     <div>{t('config_management.visual.api_keys.priority_excluded')}: {(keyPriorities?.excludedPriorities ?? []).join(', ') || t('config_management.visual.api_keys.priority_none')}</div>
+                    {admissionSupported && <>
+                      <div>{t('traffic.concurrency_limit')}: {keyPriorities?.concurrencyLimit || t('traffic.unlimited')}</div>
+                      <div>{t('traffic.key_rpm')}: {keyPriorities?.rpmLimit || t('traffic.unlimited')}</div>
+                    </>}
                   </div> : '—',
                   <span title={t('config_management.visual.api_keys.last_used_hint')}>
                     {keyLastUsed ? <time dateTime={keyLastUsed}>{formatDateTime(keyLastUsed)}</time>

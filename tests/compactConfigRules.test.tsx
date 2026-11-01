@@ -21,6 +21,7 @@ routing:
     - priority: 3
       strategy: random
       max-retry-credentials: 2
+      per-auth-concurrency: 4
 non-retryable-errors:
   - status-code: 400
     code: misalignment_policy_violation
@@ -77,6 +78,10 @@ test.each([
   const toggle = within(table).getByRole('button', { name: /common.edit:/ });
   expect(toggle.getAttribute('aria-expanded')).toBe('false');
   expect(within(table).queryByRole('textbox')).toBeNull();
+  if (kind === 'priority') {
+    expect(table.querySelector('dt[title="per-auth-concurrency"]')?.parentElement?.textContent)
+      .toContain('summary_per_auth_concurrency4');
+  }
   if (kind === 'error') expect(table.textContent).toContain('misalignment_policy_violation');
   fireEvent.click(toggle);
   if (kind === 'image') {

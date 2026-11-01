@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '@/services/api/client';
-import { useAuthStore } from '@/stores';
+import { useAuthStore, useConfigStore } from '@/stores';
+import { readTrafficVisibility } from './visibility';
 import type { TrafficOverview, TrafficSnapshot } from './types';
 
 // A single timer per visible page; requests never overlap and are cancelled on navigation.
@@ -97,21 +98,29 @@ export function useTraffic<T>(
   return state.key === key ? state : { key, data: undefined, stale: false, unsupported: false };
 }
 export function useTrafficBatch(kind: 'auth-files' | 'api-keys', ids: string[], enabled = true) {
+  const visible = useConfigStore(state =>
+    state.config !== null && readTrafficVisibility(state.config.raw?.['management-ui'])[
+      kind === 'auth-files' ? 'credentialTraffic' : 'apiKeyTraffic'
+    ]
+  );
   const result = useTraffic<{ items: TrafficSnapshot[] }>(
     `/${kind}/traffic`,
     { ids },
-    enabled && ids.length > 0
+    enabled && visible && ids.length > 0
   );
   return {
     ...result,
+    visible,
     items: Object.fromEntries((result.data?.items ?? []).map((item) => [item.id, item])),
   };
 }
+export function useAdmissionOptions() {
+  return useTraffic<{ features: { admission: boolean; management_ui?: boolean } }>(
+    '/admission/options', undefined, true, true
+  ).data?.features;
+}
 export function useAdmissionSupport() {
-  return (
-    useTraffic<{ features: { admission: boolean } }>('/admission/options', undefined, true, true)
-      .data?.features?.admission === true
-  );
+  return useAdmissionOptions()?.admission === true;
 }
 export function useTrafficOverview(query: string, enabled = true) {
   return useTraffic<TrafficOverview>(`/usage/traffic?${query}`, undefined, enabled);

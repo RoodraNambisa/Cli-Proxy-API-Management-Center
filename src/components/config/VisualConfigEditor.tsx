@@ -1,7 +1,8 @@
 import { CodexIdentityEditor, useCodexIdentitySupport } from '@/features/codexIdentity/CodexIdentityEditor';
 import trafficStyles from '@/features/traffic/Traffic.module.scss';
 import { QueueFields } from '@/features/traffic/QueueFields';
-import { useAdmissionSupport } from '@/features/traffic/useTraffic';
+import { useAdmissionOptions } from '@/features/traffic/useTraffic';
+import { readTrafficVisibility } from '@/features/traffic/visibility';
 import { defaultRoutingAdmission, emptyQueue } from '@/features/traffic/types';
 import { CodexServiceTiersEditor } from './CodexServiceTiersEditor';
 import { AuthImagePriorityFields } from './AuthImagePriorityFields';
@@ -171,6 +172,11 @@ function getValidationMessage(
 ) {
   if (!errorCode) return undefined;
   return t(`config_management.visual.validation.${errorCode}`);
+}
+
+function concurrencyOverrideSummary(value: string | undefined, t: ReturnType<typeof useTranslation>['t']) {
+  if (!value?.trim()) return t('traffic.inherit');
+  return Number(value) === 0 ? t('traffic.unlimited') : value;
 }
 
 type ToggleRowProps = {
@@ -814,6 +820,7 @@ export function VisualConfigEditor({
     (state) => state.visibility.codexAgentIdentityConversion
   );
   const setFrontendFeatureVisible = useFrontendFeatureStore((state) => state.setFeatureVisible);
+  const trafficVisibility = values.trafficVisibility ?? readTrafficVisibility(undefined);
   const [searchParams, setSearchParams] = useSearchParams();
   const sectionParam = searchParams.get('section');
   const [activePageId, setActivePageId] = useState<ConfigPageId>(() => {
@@ -1085,7 +1092,8 @@ export function VisualConfigEditor({
     t,
     validationErrors?.routingFillFirstPerAuthRpm
   );
-  const admissionSupported = useAdmissionSupport();
+  const admissionOptions = useAdmissionOptions();
+  const admissionSupported = admissionOptions?.admission === true;
   const codexIdentitySupported = useCodexIdentitySupport();
   const imagePrioritySupported = useConfigStore(state => state.config?.raw?.[AUTH_IMAGE_PRIORITY_CAPABILITY] === true);
   const routingAdmission = values.routingAdmission ?? defaultRoutingAdmission();
@@ -2098,6 +2106,31 @@ export function VisualConfigEditor({
             </header>
           ) : null}
           <div className={styles.sections}>
+            <ConfigSection
+              id="config-traffic-visibility"
+              hidden={activePageId !== 'global-interface'}
+              icon={<IconEye size={16} />}
+              title={t('traffic.visibility_title')}
+              description={t('traffic.visibility_server')}
+            >
+              <SectionStack>
+                {admissionOptions?.management_ui !== true && <div className="hint">{t('traffic.visibility_unsupported')}</div>}
+                <ToggleRow
+                  title={t('traffic.show_keys')}
+                  description={t('traffic.visibility_hint')}
+                  checked={trafficVisibility.apiKeyTraffic}
+                  disabled={disabled || admissionOptions?.management_ui !== true}
+                  onChange={visible => onChange({ trafficVisibility: { ...trafficVisibility, apiKeyTraffic: visible } })}
+                />
+                <ToggleRow
+                  title={t('traffic.show_credentials')}
+                  description={t('traffic.visibility_hint')}
+                  checked={trafficVisibility.credentialTraffic}
+                  disabled={disabled || admissionOptions?.management_ui !== true}
+                  onChange={visible => onChange({ trafficVisibility: { ...trafficVisibility, credentialTraffic: visible } })}
+                />
+              </SectionStack>
+            </ConfigSection>
             <ConfigSection
               id="config-frontend-features"
               hidden={activePageId !== 'global-interface'}
@@ -4353,6 +4386,7 @@ export function VisualConfigEditor({
                                     ['fill-first-per-auth-rpm', rule.fillFirstPerAuthRpm],
                                     ['per-auth-request-limit', rule.perAuthRequestLimit],
                                     ['per-auth-request-window-minutes', rule.perAuthRequestWindowMinutes],
+                                    ['per-auth-concurrency', admissionSupported || rule.perAuthConcurrency?.trim() ? concurrencyOverrideSummary(rule.perAuthConcurrency, t) : ''],
                                     ['subscription-overrides', rule.subscriptionOverrides.length ? t('config_management.settings_center.rules_summary', { count: rule.subscriptionOverrides.length }) : ''],
                                   ]} />,
                                 ]}
@@ -4596,6 +4630,7 @@ export function VisualConfigEditor({
                                               <ConfigSummary entries={[
                                                 ['per-auth-request-limit', subscriptionRule.perAuthRequestLimit],
                                                 ['per-auth-request-window-minutes', subscriptionRule.perAuthRequestWindowMinutes],
+                                                ['per-auth-concurrency', admissionSupported || subscriptionRule.perAuthConcurrency?.trim() ? concurrencyOverrideSummary(subscriptionRule.perAuthConcurrency, t) : ''],
                                               ]} empty={t('config_management.visual.sections.network.priority_subscription_overrides_inherit_priority')} />,
                                             ]}
                                             actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}

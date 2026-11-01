@@ -1,10 +1,12 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 import { useVisualConfig, getVisualConfigValidationErrors } from '@/hooks/useVisualConfig';
 import { apiClient } from '@/services/api/client';
 import { useTrafficBatch, useTrafficOverview } from './useTraffic';
 
+import { useConfigStore } from '@/stores/useConfigStore';
+beforeEach(() => useConfigStore.setState({ config: { raw: {} } }));
 afterEach(() => vi.restoreAllMocks());
 describe('admission configuration', () => {
   it('round-trips limits, explicit zero and queue extensions without enabling defaults', () => {

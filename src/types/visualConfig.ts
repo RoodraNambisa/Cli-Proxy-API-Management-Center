@@ -69,6 +69,7 @@ export type VisualConfigFieldPath =
   | 'routingFillFirstRange'
   | 'routingFillFirstPerAuthRpm'
   | 'routingAdmission'
+  | 'trafficVisibility'
   | 'routingPerAuthRequestLimit'
   | 'routingPerAuthRequestWindowMinutes'
   | 'fixedErrorCooldowns'
@@ -467,6 +468,7 @@ export type VisualConfigValues = {
   routingFillFirstRange: string;
   routingFillFirstPerAuthRpm: string;
   routingAdmission?: RoutingAdmission;
+  trafficVisibility?: import('@/features/traffic/visibility').TrafficVisibility;
   routingPerAuthRequestLimit: string;
   routingPerAuthRequestWindowMinutes: string;
   routingPriorityOverrides: RoutingPriorityOverrideVisualEntry[];

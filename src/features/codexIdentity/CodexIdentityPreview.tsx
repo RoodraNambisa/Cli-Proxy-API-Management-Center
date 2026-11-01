@@ -2,12 +2,13 @@ import { useEffect, useState, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { IconEye } from '@/components/ui/icons';
 import { apiClient } from '@/services/api/client';
 import { useAuthStore } from '@/stores';
 import { codexIdentityFields, type CodexIdentityPreviewResult } from '@/types/codexIdentity';
 import { useCodexIdentitySupport } from './CodexIdentityEditor';
 import styles from './CodexIdentity.module.scss';
-export function CodexIdentityPreview({ authIndex }: { authIndex: string }) {
+export function CodexIdentityPreview({ authIndex, disabled }: { authIndex: string; disabled?: boolean }) {
   const supported = useCodexIdentitySupport();
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -38,8 +39,10 @@ export function CodexIdentityPreview({ authIndex }: { authIndex: string }) {
   if (!supported || !authIndex) return null;
   return (
     <>
-      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
-        {t('codex_identity.preview')}
+      <Button size="sm" variant="ghost" className={styles.previewButton} disabled={disabled}
+        title={t('codex_identity.preview')} aria-label={t('codex_identity.preview')} onClick={() => setOpen(true)}>
+        <IconEye size={14} />
+        {t('codex_identity.preview_short')}
       </Button>
       <Modal
         open={open}

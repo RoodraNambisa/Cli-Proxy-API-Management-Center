@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { IconChevronDown, IconChevronUp } from '@/components/ui/icons';
 import styles from './ConfigTable.module.scss';
 
-const summaryLabels = new Set(['providers', 'priorities', 'sources', 'scope', 'cooldown-seconds', 'message-contains', 'per-auth-request-limit', 'per-auth-request-window-minutes', 'max-retry-credentials', 'plan-types', 'match', 'regex', 'code', 'type']);
+const summaryLabels = new Set(['providers', 'priorities', 'sources', 'scope', 'cooldown-seconds', 'message-contains', 'per-auth-request-limit', 'per-auth-request-window-minutes', 'per-auth-concurrency', 'max-retry-credentials', 'plan-types', 'match', 'regex', 'code', 'type']);
 
 export function ConfigTable({ label, columns, children, numbered = false }: {
   label: string; columns: string[]; children: ReactNode; numbered?: boolean;

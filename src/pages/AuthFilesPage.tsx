@@ -2009,7 +2009,7 @@ export function AuthFilesPage() {
               >
                 {pageItems.map((file) => (
                   <AuthFileCard
-                    traffic={traffic.items[normalizeAuthIndex(file.auth_index ?? file.authIndex) ?? ""]} trafficStale={traffic.stale}
+                    traffic={traffic.items[normalizeAuthIndex(file.auth_index ?? file.authIndex) ?? ""]} trafficStale={traffic.stale} trafficUnsupported={traffic.unsupported} trafficVisible={traffic.visible}
                     key={file.name}
                     file={file}
                     cooldownAsOfMs={filesLoadedAtMs}

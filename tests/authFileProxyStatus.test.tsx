@@ -25,6 +25,30 @@ const file: AuthFileItem = {
 };
 
 describe('credential proxy and effective request limits', () => {
+  it('shows configured concurrency without a traffic snapshot and keeps its source independent', () => {
+    const view = render(<AuthFileProxyStatus file={{
+      name: 'idle.json',
+      request_limit: { limit: 20, window_minutes: 1, source: 'priority', priority: 5,
+        concurrency_limit: 3, concurrency_source: 'credential', concurrency_rule: 2 },
+    }} disabled={false} />);
+    expect(screen.getByText('20 / 1 min')).toBeTruthy();
+    expect(screen.getByText('credential_proxy.concurrency')).toBeTruthy();
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText('credential_proxy.limit_sources.priority')).toBeTruthy();
+    expect(screen.getByText('credential_proxy.limit_sources.credential #2')).toBeTruthy();
+    view.rerender(<AuthFileProxyStatus file={{
+      name: 'idle.json',
+      request_limit: { limit: 20, window_minutes: 1, source: 'priority', priority: 5,
+        concurrency_limit: 0, concurrency_source: 'global' },
+    }} disabled={false} />);
+    expect(screen.getByText('traffic.unlimited')).toBeTruthy();
+    expect(screen.queryByText('3')).toBeNull();
+  });
+
+  it('does not invent a concurrency limit when an old backend omits it', () => {
+    render(<AuthFileProxyStatus file={file} disabled={false} />);
+    expect(screen.queryByText('credential_proxy.concurrency')).toBeNull();
+  });
   it('displays effective settings without network checks and preserves unknown IP', () => {
     const check = vi.spyOn(authFilesApi, 'checkProxy');
     render(<AuthFileProxyStatus file={file} disabled={false} />);

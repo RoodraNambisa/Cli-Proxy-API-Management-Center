@@ -26,11 +26,24 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+  align-items: start;
+
+  :global(.form-group) {
+    margin-bottom: 0;
+  }
+
+  :global(.form-group > label) {
+    min-height: 2.7em;
+    display: flex;
+    align-items: flex-end;
+    line-height: 1.35;
+  }
 }
 .queueFields {
   display: grid;
   gap: 14px;
   min-width: 0;
+  align-content: start;
 }
 .editor {
   display: grid;

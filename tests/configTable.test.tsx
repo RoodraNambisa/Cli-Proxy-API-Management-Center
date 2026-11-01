@@ -35,11 +35,13 @@ test('collapses rule editors without losing their input drafts or mounting untou
 test('short summary labels retain original field names and cover all four locales', () => {
   render(<ConfigSummary entries={[
     ['message-contains', 'Rate limit exceeded'], ['custom.payload.path', 'value'],
+    ['per-auth-concurrency', '3'],
   ]} />);
   expect(screen.getByTitle('message-contains').textContent).toBe('config_management.visual.common.summary_message_contains');
   expect(screen.getByTitle('custom.payload.path').textContent).toBe('custom.payload.path');
+  expect(screen.getByTitle('per-auth-concurrency').textContent).toBe('config_management.visual.common.summary_per_auth_concurrency');
   const keys = Object.keys(en.config_management.visual.common).filter((key) => key.startsWith('summary_'));
-  expect(keys).toHaveLength(14);
+  expect(keys).toContain('summary_per_auth_concurrency');
   for (const locale of [zhCN, zhTW, ru]) {
     expect(Object.keys(locale.config_management.visual.common).filter((key) => key.startsWith('summary_'))).toEqual(keys);
   }

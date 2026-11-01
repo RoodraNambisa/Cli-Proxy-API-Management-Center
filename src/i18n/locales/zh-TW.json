@@ -2252,7 +2252,7 @@
         },
         "global_interface": {
           "title": "介面與功能",
-          "description": "控制目前瀏覽器中管理功能的顯示與隱藏。"
+          "description": "設定管理介面的即時資料顯示與選用功能入口。"
         },
         "global_credentials": {
           "title": "憑證與金鑰",
@@ -3194,7 +3194,8 @@
         "summary_message_contains": "訊息包含",
         "summary_per_auth_request_limit": "請求上限",
         "summary_per_auth_request_window_minutes": "視窗分鐘",
-        "summary_max_retry_credentials": "憑證上限",
+        "summary_max_retry_credentials": "每輪憑證上限",
+        "summary_per_auth_concurrency": "並發上限",
         "summary_plan_types": "方案",
         "summary_match": "文字",
         "summary_regex": "正則",
@@ -5033,6 +5034,8 @@
     "limit_bypass_summary": "請求限額：略過本機限額，不占用次數"
   },
   "credential_proxy": {
+    "concurrency": "並發上限",
+    "concurrency_hint": "此憑證實際生效的同時執行數量上限，與請求次數限額分別計算。",
     "invalid": "代理設定無效",
     "label": "代理",
     "ip": "出口 IP",
@@ -5814,6 +5817,11 @@
     }
   },
   "traffic": {
+    "show_keys": "顯示 API Key 即時並發與 RPM",
+    "show_credentials": "顯示憑證即時並發與 RPM",
+    "visibility_hint": "關閉後隱藏對應即時面板並停止輪詢；已設定的並發上限與請求限額仍然生效。",
+    "unavailable": "即時並發與 RPM 讀取失敗，暫時無法顯示",
+    "unsupported": "目前後端不支援即時並發與 RPM，請升級後端",
     "live": "实时流量",
     "concurrency": "并发",
     "current_concurrency": "当前并发",
@@ -5863,9 +5871,13 @@
     "source_credential": "指定凭证",
     "source_key": "此 Key",
     "waiting_credentials": "等待凭证位置",
-    "source_fill_first": "填充優先"
+    "source_fill_first": "填充優先",
+    "visibility_title": "即時資料顯示",
+    "visibility_server": "儲存後寫入伺服器設定，所有瀏覽器共用。重新開啟頁面或重新整理設定後同步；預設顯示。",
+    "visibility_unsupported": "目前後端不支援儲存顯示設定，請升級後端。"
   },
   "codex_identity": {
+    "preview_short": "查看策略",
     "title": "Codex 身分與工作階段",
     "description": "覆寫此優先級憑證的身分處理、用戶端宣告和工作階段策略。",
     "inherit": "繼承現有設定",

@@ -1,6 +1,8 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { emptyQueue, type QueueSettings } from './types';
 import styles from './Traffic.module.scss';
 export function QueueFields({
@@ -15,29 +17,31 @@ export function QueueFields({
   inherit?: boolean;
 }) {
   const { t } = useTranslation();
+  const labelId = useId();
   const queue = value ?? emptyQueue();
   return (
     <div className={styles.queueFields}>
       {inherit && (
-        <label>
-          {t('traffic.queue_policy')}
-          <select
-            className="input"
+        <div className="form-group">
+          <label id={labelId}>{t('traffic.queue_policy')}</label>
+          <Select
+            ariaLabelledBy={labelId}
             value={value === undefined ? 'inherit' : queue.enabled ? 'on' : 'off'}
             disabled={disabled}
-            onChange={(e) =>
+            options={[
+              { value: 'inherit', label: t('traffic.inherit') },
+              { value: 'off', label: t('traffic.no_queue') },
+              { value: 'on', label: t('traffic.queue_on') },
+            ]}
+            onChange={(selected) =>
               onChange(
-                e.target.value === 'inherit'
+                selected === 'inherit'
                   ? undefined
-                  : { ...queue, enabled: e.target.value === 'on' }
+                  : { ...queue, enabled: selected === 'on' }
               )
             }
-          >
-            <option value="inherit">{t('traffic.inherit')}</option>
-            <option value="off">{t('traffic.no_queue')}</option>
-            <option value="on">{t('traffic.queue_on')}</option>
-          </select>
-        </label>
+          />
+        </div>
       )}
       {!inherit && (
         <ToggleSwitch

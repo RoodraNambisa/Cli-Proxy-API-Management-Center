@@ -2267,7 +2267,7 @@
         },
         "global_interface": {
           "title": "Interface & Features",
-          "description": "Control which management features are visible in this browser."
+          "description": "Configure live traffic panels and optional management tools."
         },
         "global_credentials": {
           "title": "Credentials & Keys",
@@ -3209,7 +3209,8 @@
         "summary_message_contains": "Message",
         "summary_per_auth_request_limit": "Request limit",
         "summary_per_auth_request_window_minutes": "Window (min)",
-        "summary_max_retry_credentials": "Credentials",
+        "summary_max_retry_credentials": "Credentials per round",
+        "summary_per_auth_concurrency": "Concurrency limit",
         "summary_plan_types": "Plans",
         "summary_match": "Text",
         "summary_regex": "Regex",
@@ -5048,6 +5049,8 @@
     "limit_bypass_summary": "Request limits: bypass local limits without consuming capacity"
   },
   "credential_proxy": {
+    "concurrency": "Concurrency limit",
+    "concurrency_hint": "The effective number of simultaneous executions for this credential, independent of its request-rate limit.",
     "invalid": "Invalid proxy configuration",
     "label": "Proxy",
     "ip": "Egress IP",
@@ -5829,6 +5832,11 @@
     "saved": "Region settings saved. Provider and credential switches determine whether they are used."
   },
   "traffic": {
+    "show_keys": "Show API Key live concurrency and RPM",
+    "show_credentials": "Show credential live concurrency and RPM",
+    "visibility_hint": "Hide the corresponding live panel and stop polling when disabled. Configured concurrency and request limits remain enforced.",
+    "unavailable": "Live concurrency and RPM could not be loaded.",
+    "unsupported": "This backend does not support live concurrency and RPM. Update the backend.",
     "live": "Live traffic",
     "concurrency": "Concurrency",
     "current_concurrency": "Current concurrency",
@@ -5878,9 +5886,13 @@
     "source_credential": "Credential",
     "source_key": "This key",
     "waiting_credentials": "Waiting for a credential slot",
-    "source_fill_first": "Fill-first"
+    "source_fill_first": "Fill-first",
+    "visibility_title": "Live traffic display",
+    "visibility_server": "Save to share these settings across browsers connected to this server. Reopen the page or refresh configuration to sync. Both panels are visible by default.",
+    "visibility_unsupported": "This backend cannot save display settings. Upgrade the backend to configure them."
   },
   "codex_identity": {
+    "preview_short": "View policy",
     "title": "Codex identity and sessions",
     "description": "Override identity, client declarations, and session handling for this priority.",
     "inherit": "Inherit",
