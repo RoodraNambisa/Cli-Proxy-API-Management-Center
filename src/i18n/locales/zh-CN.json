@@ -5066,7 +5066,7 @@
     "check_hint": "检测所选路由访问 Cloudflare 时的出口 IP，不发送账号令牌。分流代理可能因目标地址返回不同出口；显示上次检测结果，不代表每条请求固定使用该 IP。",
     "limit": "请求限额",
     "limit_value": "{{count}} 次 / {{minutes}} 分钟",
-    "unlimited": "未设置本地请求限额",
+    "unlimited": "未限制",
     "limit_hint": "该凭证实际生效的固定窗口请求次数限制，不是同时执行数量，也不是上游套餐额度。",
     "sources": {
       "auth": "凭证设置",

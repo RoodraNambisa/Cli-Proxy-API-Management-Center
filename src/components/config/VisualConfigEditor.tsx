@@ -174,7 +174,7 @@ function getValidationMessage(
   return t(`config_management.visual.validation.${errorCode}`);
 }
 
-function concurrencyOverrideSummary(value: string | undefined, t: ReturnType<typeof useTranslation>['t']) {
+function limitOverrideSummary(value: string | undefined, t: ReturnType<typeof useTranslation>['t']) {
   if (!value?.trim()) return '';
   return Number(value) === 0 ? t('traffic.unlimited') : value;
 }
@@ -4383,9 +4383,9 @@ export function VisualConfigEditor({
                                     ['max-retry-credentials', rule.maxRetryCredentials],
                                     ['fill-first-range', rule.fillFirstRange],
                                     ['fill-first-per-auth-rpm', rule.fillFirstPerAuthRpm],
-                                    ['per-auth-request-limit', rule.perAuthRequestLimit],
-                                    ['per-auth-request-window-minutes', rule.perAuthRequestWindowMinutes],
-                                    ['per-auth-concurrency', concurrencyOverrideSummary(rule.perAuthConcurrency, t)],
+                                    ['per-auth-request-limit', limitOverrideSummary(rule.perAuthRequestLimit, t)],
+                                    ['per-auth-request-window-minutes', effectivePerAuthRequestLimit > 0 ? rule.perAuthRequestWindowMinutes : ''],
+                                    ['per-auth-concurrency', limitOverrideSummary(rule.perAuthConcurrency, t)],
                                     ['subscription-overrides', rule.subscriptionOverrides.length ? t('config_management.settings_center.rules_summary', { count: rule.subscriptionOverrides.length }) : ''],
                                   ]} />,
                                 ]}
@@ -4627,9 +4627,9 @@ export function VisualConfigEditor({
                                                 ['providers', subscriptionRule.providers.join(', ')], ['plan-types', subscriptionRule.planTypes.join(', ') || t('config_management.visual.sections.network.priority_subscription_overrides_plan_types_empty')],
                                               ]} />,
                                               <ConfigSummary entries={[
-                                                ['per-auth-request-limit', subscriptionRule.perAuthRequestLimit],
-                                                ['per-auth-request-window-minutes', subscriptionRule.perAuthRequestWindowMinutes],
-                                                ['per-auth-concurrency', concurrencyOverrideSummary(subscriptionRule.perAuthConcurrency, t)],
+                                                ['per-auth-request-limit', limitOverrideSummary(subscriptionRule.perAuthRequestLimit, t)],
+                                                ['per-auth-request-window-minutes', subscriptionRule.perAuthRequestLimit.trim() && Number(subscriptionRule.perAuthRequestLimit) === 0 ? '' : subscriptionRule.perAuthRequestWindowMinutes],
+                                                ['per-auth-concurrency', limitOverrideSummary(subscriptionRule.perAuthConcurrency, t)],
                                               ]} empty={t('config_management.visual.sections.network.priority_subscription_overrides_inherit_priority')} />,
                                             ]}
                                             actions={<Button type="button" variant="ghost" size="sm" disabled={disabled}

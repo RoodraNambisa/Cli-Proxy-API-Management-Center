@@ -5066,7 +5066,7 @@
     "check_hint": "Checks egress to Cloudflare using the selected route without account tokens. Routing proxies may use different IPs for other destinations. This is the last observation, not a guarantee for each request.",
     "limit": "Request limit",
     "limit_value": "{{count}} requests / {{minutes}} min",
-    "unlimited": "No local request limit",
+    "unlimited": "Unlimited",
     "limit_hint": "Effective fixed-window request count for this credential, not simultaneous requests or upstream quota.",
     "sources": {
       "auth": "Credential",

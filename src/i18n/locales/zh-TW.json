@@ -5051,7 +5051,7 @@
     "check_hint": "檢測所選路由存取 Cloudflare 時的出口 IP，不傳送帳號權杖。分流代理可能因目標位址而使用不同出口；此處顯示上次檢測結果。",
     "limit": "請求限額",
     "limit_value": "{{count}} 次 / {{minutes}} 分鐘",
-    "unlimited": "未設定本機請求限額",
+    "unlimited": "未限制",
     "limit_hint": "該憑證實際生效的固定視窗請求次數限制，不是同時執行數量，也不是上游套餐額度。",
     "sources": {
       "auth": "憑證設定",
