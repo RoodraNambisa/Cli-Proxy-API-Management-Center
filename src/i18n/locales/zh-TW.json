@@ -1,4 +1,27 @@
 {
+  "fill_order": {
+      "title": "填充順序",
+      "adjust": "調整順序",
+      "position": "填充位置",
+      "scope": "在優先級 {{priority}} 的完整帳號範圍內移動，包含停用帳號。",
+      "action": "移動方式",
+      "up": "上移",
+      "down": "下移",
+      "before": "移到帳號之前",
+      "after": "移到帳號之後",
+      "steps": "移動數量",
+      "search": "搜尋目標帳號",
+      "target": "目標帳號",
+      "choose": "選擇帳號",
+      "start": "本優先級最前",
+      "end": "本優先級最後",
+      "preview": "預覽位置",
+      "apply": "套用順序",
+      "conflict": "順序或優先級已變更，請重新整理列表後調整。",
+      "spillover": "並發滿時暫時借用其他憑證",
+      "spillover_hint": "啟用工作階段黏性與故障轉移後生效。先等待原憑證；佇列滿或逾時後嘗試其他空閒憑證，保留原綁定。",
+      "unsupported": "目前後端不支援暫時借用憑證，請升級後再儲存此設定。"
+  },
   "auth_image_priority": {
     "description": "依下方範圍停用 Codex 圖片生成能力，共用的模型排除設定仍獨立生效。",
     "models_hint": "可留空；留空時只依上方範圍停用生圖，不額外排除模型。",

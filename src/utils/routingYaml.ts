@@ -12,6 +12,7 @@ const priorityFields = [
   'fillFirstRange',
   'fill-first-per-auth-rpm',
   'fillFirstPerAuthRpm',
+  'session-affinity-capacity-spillover',
   'per-auth-concurrency',
   'perAuthConcurrency',
   'per-auth-request-limit',
@@ -94,10 +95,17 @@ function mergeFields(
   const map: YAMLMap = candidate;
   for (const field of fields) {
     const key = field.replace(/[A-Z]/g, (letter) => '-' + letter.toLowerCase());
-    if (!previous || key in previous || key in values) map.delete(field);
+    if ((!previous || key in previous || key in values) && !(field === key && key in values)) map.delete(field);
   }
   for (const [key, value] of Object.entries(values)) {
-    map.set(key, doc.createNode(value));
+    const node = doc.createNode(value);
+    const old = original?.get(key, true);
+    if (isNode(old) && isNode(node)) {
+      node.comment = old.comment;
+      node.commentBefore = old.commentBefore;
+      node.spaceBefore = old.spaceBefore;
+    }
+    map.set(key, node);
   }
   return map;
 }

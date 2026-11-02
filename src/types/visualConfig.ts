@@ -316,6 +316,7 @@ export interface RoutingSubscriptionOverrideVisualEntry {
 }
 
 export interface RoutingPriorityOverrideVisualEntry {
+  sessionAffinityCapacitySpillover?: boolean;
   codex?: CodexIdentityOverride;
   queue?: QueueSettings;
   clientId: string;
@@ -475,6 +476,7 @@ export type VisualConfigValues = {
   routingSessionAffinity: boolean;
   routingSessionAffinityUseHistory: boolean;
   routingSessionAffinityAcrossPriorities: boolean;
+  routingSessionAffinityCapacitySpillover: boolean;
   routingSessionAffinitySubagents: boolean;
   routingSessionAffinityLCP: boolean;
   routingSessionAffinityFailover: boolean;
@@ -697,6 +699,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   routingSessionAffinity: false,
   routingSessionAffinityUseHistory: true,
   routingSessionAffinityAcrossPriorities: false,
+  routingSessionAffinityCapacitySpillover: false,
   routingSessionAffinitySubagents: false,
   routingSessionAffinityLCP: false,
   routingSessionAffinityFailover: true,

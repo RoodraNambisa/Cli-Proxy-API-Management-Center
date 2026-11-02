@@ -65,6 +65,7 @@ const HEALTHY_STATUS_MESSAGES = new Set(['ok', 'healthy', 'ready', 'success', 'a
 const PREMIUM_CODEX_PLAN_TYPES = new Set(['plus', 'team', 'pro', 'prolite']);
 
 export type AuthFileCardProps = {
+  onReorder?: (file:AuthFileItem)=>void;
   traffic?: TrafficSnapshot; trafficStale?: boolean; trafficUnsupported?: boolean; trafficVisible?: boolean;
   file: AuthFileItem;
   cooldownAsOfMs: number;
@@ -563,6 +564,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
             </div>
           </div>
 
+          {file.fill_order && props.onReorder && <div className={styles.metaItem}><span className={styles.metaLabel}>{t('fill_order.position')}</span><span className={styles.metaValue}>{file.fill_order.position}</span><Button variant="ghost" size="sm" disabled={disableControls} onClick={()=>props.onReorder?.(file)}>{t('fill_order.adjust')}</Button></div>}
           <AuthFileProxyStatus file={file} disabled={disableControls || isRetiredGeminiCli}
             traffic={props.traffic} trafficStale={props.trafficStale} />
           <AuthFileStateStatus file={file} disabled={disableControls || isRetiredGeminiCli} />

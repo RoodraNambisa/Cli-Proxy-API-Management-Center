@@ -1,0 +1,45 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hint {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 540px) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.fields :global(.input),
+.fields :global([aria-haspopup='listbox']) {
+  height: 44px;
+  min-height: 44px;
+}
+
+.stack :global(.form-group) {
+  margin-bottom: 0;
+}

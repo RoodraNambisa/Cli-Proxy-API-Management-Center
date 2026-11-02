@@ -1095,6 +1095,7 @@ export function VisualConfigEditor({
   const admissionOptions = useAdmissionOptions();
   const admissionSupported = admissionOptions?.admission === true;
   const codexIdentitySupported = useCodexIdentitySupport();
+  const spilloverSupported = useConfigStore(state => state.config?.raw?.['session-affinity-capacity-spillover-supported'] === true);
   const imagePrioritySupported = useConfigStore(state => state.config?.raw?.[AUTH_IMAGE_PRIORITY_CAPABILITY] === true);
   const routingAdmission = values.routingAdmission ?? defaultRoutingAdmission();
   const routingPerAuthRequestLimitError = getValidationMessage(
@@ -1258,6 +1259,7 @@ export function VisualConfigEditor({
     'routingSessionAffinity',
     'routingSessionAffinityUseHistory',
     'routingSessionAffinityAcrossPriorities',
+    'routingSessionAffinityCapacitySpillover',
     'routingSessionAffinitySubagents',
     'routingSessionAffinityLCP',
     'routingSessionAffinityFailover',
@@ -4379,6 +4381,7 @@ export function VisualConfigEditor({
                                   <ConfigSummary entries={[['priority', rule.priority]]} />,
                                   <ConfigSummary empty={t('config_management.visual.common.inherit_global')} entries={[
                                     ['strategy', rule.strategy],
+                                    [t('fill_order.spillover'), rule.sessionAffinityCapacitySpillover === undefined ? '' : t(rule.sessionAffinityCapacitySpillover ? 'codex_identity.on' : 'codex_identity.off')],
                                     ['Codex', codexIdentitySupported && rule.codex && Object.keys(rule.codex).length ? t('codex_identity.overridden', {count:Object.keys(rule.codex).length}) : ''],
                                     ['max-retry-credentials', rule.maxRetryCredentials],
                                     ['fill-first-range', rule.fillFirstRange],
@@ -4451,6 +4454,7 @@ export function VisualConfigEditor({
                                   disabled={disabled}
                                   error={maxRetryCredentialsError}
                                 />
+                                {spilloverSupported && <FieldShell label={t('fill_order.spillover')} labelId={`spillover-${rule.clientId}`}><Select ariaLabelledBy={`spillover-${rule.clientId}`} value={rule.sessionAffinityCapacitySpillover === undefined ? '' : String(rule.sessionAffinityCapacitySpillover)} options={[{value:'',label:t('traffic.inherit')},{value:'true',label:t('codex_identity.on')},{value:'false',label:t('codex_identity.off')}]} disabled={disabled} onChange={value => updateRoutingPriorityOverride(rule.clientId,{sessionAffinityCapacitySpillover:value === '' ? undefined : value === 'true'})}/></FieldShell>}
                                 {admissionSupported && <><Input label={t('traffic.credential_limit')} type="number" min={0} value={rule.perAuthConcurrency ?? ''} placeholder={t('traffic.inherit')} disabled={disabled} onChange={e => updateRoutingPriorityOverride(rule.clientId, { perAuthConcurrency: e.target.value })} /><QueueFields inherit value={rule.queue} disabled={disabled} onChange={queue => updateRoutingPriorityOverride(rule.clientId, { queue })} /></>}
 <Input
                                   label={t(
@@ -5280,6 +5284,7 @@ export function VisualConfigEditor({
                       'config-force-model-prefix',
                       'config-session-affinity',
                       'config-session-affinity-use-history',
+                      'config-session-affinity-capacity-spillover',
                       'config-session-affinity-across-priorities',
                       'config-session-affinity-subagents',
                       'config-session-affinity-lcp',
@@ -5322,6 +5327,7 @@ export function VisualConfigEditor({
                           }
                         />
                       </div>
+                      {spilloverSupported && <div id="config-session-affinity-capacity-spillover" className={styles.pageGroup}><ToggleRow title={t('fill_order.spillover')} description={t('fill_order.spillover_hint')} checked={values.routingSessionAffinityCapacitySpillover} disabled={disabled} onChange={routingSessionAffinityCapacitySpillover => onChange({routingSessionAffinityCapacitySpillover})} /></div>}
                       <div id="config-session-affinity-across-priorities" className={styles.pageGroup}>
                         <ToggleRow
                           title={t('config_management.visual.sections.network.session_affinity_across_priorities')}

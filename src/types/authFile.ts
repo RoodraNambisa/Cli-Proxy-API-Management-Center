@@ -190,6 +190,8 @@ export interface CodexObservedQuotaWindow {
 }
 
 export interface AuthFileItem {
+  fill_order?: {record_id:string; joined_sequence:string; position:string};
+  fill_order_revision?: string;
   error_history?: AuthErrorHistorySummary;
   response_model_rewrite?: import('@/utils/responseModelRewrite').ResponseModelRewriteSummary;
   routing_alias?: string;

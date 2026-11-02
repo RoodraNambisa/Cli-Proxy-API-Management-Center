@@ -1,3 +1,5 @@
+import { useConfigStore } from '@/stores/useConfigStore';
+import { FillOrderModal } from '@/features/authFiles/components/FillOrderModal';
 import { useTrafficBatch } from '@/features/traffic/useTraffic';
 import { hasCredentialConcurrencySummary } from '@/features/traffic/credentialSummary';
 import {
@@ -342,7 +344,11 @@ export function AuthFilesPage() {
   });
   const [pageSizeInput, setPageSizeInput] = useState('9');
   const [viewMode, setViewMode] = useState<'diagram' | 'list'>('list');
+  const fillOrderCapability = useConfigStore((state) => state.config?.raw);
+  const fillOrderSupported = fillOrderCapability?.['fill-order-supported'] === true;
+  const [reorderFile, setReorderFile] = useState<AuthFileItem | null>(null);
   const [sortMode, setSortMode] = useState<AuthFilesSortMode>('default');
+  useEffect(() => { setReorderFile(null); }, [connectionGenerationKey]);
   const [codexUsageRefreshing, setCodexUsageRefreshing] = useState(false);
   const [codexResetCreditsRefreshing, setCodexResetCreditsRefreshing] = useState(false);
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
@@ -350,6 +356,12 @@ export function AuthFilesPage() {
   const [selectingFiltered, setSelectingFiltered] = useState(false);
   const [paginationMode, setPaginationMode] = useState<'unknown' | 'server' | 'client'>('unknown');
   const [uiStateHydrated, setUiStateHydrated] = useState(false);
+  useEffect(() => {
+    if (uiStateHydrated && fillOrderCapability && !fillOrderSupported && sortMode === 'fill-order') {
+      setSortMode('default');
+      setPage(1);
+    }
+  }, [uiStateHydrated, fillOrderCapability, fillOrderSupported, sortMode]);
   const floatingBatchActionsRef = useRef<HTMLDivElement>(null);
   const batchActionAnimationRef = useRef<AnimationPlaybackControlsWithThen | null>(null);
   const previousSelectionCountRef = useRef(0);
@@ -375,7 +387,7 @@ export function AuthFilesPage() {
       enabledOnly,
       disabledOnly,
       search: debouncedSearch,
-      sort: sortMode,
+      sort: sortMode === 'fill-order' && !fillOrderSupported ? 'default' : sortMode,
     }),
     [
       debouncedSearch,
@@ -389,6 +401,7 @@ export function AuthFilesPage() {
       recoveryFilter,
       problemOnly,
       sortMode,
+      fillOrderSupported,
     ]
   );
   const resolveFilteredFiles = useCallback(async (): Promise<AuthFileItem[]> => {
@@ -976,8 +989,9 @@ export function AuthFilesPage() {
       { value: 'default', label: t('auth_files.sort_default') },
       { value: 'az', label: t('auth_files.sort_az') },
       { value: 'priority', label: t('auth_files.sort_priority') },
+      ...(fillOrderSupported ? [{ value: 'fill-order', label: t('fill_order.title') }] : []),
     ],
-    [t]
+    [t, fillOrderSupported]
   );
 
   const typeCounts = useMemo(() => {
@@ -1059,6 +1073,14 @@ export function AuthFilesPage() {
       });
     } else if (sortMode === 'az') {
       copy.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortMode === 'fill-order') {
+      copy.sort((a, b) => {
+        const priority = (parsePriorityValue(b.priority) ?? 0) - (parsePriorityValue(a.priority) ?? 0);
+        if (priority) return priority;
+        const left = BigInt(a.fill_order?.position ?? '0');
+        const right = BigInt(b.fill_order?.position ?? '0');
+        return left < right ? -1 : left > right ? 1 : 0;
+      });
     } else if (sortMode === 'priority') {
       copy.sort((a, b) => {
         const pa = parsePriorityValue(a.priority ?? a['priority']) ?? 0;
@@ -1636,6 +1658,7 @@ export function AuthFilesPage() {
 
   return (
     <div className={styles.container}>
+      {reorderFile && <FillOrderModal key={reorderFile.fill_order?.record_id} file={reorderFile} onClose={()=>setReorderFile(null)} onSaved={()=>void refreshFilesInBackground()}/>}
       <span className={styles.visuallyHidden} role="status" aria-live="polite" aria-atomic="true">
         {chatGptWebAccountInfoLiveMessage}
       </span>
@@ -2017,6 +2040,7 @@ export function AuthFilesPage() {
               >
                 {pageItems.map((file) => (
                   <AuthFileCard
+                    onReorder={fillOrderSupported ? setReorderFile : undefined}
                     traffic={traffic.items[normalizeAuthIndex(file.auth_index ?? file.authIndex) ?? ""]} trafficStale={traffic.stale} trafficUnsupported={traffic.unsupported} trafficVisible={traffic.visible}
                     key={file.name}
                     file={file}

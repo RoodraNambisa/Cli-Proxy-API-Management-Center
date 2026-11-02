@@ -935,6 +935,7 @@ function parseRoutingPriorityOverrides(raw: unknown): RoutingPriorityOverrideVis
       ? record['max-retry-credentials']
       : record.maxRetryCredentials;
 
+    if (record['session-affinity-capacity-spillover'] !== undefined && typeof record['session-affinity-capacity-spillover'] !== 'boolean') throw new Error('session-affinity-capacity-spillover must be a boolean');
     result.push({
       clientId: makeClientId(),
       priority:
@@ -953,6 +954,7 @@ function parseRoutingPriorityOverrides(raw: unknown): RoutingPriorityOverrideVis
         record['fill-first-per-auth-rpm'] === undefined && record.fillFirstPerAuthRpm === undefined
           ? ''
           : String(record['fill-first-per-auth-rpm'] ?? record.fillFirstPerAuthRpm ?? ''),
+      sessionAffinityCapacitySpillover: record['session-affinity-capacity-spillover'] as boolean | undefined,
       perAuthConcurrency: String(record['per-auth-concurrency'] ?? record.perAuthConcurrency ?? ''),
       perAuthRequestLimit:
         record['per-auth-request-limit'] === undefined && record.perAuthRequestLimit === undefined
@@ -985,6 +987,7 @@ function areRoutingPriorityOverridesEqual(
       Boolean(other) &&
       entry.priority === other.priority &&
       entry.strategy === other.strategy &&
+      entry.sessionAffinityCapacitySpillover === other.sessionAffinityCapacitySpillover &&
       JSON.stringify(entry.codex) === JSON.stringify(other.codex) &&
       entry.maxRetryCredentials === other.maxRetryCredentials &&
       entry.fillFirstRange === other.fillFirstRange &&
@@ -1192,6 +1195,7 @@ function serializeRoutingPriorityOverridesForYaml(
     }
     if (rule.perAuthConcurrency?.trim()) entry['per-auth-concurrency'] = Number(rule.perAuthConcurrency);
     if (rule.queue !== undefined) entry.queue = rule.queue;
+    if (rule.sessionAffinityCapacitySpillover !== undefined) entry['session-affinity-capacity-spillover'] = rule.sessionAffinityCapacitySpillover;
     if (rule.perAuthRequestLimit.trim()) {
       const perAuthRequestLimit = parseNonNegativeIntegerString(rule.perAuthRequestLimit);
       if (perAuthRequestLimit === null) return result;
@@ -3192,6 +3196,13 @@ function getNextDirtyFields(
         baselineValues.routingSessionAffinityAcrossPriorities
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinityCapacitySpillover')) {
+    updateDirty(
+      'routingSessionAffinityCapacitySpillover',
+      nextValues.routingSessionAffinityCapacitySpillover ===
+        baselineValues.routingSessionAffinityCapacitySpillover
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'routingSessionAffinitySubagents')) {
     updateDirty(
       'routingSessionAffinitySubagents',
@@ -3481,6 +3492,16 @@ export function useVisualConfig() {
         typeof routingSessionAffinityAcrossPriorities !== 'boolean'
       ) {
         throw new Error('routing.session-affinity-across-priorities must be a boolean');
+      }
+      const routingSessionAffinityCapacitySpillover =
+        routing && Object.prototype.hasOwnProperty.call(routing, 'session-affinity-capacity-spillover')
+          ? routing['session-affinity-capacity-spillover']
+          : routing?.sessionAffinityCapacitySpillover;
+      if (
+        routingSessionAffinityCapacitySpillover != null &&
+        typeof routingSessionAffinityCapacitySpillover !== 'boolean'
+      ) {
+        throw new Error('routing.session-affinity-capacity-spillover must be a boolean');
       }
       const routingSessionAffinitySubagents =
         routing && Object.prototype.hasOwnProperty.call(routing, 'session-affinity-subagents')
@@ -3982,6 +4003,7 @@ export function useVisualConfig() {
           routing?.['session-affinity'] ?? routing?.sessionAffinity ?? routing?.['sessionAffinity']
         ),
         routingSessionAffinityAcrossPriorities: routingSessionAffinityAcrossPriorities ?? false,
+        routingSessionAffinityCapacitySpillover: routingSessionAffinityCapacitySpillover ?? false,
         routingSessionAffinitySubagents: routingSessionAffinitySubagents ?? false,
         routingSessionAffinityLCP: routingSessionAffinityLCP ?? false,
         routingSessionAffinityUseHistory: routingSessionAffinityUseHistory ?? true,
@@ -5074,6 +5096,7 @@ export function useVisualConfig() {
           values.routingPriorityOverrides.length > 0 ||
           values.routingSessionAffinity ||
           values.routingSessionAffinityUseHistory !== DEFAULT_VISUAL_VALUES.routingSessionAffinityUseHistory ||
+          values.routingSessionAffinityCapacitySpillover ||
           values.routingSessionAffinityAcrossPriorities ||
           values.routingSessionAffinitySubagents ||
           values.routingSessionAffinityLCP ||
@@ -5145,6 +5168,17 @@ export function useVisualConfig() {
               values.routingSessionAffinityAcrossPriorities
             );
             doc.deleteIn(['routing', 'sessionAffinityAcrossPriorities']);
+          }
+          if (
+            values.routingSessionAffinityCapacitySpillover ||
+            docHas(doc, ['routing', 'session-affinity-capacity-spillover']) ||
+            docHas(doc, ['routing', 'sessionAffinityCapacitySpillover'])
+          ) {
+            doc.setIn(
+              ['routing', 'session-affinity-capacity-spillover'],
+              values.routingSessionAffinityCapacitySpillover
+            );
+            doc.deleteIn(['routing', 'sessionAffinityCapacitySpillover']);
           }
           if (
             values.routingSessionAffinitySubagents ||

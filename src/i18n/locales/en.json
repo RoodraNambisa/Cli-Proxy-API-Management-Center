@@ -1,4 +1,27 @@
 {
+  "fill_order": {
+      "title": "Fill order",
+      "adjust": "Reorder",
+      "position": "Fill position",
+      "scope": "Move within all accounts at priority {{priority}}, including disabled accounts.",
+      "action": "Move",
+      "up": "Move up",
+      "down": "Move down",
+      "before": "Before account",
+      "after": "After account",
+      "steps": "Number of positions",
+      "search": "Search target account",
+      "target": "Target account",
+      "choose": "Choose an account",
+      "start": "First at this priority",
+      "end": "Last at this priority",
+      "preview": "Preview position",
+      "apply": "Apply order",
+      "conflict": "Order or priority changed. Refresh the list and try again.",
+      "spillover": "Temporarily use another credential when concurrency is full",
+      "spillover_hint": "Requires session affinity and failover. Wait for the bound credential first; when the queue is full or times out, try another available credential and preserve the original binding.",
+      "unsupported": "This backend does not support sticky capacity spillover. Upgrade before saving this setting."
+  },
   "auth_image_priority": {
     "description": "Disable Codex image generation within the scope below. Shared model exclusions apply independently.",
     "models_hint": "Optional. Leave empty to restrict image generation only within the scope above.",

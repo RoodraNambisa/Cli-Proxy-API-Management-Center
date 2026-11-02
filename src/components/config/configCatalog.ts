@@ -413,6 +413,11 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     ],
   },
   {
+    id: 'config-session-affinity-capacity-spillover', pageId: 'global-network',
+    labelKey: 'fill_order.spillover', yamlKeys: ['routing.session-affinity-capacity-spillover', 'routing.priority-overrides[].session-affinity-capacity-spillover'],
+    aliases: ['临时借号', 'sticky spillover'],
+  },
+  {
     id: 'config-session-affinity-across-priorities',
     pageId: 'global-network',
     labelKey: 'config_management.visual.sections.network.session_affinity_across_priorities',

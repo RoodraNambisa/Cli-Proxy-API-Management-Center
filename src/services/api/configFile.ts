@@ -47,6 +47,14 @@ export const configFileApi = {
       }
       if (!supported) throw new Error(i18n.t('auth_image_priority.upgrade'));
     }
+    const routing = parseDocument(content, { merge: true }).toJS()?.routing;
+    const needsSpillover = routing?.['session-affinity-capacity-spillover'] !== undefined ||
+      Array.isArray(routing?.['priority-overrides']) && routing['priority-overrides'].some((rule: Record<string,unknown>)=>rule?.['session-affinity-capacity-spillover'] !== undefined);
+    const spilloverConnection = needsSpillover ? options.connection ?? apiClient.captureConnection() : undefined;
+    if (spilloverConnection) {
+      const capabilities = await apiClient.getAtConnection<Record<string,unknown>>(spilloverConnection,'/config',{signal:options.signal});
+      if(capabilities['session-affinity-capacity-spillover-supported'] !== true) throw new Error(i18n.t('fill_order.unsupported'));
+    }
     const tlsValue = root?.['chatgpt-web']?.[TLS_TRUST_ANCHORS_KEY];
     const previousTLSValue = options.previousContent === undefined ? undefined
       : parseDocument(options.previousContent).toJS()?.['chatgpt-web']?.[TLS_TRUST_ANCHORS_KEY];
@@ -74,7 +82,7 @@ export const configFileApi = {
     const needsRegion = Boolean(
       needsManualRegion || root?.['proxy-ip'] || root?.codex?.['time-context']?.enabled === true
     );
-    const saveConnection = options.connection ?? imagePriorityConnection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
+    const saveConnection = options.connection ?? spilloverConnection ?? imagePriorityConnection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
     if (needsRegion) {
       const caps = await apiClient.getAtConnection<{ capabilities?: Record<string, boolean> }>(
         saveConnection!,
