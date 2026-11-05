@@ -2,6 +2,58 @@
   display: grid;
   gap: 12px;
 }
+.disclosure {
+  min-width: 0;
+}
+.summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px;
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+}
+.chevron {
+  flex: none;
+  margin-top: 9px;
+  color: var(--text-secondary);
+  transform: rotate(-90deg);
+}
+.disclosure[open] > .summary .chevron {
+  transform: none;
+}
+.models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.model {
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.content {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+}
 .hint {
   margin: 0;
   color: var(--text-secondary);

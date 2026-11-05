@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { IconChevronDown } from '@/components/ui/icons';
 import { StringListEditor } from '@/components/config/VisualConfigEditorBlocks';
 import { useChatGptWebImageFormats } from '../useChatGptWebImageFormats';
 import {
@@ -70,7 +71,6 @@ export function ChatGptWebImageFormatsEditor({
   };
   return (
     <div className={styles.editor}>
-      <p className={styles.hint}>{tr('description')}</p>
       {capability.status !== 'supported' && (
         <p role="status" className={styles.hint}>
           {tr(capability.status)}
@@ -85,93 +85,106 @@ export function ChatGptWebImageFormatsEditor({
           onChange={(chatgptWebImageModels) => onChange({ chatgptWebImageModels })}
         />
       ) : (
-        <>
-          <div className={styles.rows}>
-            {aliases.map((model) => {
-              const key = aliasKey(model);
-              const custom = Object.prototype.hasOwnProperty.call(overrides, key);
-              const formats = custom
-                ? overrides[key]
-                : Object.prototype.hasOwnProperty.call(data.default_overrides, key)
-                  ? data.default_overrides[key]
-                  : data.default_formats;
-              return (
-                <div key={key} className={styles.row}>
-                  <div className={styles.name}>
-                    <strong>{model}</strong>
-                    <span className={styles.badge}>{tr(custom ? 'custom' : 'default')}</span>
+        <details key={connectionKey} className={styles.disclosure}>
+          <summary className={styles.summary}>
+            <IconChevronDown size={16} className={styles.chevron} />
+            <span className={styles.models}>
+              {aliases.map((model) => (
+                <span key={aliasKey(model)} className={styles.model}>
+                  {model}
+                </span>
+              ))}
+            </span>
+          </summary>
+          <div className={styles.content}>
+            <p className={styles.hint}>{tr('description')}</p>
+            <div className={styles.rows}>
+              {aliases.map((model) => {
+                const key = aliasKey(model);
+                const custom = Object.prototype.hasOwnProperty.call(overrides, key);
+                const formats = custom
+                  ? overrides[key]
+                  : Object.prototype.hasOwnProperty.call(data.default_overrides, key)
+                    ? data.default_overrides[key]
+                    : data.default_formats;
+                return (
+                  <div key={key} className={styles.row}>
+                    <div className={styles.name}>
+                      <strong>{model}</strong>
+                      <span className={styles.badge}>{tr(custom ? 'custom' : 'default')}</span>
+                    </div>
+                    <div className={styles.formats} role="group" aria-label={model}>
+                      {IMAGE_OUTPUT_FORMATS.map((format) => (
+                        <label key={format}>
+                          <input
+                            type="checkbox"
+                            checked={formats.includes(format)}
+                            aria-label={`${model} ${format.toUpperCase()}`}
+                            disabled={!ready || (formats.length === 1 && formats[0] === format)}
+                            onChange={(e) => {
+                              const selected = e.target.checked
+                                ? IMAGE_OUTPUT_FORMATS.filter(
+                                    (f) => f === format || formats.includes(f)
+                                  )
+                                : formats.filter((f) => f !== format);
+                              onChange({
+                                chatgptWebModelOutputFormats: { ...overrides, [key]: selected },
+                              });
+                            }}
+                          />
+                          {format.toUpperCase()}
+                        </label>
+                      ))}
+                    </div>
+                    <div className={styles.actions}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={!ready || !custom}
+                        onClick={() =>
+                          onChange({ chatgptWebModelOutputFormats: removeOverride(model) })
+                        }
+                      >
+                        {tr('reset')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={!ready}
+                        onClick={() =>
+                          setEdit({ previous: model, value: model, connection: connectionKey })
+                        }
+                      >
+                        {tr('rename')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={!ready || aliases.length === 1}
+                        onClick={() =>
+                          onChange({
+                            chatgptWebImageModels: aliases.filter((a) => a !== model),
+                            chatgptWebModelOutputFormats: removeOverride(model),
+                          })
+                        }
+                      >
+                        {tr('delete')}
+                      </Button>
+                    </div>
                   </div>
-                  <div className={styles.formats} role="group" aria-label={model}>
-                    {IMAGE_OUTPUT_FORMATS.map((format) => (
-                      <label key={format}>
-                        <input
-                          type="checkbox"
-                          checked={formats.includes(format)}
-                          aria-label={`${model} ${format.toUpperCase()}`}
-                          disabled={!ready || (formats.length === 1 && formats[0] === format)}
-                          onChange={(e) => {
-                            const selected = e.target.checked
-                              ? IMAGE_OUTPUT_FORMATS.filter(
-                                  (f) => f === format || formats.includes(f)
-                                )
-                              : formats.filter((f) => f !== format);
-                            onChange({
-                              chatgptWebModelOutputFormats: { ...overrides, [key]: selected },
-                            });
-                          }}
-                        />
-                        {format.toUpperCase()}
-                      </label>
-                    ))}
-                  </div>
-                  <div className={styles.actions}>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={!ready || !custom}
-                      onClick={() =>
-                        onChange({ chatgptWebModelOutputFormats: removeOverride(model) })
-                      }
-                    >
-                      {tr('reset')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={!ready}
-                      onClick={() =>
-                        setEdit({ previous: model, value: model, connection: connectionKey })
-                      }
-                    >
-                      {tr('rename')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={!ready || aliases.length === 1}
-                      onClick={() =>
-                        onChange({
-                          chatgptWebImageModels: aliases.filter((a) => a !== model),
-                          chatgptWebModelOutputFormats: removeOverride(model),
-                        })
-                      }
-                    >
-                      {tr('delete')}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={!ready}
+              onClick={() => setEdit({ value: '', connection: connectionKey })}
+            >
+              {tr('add')}
+            </Button>
           </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={!ready}
-            onClick={() => setEdit({ value: '', connection: connectionKey })}
-          >
-            {tr('add')}
-          </Button>
-        </>
+        </details>
       )}
       <Modal
         open={!!draft && ready}

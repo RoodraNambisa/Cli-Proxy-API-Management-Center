@@ -53,6 +53,16 @@ function Harness() {
     </>
   );
 }
+
+async function expandFormats() {
+  const checkbox = await screen.findByLabelText('gpt-image-2.6 GIF');
+  const details = checkbox.closest('details')!;
+  expect(details.open).toBe(false);
+  fireEvent.click(details.querySelector('summary')!);
+  expect(details.open).toBe(true);
+  return details;
+}
+
 describe('alias formats editor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -62,7 +72,8 @@ describe('alias formats editor', () => {
   afterEach(cleanup);
   it('changes only the override and can restore the inherited default', async () => {
     render(<Harness />);
-    const checkbox = await screen.findByLabelText('gpt-image-2.6 GIF');
+    const details = await expandFormats();
+    const checkbox = screen.getByLabelText('gpt-image-2.6 GIF');
     expect((checkbox as HTMLInputElement).checked).toBe(true);
     expect((screen.getByLabelText('gpt-image-2.5 GIF') as HTMLInputElement).checked).toBe(false);
     fireEvent.click(checkbox);
@@ -71,6 +82,11 @@ describe('alias formats editor', () => {
     expect(value.chatgptWebModelOutputFormats).toEqual({
       'gpt-image-2.6': ['png', 'jpeg', 'webp'],
     });
+    fireEvent.click(details.querySelector('summary')!);
+    expect(details.open).toBe(false);
+    expect(JSON.parse(screen.getByTestId('value').textContent!)).toEqual(value);
+    fireEvent.click(details.querySelector('summary')!);
+    expect((checkbox as HTMLInputElement).checked).toBe(false);
     const row = checkbox.closest('div[role="group"]')!.parentElement!;
     fireEvent.click(within(row).getByText('chatgpt_web.image_formats.reset'));
     expect(
@@ -79,7 +95,8 @@ describe('alias formats editor', () => {
   });
   it('moves a format override when renaming and removes it with the alias', async () => {
     render(<Harness />);
-    const checkbox = await screen.findByLabelText('gpt-image-2.5 GIF');
+    await expandFormats();
+    const checkbox = screen.getByLabelText('gpt-image-2.5 GIF');
     fireEvent.click(checkbox);
     const row = checkbox.closest('div[role="group"]')!.parentElement!;
     fireEvent.click(within(row).getByText('chatgpt_web.image_formats.rename'));
@@ -100,7 +117,8 @@ describe('alias formats editor', () => {
   });
   it('adds a custom alias with static defaults and prevents an empty format set', async () => {
     render(<Harness />);
-    fireEvent.click(await screen.findByText('chatgpt_web.image_formats.add'));
+    await expandFormats();
+    fireEvent.click(screen.getByText('chatgpt_web.image_formats.add'));
     fireEvent.change(screen.getByLabelText('chatgpt_web.image_formats.name'), {
       target: { value: 'new-alias' },
     });
