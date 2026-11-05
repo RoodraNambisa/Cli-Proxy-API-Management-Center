@@ -4571,6 +4571,8 @@
       }
     },
     "usage_cache": {
+      "output_estimator_title": "圖片輸出估算：GPT Image 2.6",
+      "output_estimator_description": "尺寸依最終交付結果計算；GIF 依動畫配置的整張拼格畫布估算，缺少配置時依實際影格數推算。播放速度不增加 Token。固定 Usage 備援仍按檔案計數。",
       "title": "Usage 計費快取",
       "description": "僅在 ChatGPT Web 成功回傳後估算 Token，並控制精簡計費資料的儲存位置。",
       "estimate": "估算 Token Usage",
@@ -4609,10 +4611,10 @@
       "orphan_retention": "孤兒快取保留時間（分鐘）",
       "orphan_retention_hint": "僅在服務啟動時清理確認已停止的執行個體目錄；0 表示立即清理，最大 10080 分鐘。",
       "auto_quality": "自動圖片計費品質",
-      "auto_quality_hint": "quality=auto 預設按中（48）估算 GPT Image 2 本機 Token 與費用；此設定不會改變實際圖片品質。",
-      "quality_low": "低（16）",
-      "quality_medium": "中（48）",
-      "quality_high": "高（96）",
+      "auto_quality_hint": "quality=auto 預設以中等品質估算本地 Token 與費用；此設定不會改變實際出圖品質。",
+      "quality_low": "低",
+      "quality_medium": "中",
+      "quality_high": "高",
       "security_notice": "磁碟快取可能包含提示詞文字。此功能預設關閉；開啟時請使用受保護的快取根目錄，每個執行個體會建立自己的私有子目錄。",
       "security_notice_legacy": "磁碟快取可能包含提示詞文字。此功能預設關閉；開啟時請使用受保護且不被多個執行個體共用的目錄。",
       "status_title": "即時快取使用量",

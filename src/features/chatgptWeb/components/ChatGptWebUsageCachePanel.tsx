@@ -446,6 +446,7 @@ export const ChatGptWebUsageCachePanel = forwardRef<
       if (!refreshed) {
         const fallbackSnapshot = {
           ...parsedDraft.config,
+          'image-output-estimator': snapshot['image-output-estimator'],
           stats: snapshot.stats,
           filesystem: snapshot.filesystem,
         };
@@ -564,6 +565,13 @@ export const ChatGptWebUsageCachePanel = forwardRef<
       }
     >
       <div className={styles.content}>
+        {snapshotGenerationKeyRef.current === connectionGenerationKey &&
+        snapshot?.['image-output-estimator'] === 'gpt-image-2.6-sheet-v1' ? (
+          <p className={styles.estimatorNotice}>
+            <strong>{t('chatgpt_web.usage_cache.output_estimator_title')}</strong>{' '}
+            {t('chatgpt_web.usage_cache.output_estimator_description')}
+          </p>
+        ) : null}
         <div className={styles.toggleRow}>
           <div>
             <strong>{t('chatgpt_web.usage_cache.estimate')}</strong>

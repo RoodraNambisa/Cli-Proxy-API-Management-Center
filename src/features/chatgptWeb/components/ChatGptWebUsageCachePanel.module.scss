@@ -294,3 +294,14 @@
     grid-column: auto;
   }
 }
+
+.estimatorNotice {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}

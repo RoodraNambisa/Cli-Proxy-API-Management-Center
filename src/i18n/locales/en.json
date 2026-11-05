@@ -4586,6 +4586,8 @@
       }
     },
     "usage_cache": {
+      "output_estimator_title": "Image output estimate: GPT Image 2.6",
+      "output_estimator_description": "Uses delivered dimensions. GIF output is estimated from the complete animation sheet; missing layouts are inferred from the actual frame count. Playback speed adds no tokens. Fixed usage fallback still counts files.",
       "title": "Usage accounting cache",
       "description": "Estimate ChatGPT Web token usage after successful responses and control where compact billing material is retained.",
       "estimate": "Estimate token usage",
@@ -4624,10 +4626,10 @@
       "orphan_retention": "Orphan cache retention (minutes)",
       "orphan_retention_hint": "Confirmed stopped instance directories are cleaned only at service startup. Use 0 for immediate cleanup; maximum 10080 minutes.",
       "auto_quality": "Auto image billing quality",
-      "auto_quality_hint": "quality=auto defaults to medium (48) for local GPT Image 2 token and cost estimates. It does not change generated image quality.",
-      "quality_low": "Low (16)",
-      "quality_medium": "Medium (48)",
-      "quality_high": "High (96)",
+      "auto_quality_hint": "quality=auto defaults to medium for local token and cost estimates. This setting does not change generation quality.",
+      "quality_low": "Low",
+      "quality_medium": "Medium",
+      "quality_high": "High",
       "security_notice": "Disk cache files may contain prompt text. Disk caching is disabled by default; use a protected cache root. Each running instance creates a private child directory.",
       "security_notice_legacy": "Disk cache files may contain prompt text. Disk caching is disabled by default; use a protected directory that is not shared by running instances.",
       "status_title": "Live cache usage",

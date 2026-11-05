@@ -521,6 +521,7 @@ export interface ChatGptWebUsageCacheStats {
 }
 
 export interface ChatGptWebUsageSnapshot extends ChatGptWebUsageConfig {
+  'image-output-estimator'?: string;
   stats: ChatGptWebUsageCacheStats;
   filesystem?: SystemFilesystemSnapshot;
 }

@@ -478,6 +478,32 @@ describe('system metrics and filesystem capacity', () => {
     expect(get).toHaveBeenCalledWith('/system/metrics');
   });
 
+  test('shows the output estimator only for the current supported backend and never saves it', async () => {
+    localStorage.setItem('config-management:chatgpt-web-usage-cache-expanded', 'true');
+    const snapshot = {
+      ...createUsageSnapshot(undefined),
+      'image-output-estimator': 'gpt-image-2.6-sheet-v1',
+    };
+    const get = vi.spyOn(chatGptWebApi, 'getUsageCache').mockResolvedValue(snapshot);
+    const patch = vi.spyOn(chatGptWebApi, 'patchUsageCache').mockResolvedValue({});
+    const ref = createRef<ChatGptWebUsageCachePanelHandle>();
+    const view = render(<ChatGptWebUsageCachePanel ref={ref} connectionGenerationKey="a" />);
+    expect(await screen.findByText('chatgpt_web.usage_cache.output_estimator_title')).toBeTruthy();
+    fireEvent.change(document.getElementById('chatgpt-web-usage-quality') as HTMLSelectElement, {
+      target: { value: 'high' },
+    });
+    await act(async () => {
+      await ref.current?.save();
+    });
+    expect(patch).toHaveBeenCalled();
+    expect(patch.mock.calls[0][0]).not.toHaveProperty('image-output-estimator');
+    get.mockResolvedValue(createUsageSnapshot(undefined));
+    view.rerender(<ChatGptWebUsageCachePanel ref={ref} connectionGenerationKey="b" />);
+    expect(screen.queryByText('chatgpt_web.usage_cache.output_estimator_title')).toBeNull();
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(3));
+    expect(screen.queryByText('chatgpt_web.usage_cache.output_estimator_title')).toBeNull();
+  });
+
   test('shows cache filesystem capacity and handles an older backend without the field', async () => {
     localStorage.setItem('config-management:chatgpt-web-usage-cache-expanded', 'true');
     const getUsageCache = vi

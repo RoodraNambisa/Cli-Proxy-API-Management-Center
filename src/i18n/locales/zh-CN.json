@@ -4586,6 +4586,8 @@
       }
     },
     "usage_cache": {
+      "output_estimator_title": "图片输出估算：GPT Image 2.6",
+      "output_estimator_description": "尺寸按最终交付结果计算；GIF 按动画布局的整张拼帧画布估算，缺少布局时按实际帧数推算。播放速度不增加 Token。固定 Usage 回退仍按文件计数。",
       "title": "Usage 计费缓存",
       "description": "仅在 ChatGPT Web 成功返回后估算 Token，并控制精简计费材料的保存位置。",
       "estimate": "估算 Token Usage",
@@ -4624,10 +4626,10 @@
       "orphan_retention": "孤儿缓存保留时间（分钟）",
       "orphan_retention_hint": "仅在服务启动时清理确认已停止的实例目录；0 表示立即清理，最大 10080 分钟。",
       "auto_quality": "自动图片计费质量",
-      "auto_quality_hint": "quality=auto 默认按中（48）估算 GPT Image 2 本地 Token 和费用；该设置不会改变实际出图质量。",
-      "quality_low": "低（16）",
-      "quality_medium": "中（48）",
-      "quality_high": "高（96）",
+      "auto_quality_hint": "quality=auto 默认按中等质量估算本地 Token 和费用；该设置不会改变实际出图质量。",
+      "quality_low": "低",
+      "quality_medium": "中",
+      "quality_high": "高",
       "security_notice": "磁盘缓存可能包含提示词文本。该功能默认关闭；开启时请使用受保护的缓存根目录，每个运行实例会创建自己的私有子目录。",
       "security_notice_legacy": "磁盘缓存可能包含提示词文本。该功能默认关闭；开启时请使用受保护且不被多个运行实例共享的目录。",
       "status_title": "实时缓存占用",
