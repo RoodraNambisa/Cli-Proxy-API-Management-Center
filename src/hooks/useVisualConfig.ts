@@ -1,3 +1,4 @@
+import { readModelOutputFormats, imageFormatsInvalid } from '@/features/chatgptWeb/imageOutputFormats';
 import { readCodexIdentityOverride } from '@/types/codexIdentity';
 import { defaultRoutingAdmission, emptyQueue, type QueueSettings } from '@/features/traffic/types';
 import { readTrafficVisibility } from '@/features/traffic/visibility';
@@ -27,7 +28,7 @@ import {
   serializeOAuthRequestScopedErrors,
   validateRequestScopedErrorRule,
 } from '@/utils/requestScopedErrors';
-import { isMap, parse as parseYaml, parseDocument } from 'yaml';
+import { isMap, isSeq, type YAMLMap, parse as parseYaml, parseDocument } from 'yaml';
 import type {
   CodexCustomModelValidationErrors,
   CodexCustomModelVisualEntry,
@@ -1680,6 +1681,7 @@ export function getVisualConfigValidationErrors(
       'integer_range_1_64'
     ),
     noCooldownStatusCodes: getHttpStatusListError(values.noCooldownStatusCodes),
+    chatgptWebModelOutputFormats: imageFormatsInvalid(values.chatgptWebModelOutputFormats, values.chatgptWebImageModels, values.images.imageModel) ? 'image_output_formats' : undefined,
     chatgptWebAutoDeleteDeadPriorities: getSafeIntegerStringListError(
       values.chatgptWebAutoDeleteDeadPriorities
     ),
@@ -2685,6 +2687,9 @@ function getNextDirtyFields(
       'chatgptWebImageReasoningMode',
       nextValues.chatgptWebImageReasoningMode === baselineValues.chatgptWebImageReasoningMode
     );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebModelOutputFormats')) {
+    updateDirty('chatgptWebModelOutputFormats', JSON.stringify(nextValues.chatgptWebModelOutputFormats) === JSON.stringify(baselineValues.chatgptWebModelOutputFormats));
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebImageModels')) {
     updateDirty(
@@ -3730,6 +3735,7 @@ export function useVisualConfig() {
               ? imagesChatGPTWeb.upstreamModel
               : DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel,
         chatgptWebImageReasoningMode: (imageReasoningMode ?? 'auto').trim().toLowerCase() || 'auto',
+        chatgptWebModelOutputFormats: readModelOutputFormats(imagesChatGPTWeb?.['model-output-formats']),
         chatgptWebImageModels: parseStringList(
           imagesChatGPTWeb?.['image-models'] ?? imagesChatGPTWeb?.imageModels
         ),
@@ -4680,6 +4686,7 @@ export function useVisualConfig() {
 
         const imagesDefaults = DEFAULT_VISUAL_VALUES.images;
         const imagesDefined =
+          Object.keys(values.chatgptWebModelOutputFormats).length > 0 ||
           docHas(doc, ['images']) ||
           values.images.codexModel !== imagesDefaults.codexModel ||
           values.images.codexRequestTimeoutSeconds !== imagesDefaults.codexRequestTimeoutSeconds ||
@@ -4812,6 +4819,7 @@ export function useVisualConfig() {
             values.images.streamFlushMinBytes
           );
           if (
+            Object.keys(values.chatgptWebModelOutputFormats).length > 0 ||
             docHas(doc, ['images', 'chatgpt-web']) ||
             !areStringArraysEqual(
               values.chatgptWebImageModels,
@@ -4873,6 +4881,26 @@ export function useVisualConfig() {
               DEFAULT_VISUAL_VALUES.chatgptWebImageMemoryFinalizerConcurrency
           ) {
             ensureMapInDoc(doc, ['images', 'chatgpt-web']);
+            if (state.dirtyFields.has('chatgptWebModelOutputFormats')) {
+              const formatsPath = ['images', 'chatgpt-web', 'model-output-formats'];
+              const formats = values.chatgptWebModelOutputFormats;
+              if (Object.keys(formats).length) {
+                ensureMapInDoc(doc, formatsPath);
+                const previous = doc.getIn(formatsPath) as YAMLMap;
+                for (const item of [...previous.items]) {
+                  const key = String(item.key);
+                  if (!Object.prototype.hasOwnProperty.call(formats, key)) doc.deleteIn([...formatsPath, key]);
+                }
+                for (const [model, allowed] of Object.entries(formats)) {
+                  const path = [...formatsPath, model];
+                  const node = doc.getIn(path);
+                  const current = isSeq(node) ? node.toJSON() : undefined;
+                  if (JSON.stringify(current) !== JSON.stringify(allowed)) doc.setIn(path, allowed);
+                }
+              } else {
+                doc.deleteIn(formatsPath);
+              }
+            }
             if (
               docHas(doc, ['images', 'chatgpt-web', 'image-models']) ||
               docHas(doc, ['images', 'chatgpt-web', 'imageModels']) ||

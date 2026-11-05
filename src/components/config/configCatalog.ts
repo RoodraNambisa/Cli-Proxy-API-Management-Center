@@ -178,6 +178,7 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebImageUpstreamModel',
       'chatgptWebImageReasoningMode',
       'chatgptWebImageModels',
+      'chatgptWebModelOutputFormats',
       'chatgptWebIgnoreUnsupportedImageParams',
       'chatgptWebSanitizeErrorResponses',
       'chatgptWebAutoCleanupLibraryOnFull',
@@ -965,8 +966,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     id: 'config-chatgpt-web-image-models',
     pageId: 'provider-chatgpt-web',
     labelKey: 'config_management.settings_center.chatgpt_web.image_models',
-    yamlKeys: ['images.chatgpt-web.image-models'],
-    aliases: ['gpt-image-2.5', 'flare', 'sunburst', 'image aliases', '图片别名'],
+    yamlKeys: ['images.chatgpt-web.image-models', 'images.chatgpt-web.model-output-formats'],
+    aliases: ['gpt-image-2.5', 'gpt-image-2.6', 'gif', 'png', 'jpeg', 'webp', 'output_format', 'flare', 'sunburst', 'image aliases', '图片别名', '输出格式'],
   },
   {
     id: 'config-chatgpt-web-sanitize-image-errors',

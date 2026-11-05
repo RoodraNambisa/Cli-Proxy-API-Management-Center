@@ -147,6 +147,7 @@ export interface ImagesConfig {
     bootstrapTimeoutSeconds?: number;
     bootstrapRetries?: number;
     imageModels?: string[];
+    modelOutputFormats?: Record<string, string[]>;
     upstreamModel?: string;
     reasoningMode?: string;
     sanitizeErrorResponses?: boolean;

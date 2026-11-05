@@ -1,3 +1,4 @@
+import { readModelOutputFormats } from '@/features/chatgptWeb/imageOutputFormats';
 import { readCodexServiceTiers } from '@/utils/codexServiceTiers';
 import { normalizeCredentialWeight } from '@/utils/credentialWeight';
 import { normalizeClientApiKeyGroups } from '@/utils/apiKeyGroups';
@@ -1196,6 +1197,7 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       chatgptWeb: chatgptWeb
         ? {
             imageModels: normalizeStringArray(chatgptWeb['image-models'] ?? chatgptWeb.imageModels),
+            modelOutputFormats: (chatgptWeb['model-output-formats'] ?? chatgptWeb.modelOutputFormats) === undefined ? undefined : readModelOutputFormats(chatgptWeb['model-output-formats'] ?? chatgptWeb.modelOutputFormats),
             upstreamModel:
               typeof (chatgptWeb['upstream-model'] ?? chatgptWeb.upstreamModel) === 'string'
                 ? String(chatgptWeb['upstream-model'] ?? chatgptWeb.upstreamModel)

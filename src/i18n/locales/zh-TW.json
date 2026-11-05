@@ -3205,7 +3205,8 @@
         "codex_response_guard": "規則設定有誤，请檢查匹配條件、重複的模型覆盖和欄位值。",
         "codex_auto_cookie_conflict": "與已啟用的 Cookie-only 託管衝突。請關閉對應規則或自動補全後再儲存。",
         "codex_time_context": "请填写有效的 IANA 时区。",
-        "codex_identity_user_agent": "User-Agent 不可包含控制字元。"
+        "codex_identity_user_agent": "User-Agent 不可包含控制字元。",
+        "image_output_formats": "每項覆寫必須對應有效 Web 圖片別名，且至少選擇一種 PNG、JPEG、WebP 或 GIF 格式；別名不能重複。"
       },
       "common": {
         "summary_providers": "提供者",
@@ -4652,6 +4653,22 @@
         "cleanup_errors": "清理錯誤",
         "last_cleanup_at": "最近啟動清理"
       }
+    },
+    "image_formats": {
+      "description": "僅限制 ChatGPT Web 圖片輸出，參考圖輸入不受影響。未指定 output_format 時預設 PNG；禁止的格式在提交官方前拒絕。2.6 系列預設允許 GIF，其他別名預設靜態格式。提示詞產生的 GIF 在請求靜態格式時取首幀交付。",
+      "default": "預設",
+      "custom": "自訂",
+      "reset": "恢復預設",
+      "rename": "重新命名",
+      "delete": "刪除",
+      "add": "新增別名",
+      "apply": "套用",
+      "name": "別名名稱",
+      "invalid_name": "請輸入不重複的非空別名。",
+      "loading": "正在讀取目前連線的輸出格式能力…",
+      "unsupported": "目前後端不支援別名輸出格式設定，請升級後端。",
+      "error": "無法讀取輸出格式能力；格式控制項暫時無法使用。",
+      "connection_changed": "連線已切換，請重新載入設定後儲存。"
     }
   },
   "proxy_pools": {

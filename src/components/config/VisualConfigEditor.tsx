@@ -1,3 +1,4 @@
+import { ChatGptWebImageFormatsEditor } from '@/features/chatgptWeb/components/ChatGptWebImageFormatsEditor';
 import { CodexIdentityEditor, useCodexIdentitySupport } from '@/features/codexIdentity/CodexIdentityEditor';
 import trafficStyles from '@/features/traffic/Traffic.module.scss';
 import { QueueFields } from '@/features/traffic/QueueFields';
@@ -2460,15 +2461,15 @@ export function VisualConfigEditor({
                     )}
                     compactHint
                   >
-                    <StringListEditor
-                      compact
-                      value={values.chatgptWebImageModels}
+                    <ChatGptWebImageFormatsEditor
+                      key={chatGptWebConnectionGenerationKey}
+                      models={values.chatgptWebImageModels}
+                      overrides={values.chatgptWebModelOutputFormats}
+                      legacyModel={values.images.imageModel}
+                      connectionKey={chatGptWebConnectionGenerationKey}
+                      active={activePageId === 'provider-chatgpt-web'}
                       disabled={disabled}
-                      placeholder="gpt-image-2.5"
-                      inputAriaLabel={t(
-                        'config_management.settings_center.chatgpt_web.image_models'
-                      )}
-                      onChange={(chatgptWebImageModels) => onChange({ chatgptWebImageModels })}
+                      onChange={onChange}
                     />
                   </FieldShell>
                 </div>

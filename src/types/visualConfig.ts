@@ -103,6 +103,7 @@ export type VisualConfigFieldPath =
   | 'streaming.nonstreamKeepaliveInterval';
 
 export type VisualConfigValidationErrorCode =
+  | 'image_output_formats'
   | 'codex_time_context'
   | 'codex_base_url'
   | 'codex_identity_user_agent'
@@ -421,6 +422,7 @@ export type VisualConfigValues = {
   chatgptWebImageUpstreamModel: string;
   chatgptWebImageReasoningMode: string;
   chatgptWebImageModels: string[];
+  chatgptWebModelOutputFormats: Record<string, ('png' | 'jpeg' | 'webp' | 'gif')[]>;
   chatgptWebIgnoreUnsupportedImageParams: boolean;
   chatgptWebSanitizeErrorResponses: boolean;
   chatgptWebAutoCleanupLibraryOnFull: boolean;
@@ -574,6 +576,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebImageUpstreamModel: 'auto',
   chatgptWebImageReasoningMode: 'auto',
   chatgptWebImageModels: [],
+  chatgptWebModelOutputFormats: {},
   chatgptWebIgnoreUnsupportedImageParams: false,
   chatgptWebSanitizeErrorResponses: false,
   chatgptWebAutoCleanupLibraryOnFull: false,

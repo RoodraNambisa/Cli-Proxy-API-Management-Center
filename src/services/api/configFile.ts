@@ -1,3 +1,4 @@
+import { IMAGE_FORMATS_KEY, fetchImageFormatsCapability, readModelOutputFormats, effectiveImageAliases } from '@/features/chatgptWeb/imageOutputFormats';
 import { autoCookieConflict } from '@/utils/codexAutoCookie';
 import { readCodexState } from '@/utils/codexStateOverride';
 import { STATE_STRATEGY_KEYS } from '@/utils/codexStateStrategy';
@@ -55,6 +56,24 @@ export const configFileApi = {
       const capabilities = await apiClient.getAtConnection<Record<string,unknown>>(spilloverConnection,'/config',{signal:options.signal});
       if(capabilities['session-affinity-capacity-spillover-supported'] !== true) throw new Error(i18n.t('fill_order.unsupported'));
     }
+    const imageFormatsRoot = parseDocument(content, { merge: true }).toJS();
+    const formats = imageFormatsRoot?.images?.['chatgpt-web']?.[IMAGE_FORMATS_KEY];
+    const previousFormats = options.previousContent === undefined ? undefined
+      : parseDocument(options.previousContent, { merge: true }).toJS()?.images?.['chatgpt-web']?.[IMAGE_FORMATS_KEY];
+    const needsImageFormats = options.previousContent === undefined ? formats !== undefined
+      : JSON.stringify(formats) !== JSON.stringify(previousFormats);
+    const formatsConnection = needsImageFormats ? options.connection ?? apiClient.captureConnection() : undefined;
+    if (formatsConnection) {
+      let capability = null;
+      try { capability = await fetchImageFormatsCapability(formatsConnection, options.signal); }
+      catch (error) {
+        if (![404, 405, 501].includes((error as { status?: number }).status ?? 0)) throw error;
+      }
+      if (!capability) throw new Error(i18n.t('chatgpt_web.image_formats.unsupported'));
+      try {
+        readModelOutputFormats(formats, effectiveImageAliases(imageFormatsRoot?.images?.['chatgpt-web']?.['image-models'] ?? [], imageFormatsRoot?.images?.['image-model'] ?? '', capability.default_aliases));
+      } catch { throw new Error(i18n.t('config_management.visual.validation.image_output_formats')); }
+    }
     const tlsValue = root?.['chatgpt-web']?.[TLS_TRUST_ANCHORS_KEY];
     const previousTLSValue = options.previousContent === undefined ? undefined
       : parseDocument(options.previousContent).toJS()?.['chatgpt-web']?.[TLS_TRUST_ANCHORS_KEY];
@@ -82,7 +101,7 @@ export const configFileApi = {
     const needsRegion = Boolean(
       needsManualRegion || root?.['proxy-ip'] || root?.codex?.['time-context']?.enabled === true
     );
-    const saveConnection = options.connection ?? spilloverConnection ?? imagePriorityConnection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
+    const saveConnection = options.connection ?? formatsConnection ?? spilloverConnection ?? imagePriorityConnection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
     if (needsRegion) {
       const caps = await apiClient.getAtConnection<{ capabilities?: Record<string, boolean> }>(
         saveConnection!,
@@ -246,6 +265,11 @@ export const configFileApi = {
         throw new Error(i18n.t('codex_state.model_special_upgrade'));
       if (retryRounds && options.features?.state_retry_rounds !== true)
         throw new Error(i18n.t('codex_state.retry_round_upgrade'));
+    }
+    if (formatsConnection) {
+      const current = apiClient.captureConnection();
+      if (current.apiBase !== formatsConnection.apiBase || current.managementKey !== formatsConnection.managementKey)
+        throw new Error(i18n.t('chatgpt_web.image_formats.connection_changed'));
     }
     if (tlsConnection) {
       const current = apiClient.captureConnection();
