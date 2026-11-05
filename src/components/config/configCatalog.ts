@@ -186,6 +186,8 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebRemoteImageUrlDownloadMode',
       'chatgptWebAdaptSizeToAspectRatio',
       'chatgptWebStrictSize',
+      'chatgptWebGIFAllowAspectRatioMismatch',
+      'chatgptWebGIFAspectRatioMaxErrorPercent',
       'chatgptWebAspectRatioMaxErrorPercent',
       'chatgptWebResizeToRequestedSize',
       'chatgptWebResizeFilter',
@@ -1028,6 +1030,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     yamlKeys: [
       'images.chatgpt-web.adapt-size-to-aspect-ratio',
       'images.chatgpt-web.strict-size',
+      'images.chatgpt-web.gif-allow-aspect-ratio-mismatch',
+      'images.chatgpt-web.gif-aspect-ratio-max-error-percent',
       'images.chatgpt-web.aspect-ratio-max-error-percent',
       'images.chatgpt-web.resize-to-requested-size',
       'images.chatgpt-web.resize-filter',
@@ -1037,6 +1041,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
     ],
     fieldTargets: {
       'images.chatgpt-web.strict-size': 'config-chatgpt-web-strict-size',
+      'images.chatgpt-web.gif-allow-aspect-ratio-mismatch': 'config-chatgpt-web-gif-allow-aspect-ratio-mismatch',
+      'images.chatgpt-web.gif-aspect-ratio-max-error-percent': 'config-chatgpt-web-gif-aspect-ratio-max-error-percent',
       'images.chatgpt-web.aspect-ratio-max-error-percent': 'config-chatgpt-web-aspect-ratio-max-error-percent',
       'images.chatgpt-web.resize-to-requested-size': 'config-chatgpt-web-resize-to-requested-size',
       'images.chatgpt-web.resize-filter': 'config-chatgpt-web-resize-filter',
@@ -1045,6 +1051,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.max-n': 'config-chatgpt-web-max-n',
     },
     aliases: [
+      'GIF tolerance', 'GIF 容差', 'GIF 比例', 'допуск GIF',
       'aspect ratio',
       'resize',
       'max n',

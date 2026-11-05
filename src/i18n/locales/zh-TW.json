@@ -3878,6 +3878,17 @@
     "author": "作者"
   },
   "chatgpt_web": {
+    "gif_aspect_ratio": {
+      "title": "GIF 比例超限時保留原尺寸",
+      "description": "預設關閉。僅對 GIF 輸出生效：超過 GIF 容差時保留官方傳回的原尺寸；在容差內仍依既有設定縮放。靜態格式、輸入尺寸、動畫影格與資源限制維持原規則。",
+      "tolerance": "GIF 獨立比例容差（%）",
+      "tolerance_hint": "範圍 0–10%，留空沿用通用比例容差。僅影響 GIF 輸出，例如通用 1%、GIF 5%。",
+      "inherit": "沿用通用容差",
+      "loading": "正在確認目前後端是否支援 GIF 比例設定。",
+      "unsupported": "目前後端不支援 GIF 比例設定，請升級後端。",
+      "error": "無法讀取後端能力，暫時不能修改 GIF 比例設定。",
+      "connection_changed": "連線已切換，請重新載入設定後儲存。"
+    },
     "tls_trust_anchors": {
       "title": "傳送 TLS Trust Anchors 擴充",
       "enabled_description": "原始 Chrome 146 範本（預設）：傳送 trust_anchors（0xca34）。憑證驗證維持啟用；儲存後對新流程生效。",

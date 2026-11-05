@@ -1,3 +1,4 @@
+import { GIF_RATIO_EXCEPTION_KEY, GIF_RATIO_TOLERANCE_KEY, readGIFRatioException, readGIFRatioTolerance, supportsGIFAspectRatio } from '@/features/chatgptWeb/gifAspectRatio';
 import { IMAGE_FORMATS_KEY, fetchImageFormatsCapability, readModelOutputFormats, effectiveImageAliases } from '@/features/chatgptWeb/imageOutputFormats';
 import { autoCookieConflict } from '@/utils/codexAutoCookie';
 import { readCodexState } from '@/utils/codexStateOverride';
@@ -57,6 +58,22 @@ export const configFileApi = {
       if(capabilities['session-affinity-capacity-spillover-supported'] !== true) throw new Error(i18n.t('fill_order.unsupported'));
     }
     const imageFormatsRoot = parseDocument(content, { merge: true }).toJS();
+    const gifSettings = imageFormatsRoot?.images?.['chatgpt-web'];
+    const previousGIFSettings = options.previousContent === undefined ? undefined
+      : parseDocument(options.previousContent, { merge: true }).toJS()?.images?.['chatgpt-web'];
+    readGIFRatioException(gifSettings?.[GIF_RATIO_EXCEPTION_KEY]);
+    readGIFRatioTolerance(gifSettings?.[GIF_RATIO_TOLERANCE_KEY]);
+    const needsGIFRatio = [GIF_RATIO_EXCEPTION_KEY, GIF_RATIO_TOLERANCE_KEY].some(key =>
+      options.previousContent === undefined ? gifSettings?.[key] !== undefined : gifSettings?.[key] !== previousGIFSettings?.[key]);
+    const gifConnection = needsGIFRatio ? options.connection ?? apiClient.captureConnection() : undefined;
+    if (gifConnection) {
+      let supported = false;
+      try { supported = await supportsGIFAspectRatio(gifConnection, options.signal); }
+      catch (error) {
+        if (![404, 405, 501].includes((error as {status?: number}).status ?? 0)) throw error;
+      }
+      if (!supported) throw new Error(i18n.t('chatgpt_web.gif_aspect_ratio.unsupported'));
+    }
     const formats = imageFormatsRoot?.images?.['chatgpt-web']?.[IMAGE_FORMATS_KEY];
     const previousFormats = options.previousContent === undefined ? undefined
       : parseDocument(options.previousContent, { merge: true }).toJS()?.images?.['chatgpt-web']?.[IMAGE_FORMATS_KEY];
@@ -101,7 +118,7 @@ export const configFileApi = {
     const needsRegion = Boolean(
       needsManualRegion || root?.['proxy-ip'] || root?.codex?.['time-context']?.enabled === true
     );
-    const saveConnection = options.connection ?? formatsConnection ?? spilloverConnection ?? imagePriorityConnection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
+    const saveConnection = options.connection ?? gifConnection ?? formatsConnection ?? spilloverConnection ?? imagePriorityConnection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
     if (needsRegion) {
       const caps = await apiClient.getAtConnection<{ capabilities?: Record<string, boolean> }>(
         saveConnection!,
@@ -265,6 +282,11 @@ export const configFileApi = {
         throw new Error(i18n.t('codex_state.model_special_upgrade'));
       if (retryRounds && options.features?.state_retry_rounds !== true)
         throw new Error(i18n.t('codex_state.retry_round_upgrade'));
+    }
+    if (gifConnection) {
+      const current = apiClient.captureConnection();
+      if (current.apiBase !== gifConnection.apiBase || current.managementKey !== gifConnection.managementKey)
+        throw new Error(i18n.t('chatgpt_web.gif_aspect_ratio.connection_changed'));
     }
     if (formatsConnection) {
       const current = apiClient.captureConnection();

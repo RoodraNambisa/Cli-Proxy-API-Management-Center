@@ -1,3 +1,4 @@
+import { readGIFRatioException, readGIFRatioTolerance } from '@/features/chatgptWeb/gifAspectRatio';
 import { readModelOutputFormats, imageFormatsInvalid } from '@/features/chatgptWeb/imageOutputFormats';
 import { readCodexIdentityOverride } from '@/types/codexIdentity';
 import { defaultRoutingAdmission, emptyQueue, type QueueSettings } from '@/features/traffic/types';
@@ -1701,6 +1702,9 @@ export function getVisualConfigValidationErrors(
       values.chatgptWebManualReloginConcurrency,
       1
     ),
+    chatgptWebGIFAspectRatioMaxErrorPercent: values.chatgptWebGIFAspectRatioMaxErrorPercent.trim()
+      ? getNumberRangeError(values.chatgptWebGIFAspectRatioMaxErrorPercent, 0, 10, 'number_range_0_10')
+      : undefined,
     chatgptWebAspectRatioMaxErrorPercent: getNumberRangeError(
       values.chatgptWebAspectRatioMaxErrorPercent,
       0,
@@ -2757,6 +2761,20 @@ function getNextDirtyFields(
       nextValues.chatgptWebStrictSize === baselineValues.chatgptWebStrictSize
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebGIFAllowAspectRatioMismatch')) {
+    updateDirty(
+      'chatgptWebGIFAllowAspectRatioMismatch',
+      nextValues.chatgptWebGIFAllowAspectRatioMismatch ===
+        baselineValues.chatgptWebGIFAllowAspectRatioMismatch
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebGIFAspectRatioMaxErrorPercent')) {
+    updateDirty(
+      'chatgptWebGIFAspectRatioMaxErrorPercent',
+      nextValues.chatgptWebGIFAspectRatioMaxErrorPercent ===
+        baselineValues.chatgptWebGIFAspectRatioMaxErrorPercent
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebAspectRatioMaxErrorPercent')) {
     updateDirty(
       'chatgptWebAspectRatioMaxErrorPercent',
@@ -3769,6 +3787,14 @@ export function useVisualConfig() {
           imagesChatGPTWeb?.['adapt-size-to-aspect-ratio'] ??
             imagesChatGPTWeb?.adaptSizeToAspectRatio
         ),
+        chatgptWebGIFAllowAspectRatioMismatch: readGIFRatioException(
+          imagesChatGPTWeb?.['gif-allow-aspect-ratio-mismatch'] ??
+            imagesChatGPTWeb?.gifAllowAspectRatioMismatch
+        ),
+        chatgptWebGIFAspectRatioMaxErrorPercent: String(
+          readGIFRatioTolerance(imagesChatGPTWeb?.['gif-aspect-ratio-max-error-percent'] ??
+            imagesChatGPTWeb?.gifAspectRatioMaxErrorPercent) ?? ''
+        ),
         chatgptWebStrictSize: parseBooleanValue(
           imagesChatGPTWeb?.['strict-size'] ?? imagesChatGPTWeb?.strictSize
         ),
@@ -4726,6 +4752,10 @@ export function useVisualConfig() {
             DEFAULT_VISUAL_VALUES.chatgptWebNormalizeRemoteImageMime ||
           values.chatgptWebAdaptSizeToAspectRatio !==
             DEFAULT_VISUAL_VALUES.chatgptWebAdaptSizeToAspectRatio ||
+          values.chatgptWebGIFAllowAspectRatioMismatch !==
+            DEFAULT_VISUAL_VALUES.chatgptWebGIFAllowAspectRatioMismatch ||
+          values.chatgptWebGIFAspectRatioMaxErrorPercent !==
+            DEFAULT_VISUAL_VALUES.chatgptWebGIFAspectRatioMaxErrorPercent ||
           values.chatgptWebStrictSize !== DEFAULT_VISUAL_VALUES.chatgptWebStrictSize ||
           values.chatgptWebAspectRatioMaxErrorPercent !==
             DEFAULT_VISUAL_VALUES.chatgptWebAspectRatioMaxErrorPercent ||
@@ -4844,6 +4874,10 @@ export function useVisualConfig() {
               DEFAULT_VISUAL_VALUES.chatgptWebNormalizeRemoteImageMime ||
             values.chatgptWebAdaptSizeToAspectRatio !==
               DEFAULT_VISUAL_VALUES.chatgptWebAdaptSizeToAspectRatio ||
+            values.chatgptWebGIFAllowAspectRatioMismatch !==
+              DEFAULT_VISUAL_VALUES.chatgptWebGIFAllowAspectRatioMismatch ||
+            values.chatgptWebGIFAspectRatioMaxErrorPercent !==
+              DEFAULT_VISUAL_VALUES.chatgptWebGIFAspectRatioMaxErrorPercent ||
             values.chatgptWebStrictSize !== DEFAULT_VISUAL_VALUES.chatgptWebStrictSize ||
             values.chatgptWebAspectRatioMaxErrorPercent !==
               DEFAULT_VISUAL_VALUES.chatgptWebAspectRatioMaxErrorPercent ||
@@ -4957,6 +4991,18 @@ export function useVisualConfig() {
               values.chatgptWebAdaptSizeToAspectRatio
             );
             doc.setIn(['images', 'chatgpt-web', 'strict-size'], values.chatgptWebStrictSize);
+            if (state.dirtyFields.has('chatgptWebGIFAllowAspectRatioMismatch')) {
+              doc.setIn(
+                ['images', 'chatgpt-web', 'gif-allow-aspect-ratio-mismatch'],
+                values.chatgptWebGIFAllowAspectRatioMismatch
+              );
+            }
+            if (state.dirtyFields.has('chatgptWebGIFAspectRatioMaxErrorPercent')) {
+              setNumberFromStringInDoc(
+                doc, ['images', 'chatgpt-web', 'gif-aspect-ratio-max-error-percent'],
+                values.chatgptWebGIFAspectRatioMaxErrorPercent
+              );
+            }
             setNumberFromStringInDoc(
               doc,
               ['images', 'chatgpt-web', 'aspect-ratio-max-error-percent'],

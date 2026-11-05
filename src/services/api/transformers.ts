@@ -1216,6 +1216,8 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
               chatgptWeb['normalize-mismatched-image-mime'] ??
                 chatgptWeb.normalizeMismatchedImageMime
             ),
+            gifAllowAspectRatioMismatch: normalizeBoolean(chatgptWeb['gif-allow-aspect-ratio-mismatch'] ?? chatgptWeb.gifAllowAspectRatioMismatch),
+            gifAspectRatioMaxErrorPercent: normalizeNumber(chatgptWeb['gif-aspect-ratio-max-error-percent'] ?? chatgptWeb.gifAspectRatioMaxErrorPercent),
             normalizeRemoteImageMime: normalizeBoolean(
               chatgptWeb['normalize-remote-image-mime'] ?? chatgptWeb.normalizeRemoteImageMime
             ),

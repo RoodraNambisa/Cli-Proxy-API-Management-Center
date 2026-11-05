@@ -47,6 +47,8 @@ export type VisualConfigFieldPath =
   | 'chatgptWebAutoReloginQueueSize'
   | 'chatgptWebManualReloginConcurrency'
   | 'chatgptWebStrictSize'
+  | 'chatgptWebGIFAllowAspectRatioMismatch'
+  | 'chatgptWebGIFAspectRatioMaxErrorPercent'
   | 'chatgptWebAspectRatioMaxErrorPercent'
   | 'chatgptWebMaxResizeEdgePixels'
   | 'chatgptWebResizeToRequestedSize'
@@ -432,6 +434,8 @@ export type VisualConfigValues = {
   chatgptWebNormalizeRemoteImageMime: boolean;
   chatgptWebAdaptSizeToAspectRatio: boolean;
   chatgptWebStrictSize: boolean;
+  chatgptWebGIFAllowAspectRatioMismatch: boolean;
+  chatgptWebGIFAspectRatioMaxErrorPercent: string;
   chatgptWebAspectRatioMaxErrorPercent: string;
   chatgptWebResizeToRequestedSize: boolean;
   chatgptWebResizeFilter: string;
@@ -586,6 +590,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebNormalizeRemoteImageMime: true,
   chatgptWebAdaptSizeToAspectRatio: false,
   chatgptWebStrictSize: false,
+  chatgptWebGIFAllowAspectRatioMismatch: false,
+  chatgptWebGIFAspectRatioMaxErrorPercent: '',
   chatgptWebAspectRatioMaxErrorPercent: '1',
   chatgptWebResizeToRequestedSize: false,
   chatgptWebResizeFilter: 'catmull-rom',

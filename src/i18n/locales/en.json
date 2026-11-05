@@ -3893,6 +3893,17 @@
     "author": "Author"
   },
   "chatgpt_web": {
+    "gif_aspect_ratio": {
+      "title": "Keep native GIF dimensions when the aspect ratio exceeds tolerance",
+      "description": "Off by default. Applies only to GIF output: keep native dimensions when the GIF tolerance is exceeded; otherwise use the existing resize settings. Static formats, input sizes, animation validation and resource limits keep their current rules.",
+      "tolerance": "GIF aspect ratio tolerance (%)",
+      "tolerance_hint": "Range: 0–10%. Leave empty to inherit the general tolerance. Applies only to GIF output, for example 1% general and 5% GIF.",
+      "inherit": "Inherit general tolerance",
+      "loading": "Checking this backend for GIF aspect ratio support.",
+      "unsupported": "This backend does not support GIF aspect ratio settings. Upgrade the backend.",
+      "error": "Could not read backend capabilities. GIF aspect ratio settings cannot be edited yet.",
+      "connection_changed": "The connection changed. Reload the configuration before saving."
+    },
     "tls_trust_anchors": {
       "title": "Send TLS Trust Anchors extension",
       "enabled_description": "Original Chrome 146 template (default): sends trust_anchors (0xca34). Certificate verification stays enabled. Saved changes apply to new flows.",

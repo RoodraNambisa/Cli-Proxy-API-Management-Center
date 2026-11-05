@@ -1,3 +1,4 @@
+import { ChatGptWebGIFAspectRatio } from '@/features/chatgptWeb/components/ChatGptWebGIFAspectRatio';
 import { ChatGptWebImageFormatsEditor } from '@/features/chatgptWeb/components/ChatGptWebImageFormatsEditor';
 import { CodexIdentityEditor, useCodexIdentitySupport } from '@/features/codexIdentity/CodexIdentityEditor';
 import trafficStyles from '@/features/traffic/Traffic.module.scss';
@@ -1280,6 +1281,8 @@ export function VisualConfigEditor({
   const chatGptWebImageSizeDirty = hasDirtyConfigField(dirtyFields, [
     'chatgptWebAdaptSizeToAspectRatio',
     'chatgptWebStrictSize',
+    'chatgptWebGIFAllowAspectRatioMismatch',
+    'chatgptWebGIFAspectRatioMaxErrorPercent',
     'chatgptWebAspectRatioMaxErrorPercent',
     'chatgptWebMaxResizeEdgePixels',
     'chatgptWebResizeToRequestedSize',
@@ -1290,6 +1293,7 @@ export function VisualConfigEditor({
   const chatGptWebImageSizeErrorCount = [
     chatGptWebStrictSizeError,
     chatGptWebAspectRatioMaxErrorPercentError,
+    validationErrors?.chatgptWebGIFAspectRatioMaxErrorPercent,
     chatGptWebMaxResizeEdgePixelsError,
     chatGptWebResizeToRequestedSizeError,
     chatGptWebResizeFilterError,
@@ -1826,6 +1830,8 @@ export function VisualConfigEditor({
         countErrors([
           'chatgptWebAutoDeleteDeadPriorities',
           'chatgptWebStrictSize',
+          'chatgptWebGIFAllowAspectRatioMismatch',
+          'chatgptWebGIFAspectRatioMaxErrorPercent',
           'chatgptWebAspectRatioMaxErrorPercent',
           'chatgptWebMaxResizeEdgePixels',
           'chatgptWebResizeToRequestedSize',
@@ -2653,6 +2659,8 @@ export function VisualConfigEditor({
                 targetIds={[
                   'config-chatgpt-web-adapt-size-to-aspect-ratio',
                   'config-chatgpt-web-strict-size',
+                  'config-chatgpt-web-gif-allow-aspect-ratio-mismatch',
+                  'config-chatgpt-web-gif-aspect-ratio-max-error-percent',
                   'config-chatgpt-web-aspect-ratio-max-error-percent',
                   'config-chatgpt-web-max-resize-edge-pixels',
                   'config-chatgpt-web-resize-to-requested-size',
@@ -2741,6 +2749,22 @@ export function VisualConfigEditor({
                       }
                     />
                   </SectionGrid>
+                  <ChatGptWebGIFAspectRatio
+                    connectionKey={chatGptWebConnectionGenerationKey}
+                    active={activePageId === 'provider-chatgpt-web'}
+                    disabled={disabled || !values.chatgptWebAdaptSizeToAspectRatio}
+                    enabled={values.chatgptWebGIFAllowAspectRatioMismatch}
+                    tolerance={values.chatgptWebGIFAspectRatioMaxErrorPercent}
+                    error={getValidationMessage(
+                      t, validationErrors?.chatgptWebGIFAspectRatioMaxErrorPercent
+                    )}
+                    onEnabledChange={(chatgptWebGIFAllowAspectRatioMismatch) =>
+                      onChange({ chatgptWebGIFAllowAspectRatioMismatch })
+                    }
+                    onToleranceChange={(chatgptWebGIFAspectRatioMaxErrorPercent) =>
+                      onChange({ chatgptWebGIFAspectRatioMaxErrorPercent })
+                    }
+                  />
                   <div id="config-chatgpt-web-resize-to-requested-size">
                     <ToggleRow
                       title={t(

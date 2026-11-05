@@ -154,6 +154,8 @@ export interface ImagesConfig {
     autoCleanupLibraryOnFull?: boolean;
     normalizeMismatchedImageMime?: boolean;
     normalizeRemoteImageMime?: boolean;
+    gifAllowAspectRatioMismatch?: boolean;
+    gifAspectRatioMaxErrorPercent?: number;
     pollStallBreakerEnabled?: boolean;
     pollStallSeconds?: number;
   };
