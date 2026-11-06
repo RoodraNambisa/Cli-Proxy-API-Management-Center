@@ -305,3 +305,57 @@
   font-size: 12px;
   line-height: 1.55;
 }
+
+.profileSettings {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  summary {
+    cursor: pointer;
+    padding: 10px 0;
+  }
+  select {
+    min-height: 36px;
+    padding: 6px 10px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+  }
+}
+.profileMode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.profileRows {
+  display: grid;
+  gap: 8px;
+}
+.profileRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+  > div {
+    flex: 1;
+    min-width: 200px;
+    overflow-wrap: anywhere;
+  }
+  small {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-secondary);
+  }
+}

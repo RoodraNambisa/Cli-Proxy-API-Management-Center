@@ -1,3 +1,4 @@
+import { readImageUsageMode, readImageUsageModelProfiles, supportsImageUsageProfiles } from '@/features/chatgptWeb/imageUsageProfiles';
 import { GIF_RATIO_EXCEPTION_KEY, GIF_RATIO_TOLERANCE_KEY, readGIFRatioException, readGIFRatioTolerance, supportsGIFAspectRatio } from '@/features/chatgptWeb/gifAspectRatio';
 import { IMAGE_FORMATS_KEY, fetchImageFormatsCapability, readModelOutputFormats, effectiveImageAliases } from '@/features/chatgptWeb/imageOutputFormats';
 import { autoCookieConflict } from '@/utils/codexAutoCookie';
@@ -30,6 +31,7 @@ export const configFileApi = {
     connection?: ApiClientConnectionSnapshot;
     signal?: AbortSignal;
   } = {}): Promise<void> {
+    const profileConnectionAtStart = options.connection ?? apiClient.captureConnection();
     const root = parseDocument(content).toJS();
     const imageScopeRules = parseDocument(content, { merge: true }).toJS()?.['auth-model-exclusions'];
     const needsImagePriority = Array.isArray(imageScopeRules) && imageScopeRules.some(
@@ -58,6 +60,18 @@ export const configFileApi = {
       if(capabilities['session-affinity-capacity-spillover-supported'] !== true) throw new Error(i18n.t('fill_order.unsupported'));
     }
     const imageFormatsRoot = parseDocument(content, { merge: true }).toJS();
+    const imageUsage = imageFormatsRoot?.['chatgpt-web']?.['image-usage'];
+    const previousImageUsage = options.previousContent === undefined ? undefined : parseDocument(options.previousContent, {merge:true}).toJS()?.['chatgpt-web']?.['image-usage'];
+    readImageUsageMode(imageUsage?.['estimation-profile']);
+    readImageUsageModelProfiles(imageUsage?.['model-profiles'], effectiveImageAliases(imageFormatsRoot?.images?.['chatgpt-web']?.['image-models'] ?? [], imageFormatsRoot?.images?.['image-model'] ?? ''));
+    const needsUsageProfiles = ['estimation-profile', 'model-profiles'].some(key => options.previousContent === undefined ? imageUsage?.[key] !== undefined : JSON.stringify(imageUsage?.[key]) !== JSON.stringify(previousImageUsage?.[key]));
+    const usageProfilesConnection = needsUsageProfiles ? profileConnectionAtStart : undefined;
+    if (usageProfilesConnection) {
+      let supported = false;
+      try { supported = await supportsImageUsageProfiles(usageProfilesConnection, options.signal); }
+      catch (error) { if (![404,405,501].includes((error as {status?:number}).status ?? 0)) throw error; }
+      if (!supported) throw new Error(i18n.t('chatgpt_web.usage_profiles.unsupported'));
+    }
     const gifSettings = imageFormatsRoot?.images?.['chatgpt-web'];
     const previousGIFSettings = options.previousContent === undefined ? undefined
       : parseDocument(options.previousContent, { merge: true }).toJS()?.images?.['chatgpt-web'];
@@ -118,7 +132,7 @@ export const configFileApi = {
     const needsRegion = Boolean(
       needsManualRegion || root?.['proxy-ip'] || root?.codex?.['time-context']?.enabled === true
     );
-    const saveConnection = options.connection ?? gifConnection ?? formatsConnection ?? spilloverConnection ?? imagePriorityConnection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
+    const saveConnection = options.connection ?? usageProfilesConnection ?? gifConnection ?? formatsConnection ?? spilloverConnection ?? imagePriorityConnection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
     if (needsRegion) {
       const caps = await apiClient.getAtConnection<{ capabilities?: Record<string, boolean> }>(
         saveConnection!,
@@ -282,6 +296,10 @@ export const configFileApi = {
         throw new Error(i18n.t('codex_state.model_special_upgrade'));
       if (retryRounds && options.features?.state_retry_rounds !== true)
         throw new Error(i18n.t('codex_state.retry_round_upgrade'));
+    }
+    if (usageProfilesConnection) {
+      const current = apiClient.captureConnection();
+      if (current.apiBase !== usageProfilesConnection.apiBase || current.managementKey !== usageProfilesConnection.managementKey) throw new Error(i18n.t('chatgpt_web.image_formats.connection_changed'));
     }
     if (gifConnection) {
       const current = apiClient.captureConnection();

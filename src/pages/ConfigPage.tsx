@@ -1153,6 +1153,14 @@ export function ConfigPage() {
                     onErrorCountChange={setChatGptWebBrowserRegionErrorCount}
                   />
                   <ChatGptWebUsageCachePanel
+                    imageProfiles={{
+                      mode: visualValues.chatgptWebImageUsageProfile,
+                      overrides: visualValues.chatgptWebImageUsageModelProfiles,
+                      models: visualValues.chatgptWebImageModels,
+                      legacyModel: visualValues.images.imageModel,
+                      dirty: visualDirtyFields.includes('chatgptWebImageUsageProfile') || visualDirtyFields.includes('chatgptWebImageUsageModelProfiles'),
+                      onChange: setVisualValues,
+                    }}
                     ref={chatGptWebUsageCacheRef}
                     active={active}
                     disabled={disableControls}

@@ -1,4 +1,8 @@
 import {
+  ChatGptWebImageUsageProfiles,
+  type ImageUsageProfilesDraft,
+} from './ChatGptWebImageUsageProfiles';
+import {
   forwardRef,
   useCallback,
   useEffect,
@@ -51,6 +55,7 @@ export type ChatGptWebUsageCachePanelHandle = {
 };
 
 type ChatGptWebUsageCachePanelProps = {
+  imageProfiles?: ImageUsageProfilesDraft;
   active?: boolean;
   disabled?: boolean;
   connectionGenerationKey?: string;
@@ -252,6 +257,7 @@ export const ChatGptWebUsageCachePanel = forwardRef<
     connectionGenerationKey = '',
     externalSaving = false,
     focusTarget,
+    imageProfiles,
     onDirtyChange,
     onErrorCountChange,
   },
@@ -447,6 +453,7 @@ export const ChatGptWebUsageCachePanel = forwardRef<
         const fallbackSnapshot = {
           ...parsedDraft.config,
           'image-output-estimator': snapshot['image-output-estimator'],
+          'image-usage': { ...snapshot['image-usage'], ...parsedDraft.config['image-usage'] },
           stats: snapshot.stats,
           filesystem: snapshot.filesystem,
         };
@@ -482,9 +489,14 @@ export const ChatGptWebUsageCachePanel = forwardRef<
   const handleReset = useCallback(() => {
     if (!snapshot) return;
     setDraft(toDraft(snapshot));
+    if (imageProfiles && snapshot['image-usage']['estimation-profile'])
+      imageProfiles.onChange({
+        chatgptWebImageUsageProfile: snapshot['image-usage']['estimation-profile'],
+        chatgptWebImageUsageModelProfiles: snapshot['image-usage']['model-profiles'] ?? {},
+      });
     setConnectionConflict(false);
     setServerConfigConflict(false);
-  }, [setDraft, snapshot]);
+  }, [imageProfiles, setDraft, snapshot]);
 
   const runValidation = useCallback(() => {
     const valid = parsedDraft.config !== null && !connectionConflict && !serverConfigConflict;
@@ -546,12 +558,12 @@ export const ChatGptWebUsageCachePanel = forwardRef<
             ? t('chatgpt_web.usage_cache.summary_fallback')
             : t('chatgpt_web.usage_cache.summary_disabled')
       }
-      expanded={dirty || expanded || errorCount > 0}
+      expanded={dirty || imageProfiles?.dirty || expanded || errorCount > 0}
       onExpandedChange={handleExpandedChange}
-      dirty={dirty}
+      dirty={dirty || imageProfiles?.dirty}
       errorCount={errorCount}
       actions={
-        dirty ? (
+        dirty || imageProfiles?.dirty ? (
           <Button
             type="button"
             variant="ghost"
@@ -565,6 +577,19 @@ export const ChatGptWebUsageCachePanel = forwardRef<
       }
     >
       <div className={styles.content}>
+        {imageProfiles && (
+          <ChatGptWebImageUsageProfiles
+            draft={imageProfiles}
+            connectionKey={connectionGenerationKey}
+            active={active}
+            disabled={controlsDisabled || !draft.estimate}
+            savedMode={
+              snapshotGenerationKeyRef.current === connectionGenerationKey
+                ? snapshot?.['image-usage']['estimation-profile']
+                : undefined
+            }
+          />
+        )}
         {snapshotGenerationKeyRef.current === connectionGenerationKey &&
         snapshot?.['image-output-estimator'] === 'gpt-image-2.6-sheet-v1' ? (
           <p className={styles.estimatorNotice}>

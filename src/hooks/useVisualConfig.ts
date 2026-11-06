@@ -1,3 +1,4 @@
+import { readImageUsageMode, readImageUsageModelProfiles, imageUsageProfilesInvalid } from '@/features/chatgptWeb/imageUsageProfiles';
 import { readGIFRatioException, readGIFRatioTolerance } from '@/features/chatgptWeb/gifAspectRatio';
 import { readModelOutputFormats, imageFormatsInvalid } from '@/features/chatgptWeb/imageOutputFormats';
 import { readCodexIdentityOverride } from '@/types/codexIdentity';
@@ -1682,6 +1683,7 @@ export function getVisualConfigValidationErrors(
       'integer_range_1_64'
     ),
     noCooldownStatusCodes: getHttpStatusListError(values.noCooldownStatusCodes),
+    chatgptWebImageUsageModelProfiles: imageUsageProfilesInvalid(values.chatgptWebImageUsageProfile, values.chatgptWebImageUsageModelProfiles, values.chatgptWebImageModels, values.images.imageModel) ? 'image_usage_profiles' : undefined,
     chatgptWebModelOutputFormats: imageFormatsInvalid(values.chatgptWebModelOutputFormats, values.chatgptWebImageModels, values.images.imageModel) ? 'image_output_formats' : undefined,
     chatgptWebAutoDeleteDeadPriorities: getSafeIntegerStringListError(
       values.chatgptWebAutoDeleteDeadPriorities
@@ -2691,6 +2693,9 @@ function getNextDirtyFields(
       'chatgptWebImageReasoningMode',
       nextValues.chatgptWebImageReasoningMode === baselineValues.chatgptWebImageReasoningMode
     );
+  }
+  for (const field of ['chatgptWebImageUsageProfile', 'chatgptWebImageUsageModelProfiles'] as const) {
+    if (Object.prototype.hasOwnProperty.call(patch, field)) updateDirty(field, JSON.stringify(nextValues[field]) === JSON.stringify(baselineValues[field]));
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebModelOutputFormats')) {
     updateDirty('chatgptWebModelOutputFormats', JSON.stringify(nextValues.chatgptWebModelOutputFormats) === JSON.stringify(baselineValues.chatgptWebModelOutputFormats));
@@ -3754,6 +3759,8 @@ export function useVisualConfig() {
               : DEFAULT_VISUAL_VALUES.chatgptWebImageUpstreamModel,
         chatgptWebImageReasoningMode: (imageReasoningMode ?? 'auto').trim().toLowerCase() || 'auto',
         chatgptWebModelOutputFormats: readModelOutputFormats(imagesChatGPTWeb?.['model-output-formats']),
+        chatgptWebImageUsageProfile: readImageUsageMode(asRecord(chatgptWeb?.['image-usage'])?.['estimation-profile']),
+        chatgptWebImageUsageModelProfiles: readImageUsageModelProfiles(asRecord(chatgptWeb?.['image-usage'])?.['model-profiles']),
         chatgptWebImageModels: parseStringList(
           imagesChatGPTWeb?.['image-models'] ?? imagesChatGPTWeb?.imageModels
         ),
@@ -4414,6 +4421,25 @@ export function useVisualConfig() {
             values.codexHeaderDefaultsOriginator
           );
           deleteIfMapEmpty(doc, ['codex-header-defaults']);
+        }
+        if (state.dirtyFields.has('chatgptWebImageUsageProfile')) {
+          ensureMapInDoc(doc, ['chatgpt-web', 'image-usage']);
+          doc.setIn(['chatgpt-web', 'image-usage', 'estimation-profile'], values.chatgptWebImageUsageProfile);
+        }
+        if (state.dirtyFields.has('chatgptWebImageUsageModelProfiles')) {
+          const path = ['chatgpt-web', 'image-usage', 'model-profiles'];
+          const profiles = values.chatgptWebImageUsageModelProfiles;
+          if (!Object.keys(profiles).length) doc.deleteIn(path);
+          else {
+            ensureMapInDoc(doc, path);
+            const previous = doc.getIn(path) as YAMLMap;
+            for (const entry of [...previous.items]) {
+              if (!Object.prototype.hasOwnProperty.call(profiles, String(entry.key))) doc.deleteIn([...path, String(entry.key)]);
+            }
+            for (const [model, profile] of Object.entries(profiles)) {
+              if (doc.getIn([...path, model]) !== profile) doc.setIn([...path, model], profile);
+            }
+          }
         }
         if (state.dirtyFields.has('chatgptWebTLSTrustAnchorsEnabled')) {
           ensureMapInDoc(doc, ['chatgpt-web']);

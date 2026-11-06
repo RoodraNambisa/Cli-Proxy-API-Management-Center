@@ -106,6 +106,7 @@ export type VisualConfigFieldPath =
 
 export type VisualConfigValidationErrorCode =
   | 'image_output_formats'
+  | 'image_usage_profiles'
   | 'codex_time_context'
   | 'codex_base_url'
   | 'codex_identity_user_agent'
@@ -425,6 +426,8 @@ export type VisualConfigValues = {
   chatgptWebImageReasoningMode: string;
   chatgptWebImageModels: string[];
   chatgptWebModelOutputFormats: Record<string, ('png' | 'jpeg' | 'webp' | 'gif')[]>;
+  chatgptWebImageUsageProfile: import('@/features/chatgptWeb/imageUsageProfiles').ImageUsageMode;
+  chatgptWebImageUsageModelProfiles: import('@/features/chatgptWeb/imageUsageProfiles').ImageUsageModelProfiles;
   chatgptWebIgnoreUnsupportedImageParams: boolean;
   chatgptWebSanitizeErrorResponses: boolean;
   chatgptWebAutoCleanupLibraryOnFull: boolean;
@@ -581,6 +584,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebImageReasoningMode: 'auto',
   chatgptWebImageModels: [],
   chatgptWebModelOutputFormats: {},
+  chatgptWebImageUsageProfile: 'by-model',
+  chatgptWebImageUsageModelProfiles: {},
   chatgptWebIgnoreUnsupportedImageParams: false,
   chatgptWebSanitizeErrorResponses: false,
   chatgptWebAutoCleanupLibraryOnFull: false,

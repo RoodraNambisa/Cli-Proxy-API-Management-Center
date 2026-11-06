@@ -2471,6 +2471,7 @@ export function VisualConfigEditor({
                       key={chatGptWebConnectionGenerationKey}
                       models={values.chatgptWebImageModels}
                       overrides={values.chatgptWebModelOutputFormats}
+                      usageProfiles={values.chatgptWebImageUsageModelProfiles}
                       legacyModel={values.images.imageModel}
                       connectionKey={chatGptWebConnectionGenerationKey}
                       active={activePageId === 'provider-chatgpt-web'}

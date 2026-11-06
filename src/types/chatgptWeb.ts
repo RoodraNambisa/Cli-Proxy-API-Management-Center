@@ -491,6 +491,9 @@ export interface ChatGptWebUsageConfig {
   'usage-cache': ChatGptWebUsageCacheSettings;
   'image-usage': {
     'auto-output-quality': ChatGptWebImageUsageQuality;
+    'estimation-profile'?: import('@/features/chatgptWeb/imageUsageProfiles').ImageUsageMode;
+    'model-profiles'?: import('@/features/chatgptWeb/imageUsageProfiles').ImageUsageModelProfiles;
+
     'fallback-usage'?: ChatGptWebImageUsageFallback;
   };
 }
@@ -521,6 +524,9 @@ export interface ChatGptWebUsageCacheStats {
 }
 
 export interface ChatGptWebUsageSnapshot extends ChatGptWebUsageConfig {
+  'image-usage': ChatGptWebUsageConfig['image-usage'] & {
+    'effective-model-profiles'?: Record<string, import('@/features/chatgptWeb/imageUsageProfiles').ImageUsageProfile>;
+  };
   'image-output-estimator'?: string;
   stats: ChatGptWebUsageCacheStats;
   filesystem?: SystemFilesystemSnapshot;

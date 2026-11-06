@@ -3206,7 +3206,8 @@
         "codex_auto_cookie_conflict": "與已啟用的 Cookie-only 託管衝突。請關閉對應規則或自動補全後再儲存。",
         "codex_time_context": "请填写有效的 IANA 时区。",
         "codex_identity_user_agent": "User-Agent 不可包含控制字元。",
-        "image_output_formats": "每項覆寫必須對應有效 Web 圖片別名，且至少選擇一種 PNG、JPEG、WebP 或 GIF 格式；別名不能重複。"
+        "image_output_formats": "每項覆寫必須對應有效 Web 圖片別名，且至少選擇一種 PNG、JPEG、WebP 或 GIF 格式；別名不能重複。",
+        "image_usage_profiles": "請選擇有效的圖片估算規則；覆寫項目必須對應現有 Web 圖片別名，且不能重複。"
       },
       "common": {
         "summary_providers": "提供者",
@@ -4682,6 +4683,25 @@
       "unsupported": "目前後端不支援別名輸出格式設定，請升級後端。",
       "error": "無法讀取輸出格式能力；格式控制項暫時無法使用。",
       "connection_changed": "連線已切換，請重新載入設定後儲存。"
+    },
+    "usage_profiles": {
+      "title": "圖片輸出估算規則",
+      "by_model": "依別名分別計算",
+      "unified": "統一使用",
+      "description": "僅調整 ChatGPT Web 本機圖片輸出 Token 估算，不切換上游模型，也不改變輸入 Token 或模型單價。尺寸依最終交付結果計算；GIF 使用動畫拼幀配置。",
+      "aliases": "各別名規則",
+      "uniform_hint": "目前使用統一規則；各別名設定已保留，切回依別名模式後生效。",
+      "saved": "目前已儲存：",
+      "unsaved": "有尚未儲存的規則變更",
+      "custom": "自訂",
+      "automatic": "自動",
+      "draft_rule": "草稿規則：",
+      "effective": "有效規則：",
+      "rule": "估算規則",
+      "reset": "恢復自動",
+      "loading": "正在檢查後端支援",
+      "unsupported": "目前後端不支援選擇圖片估算規則，請升級後端。",
+      "error": "無法確認後端能力，暫時無法修改規則。"
     }
   },
   "proxy_pools": {

@@ -40,13 +40,15 @@ function Harness() {
   const [value, setValue] = useState<{
     chatgptWebImageModels: string[];
     chatgptWebModelOutputFormats: ModelOutputFormats;
-  }>({ chatgptWebImageModels: [], chatgptWebModelOutputFormats: {} });
+    chatgptWebImageUsageModelProfiles: import('../imageUsageProfiles').ImageUsageModelProfiles;
+  }>({ chatgptWebImageModels: [], chatgptWebModelOutputFormats: {}, chatgptWebImageUsageModelProfiles: {'gpt-image-2.5':'gpt-image-2.6'} });
   return (
     <>
       <ChatGptWebImageFormatsEditor
         {...props}
         models={value.chatgptWebImageModels}
         overrides={value.chatgptWebModelOutputFormats}
+        usageProfiles={value.chatgptWebImageUsageModelProfiles}
         onChange={(patch) => setValue((previous) => ({ ...previous, ...patch }))}
       />
       <output data-testid="value">{JSON.stringify(value)}</output>
@@ -106,6 +108,7 @@ describe('alias formats editor', () => {
     fireEvent.click(screen.getByText('chatgpt_web.image_formats.apply'));
     const value = JSON.parse(screen.getByTestId('value').textContent!);
     expect(value.chatgptWebImageModels).toEqual(['custom', 'gpt-image-2.6']);
+    expect(value.chatgptWebImageUsageModelProfiles).toEqual({custom:'gpt-image-2.6'});
     expect(value.chatgptWebModelOutputFormats).toEqual({ custom: ['png', 'jpeg', 'webp', 'gif'] });
     const renamed = screen
       .getByLabelText('custom GIF')

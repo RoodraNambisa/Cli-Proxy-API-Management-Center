@@ -1,3 +1,4 @@
+import type { ImageUsageModelProfiles } from '../imageUsageProfiles';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +17,7 @@ import styles from './ChatGptWebImageFormatsEditor.module.scss';
 export function ChatGptWebImageFormatsEditor({
   models,
   overrides,
+  usageProfiles,
   legacyModel,
   connectionKey,
   active,
@@ -24,6 +26,7 @@ export function ChatGptWebImageFormatsEditor({
 }: {
   models: string[];
   overrides: ModelOutputFormats;
+  usageProfiles?: ImageUsageModelProfiles;
   legacyModel: string;
   connectionKey: string;
   active: boolean;
@@ -31,6 +34,7 @@ export function ChatGptWebImageFormatsEditor({
   onChange: (patch: {
     chatgptWebImageModels?: string[];
     chatgptWebModelOutputFormats?: ModelOutputFormats;
+    chatgptWebImageUsageModelProfiles?: ImageUsageModelProfiles;
   }) => void;
 }) {
   const { t } = useTranslation();
@@ -51,6 +55,21 @@ export function ChatGptWebImageFormatsEditor({
     delete next[aliasKey(model)];
     return next;
   };
+  const migrateUsageProfile = (previous: string, nextName?: string) => {
+    if (!usageProfiles || !Object.prototype.hasOwnProperty.call(usageProfiles, aliasKey(previous)))
+      return {};
+    const next = { ...usageProfiles };
+    const profile = next[aliasKey(previous)];
+    delete next[aliasKey(previous)];
+    if (nextName)
+      Object.defineProperty(next, aliasKey(nextName), {
+        value: profile,
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
+    return { chatgptWebImageUsageModelProfiles: next };
+  };
   const saveAlias = () => {
     if (!ready || !draft || invalidName) return;
     const next = removeOverride(draft.previous ?? '');
@@ -66,6 +85,7 @@ export function ChatGptWebImageFormatsEditor({
         ? aliases.map((a) => (a === draft.previous ? name : a))
         : [...aliases, name],
       chatgptWebModelOutputFormats: next,
+      ...migrateUsageProfile(draft.previous ?? '', name),
     });
     setEdit(null);
   };
@@ -165,6 +185,7 @@ export function ChatGptWebImageFormatsEditor({
                           onChange({
                             chatgptWebImageModels: aliases.filter((a) => a !== model),
                             chatgptWebModelOutputFormats: removeOverride(model),
+                            ...migrateUsageProfile(model),
                           })
                         }
                       >

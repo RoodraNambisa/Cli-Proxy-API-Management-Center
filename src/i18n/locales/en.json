@@ -3221,7 +3221,8 @@
         "codex_auto_cookie_conflict": "Conflicts with enabled Cookie-only management. Disable the conflicting rule or automatic cookies before saving.",
         "codex_time_context": "Enter a valid IANA timezone.",
         "codex_identity_user_agent": "User-Agent must not contain control characters.",
-        "image_output_formats": "Each override must match an active Web image alias and select at least one of PNG, JPEG, WebP or GIF. Duplicate aliases are not allowed."
+        "image_output_formats": "Each override must match an active Web image alias and select at least one of PNG, JPEG, WebP or GIF. Duplicate aliases are not allowed.",
+        "image_usage_profiles": "Choose a valid image estimation rule. Overrides must reference existing Web image aliases without duplicate names."
       },
       "common": {
         "summary_providers": "Providers",
@@ -4697,6 +4698,25 @@
       "unsupported": "This backend does not support alias output formats. Upgrade the backend.",
       "error": "Could not load output format capabilities. Format controls are unavailable.",
       "connection_changed": "Connection changed. Reload the configuration before saving."
+    },
+    "usage_profiles": {
+      "title": "Image output estimation rule",
+      "by_model": "By image alias",
+      "unified": "Use for all aliases:",
+      "description": "Changes only local ChatGPT Web image output token estimates. It does not select an upstream model or change input tokens or model prices. Estimates use delivered dimensions and the animation sheet layout for GIFs.",
+      "aliases": "Rules by alias",
+      "uniform_hint": "A shared rule is active. Alias overrides are retained and apply again when you select By image alias.",
+      "saved": "Currently saved:",
+      "unsaved": "Unsaved rule changes",
+      "custom": "Custom",
+      "automatic": "Automatic",
+      "draft_rule": "Draft rule:",
+      "effective": "Effective rule:",
+      "rule": "Estimation rule",
+      "reset": "Reset to automatic",
+      "loading": "Checking backend support",
+      "unsupported": "This backend does not support image estimation rule selection. Upgrade the backend.",
+      "error": "Backend support could not be confirmed. Rule editing is unavailable."
     }
   },
   "proxy_pools": {

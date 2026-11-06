@@ -64,7 +64,7 @@ vi.mock('@/hooks/useMediaQuery', () => ({
 
 vi.mock('@/hooks/useVisualConfig', () => ({
   useVisualConfig: () => ({
-    visualValues: {},
+    visualValues: {images: {imageModel: 'gpt-image-2'}, chatgptWebImageModels: [], chatgptWebImageUsageProfile: 'by-model', chatgptWebImageUsageModelProfiles: {}},
     baselineValues: {},
     visualDirty: harness.visualDirty,
     visualDirtyFields: [],

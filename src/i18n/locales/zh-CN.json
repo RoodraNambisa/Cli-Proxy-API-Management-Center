@@ -3221,7 +3221,8 @@
         "codex_auto_cookie_conflict": "与已启用的 Cookie-only 托管冲突。请关闭对应规则或自动补全后再保存。",
         "codex_time_context": "请填写有效的 IANA 时区。",
         "codex_identity_user_agent": "User-Agent 不能包含控制字符。",
-        "image_output_formats": "每个覆盖必须对应有效 Web 图片别名，且至少选择一种 PNG、JPEG、WebP 或 GIF 格式；别名不能重复。"
+        "image_output_formats": "每个覆盖必须对应有效 Web 图片别名，且至少选择一种 PNG、JPEG、WebP 或 GIF 格式；别名不能重复。",
+        "image_usage_profiles": "请选择有效的图片估算规则；覆盖项必须对应现有 Web 图片别名，不能重复。"
       },
       "common": {
         "summary_providers": "提供者",
@@ -4697,6 +4698,25 @@
       "unsupported": "当前后端不支持别名输出格式配置，请升级后端。",
       "error": "无法读取输出格式能力；格式控件暂不可用。",
       "connection_changed": "连接已切换，请重新加载配置后保存。"
+    },
+    "usage_profiles": {
+      "title": "图片输出估算规则",
+      "by_model": "按别名分别计算",
+      "unified": "统一按",
+      "description": "仅调整 ChatGPT Web 本地图片输出 Token 估算，不切换上游模型，也不改变输入 Token 或模型单价。尺寸按最终交付结果计算；GIF 使用动画拼帧布局。",
+      "aliases": "逐别名规则",
+      "uniform_hint": "当前使用统一规则；逐别名设置已保留，切回按别名模式后生效。",
+      "saved": "当前已保存：",
+      "unsaved": "存在未保存的规则修改",
+      "custom": "自定义",
+      "automatic": "自动",
+      "draft_rule": "草稿规则：",
+      "effective": "有效规则：",
+      "rule": "估算规则",
+      "reset": "恢复自动",
+      "loading": "正在检查后端支持",
+      "unsupported": "当前后端不支持图片估算规则选择，请升级后端。",
+      "error": "无法确认后端能力，暂时不能修改规则。"
     }
   },
   "proxy_pools": {
