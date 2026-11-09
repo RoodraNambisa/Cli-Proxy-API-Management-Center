@@ -16,5 +16,5 @@ export async function supportsImageAggregation(
     '/chatgpt-web/capabilities',
     { signal }
   );
-  return Array.isArray(result?.features) && result.features.includes('image_n_parallel_v1');
+  return Array.isArray(result?.features) && result.features.includes('image_n_parallel_v2');
 }

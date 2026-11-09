@@ -2836,7 +2836,7 @@ export function VisualConfigEditor({
                       connectionKey={chatGptWebConnectionGenerationKey}
                       active={activePageId === 'provider-chatgpt-web'}
                       disabled={disabled}
-                      enabled={values.images.enableNAggregation && Number(values.chatgptWebMaxN) > 1}
+                      enabled={Number(values.chatgptWebMaxN) > 1}
                     />
                     <Input
                       id="config-chatgpt-web-max-n"

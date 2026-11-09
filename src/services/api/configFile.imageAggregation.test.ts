@@ -19,7 +19,7 @@ const source = 'images:\n  chatgpt-web:\n    n-aggregation-concurrency: 5\n';
 describe('image aggregation source capability', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.get.mockResolvedValue({ features: ['image_n_parallel_v1'] });
+    mocks.get.mockResolvedValue({ features: ['image_n_parallel_v2'] });
     mocks.connection.apiBase = 'one';
   });
   it('pins the save to the checked connection', async () => {
@@ -30,13 +30,13 @@ describe('image aggregation source capability', () => {
   it('aborts a save if the connection changes during capability checks', async () => {
     mocks.get.mockImplementation(async () => {
       mocks.connection.apiBase = 'two';
-      return { features: ['image_n_parallel_v1'] };
+      return { features: ['image_n_parallel_v2'] };
     });
     await expect(configFileApi.saveConfigYaml(source)).rejects.toThrow('connection_changed');
     expect(mocks.put).not.toHaveBeenCalled();
   });
   it('rejects old backends and failed checks before any write', async () => {
-    mocks.get.mockResolvedValue({ features: [] });
+    mocks.get.mockResolvedValue({ features: ['image_n_parallel_v1'] });
     await expect(configFileApi.saveConfigYaml(source)).rejects.toThrow('unsupported');
     expect(mocks.put).not.toHaveBeenCalled();
     mocks.get.mockRejectedValue({ status: 503 });

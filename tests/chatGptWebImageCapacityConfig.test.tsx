@@ -1,4 +1,4 @@
-import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { parse } from 'yaml';
 import { describe, expect, test, vi } from 'vitest';
@@ -13,6 +13,7 @@ import ruLocale from '@/i18n/locales/ru.json';
 import zhCNLocale from '@/i18n/locales/zh-CN.json';
 import zhTWLocale from '@/i18n/locales/zh-TW.json';
 import { DEFAULT_VISUAL_VALUES, type VisualConfigValues } from '@/types/visualConfig';
+import { apiClient } from '@/services/api/client';
 
 vi.mock('react-i18next', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-i18next')>();
@@ -199,6 +200,45 @@ describe('ChatGPT Web image concurrency and capacity config', () => {
       chatgptWebImagePollConcurrency: '72',
       chatgptWebImageMemoryFinalizerConcurrency: '5',
     });
+  });
+
+  test('enables Web aggregation from max-n while the Codex legacy switch remains off', async () => {
+    vi.spyOn(apiClient, 'getAtConnection').mockResolvedValue({ features: ['image_n_parallel_v2'] });
+    const values = cloneValues();
+    values.chatgptWebMaxN = '10';
+    values.images.enableNAggregation = false;
+    const view = render(
+      <MemoryRouter initialEntries={['/config?section=provider-chatgpt-web']}>
+        <VisualConfigEditor
+          values={values}
+          baselineValues={values}
+          onChange={vi.fn()}
+          renderRequestBodyPanels={() => null}
+        />
+      </MemoryRouter>
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /config_management\.settings_center\.chatgpt_web\.image_size_title/,
+      })
+    );
+    const input = document.getElementById(
+      'config-chatgpt-web-n-aggregation-concurrency'
+    ) as HTMLInputElement;
+    await waitFor(() => expect(input.disabled).toBe(false));
+    expect(screen.queryByText('chatgpt_web.n_aggregation.hint')).not.toBeNull();
+    expect(screen.queryByText('chatgpt_web.n_aggregation.inactive')).toBeNull();
+    view.rerender(
+      <MemoryRouter initialEntries={['/config?section=provider-chatgpt-web']}>
+        <VisualConfigEditor
+          values={{ ...values, chatgptWebMaxN: '1' }}
+          baselineValues={values}
+          onChange={vi.fn()}
+          renderRequestBodyPanels={() => null}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.queryByText('chatgpt_web.n_aggregation.inactive')).not.toBeNull();
   });
 
   test('renders all eight controls behind one progressive disclosure', () => {

@@ -2467,7 +2467,7 @@
         "max_image_response_megabytes": "圖片回應上限（MiB）",
         "max_image_response_megabytes_description": "單次請求最終返回的壓縮圖片總量，範圍 1–256 MiB。",
         "max_n": "ChatGPT Web 最大生成數量（n）",
-        "max_n_description": "單次 ChatGPT Web 圖片呼叫允許生成 1–10 張，同時限制聚合記憶體和圖片額度消耗。",
+        "max_n_description": "設為 1 時僅允許單張；設為 2–10 時啟用多圖聚合並限制總張數，同時生成的張數由聚合並行數控制。",
         "image_capacity_title": "圖片並行與容量",
         "image_capacity_description": "限制進入上游前的完整 ChatGPT Web 圖片任務、已完成結果的收尾階段，以及所有 Web 圖片請求共用的工作集預算。",
         "image_capacity_summary": "進行中 {{inFlight}} · 排隊 {{queue}}",
@@ -2964,7 +2964,7 @@
           "enable_free_plan_image_model": "允許 Free Plan 圖片模型",
           "enable_free_plan_image_model_desc": "預設關閉；開啟後 free plan 的 Codex 憑證也會顯示並使用圖片模型",
           "enable_n_aggregation": "啟用 n 聚合",
-          "enable_n_aggregation_desc": "預設關閉；開啟後 n > 1 會拆成多次 Codex 圖片呼叫並聚合結果，關閉後直接回傳不支援錯誤",
+          "enable_n_aggregation_desc": "控制 Codex Responses 圖片請求的 n > 1 聚合，預設關閉。",
           "enable_stream_flush": "啟用圖片流式 flush 合併",
           "enable_stream_flush_desc": "預設開啟；關閉後圖片流式回應每個 chunk 立即 flush",
           "override_response_format_url": "覆蓋 response_format=url",
@@ -3881,10 +3881,10 @@
   "chatgpt_web": {
     "n_aggregation": {
       "title": "單次多圖聚合並行數",
-      "hint": "預設 3，範圍 1–10；1 為循序，實際不超過請求 n。僅純 ChatGPT Web 路由生效，遵守全域與憑證限額；優先使用不同憑證，指定憑證與工作階段親和仍保留。",
-      "inactive": "需開啟多圖聚合，並將 Web 最大 n 設為大於 1；本項可先儲存。混合 Provider 路由維持原有執行方式。",
+      "hint": "預設並行數 3，範圍 1–10；1 為循序，實際不超過請求 n。Web 最大 n 大於 1 時啟用多圖聚合。遵守全域與憑證限額，優先使用不同憑證，並保留指定憑證與工作階段親和。",
+      "inactive": "Web 最大 n 目前僅允許單張；設為 2–10 即可啟用多圖聚合，並行數可以先儲存。",
       "loading": "正在檢查後端多圖並行能力…",
-      "unsupported": "目前後端不支援此設定，請先升級後端。",
+      "unsupported": "請升級後端，以使用由 Web 最大 n 直接控制的多圖聚合。",
       "error": "無法確認後端能力，暫時無法修改此設定。"
     },
     "gif_aspect_ratio": {

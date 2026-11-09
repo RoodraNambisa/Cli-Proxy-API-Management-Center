@@ -10,7 +10,7 @@ const props = { value: '3', onChange: vi.fn(), connectionKey: 'a', active: true,
 describe('Web aggregation control', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.get.mockResolvedValue({ features: ['image_n_parallel_v1'] });
+    mocks.get.mockResolvedValue({ features: ['image_n_parallel_v2'] });
   });
   afterEach(cleanup);
   it('enables supported controls and propagates edits', async () => {
@@ -22,7 +22,7 @@ describe('Web aggregation control', () => {
     expect(props.onChange).toHaveBeenCalledWith('5');
   });
   it('disables unsupported and failed capability checks', async () => {
-    mocks.get.mockResolvedValue({ features: [] });
+    mocks.get.mockResolvedValue({ features: ['image_n_parallel_v1'] });
     const view = render(<ChatGptWebImageAggregation {...props} />);
     await screen.findByText('chatgpt_web.n_aggregation.unsupported');
     expect((screen.getByRole('spinbutton') as HTMLInputElement).disabled).toBe(true);
@@ -40,11 +40,11 @@ describe('Web aggregation control', () => {
     );
     const view = render(<ChatGptWebImageAggregation {...props} />);
     const signal = mocks.get.mock.calls[0][2].signal as AbortSignal;
-    mocks.get.mockResolvedValue({ features: [] });
+    mocks.get.mockResolvedValue({ features: ['image_n_parallel_v1'] });
     view.rerender(<ChatGptWebImageAggregation {...props} connectionKey="b" />);
     expect(signal.aborted).toBe(true);
     await screen.findByText('chatgpt_web.n_aggregation.unsupported');
-    await act(async () => resolve({ features: ['image_n_parallel_v1'] }));
+    await act(async () => resolve({ features: ['image_n_parallel_v2'] }));
     expect((screen.getByRole('spinbutton') as HTMLInputElement).disabled).toBe(true);
   });
 });

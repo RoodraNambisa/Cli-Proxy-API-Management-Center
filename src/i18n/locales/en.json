@@ -2482,7 +2482,7 @@
         "max_image_response_megabytes": "Maximum image response (MiB)",
         "max_image_response_megabytes_description": "Maximum total compressed image bytes returned by one request, from 1 to 256 MiB.",
         "max_n": "Maximum ChatGPT Web image count (n)",
-        "max_n_description": "Maximum images allowed in one ChatGPT Web call, from 1 to 10. This also limits aggregation memory and image quota consumption.",
+        "max_n_description": "1 allows a single image. Values 2–10 enable aggregation and cap the total image count; aggregation concurrency controls how many run together.",
         "image_capacity_title": "Image concurrency and capacity",
         "image_capacity_description": "Bound complete ChatGPT Web image lifecycles before upstream work, stage settled results, and set the shared image working-set budget.",
         "image_capacity_summary": "{{inFlight}} in flight · {{queue}} queued",
@@ -2957,7 +2957,7 @@
           "enable_free_plan_image_model": "Allow Free plan image model",
           "enable_free_plan_image_model_desc": "Disabled by default. When enabled, free-plan Codex credentials can also expose and use the image model.",
           "enable_n_aggregation": "Enable n Aggregation",
-          "enable_n_aggregation_desc": "Disabled by default. When enabled, n > 1 is split into multiple Codex image calls and aggregated; when disabled, n > 1 returns an unsupported option error",
+          "enable_n_aggregation_desc": "Controls n > 1 image aggregation for Codex Responses requests. Disabled by default.",
           "enable_stream_flush": "Enable Image Stream Flush Batching",
           "enable_stream_flush_desc": "Enabled by default. Disable it to flush every image stream chunk immediately.",
           "override_response_format_url": "Override response_format=url",
@@ -3896,10 +3896,10 @@
   "chatgpt_web": {
     "n_aggregation": {
       "title": "Parallel images per aggregated request",
-      "hint": "Default 3, range 1–10; 1 runs serially, and concurrency never exceeds n. Applies to Web-only routes and respects global and credential limits. Prefers distinct credentials while preserving explicit targeting and session affinity.",
-      "inactive": "Enable n aggregation and set Web maximum n above 1 to activate this setting. It can be saved now. Mixed-provider routes keep their existing execution behavior.",
+      "hint": "Default concurrency 3, range 1–10; 1 is serial and concurrency never exceeds n. Web maximum n above 1 enables aggregation. Respects global and credential limits, prefers distinct credentials, and preserves explicit targeting and session affinity.",
+      "inactive": "Web maximum n currently allows one image. Set it to 2–10 to enable aggregation; concurrency can be saved in advance.",
       "loading": "Checking backend parallel image support…",
-      "unsupported": "This backend does not support parallel image aggregation. Upgrade the backend first.",
+      "unsupported": "Upgrade the backend to enable Web aggregation directly through maximum n.",
       "error": "Backend capability could not be confirmed. Editing is temporarily disabled."
     },
     "gif_aspect_ratio": {
