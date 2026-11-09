@@ -3896,7 +3896,7 @@
   "chatgpt_web": {
     "n_aggregation": {
       "title": "Parallel images per aggregated request",
-      "hint": "Default concurrency 3, range 1–10; 1 is serial and concurrency never exceeds n. Web maximum n above 1 enables aggregation. Respects global and credential limits, prefers distinct credentials, and preserves explicit targeting and session affinity.",
+      "hint": "Default concurrency 3, range 1–10; 1 is serial and concurrency never exceeds n. Web maximum n above 1 enables aggregation; parallel execution applies to Web-only routes. Respects global and credential limits, prefers distinct credentials, and preserves explicit targeting and session affinity.",
       "inactive": "Web maximum n currently allows one image. Set it to 2–10 to enable aggregation; concurrency can be saved in advance.",
       "loading": "Checking backend parallel image support…",
       "unsupported": "Upgrade the backend to enable Web aggregation directly through maximum n.",
