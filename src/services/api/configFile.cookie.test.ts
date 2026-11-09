@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-const mocks = vi.hoisted(() => ({ get: vi.fn(), put: vi.fn() }));
+const mocks = vi.hoisted(() => ({ get: vi.fn(), put: vi.fn(), captureConnection: () => ({ apiBase: 'test', managementKey: 'test', timeout: 1000 }) }));
 vi.mock('./client', () => ({ apiClient: mocks }));
 vi.mock('./routingCredentials', () => ({ requireRoutingCredentialSupport: vi.fn() }));
 vi.mock('@/i18n', () => ({ default: { t: (key: string) => key } }));

@@ -55,6 +55,7 @@ export type VisualConfigFieldPath =
   | 'chatgptWebResizeFilter'
   | 'chatgptWebMaxImageResponseMegabytes'
   | 'chatgptWebMaxN'
+  | 'chatgptWebNAggregationConcurrency'
   | 'chatgptWebImageMaxInFlight'
   | 'chatgptWebImageAdmissionQueueSize'
   | 'chatgptWebImageAdmissionWaitMilliseconds'
@@ -445,6 +446,7 @@ export type VisualConfigValues = {
   chatgptWebMaxResizeEdgePixels: string;
   chatgptWebMaxImageResponseMegabytes: string;
   chatgptWebMaxN: string;
+  chatgptWebNAggregationConcurrency: string;
   chatgptWebImageMaxInFlight: string;
   chatgptWebImageAdmissionQueueSize: string;
   chatgptWebImageAdmissionWaitMilliseconds: string;
@@ -603,6 +605,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebMaxResizeEdgePixels: '3840',
   chatgptWebMaxImageResponseMegabytes: '128',
   chatgptWebMaxN: '1',
+  chatgptWebNAggregationConcurrency: '3',
   chatgptWebImageMaxInFlight: '64',
   chatgptWebImageAdmissionQueueSize: '64',
   chatgptWebImageAdmissionWaitMilliseconds: '1000',

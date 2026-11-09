@@ -1040,6 +1040,7 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.max-resize-edge-pixels',
       'images.chatgpt-web.max-image-response-megabytes',
       'images.chatgpt-web.max-n',
+      'images.chatgpt-web.n-aggregation-concurrency',
     ],
     fieldTargets: {
       'images.chatgpt-web.strict-size': 'config-chatgpt-web-strict-size',
@@ -1051,12 +1052,13 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.max-resize-edge-pixels': 'config-chatgpt-web-max-resize-edge-pixels',
       'images.chatgpt-web.max-image-response-megabytes': 'config-chatgpt-web-max-image-response-megabytes',
       'images.chatgpt-web.max-n': 'config-chatgpt-web-max-n',
+      'images.chatgpt-web.n-aggregation-concurrency': 'config-chatgpt-web-n-aggregation-concurrency',
     },
     aliases: [
       'GIF tolerance', 'GIF 容差', 'GIF 比例', 'допуск GIF',
       'aspect ratio',
       'resize',
-      'max n',
+      'max n', 'parallel images', '聚合并发', '多图并发', 'параллельные изображения',
       'image count',
       '比例适配',
       '严格模式',

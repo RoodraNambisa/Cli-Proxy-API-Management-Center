@@ -1,3 +1,4 @@
+import { IMAGE_AGGREGATION_KEY, readImageAggregationConcurrency, supportsImageAggregation } from '@/features/chatgptWeb/imageAggregation';
 import { readImageUsageMode, readImageUsageModelProfiles, supportsImageUsageProfiles } from '@/features/chatgptWeb/imageUsageProfiles';
 import { GIF_RATIO_EXCEPTION_KEY, GIF_RATIO_TOLERANCE_KEY, readGIFRatioException, readGIFRatioTolerance, supportsGIFAspectRatio } from '@/features/chatgptWeb/gifAspectRatio';
 import { IMAGE_FORMATS_KEY, fetchImageFormatsCapability, readModelOutputFormats, effectiveImageAliases } from '@/features/chatgptWeb/imageOutputFormats';
@@ -75,6 +76,15 @@ export const configFileApi = {
     const gifSettings = imageFormatsRoot?.images?.['chatgpt-web'];
     const previousGIFSettings = options.previousContent === undefined ? undefined
       : parseDocument(options.previousContent, { merge: true }).toJS()?.images?.['chatgpt-web'];
+    readImageAggregationConcurrency(gifSettings?.[IMAGE_AGGREGATION_KEY]);
+    const needsAggregation = options.previousContent === undefined ? gifSettings?.[IMAGE_AGGREGATION_KEY] !== undefined : gifSettings?.[IMAGE_AGGREGATION_KEY] !== previousGIFSettings?.[IMAGE_AGGREGATION_KEY];
+    const aggregationConnection = needsAggregation ? profileConnectionAtStart : undefined;
+    if (aggregationConnection) {
+      let supported = false;
+      try { supported = await supportsImageAggregation(aggregationConnection, options.signal); }
+      catch (error) { if (![404,405,501].includes((error as { status?: number }).status ?? 0)) throw error; }
+      if (!supported) throw new Error(i18n.t('chatgpt_web.n_aggregation.unsupported'));
+    }
     readGIFRatioException(gifSettings?.[GIF_RATIO_EXCEPTION_KEY]);
     readGIFRatioTolerance(gifSettings?.[GIF_RATIO_TOLERANCE_KEY]);
     const needsGIFRatio = [GIF_RATIO_EXCEPTION_KEY, GIF_RATIO_TOLERANCE_KEY].some(key =>
@@ -132,7 +142,7 @@ export const configFileApi = {
     const needsRegion = Boolean(
       needsManualRegion || root?.['proxy-ip'] || root?.codex?.['time-context']?.enabled === true
     );
-    const saveConnection = options.connection ?? usageProfilesConnection ?? gifConnection ?? formatsConnection ?? spilloverConnection ?? imagePriorityConnection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
+    const saveConnection = options.connection ?? aggregationConnection ?? usageProfilesConnection ?? gifConnection ?? formatsConnection ?? spilloverConnection ?? imagePriorityConnection ?? tlsConnection ?? (needsRegion ? apiClient.captureConnection() : undefined);
     if (needsRegion) {
       const caps = await apiClient.getAtConnection<{ capabilities?: Record<string, boolean> }>(
         saveConnection!,
@@ -296,6 +306,10 @@ export const configFileApi = {
         throw new Error(i18n.t('codex_state.model_special_upgrade'));
       if (retryRounds && options.features?.state_retry_rounds !== true)
         throw new Error(i18n.t('codex_state.retry_round_upgrade'));
+    }
+    if (aggregationConnection) {
+      const current = apiClient.captureConnection();
+      if (current.apiBase !== aggregationConnection.apiBase || current.managementKey !== aggregationConnection.managementKey) throw new Error(i18n.t('chatgpt_web.image_formats.connection_changed'));
     }
     if (usageProfilesConnection) {
       const current = apiClient.captureConnection();

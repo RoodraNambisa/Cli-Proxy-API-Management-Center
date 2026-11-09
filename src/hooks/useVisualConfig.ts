@@ -1,3 +1,4 @@
+import { readImageAggregationConcurrency } from '@/features/chatgptWeb/imageAggregation';
 import { readImageUsageMode, readImageUsageModelProfiles, imageUsageProfilesInvalid } from '@/features/chatgptWeb/imageUsageProfiles';
 import { readGIFRatioException, readGIFRatioTolerance } from '@/features/chatgptWeb/gifAspectRatio';
 import { readModelOutputFormats, imageFormatsInvalid } from '@/features/chatgptWeb/imageOutputFormats';
@@ -1747,6 +1748,9 @@ export function getVisualConfigValidationErrors(
       'integer_range_1_256'
     ),
     chatgptWebMaxN: getIntegerRangeError(values.chatgptWebMaxN, 1, 10, 'integer_range_1_10'),
+    chatgptWebNAggregationConcurrency: getIntegerRangeError(
+      values.chatgptWebNAggregationConcurrency, 1, 10, 'integer_range_1_10'
+    ),
     chatgptWebImageMaxInFlight: getCapacityIntegerError(values.chatgptWebImageMaxInFlight, 1),
     chatgptWebImageAdmissionQueueSize: getCapacityIntegerError(
       values.chatgptWebImageAdmissionQueueSize,
@@ -2812,6 +2816,12 @@ function getNextDirtyFields(
         baselineValues.chatgptWebMaxImageResponseMegabytes
     );
   }
+  if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebNAggregationConcurrency')) {
+    updateDirty(
+      'chatgptWebNAggregationConcurrency',
+      nextValues.chatgptWebNAggregationConcurrency === baselineValues.chatgptWebNAggregationConcurrency
+    );
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebMaxN')) {
     updateDirty('chatgptWebMaxN', nextValues.chatgptWebMaxN === baselineValues.chatgptWebMaxN);
   }
@@ -3828,6 +3838,9 @@ export function useVisualConfig() {
             imagesChatGPTWeb?.maxImageResponseMegabytes ??
             DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes
         ),
+        chatgptWebNAggregationConcurrency: String(
+          readImageAggregationConcurrency(imagesChatGPTWeb?.['n-aggregation-concurrency'])
+        ),
         chatgptWebMaxN: String(
           imagesChatGPTWeb?.['max-n'] ??
             imagesChatGPTWeb?.maxN ??
@@ -4793,6 +4806,7 @@ export function useVisualConfig() {
           values.chatgptWebMaxImageResponseMegabytes !==
             DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes ||
           values.chatgptWebMaxN !== DEFAULT_VISUAL_VALUES.chatgptWebMaxN ||
+          values.chatgptWebNAggregationConcurrency !== DEFAULT_VISUAL_VALUES.chatgptWebNAggregationConcurrency ||
           values.chatgptWebImageMaxInFlight !== DEFAULT_VISUAL_VALUES.chatgptWebImageMaxInFlight ||
           values.chatgptWebImageAdmissionQueueSize !==
             DEFAULT_VISUAL_VALUES.chatgptWebImageAdmissionQueueSize ||
@@ -4915,6 +4929,7 @@ export function useVisualConfig() {
             values.chatgptWebMaxImageResponseMegabytes !==
               DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes ||
             values.chatgptWebMaxN !== DEFAULT_VISUAL_VALUES.chatgptWebMaxN ||
+            values.chatgptWebNAggregationConcurrency !== DEFAULT_VISUAL_VALUES.chatgptWebNAggregationConcurrency ||
             values.chatgptWebImageMaxInFlight !==
               DEFAULT_VISUAL_VALUES.chatgptWebImageMaxInFlight ||
             values.chatgptWebImageAdmissionQueueSize !==
@@ -5054,6 +5069,12 @@ export function useVisualConfig() {
               values.chatgptWebMaxImageResponseMegabytes
             );
             setIntFromStringInDoc(doc, ['images', 'chatgpt-web', 'max-n'], values.chatgptWebMaxN);
+            if (state.dirtyFields.has('chatgptWebNAggregationConcurrency')) {
+              setIntFromStringInDoc(
+                doc, ['images', 'chatgpt-web', 'n-aggregation-concurrency'],
+                values.chatgptWebNAggregationConcurrency
+              );
+            }
             setIntFromStringInDoc(
               doc,
               ['images', 'chatgpt-web', 'max-in-flight'],

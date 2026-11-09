@@ -1,3 +1,4 @@
+import { ChatGptWebImageAggregation } from '@/features/chatgptWeb/components/ChatGptWebImageAggregation';
 import { ChatGptWebGIFAspectRatio } from '@/features/chatgptWeb/components/ChatGptWebGIFAspectRatio';
 import { ChatGptWebImageFormatsEditor } from '@/features/chatgptWeb/components/ChatGptWebImageFormatsEditor';
 import { CodexIdentityEditor, useCodexIdentitySupport } from '@/features/codexIdentity/CodexIdentityEditor';
@@ -1289,6 +1290,7 @@ export function VisualConfigEditor({
     'chatgptWebResizeFilter',
     'chatgptWebMaxImageResponseMegabytes',
     'chatgptWebMaxN',
+    'chatgptWebNAggregationConcurrency',
   ]);
   const chatGptWebImageSizeErrorCount = [
     chatGptWebStrictSizeError,
@@ -1299,6 +1301,7 @@ export function VisualConfigEditor({
     chatGptWebResizeFilterError,
     chatGptWebMaxImageResponseMegabytesError,
     chatGptWebMaxNError,
+    validationErrors?.chatgptWebNAggregationConcurrency,
   ].filter(Boolean).length;
   const chatGptWebImageCapacityDirty = hasDirtyConfigField(dirtyFields, [
     'chatgptWebImageMaxInFlight',
@@ -1838,6 +1841,7 @@ export function VisualConfigEditor({
           'chatgptWebResizeFilter',
           'chatgptWebMaxImageResponseMegabytes',
           'chatgptWebMaxN',
+    'chatgptWebNAggregationConcurrency',
           'chatgptWebImageMaxInFlight',
           'chatgptWebImageAdmissionQueueSize',
           'chatgptWebImageAdmissionWaitMilliseconds',
@@ -2668,6 +2672,7 @@ export function VisualConfigEditor({
                   'config-chatgpt-web-resize-filter',
                   'config-chatgpt-web-max-image-response-megabytes',
                   'config-chatgpt-web-max-n',
+                  'config-chatgpt-web-n-aggregation-concurrency',
                 ]}
                 dirty={chatGptWebImageSizeDirty}
                 errorCount={chatGptWebImageSizeErrorCount}
@@ -2823,6 +2828,15 @@ export function VisualConfigEditor({
                       onChange={(event) =>
                         onChange({ chatgptWebMaxImageResponseMegabytes: event.target.value })
                       }
+                    />
+                    <ChatGptWebImageAggregation
+                      value={values.chatgptWebNAggregationConcurrency}
+                      error={getValidationMessage(t, validationErrors?.chatgptWebNAggregationConcurrency)}
+                      onChange={chatgptWebNAggregationConcurrency => onChange({ chatgptWebNAggregationConcurrency })}
+                      connectionKey={chatGptWebConnectionGenerationKey}
+                      active={activePageId === 'provider-chatgpt-web'}
+                      disabled={disabled}
+                      enabled={values.images.enableNAggregation && Number(values.chatgptWebMaxN) > 1}
                     />
                     <Input
                       id="config-chatgpt-web-max-n"

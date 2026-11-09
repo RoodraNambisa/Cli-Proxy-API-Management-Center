@@ -3894,6 +3894,14 @@
     "author": "Author"
   },
   "chatgpt_web": {
+    "n_aggregation": {
+      "title": "Parallel images per aggregated request",
+      "hint": "Default 3, range 1–10; 1 runs serially, and concurrency never exceeds n. Applies to Web-only routes and respects global and credential limits. Prefers distinct credentials while preserving explicit targeting and session affinity.",
+      "inactive": "Enable n aggregation and set Web maximum n above 1 to activate this setting. It can be saved now. Mixed-provider routes keep their existing execution behavior.",
+      "loading": "Checking backend parallel image support…",
+      "unsupported": "This backend does not support parallel image aggregation. Upgrade the backend first.",
+      "error": "Backend capability could not be confirmed. Editing is temporarily disabled."
+    },
     "gif_aspect_ratio": {
       "title": "Keep native GIF dimensions when the aspect ratio exceeds tolerance",
       "description": "Off by default. Applies only to GIF output: keep native dimensions when the GIF tolerance is exceeded; otherwise use the existing resize settings. Static formats, input sizes, animation validation and resource limits keep their current rules.",
