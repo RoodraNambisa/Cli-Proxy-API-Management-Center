@@ -1784,6 +1784,28 @@
     "remote_access_disabled": "This login method is not available for remote access. Please access from localhost."
   },
   "usage_stats": {
+    "image_aggregation": {
+      "title": "Batch delivery",
+      "requested": "Requested images",
+      "generated": "Generated",
+      "delivered": "Delivered",
+      "retries": "Replacement attempts",
+      "index": "Image index",
+      "attempt": "Attempt index",
+      "original": "Original error",
+      "original_stage": "Original stage",
+      "view": "View generation attempts",
+      "loading": "Loading generation attempts…",
+      "error": "Could not load generation attempts",
+      "connection_changed": "Connection changed. Close and reopen these details.",
+      "empty": "No retained generation attempts.",
+      "attempts_hint": "Attempts retain their actual usage without counting again toward health successes or failures.",
+      "health": "New Web batches count final delivery outcomes. Replacement attempts do not add health requests. Historical records keep their original meaning.",
+      "discarded": "Generated image discarded with the batch",
+      "incomplete": "Image batch incomplete",
+      "not_executed": "Image slot not executed",
+      "stage": "Batch delivery"
+    },
     "title": "Usage Statistics",
     "total_requests": "Total Requests",
     "success_requests": "Success Requests",
@@ -1902,6 +1924,9 @@
     "failure_boundary_upstream_committed": "Committed upstream",
     "failure_boundary_slot_consumed": "Request slot consumed",
     "failure_error_codes": {
+      "image_aggregation_discarded": "Generated image discarded with the batch",
+      "image_aggregation_incomplete": "Image batch incomplete",
+      "image_aggregation_not_executed": "Image slot not executed",
       "auth_request_capacity_exhausted": "CPA request capacity exhausted",
       "upstream_http_429": "Upstream HTTP 429",
       "http_429": "HTTP 429",
@@ -1918,6 +1943,7 @@
       "unknown": "Unclassified error"
     },
     "failure_stages": {
+      "aggregation": "Batch delivery",
       "execution": "Request execution",
       "preflight": "Request preparation",
       "selection": "Credential selection",
@@ -3198,6 +3224,7 @@
         "integer_range_1_256": "Enter a whole number between 1 and 256",
         "integer_range_1_64": "Enter a whole number between 1 and 64",
         "integer_range_1_1000000": "Enter a whole number between 1 and 1000000",
+        "integer_range_0_3": "Enter an integer from 0 to 3",
         "integer_range_1_10": "Enter a whole number between 1 and 10",
         "integer_range_0_512": "Enter a whole number between 0 and 512",
         "integer_range_30_3600": "Enter a whole number between 30 and 3600",
@@ -3894,6 +3921,15 @@
     "author": "Author"
   },
   "chatgpt_web": {
+    "image_refill": {
+      "retries": "Maximum replacement attempts per failed image",
+      "retry_hint": "Default 1, range 0–3; 0 disables replacements. Retry only failed slots when at least two images and at least half the initial batch succeed. Replacements consume additional quota and may duplicate an unresolved upstream task. Web-only batches.",
+      "partial": "Return partial images if the batch remains incomplete",
+      "partial_hint": "Off by default: incomplete JSON batches return an error. Enable to return successful images. Streams always deliver successful images as they finish and report missing images at the end.",
+      "loading": "Checking replacement and delivery accounting support…",
+      "unsupported": "Upgrade the backend to use replacements and delivery accounting.",
+      "error": "Backend support could not be confirmed. Editing is disabled."
+    },
     "n_aggregation": {
       "title": "Parallel images per aggregated request",
       "hint": "Default concurrency 3, range 1–10; 1 is serial and concurrency never exceeds n. Web maximum n above 1 enables aggregation; parallel execution applies to Web-only routes. Respects global and credential limits, prefers distinct credentials, and preserves explicit targeting and session affinity.",

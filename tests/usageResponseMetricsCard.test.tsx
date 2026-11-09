@@ -185,4 +185,21 @@ describe('usage response metrics display and export', () => {
       }
     }
   });
+
+  test('exports delivery association without duplicating attempt usage', async () => {
+    const image_aggregation = {
+      role: 'delivery' as const, batch_id: 'batch-fixture', image_index: 9,
+      attempt_index: 1, requested: 10, generated: 9, delivered: 0,
+      retry_attempts: 1, executed: true, original_code: 'image_size_mismatch',
+      original_stage: 'download',
+    };
+    await showDetails([detail('image-model', { failed: true, image_aggregation })]);
+    fireEvent.click(screen.getByRole('button', { name: 'usage_stats.export_json' }));
+    const exported = JSON.parse(await readBlob(vi.mocked(downloadBlob).mock.calls.at(-1)![0].blob));
+    expect(exported[0].image_aggregation).toEqual(image_aggregation);
+    fireEvent.click(screen.getByRole('button', { name: 'usage_stats.export_csv' }));
+    const csv = await readBlob(vi.mocked(downloadBlob).mock.calls.at(-1)![0].blob);
+    expect(csv.split('\n')[0]).toContain('image_aggregation_requested,image_aggregation_generated,image_aggregation_delivered');
+    expect(csv).toContain('"delivery","batch-fixture","9","1","10","9","0","1","true","image_size_mismatch","download"');
+  });
 });

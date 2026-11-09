@@ -1,3 +1,4 @@
+import { UsageAggregationDetails } from './UsageAggregationDetails';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import type { UsageFailureDetails } from '@/utils/usage/failureDetails';
@@ -15,14 +16,15 @@ export function UsageErrorDetails({ detail, onClose }: { detail: UsageFailureDet
   if (response) {
     try { response = JSON.stringify(JSON.parse(response), null, 2); } catch { /* Keep truncated or non-JSON diagnostics readable. */ }
   }
-  return <Modal open={detail !== null} onClose={onClose} title={label('title')} width={760}>
+  return <Modal open={detail !== null} onClose={onClose} title={detail?.image_aggregation ? t('usage_stats.image_aggregation.title') : label('title')} width={760}>
     {detail && <div className={styles.content}>
+      {detail.image_aggregation && <UsageAggregationDetails key={`${detail.image_aggregation.batch_id}:${detail.image_aggregation.image_index}`} detail={detail} />}
       {fields.length > 0 && <dl className={styles.fields}>{fields.map(([name, value]) =>
         <div key={String(name)}><dt>{name}</dt><dd>{value}</dd></div>
       )}</dl>}
       {detail.error_message ? <section><h4>{label('message')}</h4><p className={styles.message}>{detail.error_message}</p></section> : null}
       {response ? <section><h4>{label('response')}</h4><pre className={styles.response}>{response}</pre></section> : null}
-      {!detail.error_message && !detail.error_response && <p className="hint">{label('unavailable')}</p>}
+      {!detail.image_aggregation && !detail.error_message && !detail.error_response && <p className="hint">{label('unavailable')}</p>}
       {detail.failure_stage && <dl className={styles.fields}>{([
         ['selected', detail.credential_selected], ['committed', detail.upstream_committed], ['limited', detail.auth_request_slot_consumed],
       ] as const).filter(([, value]) => value !== undefined).map(([name, value]) =>

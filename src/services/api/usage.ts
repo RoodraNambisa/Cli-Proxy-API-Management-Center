@@ -79,6 +79,7 @@ const normalizeDetailsQuery = (query: UsageDetailsQuery = {}) => {
 
   return {
     ...query,
+    image_aggregation_role: query.image_aggregation_role ?? 'delivery',
     offset,
     limit,
     sort_by: query.sort_by || 'created_at',

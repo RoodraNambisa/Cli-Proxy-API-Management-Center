@@ -268,7 +268,10 @@ export function ServiceHealthCard({ resource }: ServiceHealthCardProps) {
   return (
     <div className={styles.healthCard}>
       <div className={styles.healthHeader}>
-        <h3 className={styles.healthTitle}>{t('service_health.title')}</h3>
+        <div>
+          <h3 className={styles.healthTitle}>{t('service_health.title')}</h3>
+          <p className="hint">{t('usage_stats.image_aggregation.health')}</p>
+        </div>
         <div className={styles.healthMeta}>
           <span className={styles.healthWindow}>{t('service_health.window')}</span>
           <span className={`${styles.healthRate} ${rateClass}`}>

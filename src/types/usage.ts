@@ -125,6 +125,9 @@ export interface UsageSummaryQuery extends UsageRangeQuery {
 }
 
 export interface UsageDetailsQuery extends UsageRangeQuery {
+  image_aggregation_role?: 'delivery' | 'attempt' | 'all';
+  image_aggregation_batch?: string;
+  image_aggregation_index?: number;
   request_path?: string;
   api?: string;
   model?: string;

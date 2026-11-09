@@ -1778,6 +1778,28 @@
     "remote_access_disabled": "遠端存取不支援此登入方式，請從本地（localhost）存取"
   },
   "usage_stats": {
+    "image_aggregation": {
+      "title": "多圖交付",
+      "requested": "目標張數",
+      "generated": "生成成功",
+      "delivered": "實際交付",
+      "retries": "額外補圖嘗試",
+      "index": "圖片索引",
+      "attempt": "嘗試序號",
+      "original": "原始錯誤",
+      "original_stage": "原始階段",
+      "view": "查看生成嘗試",
+      "loading": "正在讀取生成嘗試…",
+      "error": "無法讀取生成嘗試",
+      "connection_changed": "連線已切換，請關閉後重新開啟明細。",
+      "empty": "沒有保留的生成嘗試紀錄。",
+      "attempts_hint": "生成嘗試保留實際消耗，不重複計入健康監測的成功／失敗次數。",
+      "health": "新版 Web 多圖按最終交付計成功／失敗；補圖嘗試不重複計數。歷史紀錄保持原口徑。",
+      "discarded": "已生成但整批未交付",
+      "incomplete": "聚合圖片未補齊",
+      "not_executed": "聚合位置未執行",
+      "stage": "聚合交付"
+    },
     "title": "使用統計",
     "total_requests": "總請求數",
     "success_requests": "成功請求",
@@ -1896,6 +1918,9 @@
     "failure_boundary_upstream_committed": "已提交上游",
     "failure_boundary_slot_consumed": "已消耗請求槽",
     "failure_error_codes": {
+      "image_aggregation_discarded": "已生成但整批未交付",
+      "image_aggregation_incomplete": "聚合圖片未補齊",
+      "image_aggregation_not_executed": "聚合位置未執行",
       "auth_request_capacity_exhausted": "CPA 請求容量耗盡",
       "upstream_http_429": "上游 HTTP 429",
       "http_429": "HTTP 429",
@@ -1912,6 +1937,7 @@
       "unknown": "未分類錯誤"
     },
     "failure_stages": {
+      "aggregation": "聚合交付",
       "execution": "執行處理",
       "preflight": "請求準備",
       "selection": "憑證選取",
@@ -3183,6 +3209,7 @@
         "integer_range_1_256": "請輸入 1 到 256 之間的整數",
         "integer_range_1_64": "請輸入 1 到 64 之間的整數",
         "integer_range_1_1000000": "請輸入 1 到 1000000 之間的整數",
+        "integer_range_0_3": "請輸入 0–3 的整數",
         "integer_range_1_10": "請輸入 1 到 10 之間的整數",
         "integer_range_0_512": "請輸入 0 到 512 之間的整數",
         "integer_range_30_3600": "請輸入 30 到 3600 之間的整數",
@@ -3879,6 +3906,15 @@
     "author": "作者"
   },
   "chatgpt_web": {
+    "image_refill": {
+      "retries": "失敗子圖最多補圖次數",
+      "retry_hint": "預設 1，範圍 0–3；0 關閉補圖。首輪成功至少兩張且達到一半時，僅補失敗位置。補圖會額外消耗額度；舊任務未結束時可能重複生成。僅純 Web 多圖路由生效。",
+      "partial": "未補齊時回傳部分圖片",
+      "partial_hint": "預設關閉：一般 JSON 未補齊則整批回報錯誤。開啟後回傳成功圖片；串流始終先回傳成功圖片，最後回報缺圖。",
+      "loading": "正在檢查補圖與交付統計能力…",
+      "unsupported": "後端不支援補圖與交付統計，請先升級。",
+      "error": "無法確認後端能力，暫時不能修改。"
+    },
     "n_aggregation": {
       "title": "單次多圖聚合並行數",
       "hint": "預設並行數 3，範圍 1–10；1 為循序，實際不超過請求 n。Web 最大 n 大於 1 時啟用多圖聚合；僅純 Web 路由並行執行。遵守全域與憑證限額，優先使用不同憑證，並保留指定憑證與工作階段親和。",

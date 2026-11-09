@@ -196,6 +196,8 @@ export const CONFIG_PAGE_DEFINITIONS: ConfigPageDefinition[] = [
       'chatgptWebMaxResizeEdgePixels',
       'chatgptWebMaxImageResponseMegabytes',
       'chatgptWebMaxN',
+      'chatgptWebNAggregationMaxRetries',
+      'chatgptWebNAggregationReturnPartial',
       'chatgptWebImageMaxInFlight',
       'chatgptWebImageAdmissionQueueSize',
       'chatgptWebImageAdmissionWaitMilliseconds',
@@ -1041,6 +1043,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.max-image-response-megabytes',
       'images.chatgpt-web.max-n',
       'images.chatgpt-web.n-aggregation-concurrency',
+      'images.chatgpt-web.n-aggregation-max-retries',
+      'images.chatgpt-web.n-aggregation-return-partial',
     ],
     fieldTargets: {
       'images.chatgpt-web.strict-size': 'config-chatgpt-web-strict-size',
@@ -1052,6 +1056,8 @@ export const CONFIG_SEARCH_DEFINITIONS: ConfigSearchDefinition[] = [
       'images.chatgpt-web.max-resize-edge-pixels': 'config-chatgpt-web-max-resize-edge-pixels',
       'images.chatgpt-web.max-image-response-megabytes': 'config-chatgpt-web-max-image-response-megabytes',
       'images.chatgpt-web.max-n': 'config-chatgpt-web-max-n',
+      'images.chatgpt-web.n-aggregation-max-retries': 'config-chatgpt-web-n-aggregation-max-retries',
+      'images.chatgpt-web.n-aggregation-return-partial': 'config-chatgpt-web-n-aggregation-return-partial',
       'images.chatgpt-web.n-aggregation-concurrency': 'config-chatgpt-web-n-aggregation-concurrency',
     },
     aliases: [

@@ -502,6 +502,10 @@ export function RequestEventsDetailsCard({
   const handleExportCsv = () => {
     if (!rows.length) return;
     const includeFailureDetails = rows.some((row) => row.diagnostics.error_code || row.diagnostics.status_code);
+    const aggregationFields = rows.some((row) => row.diagnostics.image_aggregation)
+      ? (['role', 'batch_id', 'image_index', 'attempt_index', 'requested', 'generated', 'delivered',
+          'retry_attempts', 'executed', 'original_code', 'original_stage'] as const)
+      : [];
 
     const csvHeader = [
       'timestamp',
@@ -512,6 +516,7 @@ export function RequestEventsDetailsCard({
       'source_raw',
       'auth_index',
       'result',
+      ...aggregationFields.map((field) => `image_aggregation_${field}`),
       ...(hasStreamData ? ['stream'] : []),
       ...(hasGenerateData ? ['generate'] : []),
       ...(hasLatencyData ? ['latency_ms'] : []),
@@ -537,6 +542,7 @@ export function RequestEventsDetailsCard({
         row.sourceRaw,
         row.authIndex,
         row.failed ? 'failed' : 'success',
+        ...aggregationFields.map((field) => String(row.diagnostics.image_aggregation?.[field] ?? '')),
         ...(hasStreamData ? [row.stream === undefined ? '' : String(row.stream)] : []),
         ...(hasGenerateData ? [row.generate === undefined ? '' : String(row.generate)] : []),
         ...(hasLatencyData ? [row.latencyMs ?? ''] : []),
@@ -851,12 +857,12 @@ export function RequestEventsDetailsCard({
                                 : styles.requestEventsResultSuccess
                             }
                           >
-                            {row.failed ? <Button type="button" variant="ghost" size="sm"
+                            {row.failed || row.diagnostics.image_aggregation ? <Button type="button" variant="ghost" size="sm"
                               style={{ color: 'inherit' }}
                               title={row.diagnostics.error_message || row.diagnostics.error_code}
                               aria-label={`${t('usage_stats.error_details.view')}: ${row.timestampLabel}`}
                               onClick={() => setSelectedError(row.diagnostics)}
-                            >{t('stats.failure')}{row.diagnostics.status_code ? ` · ${row.diagnostics.status_code}` : ''} ⓘ</Button> : t('stats.success')}
+                            >{t(row.failed ? 'stats.failure' : 'stats.success')}{row.diagnostics.status_code ? ` · ${row.diagnostics.status_code}` : ''} ⓘ</Button> : t('stats.success')}
                           </span>
                         </td>
                         {hasStreamData && (

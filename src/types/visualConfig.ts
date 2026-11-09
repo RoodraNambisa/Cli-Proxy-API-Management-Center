@@ -56,6 +56,8 @@ export type VisualConfigFieldPath =
   | 'chatgptWebMaxImageResponseMegabytes'
   | 'chatgptWebMaxN'
   | 'chatgptWebNAggregationConcurrency'
+  | 'chatgptWebNAggregationMaxRetries'
+  | 'chatgptWebNAggregationReturnPartial'
   | 'chatgptWebImageMaxInFlight'
   | 'chatgptWebImageAdmissionQueueSize'
   | 'chatgptWebImageAdmissionWaitMilliseconds'
@@ -163,6 +165,7 @@ export type VisualConfigValidationErrorCode =
   | 'integer_range_0_86400'
   | 'integer_range_0_3600'
   | 'integer_range_0_5'
+  | 'integer_range_0_3'
   | 'integer_range_0_9223372036'
   | 'strict_size_requires_aspect_adaptation'
   | 'resize_requires_aspect_adaptation'
@@ -447,6 +450,8 @@ export type VisualConfigValues = {
   chatgptWebMaxImageResponseMegabytes: string;
   chatgptWebMaxN: string;
   chatgptWebNAggregationConcurrency: string;
+  chatgptWebNAggregationMaxRetries: string;
+  chatgptWebNAggregationReturnPartial: boolean;
   chatgptWebImageMaxInFlight: string;
   chatgptWebImageAdmissionQueueSize: string;
   chatgptWebImageAdmissionWaitMilliseconds: string;
@@ -606,6 +611,8 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   chatgptWebMaxImageResponseMegabytes: '128',
   chatgptWebMaxN: '1',
   chatgptWebNAggregationConcurrency: '3',
+  chatgptWebNAggregationMaxRetries: '1',
+  chatgptWebNAggregationReturnPartial: false,
   chatgptWebImageMaxInFlight: '64',
   chatgptWebImageAdmissionQueueSize: '64',
   chatgptWebImageAdmissionWaitMilliseconds: '1000',

@@ -183,6 +183,7 @@ describe('lightweight usage management API', () => {
     expect(get).toHaveBeenNthCalledWith(1, '/usage/details', {
       timeout: 60_000,
       params: {
+        image_aggregation_role: 'delivery',
         ...range,
         offset: 0,
         limit: 1000,

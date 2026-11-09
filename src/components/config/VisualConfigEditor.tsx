@@ -1,3 +1,4 @@
+import { ChatGptWebImageRefill } from '@/features/chatgptWeb/components/ChatGptWebImageRefill';
 import { ChatGptWebImageAggregation } from '@/features/chatgptWeb/components/ChatGptWebImageAggregation';
 import { ChatGptWebGIFAspectRatio } from '@/features/chatgptWeb/components/ChatGptWebGIFAspectRatio';
 import { ChatGptWebImageFormatsEditor } from '@/features/chatgptWeb/components/ChatGptWebImageFormatsEditor';
@@ -1290,6 +1291,8 @@ export function VisualConfigEditor({
     'chatgptWebResizeFilter',
     'chatgptWebMaxImageResponseMegabytes',
     'chatgptWebMaxN',
+    'chatgptWebNAggregationMaxRetries',
+    'chatgptWebNAggregationReturnPartial',
     'chatgptWebNAggregationConcurrency',
   ]);
   const chatGptWebImageSizeErrorCount = [
@@ -1302,6 +1305,7 @@ export function VisualConfigEditor({
     chatGptWebMaxImageResponseMegabytesError,
     chatGptWebMaxNError,
     validationErrors?.chatgptWebNAggregationConcurrency,
+    validationErrors?.chatgptWebNAggregationMaxRetries,
   ].filter(Boolean).length;
   const chatGptWebImageCapacityDirty = hasDirtyConfigField(dirtyFields, [
     'chatgptWebImageMaxInFlight',
@@ -1841,7 +1845,9 @@ export function VisualConfigEditor({
           'chatgptWebResizeFilter',
           'chatgptWebMaxImageResponseMegabytes',
           'chatgptWebMaxN',
-    'chatgptWebNAggregationConcurrency',
+          'chatgptWebNAggregationMaxRetries',
+          'chatgptWebNAggregationReturnPartial',
+          'chatgptWebNAggregationConcurrency',
           'chatgptWebImageMaxInFlight',
           'chatgptWebImageAdmissionQueueSize',
           'chatgptWebImageAdmissionWaitMilliseconds',
@@ -2673,6 +2679,8 @@ export function VisualConfigEditor({
                   'config-chatgpt-web-max-image-response-megabytes',
                   'config-chatgpt-web-max-n',
                   'config-chatgpt-web-n-aggregation-concurrency',
+                  'config-chatgpt-web-n-aggregation-max-retries',
+                  'config-chatgpt-web-n-aggregation-return-partial',
                 ]}
                 dirty={chatGptWebImageSizeDirty}
                 errorCount={chatGptWebImageSizeErrorCount}
@@ -2828,6 +2836,20 @@ export function VisualConfigEditor({
                       onChange={(event) =>
                         onChange({ chatgptWebMaxImageResponseMegabytes: event.target.value })
                       }
+                    />
+                    <ChatGptWebImageRefill
+                      retries={values.chatgptWebNAggregationMaxRetries}
+                      partial={values.chatgptWebNAggregationReturnPartial}
+                      onRetriesChange={(chatgptWebNAggregationMaxRetries) =>
+                        onChange({ chatgptWebNAggregationMaxRetries })
+                      }
+                      onPartialChange={(chatgptWebNAggregationReturnPartial) =>
+                        onChange({ chatgptWebNAggregationReturnPartial })
+                      }
+                      connectionKey={chatGptWebConnectionGenerationKey}
+                      active={activePageId === 'provider-chatgpt-web'}
+                      disabled={disabled}
+                      error={getValidationMessage(t, validationErrors?.chatgptWebNAggregationMaxRetries)}
                     />
                     <ChatGptWebImageAggregation
                       value={values.chatgptWebNAggregationConcurrency}

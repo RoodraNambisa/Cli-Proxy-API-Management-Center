@@ -1,3 +1,4 @@
+import { readImageRefillRetries, readImageReturnPartial } from '@/features/chatgptWeb/imageRefill';
 import { readImageAggregationConcurrency } from '@/features/chatgptWeb/imageAggregation';
 import { readImageUsageMode, readImageUsageModelProfiles, imageUsageProfilesInvalid } from '@/features/chatgptWeb/imageUsageProfiles';
 import { readGIFRatioException, readGIFRatioTolerance } from '@/features/chatgptWeb/gifAspectRatio';
@@ -1747,6 +1748,9 @@ export function getVisualConfigValidationErrors(
       256,
       'integer_range_1_256'
     ),
+    chatgptWebNAggregationMaxRetries: getIntegerRangeError(
+      values.chatgptWebNAggregationMaxRetries, 0, 3, 'integer_range_0_3'
+    ),
     chatgptWebMaxN: getIntegerRangeError(values.chatgptWebMaxN, 1, 10, 'integer_range_1_10'),
     chatgptWebNAggregationConcurrency: getIntegerRangeError(
       values.chatgptWebNAggregationConcurrency, 1, 10, 'integer_range_1_10'
@@ -2816,6 +2820,11 @@ function getNextDirtyFields(
         baselineValues.chatgptWebMaxImageResponseMegabytes
     );
   }
+  for (const field of ['chatgptWebNAggregationMaxRetries', 'chatgptWebNAggregationReturnPartial'] as const) {
+    if (Object.prototype.hasOwnProperty.call(patch, field)) {
+      updateDirty(field, nextValues[field] === baselineValues[field]);
+    }
+  }
   if (Object.prototype.hasOwnProperty.call(patch, 'chatgptWebNAggregationConcurrency')) {
     updateDirty(
       'chatgptWebNAggregationConcurrency',
@@ -3838,6 +3847,10 @@ export function useVisualConfig() {
             imagesChatGPTWeb?.maxImageResponseMegabytes ??
             DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes
         ),
+        chatgptWebNAggregationMaxRetries: String(
+          readImageRefillRetries(imagesChatGPTWeb?.['n-aggregation-max-retries'])
+        ),
+        chatgptWebNAggregationReturnPartial: readImageReturnPartial(imagesChatGPTWeb?.['n-aggregation-return-partial']),
         chatgptWebNAggregationConcurrency: String(
           readImageAggregationConcurrency(imagesChatGPTWeb?.['n-aggregation-concurrency'])
         ),
@@ -4806,6 +4819,8 @@ export function useVisualConfig() {
           values.chatgptWebMaxImageResponseMegabytes !==
             DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes ||
           values.chatgptWebMaxN !== DEFAULT_VISUAL_VALUES.chatgptWebMaxN ||
+          values.chatgptWebNAggregationMaxRetries !== DEFAULT_VISUAL_VALUES.chatgptWebNAggregationMaxRetries ||
+          values.chatgptWebNAggregationReturnPartial !== DEFAULT_VISUAL_VALUES.chatgptWebNAggregationReturnPartial ||
           values.chatgptWebNAggregationConcurrency !== DEFAULT_VISUAL_VALUES.chatgptWebNAggregationConcurrency ||
           values.chatgptWebImageMaxInFlight !== DEFAULT_VISUAL_VALUES.chatgptWebImageMaxInFlight ||
           values.chatgptWebImageAdmissionQueueSize !==
@@ -4929,6 +4944,8 @@ export function useVisualConfig() {
             values.chatgptWebMaxImageResponseMegabytes !==
               DEFAULT_VISUAL_VALUES.chatgptWebMaxImageResponseMegabytes ||
             values.chatgptWebMaxN !== DEFAULT_VISUAL_VALUES.chatgptWebMaxN ||
+            values.chatgptWebNAggregationMaxRetries !== DEFAULT_VISUAL_VALUES.chatgptWebNAggregationMaxRetries ||
+            values.chatgptWebNAggregationReturnPartial !== DEFAULT_VISUAL_VALUES.chatgptWebNAggregationReturnPartial ||
             values.chatgptWebNAggregationConcurrency !== DEFAULT_VISUAL_VALUES.chatgptWebNAggregationConcurrency ||
             values.chatgptWebImageMaxInFlight !==
               DEFAULT_VISUAL_VALUES.chatgptWebImageMaxInFlight ||
@@ -5069,6 +5086,18 @@ export function useVisualConfig() {
               values.chatgptWebMaxImageResponseMegabytes
             );
             setIntFromStringInDoc(doc, ['images', 'chatgpt-web', 'max-n'], values.chatgptWebMaxN);
+            if (state.dirtyFields.has('chatgptWebNAggregationMaxRetries')) {
+              setIntFromStringInDoc(
+                doc, ['images', 'chatgpt-web', 'n-aggregation-max-retries'],
+                values.chatgptWebNAggregationMaxRetries
+              );
+            }
+            if (state.dirtyFields.has('chatgptWebNAggregationReturnPartial')) {
+              doc.setIn(
+                ['images', 'chatgpt-web', 'n-aggregation-return-partial'],
+                values.chatgptWebNAggregationReturnPartial
+              );
+            }
             if (state.dirtyFields.has('chatgptWebNAggregationConcurrency')) {
               setIntFromStringInDoc(
                 doc, ['images', 'chatgpt-web', 'n-aggregation-concurrency'],

@@ -1784,6 +1784,28 @@
     "remote_access_disabled": "远程访问不支持此登录方式，请从本地 (localhost) 访问"
   },
   "usage_stats": {
+    "image_aggregation": {
+      "title": "多图交付",
+      "requested": "目标张数",
+      "generated": "生成成功",
+      "delivered": "实际交付",
+      "retries": "额外补图尝试",
+      "index": "图片索引",
+      "attempt": "尝试序号",
+      "original": "原始错误",
+      "original_stage": "原始阶段",
+      "view": "查看生成尝试",
+      "loading": "正在读取生成尝试…",
+      "error": "无法读取生成尝试",
+      "connection_changed": "连接已切换，请关闭后重新打开明细。",
+      "empty": "没有保留的生成尝试记录。",
+      "attempts_hint": "生成尝试保留实际消耗，不重复计入健康监测的成功／失败次数。",
+      "health": "新版 Web 多图按最终交付计成功／失败；补图尝试不重复计数。历史记录保持原口径。",
+      "discarded": "已生成但整批未交付",
+      "incomplete": "聚合图片未补齐",
+      "not_executed": "聚合位置未执行",
+      "stage": "聚合交付"
+    },
     "title": "使用统计",
     "total_requests": "总请求数",
     "success_requests": "成功请求",
@@ -1902,6 +1924,9 @@
     "failure_boundary_upstream_committed": "已提交上游",
     "failure_boundary_slot_consumed": "已消耗请求槽",
     "failure_error_codes": {
+      "image_aggregation_discarded": "已生成但整批未交付",
+      "image_aggregation_incomplete": "聚合图片未补齐",
+      "image_aggregation_not_executed": "聚合位置未执行",
       "auth_request_capacity_exhausted": "CPA 请求容量耗尽",
       "upstream_http_429": "上游 HTTP 429",
       "http_429": "HTTP 429",
@@ -1918,6 +1943,7 @@
       "unknown": "未分类错误"
     },
     "failure_stages": {
+      "aggregation": "聚合交付",
       "execution": "执行处理",
       "preflight": "请求准备",
       "selection": "凭证选择",
@@ -3198,6 +3224,7 @@
         "integer_range_1_256": "请输入 1 到 256 之间的整数",
         "integer_range_1_64": "请输入 1 到 64 之间的整数",
         "integer_range_1_1000000": "请输入 1 到 1000000 之间的整数",
+        "integer_range_0_3": "请输入 0–3 的整数",
         "integer_range_1_10": "请输入 1 到 10 之间的整数",
         "integer_range_0_512": "请输入 0 到 512 之间的整数",
         "integer_range_30_3600": "请输入 30 到 3600 之间的整数",
@@ -3894,6 +3921,15 @@
     "author": "作者"
   },
   "chatgpt_web": {
+    "image_refill": {
+      "retries": "失败子图最多补图次数",
+      "retry_hint": "默认 1，范围 0–3；0 关闭补图。首轮成功至少两张且达到一半时，仅补失败位置。补图会额外消耗额度；旧任务未结束时可能重复生成。仅纯 Web 多图路由生效。",
+      "partial": "未补齐时返回部分图片",
+      "partial_hint": "默认关闭：普通 JSON 未补齐则整批报错。开启后返回成功图片；流式始终先返回成功图片，最后报告缺图。",
+      "loading": "正在检查补图与交付统计能力…",
+      "unsupported": "后端不支持补图与交付统计，请先升级。",
+      "error": "无法确认后端能力，暂时不能修改。"
+    },
     "n_aggregation": {
       "title": "单次多图聚合并发数",
       "hint": "默认并发 3，范围 1–10；1 为串行，实际不超过请求 n。Web 最大 n 大于 1 时启用多图聚合；仅纯 Web 路由并发执行。遵守全局与凭证限额，优先使用不同凭证，并保留指定凭证与会话亲和。",
