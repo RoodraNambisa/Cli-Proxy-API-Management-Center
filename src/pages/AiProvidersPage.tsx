@@ -30,7 +30,10 @@ export function AiProvidersPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const section = searchParams.get('section');
-  const codexSection = searchParams.get('provider') === 'codex' && (section === 'models' || section === 'alpha-search') ? section : undefined;
+  const codexSection =
+    searchParams.get('provider') === 'codex' && (section === 'models' || section === 'alpha-search')
+      ? section
+      : undefined;
   const codexEditSearch = codexSection ? `?section=${codexSection}` : '';
   const pageRef = useRef<HTMLDivElement>(null);
   const { showNotification, showConfirmation } = useNotificationStore();
@@ -73,7 +76,11 @@ export function AiProvidersPage() {
 
   const pageTransitionLayer = usePageTransitionLayer();
   const isCurrentLayer = pageTransitionLayer ? pageTransitionLayer.status === 'current' : true;
-  useConfigFieldFocus(pageRef, codexSection ? 'provider-codex' : undefined, !loading && isCurrentLayer);
+  useConfigFieldFocus(
+    pageRef,
+    codexSection ? 'provider-codex' : undefined,
+    !loading && isCurrentLayer
+  );
 
   const { keyStats, usageDetails, loadKeyStats, refreshKeyStats } = useProviderStats({
     enabled: isCurrentLayer,
@@ -274,7 +281,11 @@ export function AiProvidersPage() {
       const nextExcluded = enabled
         ? withoutDisableAllModelsRule(current.excludedModels)
         : withDisableAllModelsRule(current.excludedModels);
-      const nextItem: GeminiKeyConfig = { ...current, excludedModels: nextExcluded };
+      const nextItem: GeminiKeyConfig = {
+        ...current,
+        disabled: current.credentialId ? !enabled : current.disabled,
+        excludedModels: nextExcluded,
+      };
       const nextList = previousList.map((item, idx) => (idx === index ? nextItem : item));
 
       if (provider === 'gemini') {
@@ -327,7 +338,11 @@ export function AiProvidersPage() {
     const nextExcluded = enabled
       ? withoutDisableAllModelsRule(current.excludedModels)
       : withDisableAllModelsRule(current.excludedModels);
-    const nextItem: ProviderKeyConfig = { ...current, excludedModels: nextExcluded };
+    const nextItem: ProviderKeyConfig = {
+      ...current,
+      disabled: current.credentialId ? !enabled : current.disabled,
+      excludedModels: nextExcluded,
+    };
     const nextList = previousList.map((item, idx) => (idx === index ? nextItem : item));
 
     if (provider === 'codex') {
@@ -517,13 +532,31 @@ export function AiProvidersPage() {
         </section>
 
         <section id="provider-xai" className={styles.chatGptWebEntry}>
-          <div><h2>{t('ai_providers.xai_title')}</h2><p>{t('ai_providers.xai_empty_desc')}</p></div>
-          <Button variant="secondary" onClick={() => openEditor('/ai-providers/xai')} disabled={disableControls}>{t('ai_providers.xai_manage')}<IconExternalLink size={15} /></Button>
+          <div>
+            <h2>{t('ai_providers.xai_title')}</h2>
+            <p>{t('ai_providers.xai_empty_desc')}</p>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={() => openEditor('/ai-providers/xai')}
+            disabled={disableControls}
+          >
+            {t('ai_providers.xai_manage')}
+            <IconExternalLink size={15} />
+          </Button>
         </section>
         <div id="provider-codex">
-          {codexSection && <p className={styles.sectionHint}>
-            {t('ai_providers.codex_choose_credential', { setting: t(codexSection === 'models' ? 'ai_providers.codex_models_label' : 'ai_providers.codex_alpha_search_label') })}
-          </p>}
+          {codexSection && (
+            <p className={styles.sectionHint}>
+              {t('ai_providers.codex_choose_credential', {
+                setting: t(
+                  codexSection === 'models'
+                    ? 'ai_providers.codex_models_label'
+                    : 'ai_providers.codex_alpha_search_label'
+                ),
+              })}
+            </p>
+          )}
           <CodexSection
             configs={codexConfigs}
             keyStats={keyStats}

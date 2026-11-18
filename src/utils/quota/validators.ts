@@ -15,6 +15,7 @@ export function isAntigravityFile(file: AuthFileItem): boolean {
 }
 
 export function isClaudeFile(file: AuthFileItem): boolean {
+  if (file.config_ref || file.entry_kind === "api") return false;
   return resolveAuthProvider(file) === 'claude';
 }
 
@@ -30,6 +31,7 @@ export function isClaudeOAuthFile(file: AuthFileItem): boolean {
 }
 
 export function isCodexFile(file: AuthFileItem): boolean {
+  if (file.config_ref || file.entry_kind === "api") return false;
   return resolveAuthProvider(file) === 'codex';
 }
 

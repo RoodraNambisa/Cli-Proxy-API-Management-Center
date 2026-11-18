@@ -1,7 +1,8 @@
+import { patchCredentialEntries } from "@/features/providerCredentials/operations";
 import { isValidCredentialWeight } from '@/utils/credentialWeight';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { authFilesApi, chatGptWebApi } from '@/services/api';
+import { chatGptWebApi } from '@/services/api';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem, ChatGptWebMutationTask, CodexFingerprintMode } from '@/types';
 import { isChatGptWebMutationTaskTerminal } from '@/types';
@@ -488,7 +489,7 @@ export function useAuthFilesBatchSettings(
       };
       for (const request of patchRequests) {
         try {
-          const partial = await authFilesApi.patchFieldsBatch(request.names, request.patch);
+          const partial = await patchCredentialEntries(request.names, targets, request.patch);
           result.matched += partial.matched;
           result.updated += partial.updated;
           result.files.push(...partial.files);

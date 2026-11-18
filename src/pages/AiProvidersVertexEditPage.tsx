@@ -279,6 +279,7 @@ export function AiProvidersVertexEditPage() {
     setError('');
     try {
       const payload: ProviderKeyConfig = {
+        ...initialData,
         weight: form.weight,
         requestRetry: form.requestRetry,
         requestScopedErrors: form.requestScopedErrors,
@@ -307,7 +308,7 @@ export function AiProvidersVertexEditPage() {
           ? configs.map((item, idx) => (idx === editIndex ? payload : item))
           : [...configs, payload];
 
-      await providersApi.saveVertexConfigs(nextList);
+      if (initialData?.credentialId && editIndex !== null) await providersApi.updateVertexConfig(editIndex, payload); else await providersApi.saveVertexConfigs(nextList);
       updateConfigValue('vertex-api-key', nextList);
       clearCache('vertex-api-key');
       showNotification(

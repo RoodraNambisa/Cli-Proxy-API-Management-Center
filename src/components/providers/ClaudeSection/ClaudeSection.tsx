@@ -94,11 +94,13 @@ export function ClaudeSection({
           onEdit={(_, index) => onEdit(index)}
           onDelete={(_, index) => onDelete(index)}
           actionsDisabled={actionsDisabled}
-          getRowDisabled={(item) => hasDisableAllModelsRule(item.excludedModels)}
+          getRowDisabled={(item) =>
+            item.disabled === true || hasDisableAllModelsRule(item.excludedModels)
+          }
           renderExtraActions={(item, index) => (
             <ToggleSwitch
               label={t('ai_providers.config_toggle_label')}
-              checked={!hasDisableAllModelsRule(item.excludedModels)}
+              checked={!(item.disabled === true || hasDisableAllModelsRule(item.excludedModels))}
               disabled={toggleDisabled}
               onChange={(value) => void onToggle(index, value)}
             />
@@ -109,7 +111,8 @@ export function ClaudeSection({
               keyStats
             );
             const headerEntries = Object.entries(item.headers || {});
-            const configDisabled = hasDisableAllModelsRule(item.excludedModels);
+            const configDisabled =
+              item.disabled === true || hasDisableAllModelsRule(item.excludedModels);
             const excludedModels = item.excludedModels ?? [];
             const statusData =
               statusBarCache.get(getProviderConfigKey(item, index)) || calculateStatusBarData([]);
@@ -147,7 +150,9 @@ export function ClaudeSection({
                 )}
                 {item.cloak && (
                   <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>{t('ai_providers.claude_cloak_mode_label')}:</span>
+                    <span className={styles.fieldLabel}>
+                      {t('ai_providers.claude_cloak_mode_label')}:
+                    </span>
                     <span className={styles.fieldValue}>
                       {(() => {
                         const raw = (item.cloak?.mode ?? '').trim().toLowerCase();
@@ -159,7 +164,9 @@ export function ClaudeSection({
                 )}
                 {item.cloak?.strictMode ? (
                   <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>{t('ai_providers.claude_cloak_strict_label')}:</span>
+                    <span className={styles.fieldLabel}>
+                      {t('ai_providers.claude_cloak_strict_label')}:
+                    </span>
                     <span className={styles.fieldValue}>{t('common.yes')}</span>
                   </div>
                 ) : null}
@@ -207,7 +214,10 @@ export function ClaudeSection({
                     </div>
                     <div className={styles.modelTagList}>
                       {excludedModels.map((model) => (
-                        <span key={model} className={`${styles.modelTag} ${styles.excludedModelTag}`}>
+                        <span
+                          key={model}
+                          className={`${styles.modelTag} ${styles.excludedModelTag}`}
+                        >
                           <span className={styles.modelName}>{model}</span>
                         </span>
                       ))}

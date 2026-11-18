@@ -1,4 +1,8 @@
-import {ProxyRegionFields,useProxyRegionCapability,validProxyRegion} from '@/features/proxyIp/ProxyRegionFields';
+import {
+  ProxyRegionFields,
+  useProxyRegionCapability,
+  validProxyRegion,
+} from '@/features/proxyIp/ProxyRegionFields';
 import { CredentialRequestRetryInput } from '@/components/providers/CredentialRequestRetryInput';
 import { CredentialRequestScopedErrorsEditor } from '@/components/providers/RequestScopedErrorsEditor';
 import { validateRequestScopedErrorRule } from '@/utils/requestScopedErrors';
@@ -26,8 +30,16 @@ import { modelsApi, providersApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import type { ProviderKeyConfig } from '@/types';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
-import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
-import { entriesToModels, modelsToEntries, type ModelEntry } from '@/components/ui/modelInputListUtils';
+import {
+  areKeyValueEntriesEqual,
+  areModelEntriesEqual,
+  areStringArraysEqual,
+} from '@/utils/compare';
+import {
+  entriesToModels,
+  modelsToEntries,
+  type ModelEntry,
+} from '@/components/ui/modelInputListUtils';
 import { excludedModelsToText, parseExcludedModels } from '@/components/providers/utils';
 import type { ProviderFormState } from '@/components/providers';
 import type { ModelInfo } from '@/utils/models';
@@ -71,7 +83,14 @@ const normalizeModelEntries = (entries: ModelEntry[]) =>
       alias = '';
     }
     if (!name && !alias) return acc;
-    acc.push({ name, alias, displayName: entry.displayName?.trim() || undefined, maxContextLength: entry.maxContextLength, thinking: copyModelThinking(entry.thinking), isCompat: entry.isCompat === true });
+    acc.push({
+      name,
+      alias,
+      displayName: entry.displayName?.trim() || undefined,
+      maxContextLength: entry.maxContextLength,
+      thinking: copyModelThinking(entry.thinking),
+      isCompat: entry.isCompat === true,
+    });
     return acc;
   }, []);
 
@@ -86,7 +105,7 @@ type CodexFormBaseline = {
   websockets: boolean;
   alphaSearch: boolean;
   proxyUrl: string;
- proxyRegion:string;
+  proxyRegion: string;
   headers: ReturnType<typeof normalizeHeaderEntries>;
   models: ReturnType<typeof normalizeModelEntries>;
   excludedModels: string[];
@@ -98,24 +117,33 @@ const buildCodexBaseline = (form: ProviderFormState): CodexFormBaseline => ({
   requestRetry: form.requestRetry ?? null,
   requestScopedErrors: JSON.stringify(form.requestScopedErrors ?? []),
   priority:
-    form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
+    form.priority !== undefined && Number.isFinite(form.priority)
+      ? Math.trunc(form.priority)
+      : null,
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
   websockets: Boolean(form.websockets),
   alphaSearch: Boolean(form.alphaSearch),
   proxyUrl: String(form.proxyUrl ?? '').trim(),
- proxyRegion:JSON.stringify(form.proxyRegion??{}),
+  proxyRegion: JSON.stringify(form.proxyRegion ?? {}),
   headers: normalizeHeaderEntries(form.headers),
   models: normalizeModelEntries(form.modelEntries),
   excludedModels: parseExcludedModels(form.excludedText ?? ''),
 });
 
-export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'codex' | 'xai' } = {}) {
-  const regionSupported=useProxyRegionCapability();
- const configKey = provider === 'xai' ? 'xai-api-key' : 'codex-api-key';
+export function AiProvidersCodexEditPage({
+  provider = 'codex',
+}: { provider?: 'codex' | 'xai' } = {}) {
+  const regionSupported = useProxyRegionCapability();
+  const configKey = provider === 'xai' ? 'xai-api-key' : 'codex-api-key';
   const { t } = useTranslation();
   const editorActive = useRef(true);
-  useEffect(() => { editorActive.current = true; return () => { editorActive.current = false; }; }, []);
+  useEffect(() => {
+    editorActive.current = true;
+    return () => {
+      editorActive.current = false;
+    };
+  }, []);
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams<{ index?: string }>();
@@ -172,9 +200,15 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
 
   const swipeRef = useEdgeSwipeBack({ onBack: handleBack });
   const focusSection = new URLSearchParams(location.search).get('section');
-  useConfigFieldFocus(swipeRef,
-    focusSection === 'models' ? 'codex-models' : focusSection === 'alpha-search' ? 'codex-alpha-search' : undefined,
-    !loading && !invalidIndexParam && !invalidIndex);
+  useConfigFieldFocus(
+    swipeRef,
+    focusSection === 'models'
+      ? 'codex-models'
+      : focusSection === 'alpha-search'
+        ? 'codex-alpha-search'
+        : undefined,
+    !loading && !invalidIndexParam && !invalidIndex
+  );
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -270,7 +304,7 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
     baseline.websockets !== Boolean(form.websockets) ||
     baseline.alphaSearch !== Boolean(form.alphaSearch) ||
     baseline.proxyUrl !== String(form.proxyUrl ?? '').trim() ||
- baseline.proxyRegion!==JSON.stringify(form.proxyRegion??{}) ||
+    baseline.proxyRegion !== JSON.stringify(form.proxyRegion ?? {}) ||
     isHeadersDirty ||
     isModelsDirty ||
     isExcludedModelsDirty;
@@ -469,7 +503,10 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
   };
 
   const handleSave = useCallback(async () => {
- if(provider==='codex'&&!validProxyRegion(form.proxyRegion??{})){showNotification(t('proxy_ip.manual_invalid'),'error');return}
+    if (provider === 'codex' && !validProxyRegion(form.proxyRegion ?? {})) {
+      showNotification(t('proxy_ip.manual_invalid'), 'error');
+      return;
+    }
     if (form.modelEntries.some((entry) => !isValidModelThinking(entry.thinking))) {
       showNotification(t('model_thinking.invalid'), 'error');
       return;
@@ -504,6 +541,7 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
     setError('');
     try {
       const payload: ProviderKeyConfig = {
+        ...initialData,
         weight: form.weight,
         requestRetry: form.requestRetry,
         requestScopedErrors: form.requestScopedErrors,
@@ -514,7 +552,7 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
         websockets: Boolean(form.websockets),
         alphaSearch: Boolean(form.alphaSearch),
         proxyUrl: form.proxyUrl?.trim() || undefined,
- proxyRegion:form.proxyRegion,
+        proxyRegion: form.proxyRegion,
         headers: buildHeaderObject(form.headers),
         models: entriesToModels(form.modelEntries),
         excludedModels: parseExcludedModels(form.excludedText),
@@ -525,7 +563,14 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
           ? configs.map((item, idx) => (idx === editIndex ? payload : item))
           : [...configs, payload];
 
-      await (provider === 'xai' ? providersApi.saveXaiConfigs(nextList) : providersApi.saveCodexConfigs(nextList));
+      if (initialData?.credentialId && editIndex !== null)
+        await (provider === 'xai'
+          ? providersApi.updateXaiConfig(editIndex, payload)
+          : providersApi.updateCodexConfig(editIndex, payload));
+      else
+        await (provider === 'xai'
+          ? providersApi.saveXaiConfigs(nextList)
+          : providersApi.saveCodexConfigs(nextList));
       if (!editorActive.current) return;
       updateConfigValue(configKey, nextList);
       clearCache(configKey);
@@ -546,7 +591,9 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
     } finally {
       if (editorActive.current) setSaving(false);
     }
-  }, [provider, configKey,
+  }, [
+    provider,
+    configKey,
     allowNextNavigation,
     canSave,
     clearCache,
@@ -620,9 +667,13 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
               onChange={(requestRetry) => setForm((prev) => ({ ...prev, requestRetry }))}
               disabled={disableControls || saving}
             />
-            <CredentialRequestScopedErrorsEditor value={form.requestScopedErrors}
-              onChange={(requestScopedErrors) => setForm((prev) => ({ ...prev, requestScopedErrors }))}
-              disabled={disableControls || saving} />
+            <CredentialRequestScopedErrorsEditor
+              value={form.requestScopedErrors}
+              onChange={(requestScopedErrors) =>
+                setForm((prev) => ({ ...prev, requestScopedErrors }))
+              }
+              disabled={disableControls || saving}
+            />
             <CredentialWeightInput
               value={form.weight}
               onChange={(weight) => setForm((prev) => ({ ...prev, weight }))}
@@ -668,16 +719,18 @@ export function AiProvidersCodexEditPage({ provider = 'codex' }: { provider?: 'c
               />
               <div className="hint">{t(`ai_providers.${provider}_websockets_hint`)}</div>
             </div>
-            {provider === 'codex' && <div id="codex-alpha-search" className="form-group">
-              <label>{t(`ai_providers.${provider}_alpha_search_label`)}</label>
-              <ToggleSwitch
-                checked={Boolean(form.alphaSearch)}
-                onChange={(value) => setForm((prev) => ({ ...prev, alphaSearch: value }))}
-                disabled={disableControls || saving}
-                ariaLabel={t(`ai_providers.${provider}_alpha_search_label`)}
-              />
-              <div className="hint">{t(`ai_providers.${provider}_alpha_search_hint`)}</div>
-            </div>}
+            {provider === 'codex' && (
+              <div id="codex-alpha-search" className="form-group">
+                <label>{t(`ai_providers.${provider}_alpha_search_label`)}</label>
+                <ToggleSwitch
+                  checked={Boolean(form.alphaSearch)}
+                  onChange={(value) => setForm((prev) => ({ ...prev, alphaSearch: value }))}
+                  disabled={disableControls || saving}
+                  ariaLabel={t(`ai_providers.${provider}_alpha_search_label`)}
+                />
+                <div className="hint">{t(`ai_providers.${provider}_alpha_search_hint`)}</div>
+              </div>
+            )}
             <Input
               label={t(`ai_providers.${provider}_add_modal_proxy_label`)}
               value={form.proxyUrl ?? ''}

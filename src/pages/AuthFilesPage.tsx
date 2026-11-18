@@ -1,3 +1,5 @@
+import { ProviderCredentialCard } from '@/features/providerCredentials/ProviderCredentialCard';
+import { ProviderCredentialEditor } from '@/features/providerCredentials/ProviderCredentialEditor';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { FillOrderModal } from '@/features/authFiles/components/FillOrderModal';
 import { useTrafficBatch } from '@/features/traffic/useTraffic';
@@ -345,10 +347,20 @@ export function AuthFilesPage() {
   const [pageSizeInput, setPageSizeInput] = useState('9');
   const [viewMode, setViewMode] = useState<'diagram' | 'list'>('list');
   const fillOrderCapability = useConfigStore((state) => state.config?.raw);
+  const apiCredentialsSupported =
+    fillOrderCapability?.['api-credential-management-supported'] === true;
+  const [apiEditor, setApiEditor] = useState<{ id?: string } | null>(null);
+  const [credentialSource, setCredentialSource] = useState<'all' | 'file' | 'api'>('all');
+  useEffect(() => {
+    setApiEditor(null);
+    setCredentialSource('all');
+  }, [connectionGenerationKey]);
   const fillOrderSupported = fillOrderCapability?.['fill-order-supported'] === true;
   const [reorderFile, setReorderFile] = useState<AuthFileItem | null>(null);
   const [sortMode, setSortMode] = useState<AuthFilesSortMode>('default');
-  useEffect(() => { setReorderFile(null); }, [connectionGenerationKey]);
+  useEffect(() => {
+    setReorderFile(null);
+  }, [connectionGenerationKey]);
   const [codexUsageRefreshing, setCodexUsageRefreshing] = useState(false);
   const [codexResetCreditsRefreshing, setCodexResetCreditsRefreshing] = useState(false);
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
@@ -357,7 +369,12 @@ export function AuthFilesPage() {
   const [paginationMode, setPaginationMode] = useState<'unknown' | 'server' | 'client'>('unknown');
   const [uiStateHydrated, setUiStateHydrated] = useState(false);
   useEffect(() => {
-    if (uiStateHydrated && fillOrderCapability && !fillOrderSupported && sortMode === 'fill-order') {
+    if (
+      uiStateHydrated &&
+      fillOrderCapability &&
+      !fillOrderSupported &&
+      sortMode === 'fill-order'
+    ) {
       setSortMode('default');
       setPage(1);
     }
@@ -379,6 +396,8 @@ export function AuthFilesPage() {
     () => ({
       page,
       pageSize,
+      includeConfig: apiCredentialsSupported,
+      source: credentialSource,
       provider: filter,
       plan: planFilter,
       priority: priorityFilter,
@@ -402,6 +421,8 @@ export function AuthFilesPage() {
       problemOnly,
       sortMode,
       fillOrderSupported,
+      apiCredentialsSupported,
+      credentialSource,
     ]
   );
   const resolveFilteredFiles = useCallback(async (): Promise<AuthFileItem[]> => {
@@ -915,8 +936,13 @@ export function AuthFilesPage() {
   const availablePriorityFilters = useMemo(
     () =>
       serverPagination
-        ? [...new Set(filesFacets?.priorities.map((facet) => normalizeAuthFilePriorityFilter(facet.value)) ?? [])]
-            .sort((a, b) => Number(b) - Number(a))
+        ? [
+            ...new Set(
+              filesFacets?.priorities.map((facet) =>
+                normalizeAuthFilePriorityFilter(facet.value)
+              ) ?? []
+            ),
+          ].sort((a, b) => Number(b) - Number(a))
         : getAvailablePriorityFilters(filesMatchingStatusFilters),
     [filesFacets?.priorities, filesMatchingStatusFilters, serverPagination]
   );
@@ -1075,7 +1101,8 @@ export function AuthFilesPage() {
       copy.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortMode === 'fill-order') {
       copy.sort((a, b) => {
-        const priority = (parsePriorityValue(b.priority) ?? 0) - (parsePriorityValue(a.priority) ?? 0);
+        const priority =
+          (parsePriorityValue(b.priority) ?? 0) - (parsePriorityValue(a.priority) ?? 0);
         if (priority) return priority;
         const left = BigInt(a.fill_order?.position ?? '0');
         const right = BigInt(b.fill_order?.position ?? '0');
@@ -1114,13 +1141,21 @@ export function AuthFilesPage() {
     [pageItems]
   );
   const currentPageAuthIndexesKey = currentPageAuthIndexes.join(',');
-  const concurrencyFallbackIds = useMemo(() => Array.from(new Set(
-    pageItems.filter(file => !hasCredentialConcurrencySummary(file))
-      .map(file => normalizeAuthIndex(file.auth_index ?? file.authIndex))
-      .filter((value): value is string => Boolean(value))
-  )), [pageItems]);
+  const concurrencyFallbackIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          pageItems
+            .filter((file) => !hasCredentialConcurrencySummary(file))
+            .map((file) => normalizeAuthIndex(file.auth_index ?? file.authIndex))
+            .filter((value): value is string => Boolean(value))
+        )
+      ),
+    [pageItems]
+  );
   const traffic = useTrafficBatch('auth-files', currentPageAuthIndexes, isCurrentLayer, {
-    ids: concurrencyFallbackIds, revision: pageItems,
+    ids: concurrencyFallbackIds,
+    revision: pageItems,
   });
 
   useEffect(() => {
@@ -1658,7 +1693,22 @@ export function AuthFilesPage() {
 
   return (
     <div className={styles.container}>
-      {reorderFile && <FillOrderModal key={reorderFile.fill_order?.record_id} file={reorderFile} onClose={()=>setReorderFile(null)} onSaved={()=>void refreshFilesInBackground()}/>}
+      {apiEditor && (
+        <ProviderCredentialEditor
+          key={apiEditor.id ?? 'new'}
+          id={apiEditor.id}
+          onClose={() => setApiEditor(null)}
+          onSaved={() => void refreshFilesInBackground()}
+        />
+      )}
+      {reorderFile && (
+        <FillOrderModal
+          key={reorderFile.fill_order?.record_id}
+          file={reorderFile}
+          onClose={() => setReorderFile(null)}
+          onSaved={() => void refreshFilesInBackground()}
+        />
+      )}
       <span className={styles.visuallyHidden} role="status" aria-live="polite" aria-atomic="true">
         {chatGptWebAccountInfoLiveMessage}
       </span>
@@ -1729,6 +1779,31 @@ export function AuthFilesPage() {
                 {t('auth_files.codex_identity_token_button')}
               </Button>
             ) : null}
+            {apiCredentialsSupported && (
+              <>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setApiEditor({})}
+                  disabled={disableControls}
+                >
+                  {t('api_credentials.add')}
+                </Button>
+                <Select
+                  value={credentialSource}
+                  options={[
+                    { value: 'all', label: t('api_credentials.source_all') },
+                    { value: 'file', label: t('api_credentials.source_file') },
+                    { value: 'api', label: t('api_credentials.source_api') },
+                  ]}
+                  onChange={(value) => {
+                    setCredentialSource(value as 'all' | 'file' | 'api');
+                    setPage(1);
+                    deselectAll();
+                  }}
+                />
+              </>
+            )}
             <Button
               size="sm"
               onClick={handleUploadClick}
@@ -2038,57 +2113,82 @@ export function AuthFilesPage() {
               <div
                 className={`${styles.fileGrid} ${quotaFilterType ? styles.fileGridQuotaManaged : ''} ${compactMode ? styles.fileGridCompact : ''}`}
               >
-                {pageItems.map((file) => (
-                  <AuthFileCard
-                    onReorder={fillOrderSupported ? setReorderFile : undefined}
-                    traffic={traffic.items[normalizeAuthIndex(file.auth_index ?? file.authIndex) ?? ""]} trafficStale={traffic.stale} trafficUnsupported={traffic.unsupported} trafficVisible={traffic.visible}
-                    key={file.name}
-                    file={file}
-                    cooldownAsOfMs={filesLoadedAtMs}
-                    compact={compactMode}
-                    selected={selectedFiles.has(file.name)}
-                    resolvedTheme={resolvedTheme}
-                    disableControls={disableControls}
-                    deleting={deleting}
-                    statusUpdating={statusUpdating}
-                    xaiFieldsUpdating={xaiFieldsUpdating}
-                    chatGptWebReloginUpdating={chatGptWebReloginUpdating}
-                    chatGptWebAccountInfoRefreshing={chatGptWebAccountInfoRefreshingNameSet.has(
-                      file.name
-                    )}
-                    chatGptWebAccountInfoRefreshBusy={chatGptWebAccountInfoRefreshing}
-                    chatGptWebAccountInfoRefreshUnsupported={chatGptWebAccountInfoUnsupported}
-                    restoring={restoring}
-                    codexIdentityConversionVisible={codexAgentIdentityConversionVisible}
-                    codexIdentityConverting={
-                      codexIdentityConversion.active || codexIdentityConversion.state.starting
-                    }
-                    quotaFilterType={quotaFilterType}
-                    keyStats={keyStats}
-                    statusBarCache={statusBarCache}
-                    usageSummaryCache={usageSummaryCache}
-                    usageLoading={usageLoading}
-                    onShowModels={showModels}
-                    onTargetCredential={setTargetCredential}
-                    onDownload={handleDownload}
-                    onOpenPrefixProxyEditor={openPrefixProxyEditor}
-                    onDelete={handleDelete}
-                    onToggleStatus={handleStatusToggle}
-                    onToggleXaiField={handleXaiFieldToggle}
-                    onChatGptWebRelogin={handleChatGptWebRelogin}
-                    onChatGptWebAccountInfoRefresh={(target) =>
-                      void refreshChatGptWebAccountInfoNames([target.name])
-                    }
-                    onRestore={handleRestore}
-                    onConvertCodexAuthMode={
-                      codexAgentIdentityConversionVisible
-                        ? (target, targetMode) =>
-                            codexIdentityConversion.openNames([target.name], targetMode)
-                        : undefined
-                    }
-                    onToggleSelect={toggleSelect}
-                  />
-                ))}
+                {pageItems.map((file) =>
+                  file.config_ref ? (
+                    <ProviderCredentialCard
+                      key={file.name}
+                      file={file}
+                      selected={selectedFiles.has(file.name)}
+                      compact={compactMode}
+                      disabled={disableControls || Boolean(statusUpdating[file.name])}
+                      traffic={
+                        traffic.items[normalizeAuthIndex(file.auth_index ?? file.authIndex) ?? '']
+                      }
+                      trafficStale={traffic.stale}
+                      trafficVisible={traffic.visible}
+                      onSelect={toggleSelect}
+                      onEdit={(id) => setApiEditor({ id })}
+                      onDelete={handleDelete}
+                      onToggle={handleStatusToggle}
+                      onReorder={fillOrderSupported ? setReorderFile : undefined}
+                    />
+                  ) : (
+                    <AuthFileCard
+                      onReorder={fillOrderSupported ? setReorderFile : undefined}
+                      traffic={
+                        traffic.items[normalizeAuthIndex(file.auth_index ?? file.authIndex) ?? '']
+                      }
+                      trafficStale={traffic.stale}
+                      trafficUnsupported={traffic.unsupported}
+                      trafficVisible={traffic.visible}
+                      key={file.name}
+                      file={file}
+                      cooldownAsOfMs={filesLoadedAtMs}
+                      compact={compactMode}
+                      selected={selectedFiles.has(file.name)}
+                      resolvedTheme={resolvedTheme}
+                      disableControls={disableControls}
+                      deleting={deleting}
+                      statusUpdating={statusUpdating}
+                      xaiFieldsUpdating={xaiFieldsUpdating}
+                      chatGptWebReloginUpdating={chatGptWebReloginUpdating}
+                      chatGptWebAccountInfoRefreshing={chatGptWebAccountInfoRefreshingNameSet.has(
+                        file.name
+                      )}
+                      chatGptWebAccountInfoRefreshBusy={chatGptWebAccountInfoRefreshing}
+                      chatGptWebAccountInfoRefreshUnsupported={chatGptWebAccountInfoUnsupported}
+                      restoring={restoring}
+                      codexIdentityConversionVisible={codexAgentIdentityConversionVisible}
+                      codexIdentityConverting={
+                        codexIdentityConversion.active || codexIdentityConversion.state.starting
+                      }
+                      quotaFilterType={quotaFilterType}
+                      keyStats={keyStats}
+                      statusBarCache={statusBarCache}
+                      usageSummaryCache={usageSummaryCache}
+                      usageLoading={usageLoading}
+                      onShowModels={showModels}
+                      onTargetCredential={setTargetCredential}
+                      onDownload={handleDownload}
+                      onOpenPrefixProxyEditor={openPrefixProxyEditor}
+                      onDelete={handleDelete}
+                      onToggleStatus={handleStatusToggle}
+                      onToggleXaiField={handleXaiFieldToggle}
+                      onChatGptWebRelogin={handleChatGptWebRelogin}
+                      onChatGptWebAccountInfoRefresh={(target) =>
+                        void refreshChatGptWebAccountInfoNames([target.name])
+                      }
+                      onRestore={handleRestore}
+                      onConvertCodexAuthMode={
+                        codexAgentIdentityConversionVisible
+                          ? (target, targetMode) =>
+                              codexIdentityConversion.openNames([target.name], targetMode)
+                          : undefined
+                      }
+                      onToggleSelect={toggleSelect}
+                    />
+                  )
+                )}
               </div>
             )}
 
@@ -2149,8 +2249,14 @@ export function AuthFilesPage() {
         onDeleteAlias={handleDeleteAlias}
       />
 
-      {targetCredential && <CredentialTargetModal key={`${targetCredential.name}:${connectionGenerationKey}`} file={targetCredential}
-        onClose={() => setTargetCredential(null)} onSaved={refreshFilesInBackground} />}
+      {targetCredential && (
+        <CredentialTargetModal
+          key={`${targetCredential.name}:${connectionGenerationKey}`}
+          file={targetCredential}
+          onClose={() => setTargetCredential(null)}
+          onSaved={refreshFilesInBackground}
+        />
+      )}
       <AuthFileModelsModal
         connectionGenerationKey={connectionGenerationKey}
         onRefreshGrok={refreshGrokModels}

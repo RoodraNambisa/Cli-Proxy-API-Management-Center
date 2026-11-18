@@ -20,52 +20,147 @@ import { parseTimestampMs } from '@/utils/timestamp';
 import { AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS, AUTH_FILE_UPLOAD_TIMEOUT_MS } from '@/utils/constants';
 import { mapWithConcurrency } from '@/utils/concurrency';
 import type { CredentialProxyBinding } from '@/utils/proxyBinding';
-import { normalizeRequestScopedErrors, serializeRequestScopedErrors } from '@/utils/requestScopedErrors';
+import {
+  normalizeRequestScopedErrors,
+  serializeRequestScopedErrors,
+} from '@/utils/requestScopedErrors';
 
 export interface GrokCatalogRefreshInfo {
   source: string;
   updated_at: string;
   using_cached: boolean;
   error?: string;
-  sources?: Array<{source: string; updated_at: string; using_cached: boolean; model_count: number; error?: string}>;
+  sources?: Array<{
+    source: string;
+    updated_at: string;
+    using_cached: boolean;
+    model_count: number;
+    error?: string;
+  }>;
 }
 
 type StatusError = { status?: number };
 export type CodexStateOptions = {
   auto_cookie_enabled?: boolean;
-  features?: {quota_auto_disable_credits?: boolean; auto_cookie?: boolean; rule_model_overrides?: boolean; state_retry_rounds?: boolean; cookie_model_rules?: boolean; cookie_backup_pool?: boolean; cookie_only?: boolean; state_seconds?: boolean; response_guard?: boolean};
-  credentials: Array<{id: string; name: string; alias?: string; priority: number; plan: string; disabled: boolean}>;
-  models: Array<{id: string; upstream_id: string}>;
+  features?: {
+    quota_auto_disable_credits?: boolean;
+    auto_cookie?: boolean;
+    rule_model_overrides?: boolean;
+    state_retry_rounds?: boolean;
+    cookie_model_rules?: boolean;
+    cookie_backup_pool?: boolean;
+    cookie_only?: boolean;
+    state_seconds?: boolean;
+    response_guard?: boolean;
+  };
+  credentials: Array<{
+    id: string;
+    name: string;
+    alias?: string;
+    priority: number;
+    plan: string;
+    disabled: boolean;
+  }>;
+  models: Array<{ id: string; upstream_id: string }>;
   priorities: number[];
   plans: string[];
 };
-export type CodexStatePreview = {managed:boolean;registered:boolean;upstream_model:string;match:{rule_id?:string;rule_name?:string;rule_index:number;action:string;model_override_id?:string;conflicts?:string[];sources?:Record<string,string>};policy:Record<string,string|number|boolean|number[]|null>};
-export type CodexStateProxyResult = { ok: boolean; ip?: string; loc?: string; elapsed_ms?: number; error?: string; message?: string };
+export type CodexStatePreview = {
+  managed: boolean;
+  registered: boolean;
+  upstream_model: string;
+  match: {
+    rule_id?: string;
+    rule_name?: string;
+    rule_index: number;
+    action: string;
+    model_override_id?: string;
+    conflicts?: string[];
+    sources?: Record<string, string>;
+  };
+  policy: Record<string, string | number | boolean | number[] | null>;
+};
+export type CodexStateProxyResult = {
+  ok: boolean;
+  ip?: string;
+  loc?: string;
+  elapsed_ms?: number;
+  error?: string;
+  message?: string;
+};
 export type ModelProbeRequest = {
   codex_response_guard?: 'off' | 'observe' | 'enforce';
- codex_cookie?: { mode: "configured" | "none" | "managed" | "candidate" };
-  name: string; model: string; protocol: string; stream: boolean; upstream?: string;
-  prompt?: string; max_output_tokens?: number; request_body?: Record<string, unknown>;
-  codex_state?: { mode: 'auto' | 'configured' | 'none' | 'custom' | 'managed' | 'acquired'; 'x-codex-turn-state'?: string };
+  codex_cookie?: { mode: 'configured' | 'none' | 'managed' | 'candidate' };
+  name: string;
+  model: string;
+  protocol: string;
+  stream: boolean;
+  upstream?: string;
+  prompt?: string;
+  max_output_tokens?: number;
+  request_body?: Record<string, unknown>;
+  codex_state?: {
+    mode: 'auto' | 'configured' | 'none' | 'custom' | 'managed' | 'acquired';
+    'x-codex-turn-state'?: string;
+  };
 };
 export type ModelProbeUsage = {
-  input_tokens?: number; output_tokens?: number; total_tokens?: number;
-  cached_tokens?: number; reasoning_tokens?: number; cache_creation_tokens?: number;
+  input_tokens?: number;
+  output_tokens?: number;
+  total_tokens?: number;
+  cached_tokens?: number;
+  reasoning_tokens?: number;
+  cache_creation_tokens?: number;
 };
 export type ModelProbeResult = {
- codex_time_context?: {mode:string;timezone?:string;current_date?:string;source:string;reason?:string;changed:string[];region:import("./proxyIp").RegionSnapshot}[];
+  codex_time_context?: {
+    mode: string;
+    timezone?: string;
+    current_date?: string;
+    source: string;
+    reason?: string;
+    changed: string[];
+    region: import('./proxyIp').RegionSnapshot;
+  }[];
   xai_diagnostics?: import('@/types/grokDiagnostics').GrokTransmission[];
   codex_response_guard?: import('@/utils/codexResponseGuard').GuardRecord;
- codex_cookie?: { mode: string; source: string; sent: boolean; digest?: string; version?: number; names: string[] };
-  success: boolean; name: string; provider?: string; model: string; upstream_model?: string;
-  returned_model?: string; request_path: string; upstream_url?: string; stream: boolean;
-  latency_ms: number; status_code?: number; request_id?: string; response_id?: string;
-  finish_reason?: string; response?: string; error?: string; usage?: ModelProbeUsage;
-  request_body?: string; upstream_request_body?: string; response_body?: string;
+  codex_cookie?: {
+    mode: string;
+    source: string;
+    sent: boolean;
+    digest?: string;
+    version?: number;
+    names: string[];
+  };
+  success: boolean;
+  name: string;
+  provider?: string;
+  model: string;
+  upstream_model?: string;
+  returned_model?: string;
+  request_path: string;
+  upstream_url?: string;
+  stream: boolean;
+  latency_ms: number;
+  status_code?: number;
+  request_id?: string;
+  response_id?: string;
+  finish_reason?: string;
+  response?: string;
+  error?: string;
+  usage?: ModelProbeUsage;
+  request_body?: string;
+  upstream_request_body?: string;
+  response_body?: string;
   details_truncated?: boolean;
   codex_state?: {
-    mode: string; source: string; sent_length: number; sent_digest?: string;
-    returned_length: number; returned_digest?: string; 'x-codex-turn-state'?: string;
+    mode: string;
+    source: string;
+    sent_length: number;
+    sent_digest?: string;
+    returned_length: number;
+    returned_digest?: string;
+    'x-codex-turn-state'?: string;
   };
 };
 type RawHeaders = Record<string, unknown> | undefined;
@@ -73,9 +168,9 @@ type AuthFileStatusResponse = { status: string; disabled: boolean };
 type AuthFileEntry = AuthFilesResponse['files'][number];
 export type XaiAuthFileField = 'using_api' | 'websockets';
 export type AuthFileFieldsPatch = {
- proxy_region?:Record<string,unknown>|null;
- codex_time_context?: Record<string,unknown>|null;
- chatgpt_web_browser_region?:Record<string,unknown>|null;
+  proxy_region?: Record<string, unknown> | null;
+  codex_time_context?: Record<string, unknown> | null;
+  chatgpt_web_browser_region?: Record<string, unknown> | null;
   routing_alias?: string;
   base_url?: string;
   xai_model_catalog_sources?: string[];
@@ -100,7 +195,13 @@ export type XaiAuthFileFieldsPatch = Partial<Pick<AuthFileFieldsPatch, XaiAuthFi
 
 const serializeAuthFileFields = (fields: AuthFileFieldsPatch): AuthFileFieldsPatch =>
   Object.prototype.hasOwnProperty.call(fields, 'request_scoped_errors')
-    ? { ...fields, request_scoped_errors: serializeRequestScopedErrors(normalizeRequestScopedErrors(fields.request_scoped_errors)) ?? null }
+    ? {
+        ...fields,
+        request_scoped_errors:
+          serializeRequestScopedErrors(
+            normalizeRequestScopedErrors(fields.request_scoped_errors)
+          ) ?? null,
+      }
     : fields;
 export type AuthFileFieldsPatchResponse = { status: string };
 export type AuthFileBatchFailure = { name: string; status?: number; error: string };
@@ -136,6 +237,8 @@ export type AuthCooldownClearSelectedResult = {
   missing: string[];
 };
 export type AuthFilesListParams = {
+  source?: 'all' | 'file' | 'api';
+  includeConfig?: boolean;
   page: number;
   pageSize: number;
   provider?: string;
@@ -700,7 +803,9 @@ export const normalizeAuthFileEntry = (entry: AuthFileEntry): AuthFileEntry => {
     normalized.lastErrorStatusCode = lastErrorStatusCode;
   }
   const cooldownActive = readBooleanValue(entry.cooldownActive ?? entry['cooldown_active']);
-  const uploadActive = readBooleanValue(entry.uploadCooldownActive ?? entry['upload_cooldown_active']);
+  const uploadActive = readBooleanValue(
+    entry.uploadCooldownActive ?? entry['upload_cooldown_active']
+  );
   if (uploadActive !== undefined) normalized.uploadCooldownActive = uploadActive;
   const uploadUntil = readStringValue(entry.uploadCooldownUntil ?? entry['upload_cooldown_until']);
   if (uploadUntil) normalized.uploadCooldownUntil = uploadUntil;
@@ -761,6 +866,7 @@ const dedupeAuthFilesResponse = (payload: AuthFilesResponse): AuthFilesResponse 
 };
 
 const authFilesListQuery = (params: AuthFilesListParams) => ({
+  ...(params.includeConfig ? {include_config:true,source:params.source ?? "all"} : {}),
   paged: true,
   page: params.page,
   page_size: params.pageSize,
@@ -864,10 +970,13 @@ const normalizeOauthModelAlias = (payload: unknown): Record<string, OAuthModelAl
         if (!name || !alias) return null;
         const fork = entry.fork === true;
         const normalized: OAuthModelAliasEntry = { ...entry, name, alias };
-        for (const field of ['id', 'model', 'fork', 'display-name', 'displayName']) delete normalized[field];
+        for (const field of ['id', 'model', 'fork', 'display-name', 'displayName'])
+          delete normalized[field];
         if (fork) normalized.fork = true;
         const displayName = normalizeModelDisplayName(
-          Object.prototype.hasOwnProperty.call(entry, 'display-name') ? entry['display-name'] : entry.displayName
+          Object.prototype.hasOwnProperty.call(entry, 'display-name')
+            ? entry['display-name']
+            : entry.displayName
         );
         if (displayName !== undefined) normalized.displayName = displayName;
         return normalized;
@@ -1004,15 +1113,25 @@ const uploadAuthFilesRequest = async (files: File[]): Promise<AuthFileBatchUploa
 };
 
 export const authFilesApi = {
-  list: async (connection?: ApiClientConnectionSnapshot, signal?: AbortSignal) =>
+  list: async (
+    connection?: ApiClientConnectionSnapshot,
+    signal?: AbortSignal,
+    params?: AuthFilesListParams
+  ) =>
     dedupeAuthFilesResponse(
       connection
-        ? await apiClient.getAtConnection<AuthFilesResponse>(
-            connection,
-            '/auth-files',
-            signal ? { signal } : undefined
-          )
-        : await apiClient.get<AuthFilesResponse>('/auth-files', signal ? { signal } : undefined)
+        ? await apiClient.getAtConnection<AuthFilesResponse>(connection, '/auth-files', {
+            signal,
+            params: params
+              ? { include_config: params.includeConfig, source: params.source }
+              : undefined,
+          })
+        : await apiClient.get<AuthFilesResponse>('/auth-files', {
+            signal,
+            params: params
+              ? { include_config: params.includeConfig, source: params.source }
+              : undefined,
+          })
     ),
 
   listPaged: async (
@@ -1034,7 +1153,8 @@ export const authFilesApi = {
     // Older pagination separates unset priorities. Use the existing local filtering path
     // only when that would make an effective-zero result incomplete.
     if (
-      authFilesListQuery(params).priority === '0' && response.pagination?.enabled &&
+      authFilesListQuery(params).priority === '0' &&
+      response.pagination?.enabled &&
       response.facets?.priorities?.some((facet) => facet.value === '__unset__')
     ) {
       return authFilesApi.list(connection, signal);
@@ -1070,9 +1190,17 @@ export const authFilesApi = {
     connection?: ApiClientConnectionSnapshot
   ): Promise<AuthFileFieldsBatchResult> => {
     const requestedNames = normalizeRequestedAuthFileNames(names);
-    if(connection){
-      const data=await apiClient.patchAtConnection<AuthFileFieldsBatchResponse>(connection,'/auth-files/fields',{names:requestedNames,fields:serializeAuthFileFields(fields)},{timeout:AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS,validateStatus:status=>status===200||status===207});
-      return normalizeAuthFileFieldsBatchResponse(data,requestedNames);
+    if (connection) {
+      const data = await apiClient.patchAtConnection<AuthFileFieldsBatchResponse>(
+        connection,
+        '/auth-files/fields',
+        { names: requestedNames, fields: serializeAuthFileFields(fields) },
+        {
+          timeout: AUTH_FILE_BATCH_UPDATE_TIMEOUT_MS,
+          validateStatus: (status) => status === 200 || status === 207,
+        }
+      );
+      return normalizeAuthFileFieldsBatchResponse(data, requestedNames);
     }
     const response = await apiClient.requestRaw({
       url: '/auth-files/fields',
@@ -1271,9 +1399,12 @@ export const authFilesApi = {
     original: Record<string, unknown>,
     content: Record<string, unknown>,
     connection: ApiClientConnectionSnapshot
-  ) => apiClient.putAtConnection<{ status: string }>(connection, '/auth-files/content', {
-    name, original, content,
-  }),
+  ) =>
+    apiClient.putAtConnection<{ status: string }>(connection, '/auth-files/content', {
+      name,
+      original,
+      content,
+    }),
 
   saveJsonObject: (name: string, json: Record<string, unknown>) =>
     saveAuthFileText(name, JSON.stringify(json)),
@@ -1337,13 +1468,31 @@ export const authFilesApi = {
 
   // Fetch models supported by a credential
   refreshXAIModels(name: string, connection: ApiClientConnectionSnapshot, signal?: AbortSignal) {
-    return apiClient.postAtConnection<GrokCatalogRefreshInfo & { models: AuthFileModelItem[] }>(connection, '/auth-files/xai/models/refresh', { name }, { signal });
+    return apiClient.postAtConnection<GrokCatalogRefreshInfo & { models: AuthFileModelItem[] }>(
+      connection,
+      '/auth-files/xai/models/refresh',
+      { name },
+      { signal }
+    );
   },
   getGrokOptions(connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
-    return apiClient.getAtConnection<import('@/types/grokDiagnostics').GrokOptions>(connection, '/auth-files/xai/options', {signal});
+    return apiClient.getAtConnection<import('@/types/grokDiagnostics').GrokOptions>(
+      connection,
+      '/auth-files/xai/options',
+      { signal }
+    );
   },
-  previewGrokHeaders(input: import('@/types/grokDiagnostics').GrokHeaderPreviewRequest, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
-    return apiClient.postAtConnection<import('@/types/grokDiagnostics').GrokTransmission>(connection, '/auth-files/xai/headers/preview', input, {signal});
+  previewGrokHeaders(
+    input: import('@/types/grokDiagnostics').GrokHeaderPreviewRequest,
+    connection: ApiClientConnectionSnapshot,
+    signal: AbortSignal
+  ) {
+    return apiClient.postAtConnection<import('@/types/grokDiagnostics').GrokTransmission>(
+      connection,
+      '/auth-files/xai/headers/preview',
+      input,
+      { signal }
+    );
   },
 
   async getModelsForAuthFile(
@@ -1364,55 +1513,143 @@ export const authFilesApi = {
   },
 
   // Run one request against the selected credential with cancellable test overrides.
-  probeModel(input: ModelProbeRequest, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
-    return apiClient.postAtConnection<ModelProbeResult>({ ...connection, timeout: 0 }, '/auth-files/models/probe', input, { signal, timeout: 0 });
-  },
-
-  acquireCodexState(name: string, model: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal, strategy: 'state' | 'cookie-only' = 'state') {
-    return apiClient.postAtConnection<{ cookie?: import('@/types/authFile').CodexCookieSnapshot; diagnostic?: boolean; model: string; previous_acquired: number; models: import('@/types/authFile').CodexStateSnapshot[] }>(
-      connection, '/auth-files/codex/state', { name, model, action: 'acquire', diagnostic: true, ...(strategy === 'cookie-only' ? {strategy} : {}) }, { signal }
+  probeModel(
+    input: ModelProbeRequest,
+    connection: ApiClientConnectionSnapshot,
+    signal: AbortSignal
+  ) {
+    return apiClient.postAtConnection<ModelProbeResult>(
+      { ...connection, timeout: 0 },
+      '/auth-files/models/probe',
+      input,
+      { signal, timeout: 0 }
     );
   },
 
-  getCodexState(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal, model?: string) {
-    return apiClient.getAtConnection<{ cookie?: import('@/types/authFile').CodexCookieSnapshot; models: import('@/types/authFile').CodexStateSnapshot[] }>(
-      connection, `/auth-files/codex/state?name=${encodeURIComponent(name)}&diagnostic=true${model ? `&model=${encodeURIComponent(model)}` : ''}`, { signal }
+  acquireCodexState(
+    name: string,
+    model: string,
+    connection: ApiClientConnectionSnapshot,
+    signal: AbortSignal,
+    strategy: 'state' | 'cookie-only' = 'state'
+  ) {
+    return apiClient.postAtConnection<{
+      cookie?: import('@/types/authFile').CodexCookieSnapshot;
+      diagnostic?: boolean;
+      model: string;
+      previous_acquired: number;
+      models: import('@/types/authFile').CodexStateSnapshot[];
+    }>(
+      connection,
+      '/auth-files/codex/state',
+      {
+        name,
+        model,
+        action: 'acquire',
+        diagnostic: true,
+        ...(strategy === 'cookie-only' ? { strategy } : {}),
+      },
+      { signal }
     );
   },
 
-  previewCodexResponseGuard(input: {name:string;model:string;returned_model:string;state_present:boolean;state_length:number;config:import('@/utils/codexResponseGuard').CodexResponseGuard},connection:ApiClientConnectionSnapshot,signal:AbortSignal) {
-    return apiClient.postAtConnection<import('@/utils/codexResponseGuard').GuardPreview>(connection,'/auth-files/codex/response-guard/preview',input,{signal});
+  getCodexState(
+    name: string,
+    connection: ApiClientConnectionSnapshot,
+    signal: AbortSignal,
+    model?: string
+  ) {
+    return apiClient.getAtConnection<{
+      cookie?: import('@/types/authFile').CodexCookieSnapshot;
+      models: import('@/types/authFile').CodexStateSnapshot[];
+    }>(
+      connection,
+      `/auth-files/codex/state?name=${encodeURIComponent(name)}&diagnostic=true${model ? `&model=${encodeURIComponent(model)}` : ''}`,
+      { signal }
+    );
   },
-  getCodexResponseGuardOptions(connection:ApiClientConnectionSnapshot,signal:AbortSignal) {
-    return apiClient.getAtConnection<CodexStateOptions>(connection,'/auth-files/codex/response-guard/options',{signal});
+
+  previewCodexResponseGuard(
+    input: {
+      name: string;
+      model: string;
+      returned_model: string;
+      state_present: boolean;
+      state_length: number;
+      config: import('@/utils/codexResponseGuard').CodexResponseGuard;
+    },
+    connection: ApiClientConnectionSnapshot,
+    signal: AbortSignal
+  ) {
+    return apiClient.postAtConnection<import('@/utils/codexResponseGuard').GuardPreview>(
+      connection,
+      '/auth-files/codex/response-guard/preview',
+      input,
+      { signal }
+    );
   },
-  previewCodexState(name:string, model:string, config:Record<string,unknown>, connection:ApiClientConnectionSnapshot, signal:AbortSignal) {
-    return apiClient.postAtConnection<CodexStatePreview>(connection, '/auth-files/codex/state/preview', {name,model,config}, {signal});
+  getCodexResponseGuardOptions(connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
+    return apiClient.getAtConnection<CodexStateOptions>(
+      connection,
+      '/auth-files/codex/response-guard/options',
+      { signal }
+    );
+  },
+  previewCodexState(
+    name: string,
+    model: string,
+    config: Record<string, unknown>,
+    connection: ApiClientConnectionSnapshot,
+    signal: AbortSignal
+  ) {
+    return apiClient.postAtConnection<CodexStatePreview>(
+      connection,
+      '/auth-files/codex/state/preview',
+      { name, model, config },
+      { signal }
+    );
   },
   getCodexStateOptions(connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
-    return apiClient.getAtConnection<CodexStateOptions>(connection, '/auth-files/codex/state/options', {signal});
+    return apiClient.getAtConnection<CodexStateOptions>(
+      connection,
+      '/auth-files/codex/state/options',
+      { signal }
+    );
   },
 
-  checkCodexStateProxy(proxyUrl: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
-    return apiClient.postAtConnection<CodexStateProxyResult>({ ...connection, timeout: 0 }, '/auth-files/codex/state/proxy/check', { 'proxy-url': proxyUrl }, { signal, timeout: 0 });
+  checkCodexStateProxy(
+    proxyUrl: string,
+    connection: ApiClientConnectionSnapshot,
+    signal: AbortSignal
+  ) {
+    return apiClient.postAtConnection<CodexStateProxyResult>(
+      { ...connection, timeout: 0 },
+      '/auth-files/codex/state/proxy/check',
+      { 'proxy-url': proxyUrl },
+      { signal, timeout: 0 }
+    );
   },
 
   checkProxy(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
-    return apiClient.postAtConnection<{ proxy_route: import('@/types/authFile').AuthFileProxyRoute }>(
-      { ...connection, timeout: 0 }, '/auth-files/proxy/check', { name }, { signal, timeout: 0 }
-    );
+    return apiClient.postAtConnection<{
+      proxy_route: import('@/types/authFile').AuthFileProxyRoute;
+    }>({ ...connection, timeout: 0 }, '/auth-files/proxy/check', { name }, { signal, timeout: 0 });
   },
 
   errorHistory(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
     return apiClient.getAtConnection<import('@/types/authFile').AuthErrorHistorySummary>(
-      connection, `/auth-files/errors?name=${encodeURIComponent(name)}`, { signal }
+      connection,
+      `/auth-files/errors?name=${encodeURIComponent(name)}`,
+      { signal }
     );
   },
 
   responseModelRewrite(name: string, connection: ApiClientConnectionSnapshot, signal: AbortSignal) {
-    return apiClient.getAtConnection<import('@/utils/responseModelRewrite').ResponseModelRewriteSummary>(
-      connection, `/auth-files/response-model-rewrite?name=${encodeURIComponent(name)}`, { signal }
-    );
+    return apiClient.getAtConnection<
+      import('@/utils/responseModelRewrite').ResponseModelRewriteSummary
+    >(connection, `/auth-files/response-model-rewrite?name=${encodeURIComponent(name)}`, {
+      signal,
+    });
   },
 
   // Fetch model definitions for a channel

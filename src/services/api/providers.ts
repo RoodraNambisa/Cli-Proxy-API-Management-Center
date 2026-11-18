@@ -25,6 +25,7 @@ import type {
   ProviderKeyConfig,
   ApiKeyEntry,
   ModelAlias,
+  ProviderManagement,
 } from '@/types';
 
 const serializeHeaders = (headers?: Record<string, string>) =>
@@ -56,7 +57,15 @@ const serializeModelAliases = (
         .map((model) => {
           if (!model?.name) return null;
           const payload: Record<string, unknown> = { ...model, name: model.name };
-          for (const key of ['alias', 'displayName', 'display-name', 'maxContextLength', 'max-context-length', 'testModel', 'test-model']) {
+          for (const key of [
+            'alias',
+            'displayName',
+            'display-name',
+            'maxContextLength',
+            'max-context-length',
+            'testModel',
+            'test-model',
+          ]) {
             delete payload[key];
           }
           const displayName = normalizeModelDisplayName(model.displayName);
@@ -65,7 +74,9 @@ const serializeModelAliases = (
           if (maxContextLength !== undefined) payload['max-context-length'] = maxContextLength;
           if (options.supportsInputModalities) {
             const modalities = normalizeModelInputModalities(
-              Object.prototype.hasOwnProperty.call(model, 'inputModalities') ? model.inputModalities : model['input-modalities']
+              Object.prototype.hasOwnProperty.call(model, 'inputModalities')
+                ? model.inputModalities
+                : model['input-modalities']
             );
             delete payload.inputModalities;
             delete payload['input-modalities'];
@@ -76,7 +87,9 @@ const serializeModelAliases = (
           if (thinking !== undefined) payload.thinking = thinking;
           if (options.supportsCompatibility !== false) {
             const isCompat = normalizeModelCompatibility(
-              Object.prototype.hasOwnProperty.call(model, 'isCompat') ? model.isCompat : model['is-compat']
+              Object.prototype.hasOwnProperty.call(model, 'isCompat')
+                ? model.isCompat
+                : model['is-compat']
             );
             delete payload.isCompat;
             delete payload['is-compat'];
@@ -96,8 +109,14 @@ const serializeModelAliases = (
         .filter(Boolean)
     : undefined;
 
+const managementFields = (value: ProviderManagement) => ({
+  ...value.management,
+  ...(value.disabled !== undefined ? { disabled: value.disabled } : {}),
+});
+
 const serializeApiKeyEntry = (entry: ApiKeyEntry) => {
   const payload: Record<string, unknown> = {
+    ...managementFields(entry),
     'api-key': entry.apiKey,
     weight: serializeCredentialWeight(entry.weight),
   };
@@ -110,7 +129,7 @@ const serializeApiKeyEntry = (entry: ApiKeyEntry) => {
 const serializeRequestRetryOverride = (config: { requestRetry?: number }, patch: boolean) => {
   const value = serializeCredentialRequestRetry(config.requestRetry);
   return patch && Object.prototype.hasOwnProperty.call(config, 'requestRetry')
-    ? value ?? null
+    ? (value ?? null)
     : value;
 };
 
@@ -120,18 +139,19 @@ const serializeErrorRulesOverride = (
 ) => {
   const value = serializeRequestScopedErrors(config.requestScopedErrors);
   return patch && Object.prototype.hasOwnProperty.call(config, 'requestScopedErrors')
-    ? value ?? null
+    ? (value ?? null)
     : value;
 };
 
 const serializeProviderKey = (config: ProviderKeyConfig, patch = false) => {
   const payload: Record<string, unknown> = {
+    ...managementFields(config),
     'api-key': config.apiKey,
     'request-retry': serializeRequestRetryOverride(config, patch),
     'request-scoped-errors': serializeErrorRulesOverride(config, patch),
     weight:
       patch && Object.prototype.hasOwnProperty.call(config, 'weight')
-        ? serializeCredentialWeight(config.weight) ?? null
+        ? (serializeCredentialWeight(config.weight) ?? null)
         : serializeCredentialWeight(config.weight),
   };
   if (config.priority !== undefined) payload.priority = config.priority;
@@ -164,8 +184,8 @@ const serializeProviderKey = (config: ProviderKeyConfig, patch = false) => {
 
 const serializeCodexKey = (config: ProviderKeyConfig, patch = false) => {
   const payload = serializeProviderKey(config, patch);
-  if(config.proxyRegion!==undefined)payload['proxy-region']=config.proxyRegion;
- const alphaSearch = normalizeCodexAlphaSearch(config.alphaSearch);
+  if (config.proxyRegion !== undefined) payload['proxy-region'] = config.proxyRegion;
+  const alphaSearch = normalizeCodexAlphaSearch(config.alphaSearch);
   if (alphaSearch !== undefined) payload['alpha-search'] = alphaSearch;
   return payload;
 };
@@ -185,12 +205,13 @@ const serializeVertexModelAliases = (models?: ModelAlias[]) =>
 
 const serializeVertexKey = (config: ProviderKeyConfig, patch = false) => {
   const payload: Record<string, unknown> = {
+    ...managementFields(config),
     'api-key': config.apiKey,
     'request-retry': serializeRequestRetryOverride(config, patch),
     'request-scoped-errors': serializeErrorRulesOverride(config, patch),
     weight:
       patch && Object.prototype.hasOwnProperty.call(config, 'weight')
-        ? serializeCredentialWeight(config.weight) ?? null
+        ? (serializeCredentialWeight(config.weight) ?? null)
         : serializeCredentialWeight(config.weight),
   };
   if (config.priority !== undefined) payload.priority = config.priority;
@@ -209,12 +230,13 @@ const serializeVertexKey = (config: ProviderKeyConfig, patch = false) => {
 
 const serializeGeminiKey = (config: GeminiKeyConfig, patch = false) => {
   const payload: Record<string, unknown> = {
+    ...managementFields(config),
     'api-key': config.apiKey,
     'request-retry': serializeRequestRetryOverride(config, patch),
     'request-scoped-errors': serializeErrorRulesOverride(config, patch),
     weight:
       patch && Object.prototype.hasOwnProperty.call(config, 'weight')
-        ? serializeCredentialWeight(config.weight) ?? null
+        ? (serializeCredentialWeight(config.weight) ?? null)
         : serializeCredentialWeight(config.weight),
   };
   if (config.priority !== undefined) payload.priority = config.priority;
@@ -233,6 +255,7 @@ const serializeGeminiKey = (config: GeminiKeyConfig, patch = false) => {
 
 const serializeOpenAIProvider = (provider: OpenAIProviderConfig, patch = false) => {
   const payload: Record<string, unknown> = {
+    ...managementFields(provider),
     name: provider.name,
     'request-retry': serializeRequestRetryOverride(provider, patch),
     'request-scoped-errors': serializeErrorRulesOverride(provider, patch),
@@ -244,11 +267,47 @@ const serializeOpenAIProvider = (provider: OpenAIProviderConfig, patch = false) 
   if (provider.prefix?.trim()) payload.prefix = provider.prefix.trim();
   const headers = serializeHeaders(provider.headers);
   if (headers) payload.headers = headers;
-  const models = serializeModelAliases(provider.models, { supportsCompatibility: false, supportsInputModalities: true });
+  const models = serializeModelAliases(provider.models, {
+    supportsCompatibility: false,
+    supportsInputModalities: true,
+  });
   if (models && models.length) payload.models = models;
   if (provider.priority !== undefined) payload.priority = provider.priority;
   if (provider.testModel) payload['test-model'] = provider.testModel;
   return payload;
+};
+
+const updateManagedProvider = (
+  config: ProviderKeyConfig | GeminiKeyConfig,
+  payload: Record<string, unknown>,
+  fallback: () => Promise<unknown>
+) => {
+  if (!config.credentialId || !config.revision) return fallback();
+  const values = { ...payload };
+  for (const key of [
+    'credential-id',
+    'credential-runtime-id',
+    'credential-index',
+    'fill-order-scope',
+  ])
+    delete values[key];
+  if (config.models) {
+    values.models = serializeModelAliases(config.models) ?? [];
+    if (!config.models.length) values['models-mode'] = 'default';
+  }
+  if (Object.prototype.hasOwnProperty.call(config, 'headers'))
+    values.headers = config.headers ?? {};
+  if ('cloak' in config) values.cloak = config.cloak ?? null;
+  if (config.excludedModels) values['excluded-models'] = config.excludedModels;
+  if (Object.prototype.hasOwnProperty.call(config, 'prefix')) values.prefix = config.prefix ?? '';
+  if (Object.prototype.hasOwnProperty.call(config, 'proxyUrl'))
+    values['proxy-url'] = config.proxyUrl ?? '';
+  if (Object.prototype.hasOwnProperty.call(config, 'priority'))
+    values.priority = config.priority ?? 0;
+  return apiClient.patch(`/provider-credentials/${encodeURIComponent(config.credentialId)}`, {
+    revision: config.revision,
+    values,
+  });
 };
 
 export const providersApi = {
@@ -265,7 +324,9 @@ export const providersApi = {
     ),
 
   updateGeminiKey: (index: number, value: GeminiKeyConfig) =>
-    apiClient.patch('/gemini-api-key', { index, value: serializeGeminiKey(value, true) }),
+    updateManagedProvider(value, serializeGeminiKey(value, true), () =>
+      apiClient.patch('/gemini-api-key', { index, value: serializeGeminiKey(value, true) })
+    ),
 
   deleteGeminiKey: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/gemini-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
@@ -283,7 +344,9 @@ export const providersApi = {
     ),
 
   updateInteractionsKey: (index: number, value: GeminiKeyConfig) =>
-    apiClient.patch('/interactions-api-key', { index, value: serializeGeminiKey(value, true) }),
+    updateManagedProvider(value, serializeGeminiKey(value, true), () =>
+      apiClient.patch('/interactions-api-key', { index, value: serializeGeminiKey(value, true) })
+    ),
 
   deleteInteractionsKey: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/interactions-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
@@ -291,9 +354,7 @@ export const providersApi = {
   async getCodexConfigs(): Promise<ProviderKeyConfig[]> {
     const data = await apiClient.get('/codex-api-key');
     const list = extractArrayPayload(data, 'codex-api-key');
-    return list
-      .map((item) => normalizeCodexKeyConfig(item))
-      .filter(Boolean) as ProviderKeyConfig[];
+    return list.map((item) => normalizeCodexKeyConfig(item)).filter(Boolean) as ProviderKeyConfig[];
   },
 
   saveCodexConfigs: (configs: ProviderKeyConfig[]) =>
@@ -303,7 +364,9 @@ export const providersApi = {
     ),
 
   updateCodexConfig: (index: number, value: ProviderKeyConfig) =>
-    apiClient.patch('/codex-api-key', { index, value: serializeCodexKey(value, true) }),
+    updateManagedProvider(value, serializeCodexKey(value, true), () =>
+      apiClient.patch('/codex-api-key', { index, value: serializeCodexKey(value, true) })
+    ),
 
   deleteCodexConfig: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/codex-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
@@ -311,22 +374,29 @@ export const providersApi = {
   async getXaiConfigs(): Promise<ProviderKeyConfig[]> {
     const data = await apiClient.getAtConnection(apiClient.captureConnection(), '/xai-api-key');
     const list = extractArrayPayload(data, 'xai-api-key');
-    return list
-      .map((item) => normalizeCodexKeyConfig(item))
-      .filter(Boolean) as ProviderKeyConfig[];
+    return list.map((item) => normalizeCodexKeyConfig(item)).filter(Boolean) as ProviderKeyConfig[];
   },
 
   saveXaiConfigs: (configs: ProviderKeyConfig[]) =>
     apiClient.putAtConnection(
-      apiClient.captureConnection(), '/xai-api-key',
+      apiClient.captureConnection(),
+      '/xai-api-key',
       configs.map((item) => serializeCodexKey({ ...item, alphaSearch: false }))
     ),
 
   updateXaiConfig: (index: number, value: ProviderKeyConfig) =>
-    apiClient.patchAtConnection(apiClient.captureConnection(), '/xai-api-key', { index, value: serializeCodexKey({ ...value, alphaSearch: false }, true) }),
+    updateManagedProvider(value, serializeCodexKey({ ...value, alphaSearch: false }, true), () =>
+      apiClient.patchAtConnection(apiClient.captureConnection(), '/xai-api-key', {
+        index,
+        value: serializeCodexKey({ ...value, alphaSearch: false }, true),
+      })
+    ),
 
   deleteXaiConfig: (apiKey: string, baseUrl?: string) =>
-    apiClient.deleteAtConnection(apiClient.captureConnection(), `/xai-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
+    apiClient.deleteAtConnection(
+      apiClient.captureConnection(),
+      `/xai-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`
+    ),
 
   async getClaudeConfigs(): Promise<ProviderKeyConfig[]> {
     const data = await apiClient.get('/claude-api-key');
@@ -343,7 +413,9 @@ export const providersApi = {
     ),
 
   updateClaudeConfig: (index: number, value: ProviderKeyConfig) =>
-    apiClient.patch('/claude-api-key', { index, value: serializeProviderKey(value, true) }),
+    updateManagedProvider(value, serializeProviderKey(value, true), () =>
+      apiClient.patch('/claude-api-key', { index, value: serializeProviderKey(value, true) })
+    ),
 
   deleteClaudeConfig: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/claude-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
@@ -363,7 +435,9 @@ export const providersApi = {
     ),
 
   updateVertexConfig: (index: number, value: ProviderKeyConfig) =>
-    apiClient.patch('/vertex-api-key', { index, value: serializeVertexKey(value, true) }),
+    updateManagedProvider(value, serializeVertexKey(value, true), () =>
+      apiClient.patch('/vertex-api-key', { index, value: serializeVertexKey(value, true) })
+    ),
 
   deleteVertexConfig: (apiKey: string, baseUrl?: string) =>
     apiClient.delete(`/vertex-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
@@ -382,8 +456,29 @@ export const providersApi = {
       providers.map((item) => serializeOpenAIProvider(item))
     ),
 
-  updateOpenAIProvider: (index: number, value: OpenAIProviderConfig) =>
-    apiClient.patch('/openai-compatibility', { index, value: serializeOpenAIProvider(value, true) }),
+  updateOpenAIProvider: (index: number, value: OpenAIProviderConfig) => {
+    const payload = serializeOpenAIProvider(value, true);
+    if (!value.credentialId || !value.revision)
+      return apiClient.patch('/openai-compatibility', { index, value: payload });
+    for (const key of [
+      'credential-id',
+      'credential-runtime-id',
+      'credential-index',
+      'fill-order-scope',
+    ])
+      delete payload[key];
+    payload.models =
+      serializeModelAliases(value.models, {
+        supportsCompatibility: false,
+        supportsInputModalities: true,
+      }) ?? [];
+    payload.headers = value.headers ?? {};
+    payload.prefix = value.prefix ?? '';
+    return apiClient.patch(`/provider-credentials/${encodeURIComponent(value.credentialId)}`, {
+      revision: value.revision,
+      values: payload,
+    });
+  },
 
   deleteOpenAIProvider: (name: string) =>
     apiClient.delete(`/openai-compatibility?name=${encodeURIComponent(name)}`),

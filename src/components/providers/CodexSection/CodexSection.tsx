@@ -77,7 +77,9 @@ export function CodexSection({
       <Card
         title={
           <span className={styles.cardTitle}>
-            {provider === 'codex' && <img src={iconCodex} alt="" className={styles.cardTitleIcon} />}
+            {provider === 'codex' && (
+              <img src={iconCodex} alt="" className={styles.cardTitleIcon} />
+            )}
             {t(`ai_providers.${provider}_title`)}
           </span>
         }
@@ -96,11 +98,13 @@ export function CodexSection({
           onEdit={(_, index) => onEdit(index)}
           onDelete={(_, index) => onDelete(index)}
           actionsDisabled={actionsDisabled}
-          getRowDisabled={(item) => hasDisableAllModelsRule(item.excludedModels)}
+          getRowDisabled={(item) =>
+            item.disabled === true || hasDisableAllModelsRule(item.excludedModels)
+          }
           renderExtraActions={(item, index) => (
             <ToggleSwitch
               label={t('ai_providers.config_toggle_label')}
-              checked={!hasDisableAllModelsRule(item.excludedModels)}
+              checked={!(item.disabled === true || hasDisableAllModelsRule(item.excludedModels))}
               disabled={toggleDisabled}
               onChange={(value) => void onToggle(index, value)}
             />
@@ -111,7 +115,8 @@ export function CodexSection({
               keyStats
             );
             const headerEntries = Object.entries(item.headers || {});
-            const configDisabled = hasDisableAllModelsRule(item.excludedModels);
+            const configDisabled =
+              item.disabled === true || hasDisableAllModelsRule(item.excludedModels);
             const excludedModels = item.excludedModels ?? [];
             const statusData =
               statusBarCache.get(getProviderConfigKey(item, index)) || calculateStatusBarData([]);
@@ -149,8 +154,12 @@ export function CodexSection({
                 )}
                 {item.websockets !== undefined && (
                   <div className={styles.fieldRow}>
-                    <span className={styles.fieldLabel}>{t(`ai_providers.${provider}_websockets_label`)}:</span>
-                    <span className={styles.fieldValue}>{item.websockets ? t('common.yes') : t('common.no')}</span>
+                    <span className={styles.fieldLabel}>
+                      {t(`ai_providers.${provider}_websockets_label`)}:
+                    </span>
+                    <span className={styles.fieldValue}>
+                      {item.websockets ? t('common.yes') : t('common.no')}
+                    </span>
                   </div>
                 )}
                 {headerEntries.length > 0 && (
@@ -189,7 +198,10 @@ export function CodexSection({
                     </div>
                     <div className={styles.modelTagList}>
                       {excludedModels.map((model) => (
-                        <span key={model} className={`${styles.modelTag} ${styles.excludedModelTag}`}>
+                        <span
+                          key={model}
+                          className={`${styles.modelTag} ${styles.excludedModelTag}`}
+                        >
                           <span className={styles.modelName}>{model}</span>
                         </span>
                       ))}

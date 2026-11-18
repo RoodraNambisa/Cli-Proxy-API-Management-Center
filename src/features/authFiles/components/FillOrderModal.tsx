@@ -70,7 +70,14 @@ export function FillOrderModal({
     const timer = window.setTimeout(() => {
       authFilesApi
         .listPaged(
-          { page, pageSize: 50, priority: String(file.priority ?? 0), search, sort: 'fill-order' },
+          {
+            page,
+            pageSize: 50,
+            includeConfig: true,
+            priority: String(file.priority ?? 0),
+            search,
+            sort: 'fill-order',
+          },
           connection,
           abort.signal
         )
@@ -200,7 +207,10 @@ export function FillOrderModal({
                   { value: '', label: t('fill_order.choose') },
                   ...candidates
                     .filter((item) => item.fill_order)
-                    .map((item) => ({ value: item.fill_order!.record_id, label: item.name })),
+                    .map((item) => ({
+                      value: item.fill_order!.record_id,
+                      label: item.display_name || item.name,
+                    })),
                 ]}
               />
             </div>

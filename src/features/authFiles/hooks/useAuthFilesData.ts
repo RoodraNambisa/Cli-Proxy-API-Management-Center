@@ -1,4 +1,8 @@
 import {
+  deleteCredentialEntries,
+  setCredentialStatus,
+} from '@/features/providerCredentials/operations';
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -807,7 +811,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       if (uniqueNames.length === 1) setDeleting(uniqueNames[0]);
 
       try {
-        const result = await authFilesApi.deleteFiles(uniqueNames, action);
+        const result = await deleteCredentialEntries(uniqueNames, operationFiles, action);
         applyDeletedFiles(result.files);
         await loadFiles({ background: true });
 
@@ -912,7 +916,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       if (openDependencyDelete([name])) return;
       showConfirmation({
         title: t('auth_files.delete_title', { defaultValue: 'Delete File' }),
-        message: `${t('auth_files.delete_confirm')} "${name}" ?`,
+        message: `${t('auth_files.delete_confirm')} "${operationFiles.find((file) => file.name === name)?.display_name || name}" ?`,
         variant: 'danger',
         confirmText: t('common.confirm'),
         onConfirm: async () => {
@@ -920,7 +924,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         },
       });
     },
-    [openDependencyDelete, performDelete, showConfirmation, t]
+    [openDependencyDelete, performDelete, showConfirmation, t, operationFiles]
   );
 
   const handleDeleteAll = useCallback(
@@ -1031,7 +1035,10 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
                 return;
               }
 
-              const result = await authFilesApi.deleteFiles(filesToDelete.map((file) => file.name));
+              const result = await deleteCredentialEntries(
+                filesToDelete.map((file) => file.name),
+                operationFiles
+              );
               const success = result.deleted;
               const failed = result.failed.length;
 
@@ -1163,7 +1170,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
       setFiles((prev) => prev.map((f) => (f.name === name ? { ...f, disabled: nextDisabled } : f)));
 
       try {
-        const res = await authFilesApi.setStatus(name, nextDisabled);
+        const res = await setCredentialStatus(item, name, nextDisabled);
         setFiles((prev) =>
           prev.map((f) => (f.name === name ? { ...f, disabled: res.disabled } : f))
         );
@@ -1381,7 +1388,13 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
       try {
         const results = await Promise.allSettled(
-          targetNameList.map((name) => authFilesApi.setStatus(name, nextDisabled))
+          targetNameList.map((name) =>
+            setCredentialStatus(
+              operationFiles.find((file) => file.name === name),
+              name,
+              nextDisabled
+            )
+          )
         );
 
         let successCount = 0;
@@ -1451,12 +1464,13 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const batchDownload = useCallback(
     async (names: string[]) => {
       const uniqueNames = Array.from(new Set(names));
-      if (uniqueNames.length === 0) return;
+      const downloadableNames = uniqueNames.filter(name => !operationFiles.find(file => file.name === name)?.config_ref);
+      if (downloadableNames.length === 0) return;
 
       let successCount = 0;
       let failCount = 0;
 
-      for (const name of uniqueNames) {
+      for (const name of downloadableNames) {
         try {
           const response = await apiClient.getRaw(
             `/auth-files/download?name=${encodeURIComponent(name)}`,
@@ -1482,20 +1496,21 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         );
       }
     },
-    [showNotification, t]
+    [showNotification, t, operationFiles]
   );
 
   const batchArchiveDownload = useCallback(
     async (names: string[]) => {
       const uniqueNames = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
-      if (uniqueNames.length === 0 || archiveDownloadingSelected) return;
+      const downloadableNames = uniqueNames.filter(name => !operationFiles.find(file => file.name === name)?.config_ref);
+      if (downloadableNames.length === 0 || archiveDownloadingSelected) return;
 
       setArchiveDownloadingSelected(true);
       try {
-        const { blob, filename } = await authFilesApi.downloadArchiveByNames(uniqueNames);
+        const { blob, filename } = await authFilesApi.downloadArchiveByNames(downloadableNames);
         downloadBlob({ filename, blob });
         showNotification(
-          t('auth_files.archive_download_selected_success', { count: uniqueNames.length }),
+          t('auth_files.archive_download_selected_success', { count: downloadableNames.length }),
           'success'
         );
       } catch (err: unknown) {
@@ -1509,7 +1524,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
         setArchiveDownloadingSelected(false);
       }
     },
-    [archiveDownloadingSelected, showNotification, t]
+    [archiveDownloadingSelected, showNotification, t, operationFiles]
   );
 
   const downloadAllArchive = useCallback(async () => {

@@ -248,6 +248,7 @@ export const resolveCodexAuthModeSummary = (file: AuthFileItem): CodexAuthModeSu
     .trim()
     .toLowerCase()
     .replace(/-/g, '_');
+  if (file.config_ref || file.entry_kind === "api") return null;
   const rawMode = String(file.authMode ?? file.auth_mode ?? '')
     .trim()
     .toLowerCase();

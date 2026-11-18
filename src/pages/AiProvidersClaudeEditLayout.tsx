@@ -436,6 +436,7 @@ export function AiProvidersClaudeEditLayout() {
     setSaving(true);
     try {
       const payload: ProviderKeyConfig = {
+        ...initialData,
         weight: form.weight,
         requestRetry: form.requestRetry,
         requestScopedErrors: form.requestScopedErrors,
@@ -462,7 +463,7 @@ export function AiProvidersClaudeEditLayout() {
           ? configs.map((item, idx) => (idx === editIndex ? payload : item))
           : [...configs, payload];
 
-      await providersApi.saveClaudeConfigs(nextList);
+      if (initialData?.credentialId && editIndex !== null) await providersApi.updateClaudeConfig(editIndex, payload); else await providersApi.saveClaudeConfigs(nextList);
       setConfigs(nextList);
       updateConfigValue('claude-api-key', nextList);
       clearCache('claude-api-key');

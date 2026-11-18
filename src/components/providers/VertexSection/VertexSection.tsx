@@ -94,11 +94,13 @@ export function VertexSection({
           onEdit={(_, index) => onEdit(index)}
           onDelete={(_, index) => onDelete(index)}
           actionsDisabled={actionsDisabled}
-          getRowDisabled={(item) => hasDisableAllModelsRule(item.excludedModels)}
+          getRowDisabled={(item) =>
+            item.disabled === true || hasDisableAllModelsRule(item.excludedModels)
+          }
           renderExtraActions={(item, index) => (
             <ToggleSwitch
               label={t('ai_providers.config_toggle_label')}
-              checked={!hasDisableAllModelsRule(item.excludedModels)}
+              checked={!(item.disabled === true || hasDisableAllModelsRule(item.excludedModels))}
               disabled={toggleDisabled}
               onChange={(value) => void onToggle(index, value)}
             />
@@ -109,7 +111,8 @@ export function VertexSection({
               keyStats
             );
             const headerEntries = Object.entries(item.headers || {});
-            const configDisabled = hasDisableAllModelsRule(item.excludedModels);
+            const configDisabled =
+              item.disabled === true || hasDisableAllModelsRule(item.excludedModels);
             const excludedModels = item.excludedModels ?? [];
             const statusData =
               statusBarCache.get(getProviderConfigKey(item, index)) || calculateStatusBarData([]);
@@ -161,11 +164,12 @@ export function VertexSection({
                       {t('ai_providers.vertex_models_count')}: {item.models.length}
                     </span>
                     {item.models.map((model) => (
-                      <span key={`${model.name}-${model.alias || 'default'}`} className={styles.modelTag}>
+                      <span
+                        key={`${model.name}-${model.alias || 'default'}`}
+                        className={styles.modelTag}
+                      >
                         <span className={styles.modelName}>{model.name}</span>
-                        {model.alias && (
-                          <span className={styles.modelAlias}>{model.alias}</span>
-                        )}
+                        {model.alias && <span className={styles.modelAlias}>{model.alias}</span>}
                       </span>
                     ))}
                   </div>
@@ -177,7 +181,10 @@ export function VertexSection({
                     </div>
                     <div className={styles.modelTagList}>
                       {excludedModels.map((model) => (
-                        <span key={model} className={`${styles.modelTag} ${styles.excludedModelTag}`}>
+                        <span
+                          key={model}
+                          className={`${styles.modelTag} ${styles.excludedModelTag}`}
+                        >
                           <span className={styles.modelName}>{model}</span>
                         </span>
                       ))}

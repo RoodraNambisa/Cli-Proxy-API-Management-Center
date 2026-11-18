@@ -18,7 +18,7 @@ export interface ModelAlias {
   [key: string]: unknown;
 }
 
-export interface ApiKeyEntry {
+export interface ApiKeyEntry extends ProviderManagement {
   apiKey: string;
   weight?: number;
   proxyUrl?: string;
@@ -32,7 +32,7 @@ export interface CloakConfig {
   sensitiveWords?: string[];
 }
 
-export interface GeminiKeyConfig {
+export interface GeminiKeyConfig extends ProviderManagement {
   apiKey: string;
   weight?: number;
   requestRetry?: number;
@@ -47,7 +47,7 @@ export interface GeminiKeyConfig {
   authIndex?: string;
 }
 
-export interface ProviderKeyConfig {
+export interface ProviderKeyConfig extends ProviderManagement {
   proxyRegion?: import('@/features/proxyIp/ProxyRegionFields').ProxyRegion;
   apiKey: string;
   weight?: number;
@@ -66,7 +66,7 @@ export interface ProviderKeyConfig {
   authIndex?: string;
 }
 
-export interface OpenAIProviderConfig {
+export interface OpenAIProviderConfig extends ProviderManagement {
   name: string;
   requestRetry?: number;
   requestScopedErrors?: RequestScopedErrorRule[];
@@ -79,4 +79,12 @@ export interface OpenAIProviderConfig {
   testModel?: string;
   authIndex?: string;
   [key: string]: unknown;
+}
+
+export interface ProviderManagement {
+  disabled?: boolean;
+  credentialId?: string;
+  revision?: string;
+  channelName?: string;
+  management?: Record<string, unknown>;
 }

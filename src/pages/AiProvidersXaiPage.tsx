@@ -135,6 +135,7 @@ function XaiKeys() {
           void update(() =>
             providersApi.updateXaiConfig(index, {
               ...configs[index],
+              disabled: configs[index].credentialId ? !enabled : configs[index].disabled,
               excludedModels: enabled
                 ? withoutDisableAllModelsRule(configs[index].excludedModels)
                 : withDisableAllModelsRule(configs[index].excludedModels),

@@ -504,6 +504,7 @@ export function AiProvidersGeminiEditPage({
       }));
 
       const payload: GeminiKeyConfig = {
+        ...initialData,
         weight: form.weight,
         requestRetry: form.requestRetry,
         requestScopedErrors: form.requestScopedErrors,
@@ -529,7 +530,7 @@ export function AiProvidersGeminiEditPage({
           await providersApi.saveInteractionsKeys(nextList);
         }
       } else {
-        await providersApi.saveGeminiKeys(nextList);
+        if (initialData?.credentialId && editIndex !== null) await providersApi.updateGeminiKey(editIndex, payload); else await providersApi.saveGeminiKeys(nextList);
       }
       updateConfigValue(configSection, nextList);
       clearCache(configSection);

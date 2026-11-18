@@ -1,14 +1,36 @@
 export interface CodexCookieBundleSnapshot {
-  version: number; digest: string; received_at: string; age_seconds: number;
-  expires_at?: string; local_expires_at?: string;
-  members: Array<{ version?: number; name: string; digest: string; domain?: string; path: string; secure: boolean; expires_at?: string }>;
+  version: number;
+  digest: string;
+  received_at: string;
+  age_seconds: number;
+  expires_at?: string;
+  local_expires_at?: string;
+  members: Array<{
+    version?: number;
+    name: string;
+    digest: string;
+    domain?: string;
+    path: string;
+    secure: boolean;
+    expires_at?: string;
+  }>;
 }
 export interface CodexCookieSnapshot extends CodexStateSnapshot {
-  pool?: string; acquisition_model?: string; shared_models?: string[];
-  backups?: CodexCookieBundleSnapshot[]; backup_target?: number; promotions?: number;
-  main?: CodexCookieBundleSnapshot; candidate?: CodexCookieBundleSnapshot; observation?: string;
+  pool?: string;
+  acquisition_model?: string;
+  shared_models?: string[];
+  backups?: CodexCookieBundleSnapshot[];
+  backup_target?: number;
+  promotions?: number;
+  main?: CodexCookieBundleSnapshot;
+  candidate?: CodexCookieBundleSnapshot;
+  observation?: string;
 }
-export type CodexStateData = { models: CodexStateSnapshot[]; cookie?: CodexCookieSnapshot | null; cookies?: CodexCookieSnapshot[] };
+export type CodexStateData = {
+  models: CodexStateSnapshot[];
+  cookie?: CodexCookieSnapshot | null;
+  cookies?: CodexCookieSnapshot[];
+};
 export interface CodexStateSnapshot {
   rule_id?: string;
   rule_name?: string;
@@ -190,7 +212,12 @@ export interface CodexObservedQuotaWindow {
 }
 
 export interface AuthFileItem {
-  fill_order?: {record_id:string; joined_sequence:string; position:string};
+  entry_kind?: 'file' | 'api';
+  display_name?: string;
+  config_ref?: import('@/features/providerCredentials/api').ConfigRef;
+  api_key_mask?: string;
+  models_count?: number;
+  fill_order?: { record_id: string; joined_sequence: string; position: string };
   fill_order_revision?: string;
   error_history?: AuthErrorHistorySummary;
   response_model_rewrite?: import('@/utils/responseModelRewrite').ResponseModelRewriteSummary;
@@ -268,7 +295,12 @@ export interface AuthFileItem {
   deletion_requested_at?: string;
   proxy_binding?: AuthFileProxyBinding;
   proxy_route?: AuthFileProxyRoute;
-  codex_state?: { enabled: boolean; models: CodexStateSnapshot[]; cookie?: CodexCookieSnapshot | null; cookies?: CodexCookieSnapshot[] };
+  codex_state?: {
+    enabled: boolean;
+    models: CodexStateSnapshot[];
+    cookie?: CodexCookieSnapshot | null;
+    cookies?: CodexCookieSnapshot[];
+  };
   request_limit?: {
     limit: number;
     window_minutes: number;

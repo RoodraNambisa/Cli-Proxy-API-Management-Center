@@ -10,7 +10,10 @@ import { normalizeModelInputModalities } from '@/utils/modelInputModalities';
 import { normalizeModelThinking } from '@/utils/modelThinking';
 import { normalizeModelCompatibility } from '@/utils/modelCompatibility';
 import { normalizeCredentialRequestRetry } from '@/utils/credentialRequestRetry';
-import { normalizeOAuthRequestScopedErrors, normalizeRequestScopedErrors } from '@/utils/requestScopedErrors';
+import {
+  normalizeOAuthRequestScopedErrors,
+  normalizeRequestScopedErrors,
+} from '@/utils/requestScopedErrors';
 import type {
   ApiKeyEntry,
   CloakConfig,
@@ -298,7 +301,12 @@ const normalizeRoutingPriorityOverrides = (
             subscriptionItem['plan-types'] ?? subscriptionItem.planTypes
           );
           const credentials = normalizeStringArray(subscriptionItem.credentials);
-          if (!planTypes?.length && !normalizeStringArray(subscriptionItem.providers)?.length && !credentials?.length) return subscriptionResult;
+          if (
+            !planTypes?.length &&
+            !normalizeStringArray(subscriptionItem.providers)?.length &&
+            !credentials?.length
+          )
+            return subscriptionResult;
 
           const subscriptionEntry: NonNullable<typeof entry.subscriptionOverrides>[number] = {
             planTypes: planTypes ?? [],
@@ -484,7 +492,11 @@ const normalizeCodexCustomModels = (value: unknown): CodexCustomModelConfig[] | 
 
 const normalizeModelAliases = (
   models: unknown,
-  options: { preserveMatchingAliases?: boolean; supportsCompatibility?: boolean; supportsInputModalities?: boolean } = {}
+  options: {
+    preserveMatchingAliases?: boolean;
+    supportsCompatibility?: boolean;
+    supportsInputModalities?: boolean;
+  } = {}
 ): ModelAlias[] => {
   if (!Array.isArray(models)) return [];
   return models
@@ -512,14 +524,28 @@ const normalizeModelAliases = (
       );
       const testModel = item['test-model'] ?? item.testModel;
       const entry: ModelAlias = { ...item, name: String(name) };
-      for (const key of ['id', 'model', 'alias', 'display_name', 'display-name', 'displayName', 'max-context-length', 'maxContextLength', 'priority', 'test-model', 'testModel']) {
+      for (const key of [
+        'id',
+        'model',
+        'alias',
+        'display_name',
+        'display-name',
+        'displayName',
+        'max-context-length',
+        'maxContextLength',
+        'priority',
+        'test-model',
+        'testModel',
+      ]) {
         delete entry[key];
       }
       if (displayName !== undefined) entry.displayName = displayName;
       if (maxContextLength !== undefined) entry.maxContextLength = maxContextLength;
       if (options.supportsInputModalities) {
         const modalities = normalizeModelInputModalities(
-          Object.prototype.hasOwnProperty.call(item, 'input-modalities') ? item['input-modalities'] : item.inputModalities
+          Object.prototype.hasOwnProperty.call(item, 'input-modalities')
+            ? item['input-modalities']
+            : item.inputModalities
         );
         delete entry['input-modalities'];
         delete entry.inputModalities;
@@ -530,7 +556,9 @@ const normalizeModelAliases = (
       if (thinking !== undefined) entry.thinking = thinking;
       if (options.supportsCompatibility !== false) {
         const isCompat = normalizeModelCompatibility(
-          Object.prototype.hasOwnProperty.call(item, 'is-compat') ? item['is-compat'] : item.isCompat
+          Object.prototype.hasOwnProperty.call(item, 'is-compat')
+            ? item['is-compat']
+            : item.isCompat
         );
         delete entry['is-compat'];
         delete entry.isCompat;
@@ -628,11 +656,16 @@ const normalizeApiKeyEntry = (entry: unknown): ApiKeyEntry | null => {
   );
 
   const result: ApiKeyEntry = {
+    ...providerManagement(record),
     apiKey: trimmed,
     weight: normalizeCredentialWeight(record?.weight),
     proxyUrl: proxyUrl ? String(proxyUrl) : undefined,
     headers,
   };
+  if (record && result.management) {
+    if ('priority' in record) result.management.priority = record.priority;
+    if ('models' in record) result.management.models = record.models;
+  }
   if (authIndex) result.authIndex = authIndex;
   return result;
 };
@@ -647,9 +680,15 @@ const normalizeProviderKeyConfig = (
   const trimmed = String(apiKey || '').trim();
   if (!trimmed) return null;
 
-  const config: ProviderKeyConfig = { apiKey: trimmed, weight: normalizeCredentialWeight(record?.weight) };
-  config.proxyRegion = isRecord(record?.['proxy-region']) ? record!['proxy-region'] as import('@/features/proxyIp/ProxyRegionFields').ProxyRegion : undefined;
- config.requestRetry = normalizeRequestRetryOverride(record);
+  const config: ProviderKeyConfig = {
+    ...providerManagement(record),
+    apiKey: trimmed,
+    weight: normalizeCredentialWeight(record?.weight),
+  };
+  config.proxyRegion = isRecord(record?.['proxy-region'])
+    ? (record!['proxy-region'] as import('@/features/proxyIp/ProxyRegionFields').ProxyRegion)
+    : undefined;
+  config.requestRetry = normalizeRequestRetryOverride(record);
   config.requestScopedErrors = normalizeErrorRulesOverride(record);
   const priority = record?.priority ?? record?.['priority'];
   if (priority !== undefined && priority !== null && String(priority).trim() !== '') {
@@ -719,7 +758,11 @@ const normalizeGeminiKeyConfig = (item: unknown): GeminiKeyConfig | null => {
   const trimmed = String(apiKey || '').trim();
   if (!trimmed) return null;
 
-  const config: GeminiKeyConfig = { apiKey: trimmed, weight: normalizeCredentialWeight(record?.weight) };
+  const config: GeminiKeyConfig = {
+    ...providerManagement(record),
+    apiKey: trimmed,
+    weight: normalizeCredentialWeight(record?.weight),
+  };
   config.requestRetry = normalizeRequestRetryOverride(record);
   config.requestScopedErrors = normalizeErrorRulesOverride(record);
   const priority = record?.priority ?? record?.['priority'];
@@ -762,7 +805,9 @@ const normalizeCodexKeyConfig = (item: unknown): ProviderKeyConfig | null => {
   const config = normalizeProviderKeyConfig(item);
   if (!config) return null;
   const raw = isRecord(item)
-    ? Object.prototype.hasOwnProperty.call(item, 'alpha-search') ? item['alpha-search'] : item.alphaSearch
+    ? Object.prototype.hasOwnProperty.call(item, 'alpha-search')
+      ? item['alpha-search']
+      : item.alphaSearch
     : undefined;
   const alphaSearch = normalizeCodexAlphaSearch(raw);
   if (alphaSearch !== undefined) config.alphaSearch = alphaSearch;
@@ -787,11 +832,15 @@ const normalizeOpenAIProvider = (provider: unknown): OpenAIProviderConfig | null
   }
 
   const headers = normalizeHeaders(provider.headers);
-  const models = normalizeModelAliases(provider.models, { supportsCompatibility: false, supportsInputModalities: true });
+  const models = normalizeModelAliases(provider.models, {
+    supportsCompatibility: false,
+    supportsInputModalities: true,
+  });
   const priority = provider.priority ?? provider['priority'];
   const testModel = provider['test-model'] ?? provider.testModel;
 
   const result: OpenAIProviderConfig = {
+    ...providerManagement(provider),
     name: String(name),
     requestRetry: normalizeRequestRetryOverride(provider),
     requestScopedErrors: normalizeErrorRulesOverride(provider),
@@ -835,8 +884,10 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     return config;
   }
 
-  if (raw['runtime-role'] === 'sentinel-solver' || raw['runtime-role'] === 'proxy') config.runtimeRole = raw['runtime-role'];
-  if (isRecord(raw['sentinel-solver'])) config.sentinelSolver = raw['sentinel-solver'] as unknown as Config['sentinelSolver'];
+  if (raw['runtime-role'] === 'sentinel-solver' || raw['runtime-role'] === 'proxy')
+    config.runtimeRole = raw['runtime-role'];
+  if (isRecord(raw['sentinel-solver']))
+    config.sentinelSolver = raw['sentinel-solver'] as unknown as Config['sentinelSolver'];
 
   config.debug = normalizeBoolean(raw.debug);
   const proxyUrl = raw['proxy-url'] ?? raw.proxyUrl;
@@ -981,27 +1032,61 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
   const codex = raw.codex;
   if (isRecord(codex)) {
     const liveEnabled = Object.prototype.hasOwnProperty.call(codex, 'live-enabled')
-      ? codex['live-enabled'] : codex.liveEnabled;
+      ? codex['live-enabled']
+      : codex.liveEnabled;
     if (liveEnabled != null && typeof liveEnabled !== 'boolean') {
       throw new Error('codex.live-enabled must be a boolean');
     }
     config.codex = {
       baseUrl: normalizeString(codex['base-url'] ?? codex.baseUrl),
-      allowClientServiceTier: readCodexBooleanPolicy(codex, 'allow-client-service-tier', 'allowClientServiceTier'),
+      allowClientServiceTier: readCodexBooleanPolicy(
+        codex,
+        'allow-client-service-tier',
+        'allowClientServiceTier'
+      ),
       upstreamRequestCompression: readCodexRequestCompression(codex),
-      serviceTierRules: readCodexServiceTiers(codex['service-tier-rules']).map(({models, tiers, defaultTier}) => ({models, tiers, default: defaultTier})),
+      serviceTierRules: readCodexServiceTiers(codex['service-tier-rules']).map(
+        ({ models, tiers, defaultTier }) => ({ models, tiers, default: defaultTier })
+      ),
       liveEnabled: liveEnabled ?? false,
-      liveMediaRelay: normalizeCodexLiveMedia(codexMediaField(codex, 'live-media-relay', 'liveMediaRelay')),
-      optimizeMultiAgentV2: readCodexBooleanPolicy(codex, 'optimize-multi-agent-v2', 'optimizeMultiAgentV2'),
-      passthroughPromptCacheKey: readCodexBooleanPolicy(codex, 'passthrough-prompt-cache-key', 'passthroughPromptCacheKey'),
-      streamBootstrapBuffering: readCodexBooleanPolicy(codex, 'stream-bootstrap-buffering', 'streamBootstrapBuffering'),
-      estimateClaudeInputTokens: readCodexBooleanPolicy(codex, 'estimate-claude-input-tokens', 'estimateClaudeInputTokens'),
+      liveMediaRelay: normalizeCodexLiveMedia(
+        codexMediaField(codex, 'live-media-relay', 'liveMediaRelay')
+      ),
+      optimizeMultiAgentV2: readCodexBooleanPolicy(
+        codex,
+        'optimize-multi-agent-v2',
+        'optimizeMultiAgentV2'
+      ),
+      passthroughPromptCacheKey: readCodexBooleanPolicy(
+        codex,
+        'passthrough-prompt-cache-key',
+        'passthroughPromptCacheKey'
+      ),
+      streamBootstrapBuffering: readCodexBooleanPolicy(
+        codex,
+        'stream-bootstrap-buffering',
+        'streamBootstrapBuffering'
+      ),
+      estimateClaudeInputTokens: readCodexBooleanPolicy(
+        codex,
+        'estimate-claude-input-tokens',
+        'estimateClaudeInputTokens'
+      ),
       autoCookie: readCodexBooleanPolicy(codex, 'auto-cookie', 'autoCookie'),
-      autoCookieOverride: readCodexBooleanPolicy(codex, 'auto-cookie-override', 'autoCookieOverride'),
+      autoCookieOverride: readCodexBooleanPolicy(
+        codex,
+        'auto-cookie-override',
+        'autoCookieOverride'
+      ),
       observeQuota: readCodexBooleanPolicy(codex, 'observe-quota', 'observeQuota'),
-      orphanDelegationCompatibility: readCodexBooleanPolicy(codex, 'orphan-delegation-compatibility', 'orphanDelegationCompatibility'),
+      orphanDelegationCompatibility: readCodexBooleanPolicy(
+        codex,
+        'orphan-delegation-compatibility',
+        'orphanDelegationCompatibility'
+      ),
       identityConfuse: normalizeBoolean(codex['identity-confuse'] ?? codex.identityConfuse),
-      identityConfuseRequireSessionAffinity: codex['identity-confuse-require-session-affinity'] !== false,
+      identityConfuseRequireSessionAffinity:
+        codex['identity-confuse-require-session-affinity'] !== false,
       identityConfuseRestoreResponse: codex['identity-confuse-restore-response'] !== false,
       spoofSessionIdentity: normalizeBoolean(
         codex['spoof-session-identity'] ?? codex.spoofSessionIdentity
@@ -1197,7 +1282,12 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
       chatgptWeb: chatgptWeb
         ? {
             imageModels: normalizeStringArray(chatgptWeb['image-models'] ?? chatgptWeb.imageModels),
-            modelOutputFormats: (chatgptWeb['model-output-formats'] ?? chatgptWeb.modelOutputFormats) === undefined ? undefined : readModelOutputFormats(chatgptWeb['model-output-formats'] ?? chatgptWeb.modelOutputFormats),
+            modelOutputFormats:
+              (chatgptWeb['model-output-formats'] ?? chatgptWeb.modelOutputFormats) === undefined
+                ? undefined
+                : readModelOutputFormats(
+                    chatgptWeb['model-output-formats'] ?? chatgptWeb.modelOutputFormats
+                  ),
             upstreamModel:
               typeof (chatgptWeb['upstream-model'] ?? chatgptWeb.upstreamModel) === 'string'
                 ? String(chatgptWeb['upstream-model'] ?? chatgptWeb.upstreamModel)
@@ -1216,8 +1306,14 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
               chatgptWeb['normalize-mismatched-image-mime'] ??
                 chatgptWeb.normalizeMismatchedImageMime
             ),
-            gifAllowAspectRatioMismatch: normalizeBoolean(chatgptWeb['gif-allow-aspect-ratio-mismatch'] ?? chatgptWeb.gifAllowAspectRatioMismatch),
-            gifAspectRatioMaxErrorPercent: normalizeNumber(chatgptWeb['gif-aspect-ratio-max-error-percent'] ?? chatgptWeb.gifAspectRatioMaxErrorPercent),
+            gifAllowAspectRatioMismatch: normalizeBoolean(
+              chatgptWeb['gif-allow-aspect-ratio-mismatch'] ??
+                chatgptWeb.gifAllowAspectRatioMismatch
+            ),
+            gifAspectRatioMaxErrorPercent: normalizeNumber(
+              chatgptWeb['gif-aspect-ratio-max-error-percent'] ??
+                chatgptWeb.gifAspectRatioMaxErrorPercent
+            ),
             normalizeRemoteImageMime: normalizeBoolean(
               chatgptWeb['normalize-remote-image-mime'] ?? chatgptWeb.normalizeRemoteImageMime
             ),
@@ -1299,10 +1395,14 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     config.routingSessionAffinity = normalizeBoolean(
       routing['session-affinity'] ?? routing.sessionAffinity
     );
-    const useHistoryRaw = Object.prototype.hasOwnProperty.call(routing, 'session-affinity-use-history')
+    const useHistoryRaw = Object.prototype.hasOwnProperty.call(
+      routing,
+      'session-affinity-use-history'
+    )
       ? routing['session-affinity-use-history']
       : routing.sessionAffinityUseHistory;
-    config.routingSessionAffinityUseHistory = useHistoryRaw == null ? true : normalizeBoolean(useHistoryRaw);
+    config.routingSessionAffinityUseHistory =
+      useHistoryRaw == null ? true : normalizeBoolean(useHistoryRaw);
     config.routingSessionAffinityAcrossPriorities = normalizeBoolean(
       Object.prototype.hasOwnProperty.call(routing, 'session-affinity-across-priorities')
         ? routing['session-affinity-across-priorities']
@@ -1412,3 +1512,26 @@ export {
   normalizeExcludedModels,
   normalizeCodexCustomModels,
 };
+
+function providerManagement(record: Record<string, unknown> | null) {
+  if (!record) return {};
+  const keys = [
+    'credential-id',
+    'credential-runtime-id',
+    'credential-index',
+    'fill-order-scope',
+    'channel-name',
+    'models-mode',
+    'models-endpoint',
+    'disabled',
+  ];
+  return {
+    disabled: typeof record.disabled === 'boolean' ? record.disabled : undefined,
+    credentialId: typeof record['credential-id'] === 'string' ? record['credential-id'] : undefined,
+    revision: typeof record.revision === 'string' ? record.revision : undefined,
+    channelName: typeof record['channel-name'] === 'string' ? record['channel-name'] : undefined,
+    management: Object.fromEntries(
+      keys.filter((key) => key in record).map((key) => [key, record[key]])
+    ),
+  };
+}
