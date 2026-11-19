@@ -133,9 +133,31 @@ it('reuses discovery briefly and invalidates it when the connection draft change
     ).toBe(false)
   );
   expect(mocks.discover).toHaveBeenCalledOnce();
+  fireEvent.change(screen.getByLabelText('api_credentials.priority'), { target: { value: '-5' } });
+  fireEvent.click(screen.getByText('api_credentials.fetch_models'));
+  await waitFor(() => expect(mocks.discover).toHaveBeenCalledTimes(2));
+  expect(mocks.discover.mock.lastCall?.[1].values.priority).toBe(-5);
+  await waitFor(() =>
+    expect(screen.getByLabelText('api_credentials.proxy').hasAttribute('disabled')).toBe(false)
+  );
   fireEvent.change(screen.getByDisplayValue('https://example.invalid'), {
     target: { value: 'https://new.invalid' },
   });
   fireEvent.click(screen.getByText('api_credentials.fetch_models'));
-  await waitFor(() => expect(mocks.discover).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(mocks.discover).toHaveBeenCalledTimes(3));
+});
+
+it.each([
+  [
+    { error: 'proxy_unavailable', proxy_pool: 'catalog-pool' },
+    'api_credentials.proxy_pool_unavailable',
+  ],
+  [{ error: 'proxy_unavailable' }, 'api_credentials.proxy_unavailable'],
+])('explains a management proxy failure for a draft', async (data, label) => {
+  mocks.discover.mockRejectedValue(
+    Object.assign(new Error('proxy_unavailable'), { status: 503, data })
+  );
+  render(<ProviderCredentialEditor onClose={vi.fn()} onSaved={vi.fn()} />);
+  fireEvent.click(screen.getByText('api_credentials.fetch_models'));
+  expect((await screen.findByRole('alert')).textContent).toBe(label);
 });

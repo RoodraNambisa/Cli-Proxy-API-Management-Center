@@ -2371,6 +2371,10 @@
           "description": "管理用戶端存取密鑰及其提供者限制。"
         },
         "proxy": {
+    "proxy_hint": "留空時依代理規則選路。未符合規則時使用全域代理或直連。填入 direct 可指定直連。",
+    "proxy_unavailable": "代理路由無法使用，請檢查代理位址與符合的代理規則。",
+    "proxy_pool_unavailable": "符合的代理路由暫無可用節點（代理池 {{pool}}）。",
+    "proxy_invalid": "請輸入有效的代理位址，或填入 direct 指定直連。",
           "title": "代理與代理池",
           "description": "設定全域代理、檢測連線並進入結構化憑證代理管理。"
         },

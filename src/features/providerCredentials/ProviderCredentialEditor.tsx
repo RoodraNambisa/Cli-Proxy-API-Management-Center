@@ -10,6 +10,7 @@ import type { ModelEntry } from '@/components/ui/modelInputListUtils';
 import { normalizeModelAliases } from '@/services/api/transformers';
 import { apiClient } from '@/services/api/client';
 import { authFilesApi, type ModelProbeResult } from '@/services/api/authFiles';
+import type { ApiError } from '@/types';
 import type { ModelInfo } from '@/utils/models';
 import {
   providerCredentialsApi,
@@ -104,14 +105,23 @@ export function ProviderCredentialEditor({
     try {
       await operation(abort.signal);
     } catch (err) {
-      if (!abort.signal.aborted)
-        setError(
-          (err as { status?: number }).status === 409
-            ? t('api_credentials.conflict')
-            : err instanceof Error
-              ? err.message
-              : String(err)
-        );
+      if (!abort.signal.aborted) {
+        const { status, data, message } = (err ?? {}) as ApiError;
+        const details = data as { error?: string; proxy_pool?: string } | undefined;
+        if (status === 409) {
+          setError(t('api_credentials.conflict'));
+        } else if (status === 503 && (details?.error ?? message) === 'proxy_unavailable') {
+          setError(
+            details?.proxy_pool
+              ? t('api_credentials.proxy_pool_unavailable', { pool: details.proxy_pool })
+              : t('api_credentials.proxy_unavailable')
+          );
+        } else if (status === 400 && (details?.error ?? message) === 'invalid_proxy_url') {
+          setError(t('api_credentials.proxy_invalid'));
+        } else {
+          setError(message || String(err));
+        }
+      }
     } finally {
       executing.current = false;
       if (!abort.signal.aborted) setBusy(false);
@@ -164,6 +174,7 @@ export function ProviderCredentialEditor({
         targetId,
         detail?.revision,
         kind,
+        values.priority,
         ...['api-key', 'base-url', 'proxy-url', 'models-endpoint', 'headers'].map(
           (key) => values[key]
         ),
@@ -303,6 +314,7 @@ export function ProviderCredentialEditor({
             />
             <Input
               label={t('api_credentials.proxy')}
+              hint={detail?.is_parent ? undefined : t('api_credentials.proxy_hint')}
               value={String(values['proxy-url'] ?? '')}
               onChange={(e) => set('proxy-url', e.target.value)}
               disabled={busy || detail?.is_parent}
