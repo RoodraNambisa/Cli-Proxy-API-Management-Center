@@ -2145,6 +2145,12 @@ export function AuthFilesPage() {
                       }
                       trafficStale={traffic.stale}
                       trafficVisible={traffic.visible}
+                      trafficUnsupported={traffic.unsupported}
+                      resolvedTheme={resolvedTheme}
+                      usageSummary={
+                        usageSummaryCache.get(normalizeAuthIndex(file.auth_index ?? file.authIndex) ?? '')
+                      }
+                      usageLoading={usageLoading}
                       onSelect={toggleSelect}
                       onEdit={(id) => setApiEditor({ id })}
                       onDelete={handleDelete}

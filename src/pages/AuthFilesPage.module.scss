@@ -1588,6 +1588,13 @@
   }
 }
 
+.apiCredentialCard {
+  align-self: start;
+  min-height: 0;
+  min-width: 0;
+  gap: 10px;
+}
+
 .fileCardSelected {
   border-color: color-mix(in srgb, var(--primary-color) 60%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 30%, transparent);
