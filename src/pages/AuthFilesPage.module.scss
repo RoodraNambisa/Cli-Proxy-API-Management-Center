@@ -29,11 +29,22 @@
   margin: 0;
 }
 
+.credentialListCard {
+  container: credential-list / inline-size;
+
+  > :global(.card-header) {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
 .headerActions {
   display: flex;
   gap: $spacing-sm;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   min-width: 0;
   max-width: 100%;
 
@@ -43,6 +54,52 @@
 
   @include mobile {
     width: 100%;
+  }
+}
+
+.moreActionsButton:global(.btn) {
+  display: none;
+}
+
+.moreActions {
+  display: contents;
+}
+
+@container credential-list (max-width: 720px) {
+  .moreActionsButton:global(.btn) {
+    display: inline-flex;
+
+    > span {
+      display: inline-flex;
+      align-items: center;
+      gap: $spacing-xs;
+    }
+
+    &[aria-expanded='true'] svg {
+      transform: rotate(180deg);
+    }
+  }
+
+  .moreActions {
+    display: none;
+
+    &[data-expanded='true'] {
+      display: flex;
+      flex: 1 1 100%;
+      flex-wrap: wrap;
+      gap: $spacing-sm;
+      justify-content: inherit;
+    }
+  }
+}
+
+@container credential-list (max-width: 460px) {
+  .credentialListCard > :global(.card-header) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .headerActions {
+    justify-content: flex-start;
   }
 }
 
@@ -61,6 +118,7 @@
   display: flex;
   align-items: center;
   gap: $spacing-sm;
+  min-height: 38px;
   line-height: 24px;
 }
 
@@ -336,8 +394,9 @@
 
 .filterRail {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px $spacing-md;
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
@@ -375,15 +434,30 @@
 
 .filterTags {
   display: flex;
-  flex-direction: row;
+  flex: 1 1 16rem;
   flex-wrap: wrap;
+  min-width: 0;
   gap: 8px;
+}
+
+.sourceFilter {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  max-width: 100%;
+}
+
+.sourceSelect {
+  width: 10rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .filterTag {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  max-width: 100%;
   padding: 7px 12px 7px 8px;
   border-radius: 10px;
   font-size: 13px;
@@ -478,6 +552,7 @@
 }
 
 .filterControlsPanel {
+  container-type: inline-size;
   padding: 14px;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
@@ -486,11 +561,9 @@
 
 .filterControls {
   display: grid;
-  grid-template-columns:
-    minmax(220px, 1.3fr) repeat(4, minmax(112px, 0.68fr))
-    minmax(220px, auto);
-  gap: $spacing-md;
-  align-items: flex-end;
+  grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr));
+  gap: 12px $spacing-md;
+  align-items: end;
 
   // 修复 Input 组件在 filterItem 中的嵌套样式
   :global(.form-group) {
@@ -501,14 +574,6 @@
     height: 40px;
     box-sizing: border-box;
   }
-
-  @include tablet {
-    grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(120px, 0.8fr));
-  }
-
-  @include mobile {
-    grid-template-columns: 1fr;
-  }
 }
 
 .filterItem {
@@ -516,56 +581,78 @@
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-
-  label {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
 }
 
-.filterToggleItem {
-  min-width: 0;
+.filterItem > label,
+.filterCaption {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 
-  @include tablet {
-    grid-column: 1 / -1;
-  }
+.displayOptions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-xs $spacing-md;
+  margin-top: 12px;
+  padding-top: $spacing-sm;
+  border-top: 1px solid var(--border-color);
 }
 
 .filterToggleGroup {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  min-height: 40px;
-}
-
-.filterToggleCard {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  min-height: 40px;
-  padding: 0 2px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
-  background: color-mix(in srgb, var(--bg-secondary) 50%, transparent);
+  gap: $spacing-xs $spacing-lg;
+  min-width: 0;
+
+  > label {
+    min-width: 0;
+    min-height: 34px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    line-height: 1.4;
+
+    &:has(input:focus-visible) {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+      border-radius: $radius-sm;
+    }
+  }
 }
 
-.filterToggle {
-  display: flex;
-  align-items: center;
-  min-height: 40px;
-  padding-inline: 2px;
+@container (max-width: 900px) {
+  .filterControls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
-.filterToggleLabel {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
+@container (max-width: 560px) {
+  .filterControls,
+  .filterToggleGroup {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 12px;
+  }
+
+  .filterToggleGroup {
+    width: 100%;
+
+    > label {
+      min-height: 40px;
+    }
+  }
+}
+
+@container (max-width: 260px) {
+  .filterControls,
+  .filterToggleGroup {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .pageSizeSelect {

@@ -1,4 +1,9 @@
 {
+  "api_credentials": {
+    "source_all": "Все учётные данные",
+    "source_file": "Файлы авторизации",
+    "source_api": "Настройки API"
+  },
   "fill_order": {
       "title": "Порядок заполнения",
       "adjust": "Изменить порядок",
@@ -1012,6 +1017,8 @@
     "problem_filter_only": "Показывать только проблемные учётные данные",
     "enabled_filter_only": "Показывать только включённые учётные данные",
     "disabled_filter_only": "Показывать только отключённые учётные данные",
+    "more_actions": "Ещё действия",
+    "credential_source_label": "Источник учётных данных",
     "display_options_label": "Параметры отображения",
     "compact_mode_label": "Компактный режим",
     "sort_label": "Сортировка",

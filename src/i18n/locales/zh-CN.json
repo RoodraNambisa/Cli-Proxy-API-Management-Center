@@ -1012,6 +1012,8 @@
     "problem_filter_only": "仅显示有问题凭证",
     "enabled_filter_only": "仅显示已启用凭证",
     "disabled_filter_only": "仅显示已停用凭证",
+    "more_actions": "更多操作",
+    "credential_source_label": "凭证来源",
     "display_options_label": "显示选项",
     "compact_mode_label": "简略模式",
     "sort_label": "排序",

@@ -1012,6 +1012,8 @@
     "problem_filter_only": "Only show problematic credentials",
     "enabled_filter_only": "Only show enabled credentials",
     "disabled_filter_only": "Only show disabled credentials",
+    "more_actions": "More actions",
+    "credential_source_label": "Credential source",
     "display_options_label": "Display options",
     "compact_mode_label": "Compact mode",
     "sort_label": "Sort",

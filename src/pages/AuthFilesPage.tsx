@@ -8,6 +8,7 @@ import {
   useCallback,
   type CSSProperties,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -27,7 +28,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { IconFilterAll, IconKey, IconRefreshCw } from '@/components/ui/icons';
+import { IconChevronDown, IconFilterAll, IconKey, IconRefreshCw } from '@/components/ui/icons';
 import { CODEX_CONFIG } from '@/components/quota';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
@@ -304,6 +305,8 @@ export function CodexPlanRefreshActions({
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
+  const filterId = useId();
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
   const showNotification = useNotificationStore((state) => state.showNotification);
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const connectionGenerationKey = useAuthStore((state) =>
@@ -1637,6 +1640,7 @@ export function AuthFilesPage() {
               key={type}
               className={`${styles.filterTag} ${isActive ? styles.filterTagActive : ''}`}
               style={buttonStyle}
+              aria-pressed={isActive}
               onClick={() => {
                 setFilter(type);
                 setPage(1);
@@ -1665,6 +1669,30 @@ export function AuthFilesPage() {
           );
         })}
       </div>
+      {apiCredentialsSupported && (
+        <div className={styles.sourceFilter}>
+          <label className={styles.filterCaption} htmlFor={`${filterId}-source`}>
+            {t('auth_files.credential_source_label')}
+          </label>
+          <Select
+            id={`${filterId}-source`}
+            ariaLabel={t('auth_files.credential_source_label')}
+            className={styles.sourceSelect}
+            fullWidth={false}
+            value={credentialSource}
+            options={[
+              { value: 'all', label: t('api_credentials.source_all') },
+              { value: 'file', label: t('api_credentials.source_file') },
+              { value: 'api', label: t('api_credentials.source_api') },
+            ]}
+            onChange={(value) => {
+              setCredentialSource(value as 'all' | 'file' | 'api');
+              setPage(1);
+              deselectAll();
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 
@@ -1718,91 +1746,22 @@ export function AuthFilesPage() {
       </div>
 
       <Card
+        className={styles.credentialListCard}
         title={titleNode}
         extra={
           <div className={styles.headerActions}>
             <Button variant="secondary" size="sm" onClick={handleHeaderRefresh} disabled={loading}>
               {t('common.refresh')}
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => void handleRefreshPageUsageStats()}
-              disabled={disableControls || usageRefreshLoading}
-              loading={usageRefreshLoading}
-              className={styles.usageRefreshButton}
-            >
-              <>
-                <IconRefreshCw size={14} />
-                <span>{t('auth_files.refresh_page_usage_stats')}</span>
-              </>
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => void handleRefreshPageResetCredits()}
-              disabled={
-                disableControls ||
-                codexResetCreditsRefreshing ||
-                currentPageCodexUsageTargets.length === 0
-              }
-              loading={codexResetCreditsRefreshing}
-              className={styles.usageRefreshButton}
-            >
-              <>
-                <IconRefreshCw size={14} />
-                <span>{t('auth_files.refresh_page_reset_credits')}</span>
-              </>
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => void startCodexPlanTypeRefresh()}
-              disabled={
-                disableControls ||
-                codexPlanRefreshLoading ||
-                codexPlanRefreshStarting ||
-                codexPlanRefreshActive
-              }
-              loading={codexPlanRefreshStarting}
-            >
-              {t('auth_files.codex_plan_refresh_button')}
-            </Button>
-            {codexAgentIdentityConversionVisible ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={codexIdentityConversion.openAccessTokens}
-                disabled={disableControls || codexIdentityConversion.state.open}
-              >
-                <IconKey size={14} />
-                {t('auth_files.codex_identity_token_button')}
-              </Button>
-            ) : null}
             {apiCredentialsSupported && (
-              <>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setApiEditor({})}
-                  disabled={disableControls}
-                >
-                  {t('api_credentials.add')}
-                </Button>
-                <Select
-                  value={credentialSource}
-                  options={[
-                    { value: 'all', label: t('api_credentials.source_all') },
-                    { value: 'file', label: t('api_credentials.source_file') },
-                    { value: 'api', label: t('api_credentials.source_api') },
-                  ]}
-                  onChange={(value) => {
-                    setCredentialSource(value as 'all' | 'file' | 'api');
-                    setPage(1);
-                    deselectAll();
-                  }}
-                />
-              </>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setApiEditor({})}
+                disabled={disableControls}
+              >
+                {t('api_credentials.add')}
+              </Button>
             )}
             <Button
               size="sm"
@@ -1813,45 +1772,117 @@ export function AuthFilesPage() {
               {t('auth_files.upload_button')}
             </Button>
             <Button
+              className={styles.moreActionsButton}
               variant="secondary"
               size="sm"
-              onClick={() => void downloadAllArchive()}
-              disabled={disableControls || archiveDownloadingAll}
-              loading={archiveDownloadingAll}
+              aria-expanded={moreActionsOpen}
+              aria-controls={`${filterId}-more-actions`}
+              onClick={() => setMoreActionsOpen((open) => !open)}
             >
-              {t('auth_files.archive_download_all')}
+              {t('auth_files.more_actions')}
+              <IconChevronDown size={14} aria-hidden="true" />
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={clearAllCooldowns}
-              disabled={disableControls || loading || clearingAllCooldowns}
-              loading={clearingAllCooldowns}
+            <div
+              className={styles.moreActions}
+              id={`${filterId}-more-actions`}
+              data-expanded={moreActionsOpen}
             >
-              {t('auth_files.clear_cooldowns_all_button')}
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() =>
-                void handleDeleteAll({
-                  filter,
-                  recoveryState: recoveryFilter,
-                  problemOnly,
-                  enabledOnly,
-                  disabledOnly,
-                  onResetFilterToAll: () => setFilter('all'),
-                  onResetRecoveryState: () => setRecoveryFilter(ALL_RECOVERY_FILTER),
-                  onResetProblemOnly: () => setProblemOnly(false),
-                  onResetEnabledOnly: () => setEnabledOnly(false),
-                  onResetDisabledOnly: () => setDisabledOnly(false),
-                })
-              }
-              disabled={disableControls || loading || deletingAll}
-              loading={deletingAll}
-            >
-              {deleteAllButtonLabel}
-            </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void handleRefreshPageUsageStats()}
+                disabled={disableControls || usageRefreshLoading}
+                loading={usageRefreshLoading}
+                className={styles.usageRefreshButton}
+              >
+                <>
+                  <IconRefreshCw size={14} />
+                  <span>{t('auth_files.refresh_page_usage_stats')}</span>
+                </>
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void handleRefreshPageResetCredits()}
+                disabled={
+                  disableControls ||
+                  codexResetCreditsRefreshing ||
+                  currentPageCodexUsageTargets.length === 0
+                }
+                loading={codexResetCreditsRefreshing}
+                className={styles.usageRefreshButton}
+              >
+                <>
+                  <IconRefreshCw size={14} />
+                  <span>{t('auth_files.refresh_page_reset_credits')}</span>
+                </>
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void startCodexPlanTypeRefresh()}
+                disabled={
+                  disableControls ||
+                  codexPlanRefreshLoading ||
+                  codexPlanRefreshStarting ||
+                  codexPlanRefreshActive
+                }
+                loading={codexPlanRefreshStarting}
+              >
+                {t('auth_files.codex_plan_refresh_button')}
+              </Button>
+              {codexAgentIdentityConversionVisible ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={codexIdentityConversion.openAccessTokens}
+                  disabled={disableControls || codexIdentityConversion.state.open}
+                >
+                  <IconKey size={14} />
+                  {t('auth_files.codex_identity_token_button')}
+                </Button>
+              ) : null}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void downloadAllArchive()}
+                disabled={disableControls || archiveDownloadingAll}
+                loading={archiveDownloadingAll}
+              >
+                {t('auth_files.archive_download_all')}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={clearAllCooldowns}
+                disabled={disableControls || loading || clearingAllCooldowns}
+                loading={clearingAllCooldowns}
+              >
+                {t('auth_files.clear_cooldowns_all_button')}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() =>
+                  void handleDeleteAll({
+                    filter,
+                    recoveryState: recoveryFilter,
+                    problemOnly,
+                    enabledOnly,
+                    disabledOnly,
+                    onResetFilterToAll: () => setFilter('all'),
+                    onResetRecoveryState: () => setRecoveryFilter(ALL_RECOVERY_FILTER),
+                    onResetProblemOnly: () => setProblemOnly(false),
+                    onResetEnabledOnly: () => setEnabledOnly(false),
+                    onResetDisabledOnly: () => setDisabledOnly(false),
+                  })
+                }
+                disabled={disableControls || loading || deletingAll}
+                loading={deletingAll}
+              >
+                {deleteAllButtonLabel}
+              </Button>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -1960,8 +1991,9 @@ export function AuthFilesPage() {
             <div className={styles.filterControlsPanel}>
               <div className={styles.filterControls}>
                 <div className={styles.filterItem}>
-                  <label>{t('auth_files.search_label')}</label>
+                  <label htmlFor={`${filterId}-search`}>{t('auth_files.search_label')}</label>
                   <Input
+                    id={`${filterId}-search`}
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
@@ -1971,8 +2003,9 @@ export function AuthFilesPage() {
                   />
                 </div>
                 <div className={styles.filterItem}>
-                  <label>{t('auth_files.plan_filter_label')}</label>
+                  <label htmlFor={`${filterId}-plan`}>{t('auth_files.plan_filter_label')}</label>
                   <Select
+                    id={`${filterId}-plan`}
                     className={styles.sortSelect}
                     value={planFilter}
                     options={planFilterOptions}
@@ -1982,8 +2015,11 @@ export function AuthFilesPage() {
                   />
                 </div>
                 <div className={styles.filterItem}>
-                  <label>{t('auth_files.priority_filter_label')}</label>
+                  <label htmlFor={`${filterId}-priority`}>
+                    {t('auth_files.priority_filter_label')}
+                  </label>
                   <Select
+                    id={`${filterId}-priority`}
                     className={styles.sortSelect}
                     value={priorityFilter}
                     options={priorityFilterOptions}
@@ -1993,8 +2029,11 @@ export function AuthFilesPage() {
                   />
                 </div>
                 <div className={styles.filterItem}>
-                  <label>{t('auth_files.chatgpt_web_recovery_filter_label')}</label>
+                  <label htmlFor={`${filterId}-recovery`}>
+                    {t('auth_files.chatgpt_web_recovery_filter_label')}
+                  </label>
                   <Select
+                    id={`${filterId}-recovery`}
                     className={styles.sortSelect}
                     value={recoveryFilter}
                     options={recoveryFilterOptions}
@@ -2007,8 +2046,9 @@ export function AuthFilesPage() {
                   />
                 </div>
                 <div className={styles.filterItem}>
-                  <label>{t('auth_files.page_size_label')}</label>
+                  <label htmlFor={`${filterId}-page-size`}>{t('auth_files.page_size_label')}</label>
                   <input
+                    id={`${filterId}-page-size`}
                     className={styles.pageSizeSelect}
                     type="number"
                     min={MIN_CARD_PAGE_SIZE}
@@ -2025,8 +2065,9 @@ export function AuthFilesPage() {
                   />
                 </div>
                 <div className={styles.filterItem}>
-                  <label>{t('auth_files.sort_label')}</label>
+                  <label htmlFor={`${filterId}-sort`}>{t('auth_files.sort_label')}</label>
                   <Select
+                    id={`${filterId}-sort`}
                     className={styles.sortSelect}
                     value={sortMode}
                     options={sortOptions}
@@ -2035,69 +2076,47 @@ export function AuthFilesPage() {
                     fullWidth
                   />
                 </div>
-                <div className={`${styles.filterItem} ${styles.filterToggleItem}`}>
-                  <label>{t('auth_files.display_options_label')}</label>
-                  <div className={styles.filterToggleGroup}>
-                    <div className={styles.filterToggleCard}>
-                      <ToggleSwitch
-                        checked={problemOnly}
-                        onChange={(value) => {
-                          setProblemOnly(value);
-                          setPage(1);
-                        }}
-                        ariaLabel={t('auth_files.problem_filter_only')}
-                        label={
-                          <span className={styles.filterToggleLabel}>
-                            {t('auth_files.problem_filter_only')}
-                          </span>
-                        }
-                      />
-                    </div>
-                    <div className={styles.filterToggleCard}>
-                      <ToggleSwitch
-                        checked={enabledOnly}
-                        onChange={(value) => {
-                          setEnabledOnly(value);
-                          if (value) setDisabledOnly(false);
-                          setPage(1);
-                        }}
-                        ariaLabel={t('auth_files.enabled_filter_only')}
-                        label={
-                          <span className={styles.filterToggleLabel}>
-                            {t('auth_files.enabled_filter_only')}
-                          </span>
-                        }
-                      />
-                    </div>
-                    <div className={styles.filterToggleCard}>
-                      <ToggleSwitch
-                        checked={disabledOnly}
-                        onChange={(value) => {
-                          setDisabledOnly(value);
-                          if (value) setEnabledOnly(false);
-                          setPage(1);
-                        }}
-                        ariaLabel={t('auth_files.disabled_filter_only')}
-                        label={
-                          <span className={styles.filterToggleLabel}>
-                            {t('auth_files.disabled_filter_only')}
-                          </span>
-                        }
-                      />
-                    </div>
-                    <div className={styles.filterToggleCard}>
-                      <ToggleSwitch
-                        checked={compactMode}
-                        onChange={(value) => setCompactMode(value)}
-                        ariaLabel={t('auth_files.compact_mode_label')}
-                        label={
-                          <span className={styles.filterToggleLabel}>
-                            {t('auth_files.compact_mode_label')}
-                          </span>
-                        }
-                      />
-                    </div>
-                  </div>
+              </div>
+              <div
+                className={styles.displayOptions}
+                role="group"
+                aria-labelledby={`${filterId}-display`}
+              >
+                <span id={`${filterId}-display`} className={styles.filterCaption}>
+                  {t('auth_files.display_options_label')}
+                </span>
+                <div className={styles.filterToggleGroup}>
+                  <ToggleSwitch
+                    checked={problemOnly}
+                    onChange={(value) => {
+                      setProblemOnly(value);
+                      setPage(1);
+                    }}
+                    label={t('auth_files.problem_filter_only')}
+                  />
+                  <ToggleSwitch
+                    checked={enabledOnly}
+                    onChange={(value) => {
+                      setEnabledOnly(value);
+                      if (value) setDisabledOnly(false);
+                      setPage(1);
+                    }}
+                    label={t('auth_files.enabled_filter_only')}
+                  />
+                  <ToggleSwitch
+                    checked={disabledOnly}
+                    onChange={(value) => {
+                      setDisabledOnly(value);
+                      if (value) setEnabledOnly(false);
+                      setPage(1);
+                    }}
+                    label={t('auth_files.disabled_filter_only')}
+                  />
+                  <ToggleSwitch
+                    checked={compactMode}
+                    onChange={setCompactMode}
+                    label={t('auth_files.compact_mode_label')}
+                  />
                 </div>
               </div>
             </div>
